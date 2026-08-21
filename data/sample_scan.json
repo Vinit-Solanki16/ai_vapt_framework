@@ -1,0 +1,17 @@
+{
+  "target": "127.0.0.1",
+  "findings": [
+    {
+      "port": 8080,
+      "service": "http",
+      "cve": "CVE-2021-44228",
+      "description": "Apache Log4j2 Remote Code Execution"
+    },
+    {
+      "port": 22,
+      "service": "ssh",
+      "cve": "CVE-2023-38408",
+      "description": "OpenSSH PKCS#11 Remote Code Execution"
+    }
+  ]
+}

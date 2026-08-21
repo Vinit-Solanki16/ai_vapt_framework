@@ -1,0 +1,5 @@
+{
+  "CVE-2021-44228": {"reliability": "HIGH", "outcome": "success", "requests": 3, "source": "corpus"},
+  "CVE-2023-38408": {"reliability": "MEDIUM", "outcome": "fail_timeout", "requests": 2, "source": "corpus"},
+  "CVE-2022-22965": {"reliability": "LOW", "outcome": "fail_syntax", "requests": 1, "source": "corpus"}
+}

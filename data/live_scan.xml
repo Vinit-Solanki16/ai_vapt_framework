@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.80 scan initiated Fri Aug 21 14:32:29 2026 as: nmap -sV -p 80 -oX data/live_scan.xml 127.0.0.1 -->
+<nmaprun scanner="nmap" args="nmap -sV -p 80 -oX data/live_scan.xml 127.0.0.1" start="1787302949" startstr="Fri Aug 21 14:32:29 2026" version="7.80" xmloutputversion="1.04">
+<scaninfo type="connect" protocol="tcp" numservices="1" services="80"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1787302949" endtime="1787302957"><status state="up" reason="syn-ack" reason_ttl="0"/>
+<address addr="127.0.0.1" addrtype="ipv4"/>
+<hostnames>
+<hostname name="localhost" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" product="Apache httpd" version="2.4.25" extrainfo="(Debian)" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.25</cpe></service></port>
+</ports>
+<times srtt="637" rttvar="3835" to="100000"/>
+</host>
+<runstats><finished time="1787302957" timestr="Fri Aug 21 14:32:37 2026" elapsed="8.08" summary="Nmap done at Fri Aug 21 14:32:37 2026; 1 IP address (1 host up) scanned in 8.08 seconds" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>
