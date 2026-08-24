@@ -193,7 +193,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** clean venv + install reproduces imports; documented Python version.
 - **Test command:** `python -c "import core"` after clean install
 - **Impl agent:** sw-dev. **Review agent:** verify-agent.
-- **Status:** TODO
+- **Status:** DONE (2026-08-24, commit 9b0fe96) — requirements.txt pinned to exact (==) versions matching the verified venv (langchain 1.3.15, langchain-core 1.6.0, langchain-openai/-ollama 1.6.0/1.1.0, langgraph 1.2.11, pydantic 2.13.4, python-nmap 0.7.1, requests 2.34.2, streamlit 1.62.0, pandas 2.3.3, reportlab 5.0.1, pytest 9.1.1); .python-version=3.10; README documents repro. No behavior change: import core OK, pytest 29 passed, pins == installed freeze (diff clean). Hermes (P3) verified.
 
 ## T-GITHUB (P3)
 - **Objective:** Verify GitHub PoC fetch with real token.
