@@ -29,6 +29,21 @@ unless measured.
   proving the *mechanism*, NOT a realistic estimate of production LLM-assessor efficacy. Valid as
   GAP-1 proof-of-mechanism only; real-world efficacy needs the production assessor on unseen CVEs
   (future work / T-DOCKER-adjacent). n=12 small.
+- **GAP-1 ablation v2 (T-GAP1-VALID directive-exact, 2026-08-24): `tests/ablation.py`** —
+  ARM A = full SMART ranking (EPSS x usability via priority_score), ARM B = RAW-EPSS-only
+  ranking (usability NOT used for routing; pivot N=2 ENABLED in BOTH arms); n=12 corpus;
+  frozen synthetic EPSS inputs (documented in-file); outcomes from labels.json only.
+  MEASURED (data/ablation_epss_only.csv):
+    * wasted_attempts_total       : A=14, B=14, DELTA=0
+    * wasted_before_first_success : A=0,  B=2,  DELTA=+2 (B burns both attempts of its
+      budget on the high-EPSS/LOW-usability dead end CVE-2023-34362 before foothold)
+    * requests_to_first_success   : A=1,  B=3,  DELTA=+2
+    * completion_%                : 100.0 BOTH arms (all labeled successes validated)
+  STRUCTURAL FINDING (thesis-relevant): with pivot enabled in both arms and full-corpus
+  coverage, TOTAL wasted attempts are IDENTICAL by mechanism — bounded retries neutralize
+  routing mistakes at portfolio level. Scoring's measurable value is ROUTING EFFICIENCY:
+  fewer wasted attempts BEFORE the first validated success and earlier foothold. Claim row
+  updated accordingly (YES with scope conditions).
 - T-DOCKER: REAL OBSERVED RESULT — success from actual module output in container (not label).
 
 ## Latest raw run (2026-08-21, simulation)
@@ -48,4 +63,4 @@ Improvement (SMART over DUMB): requests_saved=16, loops_avoided=2*, time_saved_s
 | Faster than DUMB | NO | time_saved_s negative |
 | Stealthier / less network noise | NO | not measured |
 | Real exploit success demonstrated | NO | simulation; needs T-DOCKER |
-| GAP-1 scoring improves outcomes | PROVEN (simulation, proof-of-mechanism) | T-GAP1-VALID: WITH scoring reaches labeled-success 4.00 req / 2.00 pos earlier than WITHOUT (EPSS held 0.5). BEST-CASE UPPER BOUND — see caveat below. |
+| GAP-1 scoring improves outcomes | YES for routing efficiency; NO for total-attempt/completion parity | MEASURED (tests/ablation.py, EPSS-only baseline, n=12): wasted-before-first-success 0 vs 2 and foothold 2 requests sooner WITH scoring; total waste identical (14 vs 14) and completion identical (100%) because pivot bounds retries in BOTH arms. Simulation, frozen synthetic EPSS inputs, stubbed assessor — proof-of-mechanism scope, not production efficacy. |
