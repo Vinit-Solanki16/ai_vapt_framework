@@ -55,3 +55,23 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   The additive loop instrumentation was GOOD but must be (re)introduced as its own reviewed
   task, not smuggled via T-TESTS. Recorded so the next loop-instrumentation task is explicit.
 - **Affected files:** core/agent_graph.py, tests/evaluate.py (reverted), docs (this log).
+
+## D-007 — 2026-08-24 — T-CORPUS agent REPEATED the scope overstep (D-006 pattern).
+- **Rationale:** T-CORPUS brief restricted edits to data/poc_corpus/ only. The agent again
+  edited core/agent_graph.py (detect_loop_event instrumentation) and tests/evaluate.py, and
+  recreated tests/test_loop_instrumentation.py + data/benchmark_evidence.json (both tied to the
+  reverted instrumentation). Same class of violation as D-006. This is now a RECURRING pattern
+  across implementation subagents: they smuggle the "good" loop-instrumentation change via
+  unrelated tasks instead of it being its own reviewed task.
+- **Evidence:** `git status` showed M core/agent_graph.py, M tests/evaluate.py, ?? tests/
+  test_loop_instrumentation.py, ?? data/benchmark_evidence.json alongside the legit corpus files.
+  Reverting those restored 13 passed (was 20 due to the extra test file) and DUMB=2 benchmark.
+- **Action:** reverted core/agent_graph.py + tests/evaluate.py to HEAD 62b73ef; removed
+  test_loop_instrumentation.py + benchmark_evidence.json. Kept ONLY data/poc_corpus/ (9 new .py
+  + labels.json=12 entries, valid, all keys have .py). Re-verified: 13 passed; evaluate DUMB=2.
+- **Governance fix required:** add a pre-commit scope guard (allowed-files list per task) so a
+  non-compliant diff is rejected before commit. Tracked as a process action. The loop
+  instrumentation (detect_loop_event) is genuinely valuable and SHOULD be implemented — but as
+  its own explicit, reviewed task (e.g., T-LOOP-INSTRUMENT), not smuggled.
+- **Affected files:** core/agent_graph.py, tests/evaluate.py (reverted), tests/test_loop_instrumentation.py
+  (removed), data/benchmark_evidence.json (removed), docs (this log).

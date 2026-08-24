@@ -1,5 +1,14 @@
 {
   "CVE-2021-44228": {"reliability": "HIGH", "outcome": "success", "requests": 3, "source": "corpus"},
   "CVE-2023-38408": {"reliability": "MEDIUM", "outcome": "fail_timeout", "requests": 2, "source": "corpus"},
-  "CVE-2022-22965": {"reliability": "LOW", "outcome": "fail_syntax", "requests": 1, "source": "corpus"}
+  "CVE-2022-22965": {"reliability": "LOW", "outcome": "fail_syntax", "requests": 1, "source": "corpus"},
+  "CVE-2017-0144": {"reliability": "HIGH", "outcome": "success", "requests": 5, "source": "corpus"},
+  "CVE-2020-1472": {"reliability": "HIGH", "outcome": "success", "requests": 4, "source": "corpus"},
+  "CVE-2019-0708": {"reliability": "MEDIUM", "outcome": "fail_timeout", "requests": 5, "source": "corpus"},
+  "CVE-2021-26855": {"reliability": "MEDIUM", "outcome": "success", "requests": 3, "source": "corpus"},
+  "CVE-2021-34527": {"reliability": "MEDIUM", "outcome": "fail_dependency", "requests": 3, "source": "corpus"},
+  "CVE-2021-21972": {"reliability": "MEDIUM", "outcome": "fail_timeout", "requests": 3, "source": "corpus"},
+  "CVE-2022-1388": {"reliability": "HIGH", "outcome": "success", "requests": 2, "source": "corpus"},
+  "CVE-2024-3094": {"reliability": "LOW", "outcome": "fail_dependency", "requests": 1, "source": "corpus"},
+  "CVE-2023-34362": {"reliability": "LOW", "outcome": "fail_syntax", "requests": 1, "source": "corpus"}
 }
