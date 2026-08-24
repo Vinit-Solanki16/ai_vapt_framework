@@ -6,7 +6,7 @@ the local docs/project_management/ files, NOT chat history.
 ## On (re)start
 1. Read in order: 00_PROJECT_AUTHORITY.md → 01_PROJECT_STATE.md → 02_MASTER_PLAN.md →
    03_TASK_REGISTER.md → 07_TEST_STATUS.md → 08_RISK_REGISTER.md.
-2. Confirm git baseline: `git log --oneline -1` (expect 31ccd06) and `git status` clean.
+3. Confirm git baseline: `git log --oneline -1` (current freeze baseline after T-README+T-UI: `b385ec4`) and `git status` clean.
 3. Pick the highest-priority task from 02/03 with status TODO and dependencies met.
 4. Do NOT trust prior chat claims; re-verify against repo + tests.
 

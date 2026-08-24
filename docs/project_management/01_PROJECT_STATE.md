@@ -3,15 +3,16 @@
 _Last updated: 2026-08-24 (implementation/remediation phase COMPLETE; entering TOP-LEVEL AUTHORITY EVIDENCE REVIEW)._
 
 ## Current phase
-TOP-LEVEL AUTHORITY EVIDENCE REVIEW
+TOP-LEVEL AUTHORITY REVIEW
 
 ## Implementation status
-FROZEN PENDING AUTHORITY DECISION
+FROZEN PENDING T-DOCKER EXPERIMENT DECISION
 
-(Remediation tasks T-SAFE, T-BENCH-LOOP, T-TESTS, T-CORPUS, T-BENCH-VAR,
-T-GAP1-VALID (+v2), T-OPENAI, T-CHECKPOINT, T-REQPIN, T-DEADCODE — all DONE/VERIFIED.
-Remaining: T-GITHUB, T-README, T-UI (TODO), T-DOCKER (BLOCKED). No new implementation
-task will be auto-dispatched pending the authority decision in AUTHORITY_REVIEW_MANIFEST.md.)
+(Limited continuation authorized 2026-08-24: T-README and T-UI executed and
+committed; both DONE. T-DOCKER remains BLOCKED — deferred pending a separate
+approved experiment protocol; do NOT start Docker validation. T-GITHUB remains
+OPTIONAL/DEFERRED. GAP-1/GAP-2 remain SUBSTANTIALLY COMPLETE for the simulation
+phase; do NOT claim universal accuracy or universal loop prevention.)
 
 ## Git baseline (STEP A — DONE)
 - Branch: `master`

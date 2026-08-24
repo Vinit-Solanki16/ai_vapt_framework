@@ -12,7 +12,7 @@
 | R-008 | No version pin → reproducibility drift | LOW | Possible | OPEN | T-REQPIN (P3) |
 | R-009 | Streamlit UI never run interactively; unsafe_allow_html on logs | LOW | Possible | OPEN | T-UI (P4) |
 | R-010 | Independent review (Claude) unreliable → risk of acting on phantom findings | MEDIUM (process) | Realized | MITIGATED | D-001: verify against actual repo; only carry genuine overlaps |
-| R-011 | Benchmark numbers in README stale (SMART=1 vs actual 5) | LOW (docs) | Real | OPEN | T-README (P4) |
+| R-011 | Benchmark numbers in README stale (SMART=1 vs actual 5) | LOW (docs) | Real | CLOSED | T-README (P4) DONE 2026-08-24: README SMART=1->5 (matches benchmark_results.csv); three-tier SIMULATION/CONTROLLED/REAL distinction; T-SAFE-aligned real-mode wording. |
 
 ## Severity scale
 HIGH = P0 (safety / invalid experiment). MEDIUM = P1/P2. LOW = P3/P4.
