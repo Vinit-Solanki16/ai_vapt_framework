@@ -61,6 +61,9 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
   tests/evaluate.py beyond scope (redefined DUMB loop metric 2->16, regressing the
   T-BENCH-LOOP-verified benchmark); those edits were REVERTED (D-006). Only the in-scope
   test suite was kept. Re-verified: 13 passed; evaluate.py restored to DUMB=2/SMART=0.
+  EXTENSION DONE (2026-08-24, commit 7617102): tests/test_ttests_gaps.py (+5 tests,
+  coverage (a)-(e)) + requirements.txt (pytest>=7.0). Suite now 18 passed. Claude Code
+  read-only review: APPROVE.
 
 ## T-CORPUS (P1)
 - **Objective:** Grow PoC corpus to ≥8 labelled CVEs (stronger benchmark basis).
@@ -118,7 +121,12 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Impl agent:** cyber. **Review agent:** sw-dev (TDD) + advisor.
 - **Status:** VERIFIED (2026-08-24) — P1 READ-ONLY review: APPROVE WITH REQUIRED FOLLOW-UP.
   tests/gap1_ablation.py (new) runs A_with_scoring vs B_no_scoring over 12 findings (uniform
-  EPSS=0.5, offline LLM stub). MEASURED delta (not hardcoded): first-success request A=1 /
+  EPSS=0.5, offline LLM stub). EXTENSION DONE (2026-08-24, commit 57be1f7): tests/ablation.py adds directive-exact
+ EPSS-only ARM B (rank by raw EPSS, usability ignored for routing; pivot N=2 in both arms)
+ over all 12 CVEs. MEASURED: wasted-before-first-success A=0/B=2, foothold 2 reqs sooner;
+ total waste 14=14, completion 100% both -> GAP-1 proven for routing efficiency (not
+ portfolio parity). proof-of-mechanism scope. Claude Code read-only review: APPROVE.
+ MEASURED delta (not hardcoded): first-success request A=1 /
   B_mean=5.00 (DELTA +4.00); index A=0 / B_mean=2.00 (DELTA +2.00). Required honesty follow-ups
   applied: softened "working exploit" -> "labeled-success finding (simulation)"; disclosed
   best-case UPPER BOUND (corpus reliability->outcome 100% correlated for HIGH/LOW => mechanism
@@ -154,7 +162,11 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** clear error w/o key; structured output verified w/ test key or mock; pytest green.
 - **Test command:** `python -m pytest tests/ -q`
 - **Impl agent:** sw-dev. **Review agent:** verify-agent.
-- **Status:** TODO (needs OPENAI_API_KEY to fully verify live; mock sufficient for DONE)
+- **Status:** DONE (2026-08-24, commit 25e4137) — get_llm('openai') hardened to fail-safe
+  RuntimeError on missing OPENAI_API_KEY (dummy-key fallback removed); Ollama path unchanged.
+  tests/test_openai_provider.py (3 tests) builds ChatOpenAI via the SAME structured-output
+  contract offline + asserts missing-key fails fast. Suite 21 passed. **Live OpenAI path
+  UNVERIFIED without a real key** (documented). Claude Code read-only review: APPROVE.
 
 ## T-CHECKPOINT (P2)
 - **Objective:** AgentState persistence + resume (closes "checkpoint system" gap).
