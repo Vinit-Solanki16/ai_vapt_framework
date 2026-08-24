@@ -39,6 +39,11 @@ requests / earlier than WITHOUT scoring. The DELTA is computed from actual runs.
 Governance: reads core/* and data/poc_corpus/labels.json read-only; writes only
 tests/gap1_ablation.py (this file) and data/gap1_ablation.csv. Simulation only —
 no real exploitation, no offensive traffic.
+
+HONESTY CAVEAT: in this corpus, reliability->outcome is 100% correlated for HIGH/LOW
+reliabilities, so WITH-scoring is effectively guaranteed a success at index 0. The
+measured delta is a BEST-CASE UPPER BOUND proving the mechanism, not a realistic
+estimate of production LLM-assessor efficacy. Valid as GAP-1 proof-of-mechanism only.
 """
 from __future__ import annotations
 
@@ -292,10 +297,15 @@ def main() -> int:
         f"Expected WITH-scoring to attempt the success finding earlier, "
         f"but delta={delta_index}")
 
-    print("RESULT: exploit-quality scoring is DECISION-RELEVANT.")
-    print(f"  WITH scoring reaches an exploitable finding {delta_requests:.2f} "
+    print("RESULT: exploit-quality scoring is DECISION-RELEVANT (proof-of-mechanism, simulation).")
+    print(f"  WITH scoring reaches a LABELED-SUCCESS finding (simulation) {delta_requests:.2f} "
           f"requests sooner and {delta_index:.2f} positions earlier (avg) than "
           f"WITHOUT scoring.")
+    print("CAVEAT (honesty): this corpus's reliability->outcome is 100% correlated for HIGH/LOW "
+          "reliabilities, so WITH-scoring is effectively GUARANTEED a success at index 0. The "
+          "~4-request delta is therefore a BEST-CASE UPPER BOUND demonstrating the mechanism, NOT a "
+          "realistic estimate of production LLM-assessor performance (which depends on assessor "
+          "accuracy on unseen CVEs). It is valid GAP-1 proof-of-mechanism, not real-world efficacy.")
     print(f"CSV written: {CSV_PATH}")
     return 0
 

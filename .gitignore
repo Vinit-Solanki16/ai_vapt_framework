@@ -4,3 +4,6 @@ __pycache__/
 data/reports/
 data/benchmark_results.csv
 .env
+
+# Student's personal thesis papers (untracked, unrelated to framework)
+docs/MTech_Project/

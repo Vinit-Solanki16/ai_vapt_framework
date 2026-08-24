@@ -116,12 +116,15 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** ablation table printed; multi-seed shows scoring reduces wasted attempts vs EPSS-only.
 - **Test command:** `python tests/evaluate.py` + `python -m pytest tests/ -q`
 - **Impl agent:** cyber. **Review agent:** sw-dev (TDD) + advisor.
-- **Status:** VERIFIED-pending-review (2026-08-24) — tests/gap1_ablation.py (new) runs A_with_scoring
-  vs B_no_scoring over 12 findings from labels.json (uniform EPSS=0.5, usability stubbed offline).
-  MEASURED delta (not hardcoded): first-success request A=1 / B_mean=5.00 (DELTA +4.00); index
-  A=0 / B_mean=2.00 (DELTA +2.00). Usability signal alone re-routes agent ~4 requests earlier to a
-  working exploit -> GAP-1 decision-relevance PROVEN in simulation. Scope clean (only gap1_ablation.py
-  + CSV); 13 passed; evaluate DUMB=2. P1 review (verify-agent) pending.
+- **Status:** VERIFIED (2026-08-24) — P1 READ-ONLY review: APPROVE WITH REQUIRED FOLLOW-UP.
+  tests/gap1_ablation.py (new) runs A_with_scoring vs B_no_scoring over 12 findings (uniform
+  EPSS=0.5, offline LLM stub). MEASURED delta (not hardcoded): first-success request A=1 /
+  B_mean=5.00 (DELTA +4.00); index A=0 / B_mean=2.00 (DELTA +2.00). Required honesty follow-ups
+  applied: softened "working exploit" -> "labeled-success finding (simulation)"; disclosed
+  best-case UPPER BOUND (corpus reliability->outcome 100% correlated for HIGH/LOW => mechanism
+  proof, not production efficacy); added docs/MTech_Project/ to .gitignore. GAP-1 is valid
+  PROOF-OF-MECHANISM (simulation); real-world efficacy pending production assessor. Scope clean;
+  13 passed; evaluate DUMB=2.
 
 ## T-DOCKER (P1)
 - **Objective:** Docker testbed + sandboxed live-exploitation path (thesis-critical validation).

@@ -20,7 +20,15 @@ unless measured.
 ## Required future evidence (gates)
 - T-BENCH-LOOP: instrumented SMART loop count (replace asserted 0).
 - T-BENCH-VAR: mean±std over ≥5 seeds; order-invariance.
-- T-GAP1-VALID: ablation SMART-with-scoring vs EPSS-only → measured wasted-attempt reduction.
+- **GAP-1 ablation (T-GAP1-VALID, VERIFIED 2026-08-24):** `tests/gap1_ablation.py` runs A_with_scoring
+  vs B_no_scoring over 12 findings (uniform EPSS=0.5, offline LLM stub). MEASURED (not hardcoded):
+  first-success request A=1 vs B_mean=5.00 (DELTA +4.00); index A=0 vs B_mean=2.00 (DELTA +2.00).
+  Usability signal alone re-routes agent ~4 requests earlier to a labeled-success finding.
+  **HONESTY CAVEAT (thesis-critical):** corpus reliability->outcome is 100% correlated for HIGH/LOW,
+  so WITH-scoring is effectively GUARANTEED success at index 0. The delta is a BEST-CASE UPPER BOUND
+  proving the *mechanism*, NOT a realistic estimate of production LLM-assessor efficacy. Valid as
+  GAP-1 proof-of-mechanism only; real-world efficacy needs the production assessor on unseen CVEs
+  (future work / T-DOCKER-adjacent). n=12 small.
 - T-DOCKER: REAL OBSERVED RESULT — success from actual module output in container (not label).
 
 ## Latest raw run (2026-08-21, simulation)
@@ -40,4 +48,4 @@ Improvement (SMART over DUMB): requests_saved=16, loops_avoided=2*, time_saved_s
 | Faster than DUMB | NO | time_saved_s negative |
 | Stealthier / less network noise | NO | not measured |
 | Real exploit success demonstrated | NO | simulation; needs T-DOCKER |
-| GAP-1 scoring improves outcomes | PENDING | needs T-GAP1-VALID ablation |
+| GAP-1 scoring improves outcomes | PROVEN (simulation, proof-of-mechanism) | T-GAP1-VALID: WITH scoring reaches labeled-success 4.00 req / 2.00 pos earlier than WITHOUT (EPSS held 0.5). BEST-CASE UPPER BOUND — see caveat below. |
