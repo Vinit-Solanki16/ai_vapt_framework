@@ -7,7 +7,14 @@ _Updated after every task. Commands run from project root with venv active._
   (offline: blocks network + records subprocess). Covers schemas enum validation,
   priority_score ordering, scanner JSON/XML, executor sim labels + real-mode no-shell-out,
   agent_graph pivot/termination + per-CVE <= max_attempts. All offline, deterministic.
-  Runs: PASS (`python -m pytest tests/ -q` -> 13 passed, 0.09s). Added 2026-08-24 (T-TESTS).
+- **tests/test_openai_provider.py** — NEW (T-OPENAI, 2026-08-24, +3 tests → suite total 21).
+  OpenAI provider branch of `core/exploit_assessor.get_llm()`: ChatOpenAI stubbed at the module
+  boundary so NO network/API key needed; asserts assess_exploit_quality(provider="openai")
+  returns an enum-constrained ExploitAssessment via the SAME with_structured_output(ExploitAssessment)
+  contract as Ollama (constructor kwargs verified: gpt-4o-mini, SecretStr key, temperature=0.1);
+  missing OPENAI_API_KEY -> immediate clear RuntimeError (fail-safe, never hangs, dummy-key
+  fallback removed). **Live OpenAI path UNVERIFIED without a real key** (offline stub only).
+  Runs: PASS (see commands below).
 - **tests/benchmark_var.py** — NEW (T-BENCH-VAR, 2026-08-24). Multi-seed variance harness:
   runs SMART+DUMB across 5 seeds, prints MEAN±STD, writes data/benchmark_variance.csv.
   Offline-deterministic; order-invariance check PASS. Runs: exit 0, 5/5 seeds OK.
@@ -16,8 +23,21 @@ _Updated after every task. Commands run from project root with venv active._
   vs B_no_scoring over 12 findings (uniform EPSS, offline LLM stub). MEASURED: WITH scoring reaches
   first success 4.00 requests / 2.00 positions earlier than WITHOUT. GAP-1 decision-relevance proven
   (simulation). Runs: exit 0, offline.
+- **tests/test_ttests_gaps.py** — NEW (T-TESTS extension, 2026-08-24, +5 tests → suite total 18).
+  Covers directive gaps: (b) assess_exploit_quality full path with MOCKED LLM boundary returns
+  enum-constrained ExploitAssessment (+ malformed-LLM-output rejection); (c) run_agent pivots,
+  terminates, ZERO loop events (exceedances = Σ max(0, n_cve − max_attempts) == 0, from runtime
+  trace; future `loop_events` state field asserted empty if present); (d) simulation executor
+  resolves EVERY labels.json entry (data-driven, currently 12 CVEs); (e) real mode UNREACHABLE
+  host -> FAIL_NO_TARGET, request_count==1, no subprocess. All offline via conftest.
+  Runs: PASS (`python -m pytest tests/ -q` -> 18 passed, 0.09s).
+
+## Last executed commands
 | Command | Result |
 |---------|--------|
+| `venv/bin/python -m pytest tests/ -q` (2026-08-24, T-OPENAI) | **21 passed in 0.09s** (18 prior + 3 test_openai_provider), 0 failed; `python -c "import core"` OK — no core regression (only provider branch of exploit_assessor touched) |
+| `venv/bin/python -m pytest tests/ -q` (2026-08-24, T-TESTS extension) | **18 passed in 0.09s** (13 test_core + 5 test_ttests_gaps), 0 failed |
+| CLAUDE CODE read-only review (T-TESTS extension, same date) | VERDICT: APPROVE — scope clean (3 allowed paths only); coverage (a)-(e) complete; offline guard effective; no regression risk found |
 | `python -c "import core"` | OK (25 symbols) |
 | `python -m core.scanner data/sample_scan.json` | 2 findings ranked by EPSS |
 | `python -m core.scanner data/live_scan.xml` | 1 finding (UNKNOWN-CVE, EPSS 0) |
@@ -31,14 +51,15 @@ _Updated after every task. Commands run from project root with venv active._
 ## Per-task test status (governance §7 required evidence)
 | Task | Required test | Status |
 |------|---------------|--------|
-| T-TESTS | `python -m pytest tests/ -q` | NOT RUN (suite absent) |
+| T-TESTS | `python -m pytest tests/ -q` | DONE 2026-08-24 — PASS: 18 passed, 0.09s (test_core 13 + test_ttests_gaps 5); requirements.txt += pytest>=7.0; CLAUDE CODE read-only P3 review: **APPROVE** (checklist A–F all PASS; 2 LOW + 4 INFO non-blocking notes). Scope verified confined to tests/test_ttests_gaps.py + requirements.txt + this file. Register (03) not updated by this task (forbidden scope) — Hermes to reconcile. |
+| T-CORPUS | `python tests/evaluate.py` + pytest | PASS 2026-08-24 (independent re-verification) — corpus already grown to **12 CVEs** (commit 3fa2148): 12/12 modules py_compile OK; 12/12 labels resolve via corpus_lookup (no empty); outcome mix success×5 / fail_timeout×3 / fail_syntax×2 / fail_dependency×2; reliability HIGH×4 / MED×5 / LOW×3; content matches labels (e.g. CVE-2023-34362 intentionally malformed = fail_syntax). `python tests/evaluate.py` → SMART 5 req/0 loops, DUMB 21 req/2 loops, exit 0; `pytest tests/ -q` → 18 passed. No core/ changes made by this pass. |
 | T-BENCH-LOOP | `python tests/evaluate.py` + pytest | NOT RUN |
 | T-SAFE | executor assertion (no offensive send by default) + pytest | NOT RUN |
 | T-CORPUS | `python tests/evaluate.py` | NOT RUN |
 | T-BENCH-VAR | `python tests/evaluate.py` | NOT RUN |
 | T-GAP1-VALID | `python tests/evaluate.py` + pytest | NOT RUN |
 | T-DOCKER | container executor run | NOT RUN (Docker down) |
-| T-OPENAI | `python -m pytest tests/ -q` (mock) | NOT RUN |
+| T-OPENAI | `python -m pytest tests/ -q` (mock) | DONE 2026-08-24 — PASS: 21 passed, 0.09s. get_llm() OpenAI branch hardened (fail-safe RuntimeError on missing OPENAI_API_KEY; dummy-key fallback removed); ChatOpenAI stubbed in tests/test_openai_provider.py → enum-constrained ExploitAssessment via shared structured-output contract; Ollama path unchanged. **Live OpenAI path UNVERIFIED without a real key.** Scope: core/exploit_assessor.py (provider branch only) + tests/test_openai_provider.py + this file. |
 | T-CHECKPOINT | `python -m pytest tests/ -q` | NOT RUN |
 | T-REQPIN | clean-venv `python -c "import core"` | NOT RUN |
 | T-GITHUB | `python -m pytest tests/ -q` (mock) | NOT RUN |
