@@ -180,7 +180,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** run writes checkpoint; resume yields identical final state; pytest resume test.
 - **Test command:** `python -m pytest tests/ -q`
 - **Impl agent:** sw-dev. **Review agent:** verify-agent.
-- **Status:** TODO
+- **Status:** DONE (2026-08-24, commit f1561be) — save_checkpoint/load_checkpoint/resume_agent added to core/agent_graph.py ONLY. resume re-enters from current_index with status-derived entry node (ASSESSING→assess, TESTING→execute, SUCCESS→pivot); validated CVEs never replayed; COMPLETED = no-op. tests/test_checkpoint.py (8 tests): interrupted-run resume reproduces fresh-run results exactly. Suite 29 passed. Hermes (P2) verified, offline via conftest.
 
 ## T-REQPIN (P3)
 - **Objective:** Pin Python/deps for reproducibility.
