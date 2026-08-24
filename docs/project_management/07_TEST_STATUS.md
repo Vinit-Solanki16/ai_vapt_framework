@@ -8,8 +8,9 @@ _Updated after every task. Commands run from project root with venv active._
   priority_score ordering, scanner JSON/XML, executor sim labels + real-mode no-shell-out,
   agent_graph pivot/termination + per-CVE <= max_attempts. All offline, deterministic.
   Runs: PASS (`python -m pytest tests/ -q` -> 13 passed, 0.09s). Added 2026-08-24 (T-TESTS).
-- **tests/evaluate.py** — smoke benchmark (runs both agents, prints table, writes CSV).
-  PASS (re-run 2026-08-24 -> SMART 5 req / 0 loops / DUMB 21 req / 2 loops).
+- **tests/benchmark_var.py** — NEW (T-BENCH-VAR, 2026-08-24). Multi-seed variance harness:
+  runs SMART+DUMB across 5 seeds, prints MEAN±STD, writes data/benchmark_variance.csv.
+  Offline-deterministic; order-invariance check PASS. Runs: exit 0, 5/5 seeds OK.
 
 ## Last executed commands (audit, 2026-08-21)
 | Command | Result |

@@ -1,0 +1,11 @@
+seed,agent,requests,validated,completion_%,loop_events
+101,SMART (framework),5,1,33.3,0
+101,DUMB (baseline),19,1,33.3,2
+202,SMART (framework),5,1,33.3,0
+202,DUMB (baseline),21,1,33.3,2
+303,SMART (framework),5,1,33.3,0
+303,DUMB (baseline),23,1,33.3,2
+404,SMART (framework),5,1,33.3,0
+404,DUMB (baseline),25,1,33.3,2
+505,SMART (framework),5,1,33.3,0
+505,DUMB (baseline),17,1,33.3,2

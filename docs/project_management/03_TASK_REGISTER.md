@@ -97,8 +97,12 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
   order for ranking robustness; extended CSV.
 - **Acceptance:** report mean±std over ≥5 seeds; order-invariance check passes.
 - **Test command:** `python tests/evaluate.py`
-- **Impl agent:** mlops/eval. **Review agent:** sw-dev (TDD).
-- **Status:** TODO
+- **Impl agent:** cyber. **Review agent:** sw-dev (TDD).
+- **Status:** VERIFIED (2026-08-24) — tests/benchmark_var.py (new, NOT evaluate.py) runs 5 seeds
+  [101..505]; prints MEAN±STD per agent; writes data/benchmark_variance.csv (10 rows). Order-
+  invariance PASS (SMART std=0 all metrics; DUMB requests mean 21/std 3.16 from intentional
+  hard_cap 8-12 perturbation). Scope clean (only benchmark_var.py + CSV); 13 passed; evaluate
+  DUMB=2/SMART=0. SMART loop from measured final["loops"] (not hardcoded).
 
 ## T-GAP1-VALID (P1)
 - **Objective:** Empirically prove exploit-quality scoring changes outcomes (not just runs).
