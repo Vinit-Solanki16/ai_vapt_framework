@@ -7,6 +7,17 @@ _Updated after every task. Commands run from project root with venv active._
   (offline: blocks network + records subprocess). Covers schemas enum validation,
   priority_score ordering, scanner JSON/XML, executor sim labels + real-mode no-shell-out,
   agent_graph pivot/termination + per-CVE <= max_attempts. All offline, deterministic.
+- **tests/test_checkpoint.py** — NEW (T-CHECKPOINT, 2026-08-24, +8 tests → suite total 29).
+  AgentState persistence in `core/agent_graph.py`: save_checkpoint() serializes state to JSON
+  (findings → plain dicts, enums as strings, auto-creates dirs, versioned payload);
+  load_checkpoint() rebuilds Finding models (pydantic re-coerces enums) and rejects unknown
+  checkpoint versions; resume_agent() re-invokes the graph from current_index with the entry
+  node derived from persisted status (ASSESSING→assess, TESTING→execute, SUCCESS→pivot —
+  so a validated CVE is NEVER replayed and COMPLETED checkpoints are a no-op).
+  Proven: interrupt mid-run (after target #1 SUCCESS + one failed attempt on #2) →
+  save → load → resume reproduces EXACTLY the fresh run's final results
+  (results list equality, status COMPLETED, index == len(findings), ≤ max_attempts per CVE).
+  All offline via conftest. Runs: PASS (see commands below).
 - **tests/test_openai_provider.py** — NEW (T-OPENAI, 2026-08-24, +3 tests → suite total 21).
   OpenAI provider branch of `core/exploit_assessor.get_llm()`: ChatOpenAI stubbed at the module
   boundary so NO network/API key needed; asserts assess_exploit_quality(provider="openai")
@@ -35,6 +46,7 @@ _Updated after every task. Commands run from project root with venv active._
 ## Last executed commands
 | Command | Result |
 |---------|--------|
+| `venv/bin/python -m pytest tests/ -q` (2026-08-24, T-CHECKPOINT) | **29 passed in 0.11s** (21 prior + 8 test_checkpoint), 0 failed; `python -c "import core"` OK — run_agent refactor is behaviour-preserving (state init extracted to initial_agent_state; build_vapt_graph gained an optional entry param defaulting to "assess") |
 | `venv/bin/python -m pytest tests/ -q` (2026-08-24, T-OPENAI) | **21 passed in 0.09s** (18 prior + 3 test_openai_provider), 0 failed; `python -c "import core"` OK — no core regression (only provider branch of exploit_assessor touched) |
 | `venv/bin/python -m pytest tests/ -q` (2026-08-24, T-TESTS extension) | **18 passed in 0.09s** (13 test_core + 5 test_ttests_gaps), 0 failed |
 | CLAUDE CODE read-only review (T-TESTS extension, same date) | VERDICT: APPROVE — scope clean (3 allowed paths only); coverage (a)-(e) complete; offline guard effective; no regression risk found |
@@ -60,7 +72,7 @@ _Updated after every task. Commands run from project root with venv active._
 | T-GAP1-VALID | `python tests/evaluate.py` + pytest | NOT RUN |
 | T-DOCKER | container executor run | NOT RUN (Docker down) |
 | T-OPENAI | `python -m pytest tests/ -q` (mock) | DONE 2026-08-24 — PASS: 21 passed, 0.09s. get_llm() OpenAI branch hardened (fail-safe RuntimeError on missing OPENAI_API_KEY; dummy-key fallback removed); ChatOpenAI stubbed in tests/test_openai_provider.py → enum-constrained ExploitAssessment via shared structured-output contract; Ollama path unchanged. **Live OpenAI path UNVERIFIED without a real key.** Scope: core/exploit_assessor.py (provider branch only) + tests/test_openai_provider.py + this file. |
-| T-CHECKPOINT | `python -m pytest tests/ -q` | NOT RUN |
+| T-CHECKPOINT | `python -m pytest tests/ -q` | DONE 2026-08-24 — PASS: 29 passed, 0.11s (21 prior + 8 new in tests/test_checkpoint.py). save_checkpoint/load_checkpoint/resume_agent added to core/agent_graph.py ONLY; resume re-enters from current_index with status-derived entry node (no replayed/duplicated steps; COMPLETED = no-op); interrupted-run resume reproduces fresh-run results exactly. Fully offline (conftest guard asserted call_count==0). Scope: core/agent_graph.py + tests/test_checkpoint.py + this file. |
 | T-REQPIN | clean-venv `python -c "import core"` | NOT RUN |
 | T-GITHUB | `python -m pytest tests/ -q` (mock) | NOT RUN |
 | T-README | diff README vs CSV | NOT RUN |

@@ -11,7 +11,10 @@ routes are tried first and dead-ends are abandoned deterministically.
 """
 from __future__ import annotations
 
+import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Literal, Optional, TypedDict
 
@@ -27,6 +30,7 @@ from core.schemas import (
     Finding,
     UsabilityRank,
     finding_from_dict,
+    findings_from_state,
 )
 
 
@@ -143,12 +147,17 @@ def evaluate_decision(state: AgentState) -> str:
     return "execute"
 
 
-def build_vapt_graph():
+def build_vapt_graph(entry: str = "assess"):
+    """Compile the graph. `entry` selects the start node so a resumed run can
+    re-enter mid-workflow (checkpoint resume) instead of always at 'assess'."""
+    valid_entries = ("assess", "execute", "pivot")
+    if entry not in valid_entries:
+        raise ValueError(f"Invalid entry node {entry!r}; expected one of {valid_entries}")
     g = StateGraph(AgentState)
     g.add_node("assess", assess_node)
     g.add_node("execute", execute_node)
     g.add_node("pivot", pivot_node)
-    g.set_entry_point("assess")
+    g.set_entry_point(entry)
     g.add_edge("assess", "execute")
     g.add_conditional_edges(
         "execute", evaluate_decision,
@@ -165,10 +174,11 @@ def build_vapt_graph():
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
-def run_agent(target: str, findings: List[dict], provider: str = "ollama",
-              max_attempts: int = 2, mode: str = "simulation") -> AgentState:
+def initial_agent_state(target: str, findings: List[dict], provider: str = "ollama",
+                        max_attempts: int = 2, mode: str = "simulation") -> AgentState:
+    """Build the starting AgentState (findings ranked by priority_score)."""
     fs = rank_findings(_to_findings(findings))
-    state: AgentState = {
+    return {
         "target": target,
         "findings": fs,
         "current_index": 0,
@@ -182,7 +192,113 @@ def run_agent(target: str, findings: List[dict], provider: str = "ollama",
         "logs": [f"Agent initialized: {len(fs)} findings, pivot_threshold={max_attempts}, mode={mode}"],
         "results": [],
     }
+
+
+def run_agent(target: str, findings: List[dict], provider: str = "ollama",
+              max_attempts: int = 2, mode: str = "simulation") -> AgentState:
+    state = initial_agent_state(target, findings, provider=provider,
+                                max_attempts=max_attempts, mode=mode)
     app = build_vapt_graph()
+    return app.invoke(state)
+
+
+# ---------------------------------------------------------------------------
+# Checkpointing (T-CHECKPOINT): serialize / deserialize / resume
+# ---------------------------------------------------------------------------
+# The graph is deterministic given (state, labels), so persisting the full
+# AgentState is enough to continue an interrupted run exactly where it stopped.
+CHECKPOINT_VERSION = 1
+
+# Which node a resumed run must enter on, derived from the saved status.
+# TESTING means the current CVE was already assessed but not yet exhausted
+# (or was mid-execution), so we go straight back to execute; SUCCESS means the
+# CVE validated and only the advance step remains.
+_RESUME_ENTRY = {
+    AgentStatus.ASSESSING.value: "assess",
+    AgentStatus.TESTING.value: "execute",
+    AgentStatus.SUCCESS.value: "pivot",
+}
+
+
+def _state_to_jsonable(state: AgentState) -> dict:
+    """Deep-copy an AgentState into plain JSON-safe structures.
+
+    Only Finding objects need conversion (pydantic models holding enums);
+    everything else in the state is already JSON-native.
+    """
+    data = dict(state)
+    data["findings"] = [
+        f.model_dump(mode="json") if isinstance(f, Finding) else f
+        for f in state.get("findings", [])
+    ]
+    return data
+
+
+def save_checkpoint(state: AgentState, path: str) -> str:
+    """Serialize AgentState to JSON. Call on completion OR at any interrupt.
+
+    Returns the path written (so callers can log/hand it to resume_agent).
+    """
+    payload = {
+        "version": CHECKPOINT_VERSION,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "state": _state_to_jsonable(state),
+    }
+    path = str(path)
+    parent = os.path.dirname(os.path.abspath(path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+    return path
+
+
+def load_checkpoint(path: str) -> AgentState:
+    """Load a checkpoint file back into a runnable AgentState.
+
+    Finding dicts are rebuilt into Finding models (enums restored by pydantic).
+    """
+    with open(path, encoding="utf-8") as fh:
+        payload = json.load(fh)
+    version = payload.get("version")
+    if version != CHECKPOINT_VERSION:
+        raise ValueError(
+            f"Checkpoint {path!r} has unsupported version {version!r} "
+            f"(expected {CHECKPOINT_VERSION})."
+        )
+    raw = payload["state"]
+    raw["findings"] = findings_from_state(raw.get("findings", []))
+    return raw
+
+
+def resume_entry_point(state: AgentState) -> Optional[str]:
+    """Node the graph must re-enter on for this saved state, or None when the
+    run is already complete (index past the last finding / COMPLETED)."""
+    idx = state.get("current_index", 0)
+    if idx >= len(state.get("findings", []) or []) or \
+            state.get("status") == AgentStatus.COMPLETED.value:
+        return None
+    return _RESUME_ENTRY.get(state.get("status"), "assess")
+
+
+def resume_agent(checkpoint_path: str) -> AgentState:
+    """Load a saved state and re-invoke the graph from current_index.
+
+    Entry node is chosen from the persisted status so no step is repeated
+    (no double-execution of a validated CVE, no wasted re-assessment of one
+    that is mid-attempt). A COMPLETED checkpoint returns unchanged.
+    """
+    state = load_checkpoint(checkpoint_path)
+    entry = resume_entry_point(state)
+    logs = state.setdefault("logs", [])
+    if entry is None:
+        logs.append("[Checkpoint] Run already complete; nothing to resume.")
+        return state
+    logs.append(
+        f"[Checkpoint] Resuming from '{entry}' at index {state['current_index']} "
+        f"({state['current_cve']})"
+    )
+    app = build_vapt_graph(entry=entry)
     return app.invoke(state)
 
 
