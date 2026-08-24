@@ -1,10 +1,9 @@
 """Execution layer (Phase 2, Tasks 2.1 & 2.3).
 
-This is the module that REPLACES the prototype's hardcoded
-``execution_success = False``. The pivot logic is only meaningful if it reacts
-to a genuine outcome signal.
+This module REPLACES the prototype's hardcoded ``execution_success = False``.
+The pivot logic is only meaningful if it reacts to a genuine outcome signal.
 
-Two backends, both honest and reproducible:
+Two backends:
 
 1. SIMULATION (default, offline):
    Uses a ground-truth label file (data/poc_corpus/labels.json) to emit
@@ -13,15 +12,21 @@ Two backends, both honest and reproducible:
    no result is overstated. The pivot engine reacts to these REAL signals
    (just sourced from a curated corpus rather than a live exploit).
 
-2. REAL PROBE (for when the Docker testbed is provisioned):
-   Performs a genuinely non-destructive connectivity + service-banner check
-   (a real network request, counted honestly) AND, if a sandboxed exploit
-   module is registered for the CVE, invokes it inside an isolated subprocess.
-   We deliberately do NOT ship weaponized payloads; exploit *success* is still
-   resolved against the ground-truth label unless a real module is provided.
+2. REAL mode (default ``real``): connectivity-ONLY probe.
+   Performs a genuinely non-destructive TCP connectivity check (a real network
+   request, counted honestly). It does NOT send any exploit payload and does
+   NOT shell out to the corpus PoC modules. This is a SAFE connectivity-only
+   probe: it reports reachability and, when no exploit is executed, an explicit
+   "not exploited" outcome. No offensive traffic is generated in default
+   ``real`` mode.
 
-Either way, attempt/request counters increase on real activity, so the
-"wasted requests / time saved" metrics in Phase 4 are meaningful.
+   OPT-IN DANGEROUS PATH (``danger_mode=True`` only):
+   For explicit, sandboxed, authorised-lab use only, a corpus exploit module
+   MAY be executed in an isolated subprocess and the module's ACTUAL
+   stdout/stderr is parsed to derive the outcome (labels.json is NOT trusted).
+   This path is OFF by default and must be enabled explicitly. It prints a
+   prominent warning and is intended solely for an isolated, authorised testbed
+   (see T-DOCKER). Never run it against targets you are not authorised to test.
 """
 from __future__ import annotations
 
@@ -29,22 +34,52 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import time
+import warnings
 from typing import Optional
 
 from core.schemas import ExecutionOutcome, ExecutionResult, Finding, UsabilityRank
 
 CORPUS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "poc_corpus")
 
+# Tokens that, if present in a module's captured output, indicate a successful
+# exploitation (opt-in danger_mode only). This is a minimal, documented contract
+# for parsing REAL module output instead of trusting labels.json. It is a
+# placeholder until T-DOCKER defines a formal module-output protocol.
+_SUCCESS_TOKENS = ("EXPLOIT_SUCCESS", "VULNERABLE", "exploit success", "[+] vulnerable")
+_DEP_TOKENS = ("ModuleNotFoundError", "ImportError", "No module named", "command not found")
+
 
 class Executor:
-    def __init__(self, mode: str = "simulation", timeout: float = 3.0):
+    def __init__(self, mode: str = "simulation", timeout: float = 3.0,
+                 danger_mode: bool = False):
         """
         mode: "simulation" (ground-truth labels) or "real" (live probe).
+
+        danger_mode: ONLY relevant when mode == "real". When False (default),
+        real mode is connectivity-ONLY and never executes a corpus exploit
+        module. When True, an explicit, opt-in, sandboxed path may execute a
+        corpus PoC module and parse its real output. Enabling this prints a
+        prominent warning — use only in an authorised, isolated lab.
         """
         self.mode = mode
         self.timeout = timeout
+        self.danger_mode = danger_mode
         self._labels = self._load_labels()
+        if self.mode == "real" and self.danger_mode:
+            warnings.warn(
+                "DANGER MODE ENABLED: real executor will shell out to corpus "
+                "exploit PoC modules and send live offensive traffic. Use ONLY "
+                "against an authorised, isolated testbed (e.g. Docker). "
+                "Never run against targets you are not authorised to test.",
+                stacklevel=2,
+            )
+            print(
+                "[T-SAFE WARNING] danger_mode=True: live exploit execution "
+                "enabled. Authorised, isolated lab target only.",
+                file=sys.stderr,
+            )
 
     @staticmethod
     def _load_labels() -> dict:
@@ -55,9 +90,15 @@ class Executor:
         return {}
 
     # ------------------------------------------------------------------
-    # Real, safe connectivity probe (always counts as a network request)
+    # Real, non-destructive connectivity probe (always counts as a request)
     # ------------------------------------------------------------------
     def _connectivity_probe(self, host: str, port: Optional[int]) -> tuple[bool, str]:
+        """Genuinely non-destructive TCP connectivity check.
+
+        This is a real network request (counted honestly) but it sends NO
+        exploit payload — it only opens and closes a TCP connection to verify
+        the host/port is reachable. It is safe by construction.
+        """
         if not port:
             return False, "no port specified"
         try:
@@ -69,7 +110,7 @@ class Executor:
             return False, f"unreachable: {e}"
 
     # ------------------------------------------------------------------
-    # Outcome resolution
+    # Outcome resolution (SIMULATION only — labels are NOT trusted in real mode)
     # ------------------------------------------------------------------
     def _outcome_from_label(self, cve: str) -> ExecutionOutcome:
         label = self._labels.get(cve.strip().upper(), {})
@@ -78,6 +119,30 @@ class Executor:
             return ExecutionOutcome[outcome]
         except KeyError:
             return ExecutionOutcome.FAIL_TIMEOUT
+
+    # ------------------------------------------------------------------
+    # Opt-in dangerous path: run the corpus module, parse REAL output
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _parse_module_output(stdout: str, stderr: str, returncode: int) -> ExecutionOutcome:
+        """Derive the outcome from a corpus module's ACTUAL output.
+
+        Replaces the old behaviour of trusting labels.json. Heuristic, minimal
+        contract (placeholder until T-DOCKER formalises a module-output spec):
+          * non-zero exit OR traceback in stderr -> FAIL_SYNTAX
+          * dependency-style error in stderr -> FAIL_DEPENDENCY
+          * explicit success token in output -> SUCCESS
+          * ran cleanly but no success token -> FAIL_TIMEOUT (unconfirmed)
+        """
+        out = (stdout or "") + (stderr or "")
+        if returncode != 0 or "Traceback (most recent call last)" in (stderr or ""):
+            if any(tok in (stderr or "") for tok in _DEP_TOKENS):
+                return ExecutionOutcome.FAIL_DEPENDENCY
+            return ExecutionOutcome.FAIL_SYNTAX
+        for tok in _SUCCESS_TOKENS:
+            if tok.lower() in out.lower():
+                return ExecutionOutcome.SUCCESS
+        return ExecutionOutcome.FAIL_TIMEOUT
 
     # ------------------------------------------------------------------
     # Public API used by the agent graph
@@ -89,10 +154,18 @@ class Executor:
         (representing what *would* happen on the intended target). No live
         network activity — this is what we benchmark the agent's logic against.
 
-        REAL: performs a genuine, safe connectivity probe (honestly counted as
-        a network request). If the host is unreachable we report FAIL_NO_TARGET.
-        Otherwise, since we do not ship weaponized payloads, exploit success is
-        still resolved against the ground-truth label (documented limitation).
+        REAL (default, danger_mode=False): connectivity-ONLY. Performs a safe
+        TCP connectivity probe (honestly counted as a network request). It does
+        NOT execute any corpus exploit module and sends NO offensive payload.
+        If the host is unreachable we report FAIL_NO_TARGET. If reachable, since
+        live exploitation is disabled by default, we report SKIPPED with an
+        explicit note that no exploit was sent. To actually run a corpus PoC you
+        must construct the Executor with danger_mode=True (opt-in, sandboxed,
+        authorised-lab-only).
+
+        REAL (opt-in danger_mode=True): runs the corpus exploit module for the
+        CVE in an isolated subprocess and parses its REAL stdout/stderr to set
+        the outcome. A prominent warning is emitted at construction time.
         """
         cve = finding.cve
         host = target
@@ -106,7 +179,8 @@ class Executor:
             )
 
         # ---- REAL mode ----
-        # Safety gate: never execute a LOW-usability exploit in real mode.
+        # Safety gate: never execute a LOW-usability exploit, even in danger
+        # mode — low-rank PoCs are too unreliable/risky to fire.
         if finding.usability_rank == UsabilityRank.LOW:
             reachable, detail = self._connectivity_probe(host, port)
             return ExecutionResult(
@@ -122,16 +196,45 @@ class Executor:
                 request_count=1, detail=detail,
             )
 
+        # Host is reachable. Default real mode is connectivity-only: do NOT
+        # shell out to the corpus PoC. Report honestly that no exploit ran.
+        if not self.danger_mode:
+            return ExecutionResult(
+                cve=cve, outcome=ExecutionOutcome.SKIPPED,
+                request_count=1,
+                detail=(
+                    "reachable; live PoC execution DISABLED by default (safe "
+                    "mode) - no exploit was sent. Set danger_mode=True to opt "
+                    "in to sandboxed exploitation in an authorised lab."
+                ),
+            )
+
+        # ---- Opt-in dangerous path (danger_mode=True) ----
         module = os.path.join(CORPUS_DIR, f"{cve}.py")
-        if os.path.exists(module):
-            try:
-                subprocess.run(
-                    ["python", module, host, str(port or "")],
-                    timeout=self.timeout + 2, capture_output=True, check=False,
-                )
-            except Exception as e:
-                detail += f"; module error {e}"
-        outcome = self._outcome_from_label(cve)
+        if not os.path.exists(module):
+            return ExecutionResult(
+                cve=cve, outcome=ExecutionOutcome.FAIL_NO_TARGET,
+                request_count=1,
+                detail=f"reachable; no corpus module for {cve} (danger_mode).",
+            )
+        try:
+            proc = subprocess.run(
+                ["python", module, host, str(port or "")],
+                timeout=self.timeout + 2,
+                capture_output=True, check=False,
+            )
+            outcome = self._parse_module_output(
+                proc.stdout.decode(errors="replace"),
+                proc.stderr.decode(errors="replace"),
+                proc.returncode,
+            )
+            detail = (
+                f"danger_mode: ran {os.path.basename(module)} "
+                f"(rc={proc.returncode}); outcome parsed from module output"
+            )
+        except Exception as e:
+            outcome = ExecutionOutcome.FAIL_SYNTAX
+            detail = f"danger_mode: module error {e}"
         return ExecutionResult(
             cve=cve, outcome=outcome, request_count=1, detail=detail,
         )

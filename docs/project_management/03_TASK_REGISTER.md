@@ -25,7 +25,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
   branch requires opt-in + warning; docstring matches code.
 - **Test command:** `python -c "from core.executor import Executor; ..."` + `python -m pytest tests/ -q`
 - **Impl agent:** cyber (autonomous-vapt-agents). **Review agent:** verify-agent.
-- **Status:** TODO
+- **Status:** VERIFIED (2026-08-24) — independent Hermes reproduction (R1–R7) + READ-ONLY Claude Code P0 review APPROVED WITH REQUIRED FOLLOW-UP (claude_p0_review_T-SAFE_20260824.md). Default real mode fires no offensive send; danger_mode opt-in + warned + parses real output; simulation unchanged.
 
 ## T-BENCH-LOOP (P0)
 - **Objective:** Replace hardcoded `smart_loop = 0` with instrumented, asserted measurement.

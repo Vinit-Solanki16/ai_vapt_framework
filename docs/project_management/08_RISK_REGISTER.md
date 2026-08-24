@@ -2,7 +2,7 @@
 
 | ID | Risk | Severity | Likelihood | Status | Mitigation / Task |
 |----|------|----------|-----------|--------|-------------------|
-| R-001 | "real" executor mode shells corpus PoC that performs offensive socket sends (e.g. CVE-2021-44228 JNDI) while ignoring output and trusting labels; mislabeled "safe probe" | HIGH (safety + honesty) | Real (verified) | OPEN | T-SAFE (P0); governance §8 — treat as unsafe until verified; no offensive runs outside isolated lab |
+|| R-001 | "real" executor mode shells corpus PoC that performs offensive socket sends (e.g. CVE-2021-44228 JNDI) while ignoring output and trusting labels; mislabeled "safe probe" | HIGH (safety + honesty) | Real (verified) | MITIGATED (2026-08-24, T-SAFE) | T-SAFE (P0): default real mode now connectivity-only, no PoC shell-out; opt-in danger_mode=True (warned, parses real output). READ-ONLY P0 review APPROVED (claude_p0_review_T-SAFE_20260824.md). No offensive runs outside isolated lab. |
 | R-002 | No Docker/sandbox for live PoC execution; no genuine exploit validation possible | MEDIUM (thesis) | Real | OPEN | T-DOCKER (P1) — gated; only in authorized isolated lab |
 | R-003 | Benchmark loop-avoidance metric hardcoded (smart_loop=0) → headline thesis metric unmeasured (INVALID experiment per §9) | HIGH (validity) | Real (verified) | OPEN | T-BENCH-LOOP (P0) |
 | R-004 | No pytest suite / assertions → regressions undetectable | MEDIUM | Real | OPEN | T-TESTS (P3) |
