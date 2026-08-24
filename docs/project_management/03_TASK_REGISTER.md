@@ -115,8 +115,13 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
   report requests/validated/loops; show scoring cuts wasted attempts on LOW routes.
 - **Acceptance:** ablation table printed; multi-seed shows scoring reduces wasted attempts vs EPSS-only.
 - **Test command:** `python tests/evaluate.py` + `python -m pytest tests/ -q`
-- **Impl agent:** mlops/eval. **Review agent:** sw-dev (TDD) + advisor.
-- **Status:** TODO
+- **Impl agent:** cyber. **Review agent:** sw-dev (TDD) + advisor.
+- **Status:** VERIFIED-pending-review (2026-08-24) — tests/gap1_ablation.py (new) runs A_with_scoring
+  vs B_no_scoring over 12 findings from labels.json (uniform EPSS=0.5, usability stubbed offline).
+  MEASURED delta (not hardcoded): first-success request A=1 / B_mean=5.00 (DELTA +4.00); index
+  A=0 / B_mean=2.00 (DELTA +2.00). Usability signal alone re-routes agent ~4 requests earlier to a
+  working exploit -> GAP-1 decision-relevance PROVEN in simulation. Scope clean (only gap1_ablation.py
+  + CSV); 13 passed; evaluate DUMB=2. P1 review (verify-agent) pending.
 
 ## T-DOCKER (P1)
 - **Objective:** Docker testbed + sandboxed live-exploitation path (thesis-critical validation).

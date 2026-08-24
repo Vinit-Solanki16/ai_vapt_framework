@@ -12,7 +12,10 @@ _Updated after every task. Commands run from project root with venv active._
   runs SMART+DUMB across 5 seeds, prints MEAN±STD, writes data/benchmark_variance.csv.
   Offline-deterministic; order-invariance check PASS. Runs: exit 0, 5/5 seeds OK.
 
-## Last executed commands (audit, 2026-08-21)
+- **tests/gap1_ablation.py** — NEW (T-GAP1-VALID, 2026-08-24). Controlled ablation: A_with_scoring
+  vs B_no_scoring over 12 findings (uniform EPSS, offline LLM stub). MEASURED: WITH scoring reaches
+  first success 4.00 requests / 2.00 positions earlier than WITHOUT. GAP-1 decision-relevance proven
+  (simulation). Runs: exit 0, offline.
 | Command | Result |
 |---------|--------|
 | `python -c "import core"` | OK (25 symbols) |

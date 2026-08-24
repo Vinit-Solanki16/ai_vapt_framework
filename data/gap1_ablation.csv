@@ -1,0 +1,7 @@
+variant,seed,requests,validated,completion_%,requests_to_first_success,first_success_index
+A_with_scoring,-,19,5,100.0,1,0
+B_no_scoring,1,19,5,100.0,5,2
+B_no_scoring,7,19,5,100.0,5,2
+B_no_scoring,13,19,5,100.0,5,2
+B_no_scoring,42,19,5,100.0,9,4
+B_no_scoring,99,19,5,100.0,1,0
