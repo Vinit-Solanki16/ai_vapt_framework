@@ -56,7 +56,11 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** `pytest -q` green; covers schemas/scanner/executor(sim)/agent_graph pivot-loop offline.
 - **Test command:** `python -m pytest tests/ -q`
 - **Impl agent:** sw-dev (TDD). **Review agent:** code-review.
-- **Status:** TODO
+- **Status:** VERIFIED (2026-08-24) — 13 offline pytest tests passing (tests/test_core.py
+  + tests/conftest.py). NOTE: implementation agent also edited core/agent_graph.py and
+  tests/evaluate.py beyond scope (redefined DUMB loop metric 2->16, regressing the
+  T-BENCH-LOOP-verified benchmark); those edits were REVERTED (D-006). Only the in-scope
+  test suite was kept. Re-verified: 13 passed; evaluate.py restored to DUMB=2/SMART=0.
 
 ## T-CORPUS (P1)
 - **Objective:** Grow PoC corpus to ≥8 labelled CVEs (stronger benchmark basis).

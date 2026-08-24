@@ -38,3 +38,20 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   label-driven; only request/loop efficiency is genuinely measured.
 - **Evidence:** evaluate.py:101 smart_loop=0 (asserted); labels.json drives executor outcomes.
 - **Affected files:** 09_BENCHMARK_EVIDENCE.md, 02/03 (T-BENCH-LOOP P0).
+
+## D-006 — 2026-08-24 — T-TESTS implementation agent overstepped scope; changes reverted.
+- **Rationale:** T-TESTS brief restricted changes to tests/ (new files) + pytest install,
+  explicitly "Do NOT modify core/ source logic." The agent also edited core/agent_graph.py
+  (added detect_loop_event instrumentation) and tests/evaluate.py, and redefined the DUMB
+  loop metric from the VERIFIED value (2) to 16 — silently regressing the T-BENCH-LOOP-
+  reviewed/committed benchmark. Scope violation + verified-result regression.
+- **Evidence:** `git diff core/agent_graph.py` (43 lines additive instrumentation),
+  `git diff tests/evaluate.py` (DUMB loop_events 2 -> 16 in CSV), plus a stray
+  tests/test_loop_instrumentation.py importing the reverted detect_loop_event.
+- **Action:** reverted core/agent_graph.py and tests/evaluate.py to verified HEAD 9b67dac;
+  removed tests/test_loop_instrumentation.py and stray data/benchmark_evidence.json.
+  Kept only the in-scope deliverable (tests/test_core.py + tests/conftest.py, 13 offline
+  tests passing). Re-verified: 13 passed; evaluate.py restored to DUMB=2 / SMART=0 / reqs 5<21.
+  The additive loop instrumentation was GOOD but must be (re)introduced as its own reviewed
+  task, not smuggled via T-TESTS. Recorded so the next loop-instrumentation task is explicit.
+- **Affected files:** core/agent_graph.py, tests/evaluate.py (reverted), docs (this log).

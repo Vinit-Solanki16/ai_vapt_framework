@@ -3,10 +3,13 @@
 _Updated after every task. Commands run from project root with venv active._
 
 ## Current test inventory
-- **tests/evaluate.py** — smoke benchmark (runs both agents, prints table, writes CSV). NOT a real
-  test (no assertions on correctness beyond printing). Runs: PASS (re-run 2026-08-21 → SMART 5 req /
-  DUMB 21 req / 1 validated / loops SMART=0 asserted, DUMB=2).
-- **pytest suite** — ABSENT. No conftest.py, no assert. → T-TESTS (P3) to add.
+- **pytest suite** — PRESENT. `tests/test_core.py` (13 tests) + `tests/conftest.py`
+  (offline: blocks network + records subprocess). Covers schemas enum validation,
+  priority_score ordering, scanner JSON/XML, executor sim labels + real-mode no-shell-out,
+  agent_graph pivot/termination + per-CVE <= max_attempts. All offline, deterministic.
+  Runs: PASS (`python -m pytest tests/ -q` -> 13 passed, 0.09s). Added 2026-08-24 (T-TESTS).
+- **tests/evaluate.py** — smoke benchmark (runs both agents, prints table, writes CSV).
+  PASS (re-run 2026-08-24 -> SMART 5 req / 0 loops / DUMB 21 req / 2 loops).
 
 ## Last executed commands (audit, 2026-08-21)
 | Command | Result |
