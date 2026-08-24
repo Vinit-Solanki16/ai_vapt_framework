@@ -9,7 +9,7 @@ unless measured.
   SMART run = 5 requests, DUMB run = 21 requests (re-run confirmed, deterministic).
 - **Completion %** — validated/total = 33.3% (1 of 3 labelled findings exploitable).
 - **Loop events (DUMB)** — genuinely counted: DUMB retries to hard_cap=10 → 2 loop events.
-- **Loop events (SMART)** — CURRENTLY ASSERTED = 0 (hardcoded smart_loop=0). NOT measured. → T-BENCH-LOOP.
+- **Loop events (SMART)** — MEASURED from final["results"] (Counter over CVE, sum max(0,count-threshold)); runtime `assert max_per_cve <= threshold` raises on pivot breach. Fixed by T-BENCH-LOOP (2026-08-24, VERIFIED).
 - **Runtime** — measured via time.time() but NOT isolated per LLM call; SMART slower (8.5s) due to
   Ollama latency. time_saved_s = NEGATIVE (-8.5s). Do NOT claim speed win.
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -60,9 +61,31 @@ def smart_agent(findings, threshold=2):
         "mode": "simulation", "logs": [], "results": [],
     }
     app = build_vapt_graph()
-    # Instrument to count a potential loop: if attempt_count exceeds a sane cap,
-    # it would be a loop (smart agent must never reach it).
     final = app.invoke(state)
+
+    # --- INSTRUMENTED loop measurement (T-BENCH-LOOP fix) -------------------
+    # The graph must pivot to the next target after `threshold` failed attempts
+    # on a CVE, so a healthy SMART run never executes any CVE more than
+    # `threshold` times. We MEASURE (no longer assert a constant) loop events
+    # from the actual execution results, grouped per CVE:
+    #   loop_events = sum over distinct CVEs of max(0, executions_for_cve - threshold)
+    # An excess execution is a measured "loop event" — proof the pivot failed
+    # to bound retries. A correctly-pivoting run yields 0.
+    exec_counts = Counter(r["cve"] for r in final["results"])
+    smart_loop = sum(max(0, count - threshold) for count in exec_counts.values())
+
+    # Runtime guard: the pivot MUST bound retries per CVE. If any CVE was
+    # executed more than `threshold` times, the pivot logic failed and the
+    # benchmark must ERROR rather than silently reporting 0. This converts the
+    # previously-invalid (hardcoded) metric into a real, asserted measurement.
+    max_per_cve = max(exec_counts.values()) if exec_counts else 0
+    assert max_per_cve <= threshold, (
+        f"SMART pivot FAILED to bound retries: a CVE was executed "
+        f"{max_per_cve} times, exceeding threshold={threshold}. "
+        f"Per-CVE execution counts: {dict(exec_counts)}"
+    )
+
+    final["loops"] = smart_loop
     return final
 
 
@@ -98,7 +121,7 @@ def run_benchmark(provider=PROVIDER, threshold=2):
     smart_reqs = sum(r.get("request_count", 0) for r in smart["results"])
     smart_success = sum(1 for r in smart["results"]
                         if r["outcome"] == ExecutionOutcome.SUCCESS.value)
-    smart_loop = 0  # by construction the pivot prevents loops
+    smart_loop = smart["loops"]  # measured from final["results"] (see smart_agent)
 
     t0 = time.time()
     dumb = dumb_agent(findings, hard_cap=10)

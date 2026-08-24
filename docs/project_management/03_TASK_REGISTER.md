@@ -41,7 +41,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** loops_avoided derived from instrumentation; pytest asserts SMART ≤ max_attempts/finding.
 - **Test command:** `python tests/evaluate.py` + `python -m pytest tests/ -q`
 - **Impl agent:** sw-dev (TDD). **Review agent:** mlops/eval.
-- **Status:** TODO
+- **Status:** VERIFIED (2026-08-24) — independent Hermes reproduction (BL1-BL5) + READ-ONLY Claude Code P0 review APPROVED (claude_p0_review_T-BENCH-LOOP_20260824.md). SMART loop now MEASURED from final["results"]; runtime assert guards pivot breach; no regression (DUMB=2, SMART reqs 5<21).
 
 ## T-TESTS (P3)
 - **Objective:** Regression net — real pytest suite with assertions (only smoke script exists).
