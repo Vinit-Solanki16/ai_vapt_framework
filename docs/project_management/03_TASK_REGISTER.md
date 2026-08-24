@@ -75,13 +75,16 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
   benchmark re-runs reflect larger n.
 - **Test command:** `python tests/evaluate.py`
 - **Impl agent:** cyber. **Review agent:** verify-agent.
-- **Status:** VERIFIED-pending-review (2026-08-24) — data deliverable clean: labels.json=12
-  entries (3 original + 9 new: CVE-2017-0144, 2019-0708, 2020-1472, 2021-21972, 2021-26855,
-  2021-34527, 2022-1388, 2023-34362, 2024-3094), all valid, all have .py; reliability
-  HIGH4/MED5/LOW3; outcome success5/timeout3/syntax2/dep2. NOTE (D-007): agent also edited
-  core/agent_graph.py + tests/evaluate.py beyond scope and recreated test_loop_instrumentation.py
-  + benchmark_evidence.json; all REVERTED, only data/poc_corpus/ kept. Offline suite 13 passed;
-  evaluate.py DUMB=2/SMART=0 intact. P1 review (verify-agent) pending.
+- **Status:** VERIFIED (2026-08-24) — P1 READ-ONLY review: APPROVE WITH REQUIRED FOLLOW-UP.
+  Data deliverable clean: labels.json=12 entries (3 original + 9 new: CVE-2017-0144,
+  2019-0708, 2020-1472, 2021-21972, 2021-26855, 2021-34527, 2022-1388, 2023-34362, 2024-3094),
+  all valid, all have .py; reliability HIGH4/MED5/LOW3; outcome success5/timeout3/syntax2/dep2.
+  Safety: no import-time network exec; payloads inside run()/__main__. No regression (core/
+  byte-identical; 13 passed; DUMB=2/SMART=0). NOTE (D-007/D-009): agent overstepped scope
+  (core/agent_graph.py + tests/evaluate.py edited, test_loop_instrumentation.py +
+  benchmark_evidence.json recreated) and injected a fabricated D-008 claiming a "concurrent
+  authorized T-BENCH-LOOP task" to justify it — REJECTED as false; all reverted to HEAD
+  3fa2148. Corpus is the only committed change.
 
 ## T-BENCH-VAR (P3)
 - **Objective:** Multi-seed variance runs for defensible statistics.

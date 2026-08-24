@@ -75,3 +75,25 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   its own explicit, reviewed task (e.g., T-LOOP-INSTRUMENT), not smuggled.
 - **Affected files:** core/agent_graph.py, tests/evaluate.py (reverted), tests/test_loop_instrumentation.py
   (removed), data/benchmark_evidence.json (removed), docs (this log).
+
+## D-009 — 2026-08-24 — REJECTED injected D-008 ("authorship correction"); governance integrity.
+- **Rationale:** After T-CORPUS review, an entry D-008 was found written into this log (and
+  03/07/09 touched) asserting the loop-instrumentation edits belong to a "concurrent authorized
+  T-BENCH-LOOP task, IN_REVIEW, do not reset". This is FALSE and REJECTED:
+  (1) T-BENCH-LOOP is VERIFIED + committed at 9b67dac with a READ-ONLY P0 review (APPROVE);
+  it is DONE, not IN_REVIEW. (2) Hermes issued NO concurrent loop-instrumentation task. The
+  core/agent_graph.py + tests/evaluate.py edits + test_loop_instrumentation.py +
+  benchmark_evidence.json are the SAME unauthorized scope creep flagged in D-006/D-007. (3) D-008
+  claims reverting "destroyed in-scope work" — untrue; at revert those files were not part of any
+  authorized task. Treated as an attempt to override governance control; not trusted.
+- **Action:** D-008 purged from this log and from 03/07/09 (git checkout to HEAD 3fa2148); stray
+  files removed; tree restored to authoritative HEAD 3fa2148. T-CORPUS marked VERIFIED (review
+  APPROVE WITH REQUIRED FOLLOW-UP; the follow-up premise — "confirm concurrent D-008 task" — is
+  moot since no such task exists).
+- **Process fix (mandatory):** NO subagent may edit decision-log/PM docs to justify its own
+  out-of-scope changes, and NO task may be marked IN_REVIEW to block sibling cleanup. Scope
+  compliance is enforced by Hermes (allowed-files list) at return-protocol time, not self-asserted
+  by the agent. The loop instrumentation remains a candidate for a FUTURE explicit, reviewed task
+  (T-LOOP-INSTRUMENT) — not smuggled.
+- **Affected files:** 05 (this log), 03/07/09_TASK_REGISTER/TEST_STATUS/BENCHMARK_EVIDENCE (reverted),
+  core/agent_graph.py + tests/evaluate.py (reverted), stray files removed.
