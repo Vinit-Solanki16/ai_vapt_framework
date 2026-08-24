@@ -136,17 +136,20 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 
 ## T-DOCKER (P1)
 - **Objective:** Docker testbed + sandboxed live-exploitation path (thesis-critical validation).
-- **GAP mapping:** GAP-1 + GAP-2 (true end-to-end).
-- **Exact problem:** no live validation; payloads not shipped; real success label-derived; Docker down.
-- **Evidence:** Docker DOWN; executor real mode trusts label; README "Honest limitations".
-- **Deps:** T-SAFE (must be safe first), T-CORPUS.
-- **Allowed files:** core/executor.py (real outcome from observed module output), new Dockerfile/
-  docker-compose.yml (DVWA/Metasploitable/crAPI), README.md.
-- **Impl requirements:** start Docker; isolated vulnerable target; sandboxed exploit modules;
-  real mode parses actual module outcome to set success (replacing label trust); opt-in+sandboxed.
-- **Acceptance:** real mode validates ≥1 CVE against live container; success from observed outcome
-  not label; no sends outside container net.
-- **Test command:** `python -c "from core.executor import Executor; ..."` against container
+- **GAP mapping:** GAP-1 + GAP-2 (true end-to-end, OBSERVED outcomes).
+- **Protocol/Readiness docs:** T_DOCKER_EXPERIMENT_PROTOCOL.md, T_DOCKER_READINESS_ASSESSMENT.md (DESIGN ONLY; NO-GO).
+- **Exact problem:** executor.danger_mode exists but is UNVERIFIED end-to-end; the 12-CVE corpus
+  are synthetic stubs (hardcoded 127.0.0.1, no success tokens) incompatible with any real target;
+  Docker daemon down; no target_allowlist yet.
+- **Note:** post-T-SAFE, real mode does NOT trust labels (it parses module output); the earlier
+  "trusts label" line in this entry is stale. DVWA/Metasploitable/crAPI are NOT directly compatible
+  with the corpus (protocol Part C). Recommended testbed = purpose-built lab emulator.
+- **Allowed files (when execution authorized):** core/executor.py (add target_allowlist guard;
+  keep module-output parser), new lab-corpus modules, Dockerfile/docker-compose.yml (isolated),
+  README.md. NO change to agent_graph/assessor logic required.
+- **Acceptance (future):** danger_mode validates >=1 candidate against an isolated container;
+  success from OBSERVED outcome (emulator log + module token), NOT labels; no traffic outside
+  container net; readiness gate (protocol Part J) fully PASS.
 - **Impl agent:** cyber. **Review agent:** verify-agent.
 - **Status:** BLOCKED (Docker down; see 08_RISK_REGISTER.md)
 

@@ -114,3 +114,19 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   FROZEN PENDING T-DOCKER EXPERIMENT DECISION.
 - **Affected files:** README.md, 03_TASK_REGISTER.md (T-README DONE), this log (D-010). 01/02/05/07/08/10 PM
   docs to be reconciled after Phase 2.
+
+## D-011 — 2026-08-24 — T-DOCKER authorized for EXPERIMENT DESIGN only (NO-GO for execution).
+- **Decision:** T-DOCKER EXECUTION remains BLOCKED. Only experiment-protocol design authorized.
+  No Docker start, no image pull, no danger_mode, no offensive PoC, no source change.
+- **Rationale:** Re-inspection of HEAD (`0fd4a3e`) found the 12-CVE corpus are synthetic stubs
+  (e.g. `CVE-2021-44228.py:11-12` hardcodes `run("127.0.0.1")`, ignores `sys.argv`; no module
+  emits a `_SUCCESS_TOKENS` string so `executor._parse_module_output` would return FAIL_TIMEOUT
+  even live). `danger_mode` (`executor.py:212-240`) exists but is UNVERIFIED end-to-end. Neither
+  DVWA/Metasploitable/crAPI matches the corpus. Readiness gate (protocol Part J) = NO-GO.
+- **Action:** Created T_DOCKER_EXPERIMENT_PROTOCOL.md (Parts A-K) + T_DOCKER_READINESS_ASSESSMENT.md
+  (NO-GO). Recommended testbed = purpose-built lab emulator + 2-3 lab-corpus modules. Required
+  code changes (deferred): lab-corpus modules reading argv + emitting tokens; executor target_allowlist
+  guard. NO change to agent_graph/assessor. 03_TASK_REGISTER T-DOCKER entry corrected (removed stale
+  "trusts label" claim; flagged DVWA/Metasploitable incompatibility). 29 tests pass; no source changed.
+- **Affected files:** T_DOCKER_EXPERIMENT_PROTOCOL.md, T_DOCKER_READINESS_ASSESSMENT.md (DESIGN ONLY),
+  03_TASK_REGISTER.md (T-DOCKER updated), this log (D-011).
