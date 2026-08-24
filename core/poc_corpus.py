@@ -80,18 +80,3 @@ def fetch_github_poc(cve_id: str, token: Optional[str] = None,
     except Exception as e:  # pragma: no cover - network dependent
         print(f"[-] GitHub fetch failed for {cve_id}: {e}")
     return None
-
-
-def get_poc(cve_id: str, online: bool = True, token: Optional[str] = None) -> str:
-    """Resolve exploit source: local corpus first, then optional GitHub."""
-    local = corpus_lookup(cve_id)
-    if local:
-        return local
-    if online:
-        gh = fetch_github_poc(cve_id, token=token)
-        if gh:
-            return gh
-    raise RuntimeError(
-        f"No PoC available for {cve_id}. Add it to data/poc_corpus/ "
-        f"or supply GITHUB_TOKEN for live GitHub search."
-    )

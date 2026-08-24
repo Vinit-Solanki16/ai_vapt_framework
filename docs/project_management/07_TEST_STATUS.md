@@ -79,7 +79,7 @@ _Updated after every task. Commands run from project root with venv active._
 | T-REQPIN | clean-venv `python -c "import core"` | DONE 2026-08-24 — requirements.txt pinned to exact (==) versions matching the verified venv; `.python-version`=3.10; README setup documents repro; `import core` OK and `pytest tests/ -q` 29 passed (no behavior change). Reproducibility: pins == installed freeze (diff clean). |
 | T-GITHUB | `python -m pytest tests/ -q` (mock) | NOT RUN |
 | T-README | diff README vs CSV | NOT RUN |
-| T-DEADCODE | `python -c "import core"` + grep | NOT RUN |
+| T-DEADCODE | `python -c "import core"` + grep | DONE 2026-08-24 — removed unused `get_poc` from poc_corpus.py AND its package re-export in core/__init__.py (import line + `__all__`). Verified: `grep -rn get_poc` returns nothing; `import core` OK (41 symbols); `pytest tests/ -q` 29 passed; agent_graph smoke unchanged. corpus_lookup/corpus_label/fetch_github_poc retained (used by assessor + tests). Hermes (P4) verified. |
 | T-UI | `streamlit run app.py` | NOT RUN |
 
 ## Convention

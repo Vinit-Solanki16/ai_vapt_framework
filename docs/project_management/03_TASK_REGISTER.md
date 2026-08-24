@@ -234,7 +234,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** no orphan export; or single resolver used; import clean.
 - **Test command:** `python -c "import core"` + grep
 - **Impl agent:** sw-dev (simplify). **Review agent:** verify-agent.
-- **Status:** TODO
+- **Status:** DONE (2026-08-24, commit pending) — removed unused `get_poc` from core/poc_corpus.py AND its package re-export in core/__init__.py (import line + `__all__`). corpus_lookup/corpus_label/fetch_github_poc retained (used by assessor + tests). Verified: `grep -rn get_poc` empty; `import core` OK (41 symbols); `pytest tests/ -q` 29 passed; agent_graph smoke unchanged. Hermes (P4) verified.
 
 ## T-UI (P4)
 - **Objective:** Verify Streamlit dashboard interactively.
