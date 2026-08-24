@@ -1,9 +1,17 @@
 # 01 — PROJECT STATE
 
-_Last updated: 2026-08-21 (governance activation; STEP A/B/C consolidated from prior audit)._
+_Last updated: 2026-08-24 (implementation/remediation phase COMPLETE; entering TOP-LEVEL AUTHORITY EVIDENCE REVIEW)._
 
 ## Current phase
-AUDIT → INDEPENDENT REVIEW → REMEDIATION (reconciliation complete; remediation NOT started).
+TOP-LEVEL AUTHORITY EVIDENCE REVIEW
+
+## Implementation status
+FROZEN PENDING AUTHORITY DECISION
+
+(Remediation tasks T-SAFE, T-BENCH-LOOP, T-TESTS, T-CORPUS, T-BENCH-VAR,
+T-GAP1-VALID (+v2), T-OPENAI, T-CHECKPOINT, T-REQPIN, T-DEADCODE — all DONE/VERIFIED.
+Remaining: T-GITHUB, T-README, T-UI (TODO), T-DOCKER (BLOCKED). No new implementation
+task will be auto-dispatched pending the authority decision in AUTHORITY_REVIEW_MANIFEST.md.)
 
 ## Git baseline (STEP A — DONE)
 - Branch: `master`
