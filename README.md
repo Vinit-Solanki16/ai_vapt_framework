@@ -31,8 +31,9 @@ tasks/             task1.md … task5.md (one per phase module)
 ## Setup
 ```bash
 cd ~/ai_vapt_framework
+python3.10 -m venv venv        # Python 3.10 (pinned in .python-version)
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt   # exact pins for reproducible builds (T-REQPIN)
 # optional, for live GitHub PoC fetch:
 export GITHUB_TOKEN=ghp_xxx
 # ensure Ollama is running locally:

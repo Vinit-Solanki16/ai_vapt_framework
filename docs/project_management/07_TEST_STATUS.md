@@ -7,6 +7,9 @@ _Updated after every task. Commands run from project root with venv active._
   (offline: blocks network + records subprocess). Covers schemas enum validation,
   priority_score ordering, scanner JSON/XML, executor sim labels + real-mode no-shell-out,
   agent_graph pivot/termination + per-CVE <= max_attempts. All offline, deterministic.
+- **requirements.txt** — PINNED for reproducible builds (T-REQPIN, 2026-08-24). Exact
+  (==) versions captured from the verified venv (Python 3.10); `.python-version` pins 3.10;
+  README setup documents the `pip install -r requirements.txt` repro path.
 - **tests/test_checkpoint.py** — NEW (T-CHECKPOINT, 2026-08-24, +8 tests → suite total 29).
   AgentState persistence in `core/agent_graph.py`: save_checkpoint() serializes state to JSON
   (findings → plain dicts, enums as strings, auto-creates dirs, versioned payload);
@@ -73,7 +76,7 @@ _Updated after every task. Commands run from project root with venv active._
 | T-DOCKER | container executor run | NOT RUN (Docker down) |
 | T-OPENAI | `python -m pytest tests/ -q` (mock) | DONE 2026-08-24 — PASS: 21 passed, 0.09s. get_llm() OpenAI branch hardened (fail-safe RuntimeError on missing OPENAI_API_KEY; dummy-key fallback removed); ChatOpenAI stubbed in tests/test_openai_provider.py → enum-constrained ExploitAssessment via shared structured-output contract; Ollama path unchanged. **Live OpenAI path UNVERIFIED without a real key.** Scope: core/exploit_assessor.py (provider branch only) + tests/test_openai_provider.py + this file. |
 | T-CHECKPOINT | `python -m pytest tests/ -q` | DONE 2026-08-24 — PASS: 29 passed, 0.11s (21 prior + 8 new in tests/test_checkpoint.py). save_checkpoint/load_checkpoint/resume_agent added to core/agent_graph.py ONLY; resume re-enters from current_index with status-derived entry node (no replayed/duplicated steps; COMPLETED = no-op); interrupted-run resume reproduces fresh-run results exactly. Fully offline (conftest guard asserted call_count==0). Scope: core/agent_graph.py + tests/test_checkpoint.py + this file. |
-| T-REQPIN | clean-venv `python -c "import core"` | NOT RUN |
+| T-REQPIN | clean-venv `python -c "import core"` | DONE 2026-08-24 — requirements.txt pinned to exact (==) versions matching the verified venv; `.python-version`=3.10; README setup documents repro; `import core` OK and `pytest tests/ -q` 29 passed (no behavior change). Reproducibility: pins == installed freeze (diff clean). |
 | T-GITHUB | `python -m pytest tests/ -q` (mock) | NOT RUN |
 | T-README | diff README vs CSV | NOT RUN |
 | T-DEADCODE | `python -c "import core"` + grep | NOT RUN |
