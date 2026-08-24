@@ -77,8 +77,7 @@ with tab2:
             fs = findings_from_state(final["findings"])
 
             st.subheader("Live Agent Execution Feed")
-            st.markdown("<br>".join([f"<code>{l}</code>" for l in final["logs"]]),
-                        unsafe_allow_html=True)
+            st.code("\n".join(final["logs"]), language="text")
 
             st.subheader("Execution Outcomes")
             orows = [{"CVE": f.cve, "Usability": f.usability_rank.value if f.usability_rank else "-",

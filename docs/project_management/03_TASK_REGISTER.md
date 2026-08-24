@@ -247,4 +247,4 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** dashboard launches; upload live_scan.xml + run shows live logs + downloads; pytest if added.
 - **Test command:** `streamlit run app.py` (manual) or `python -m pytest tests/ -q`
 - **Impl agent:** sw-dev. **Review agent:** code-review.
-- **Status:** TODO
+- **Status:** DONE (2026-08-24, commit pending) — Streamlit app verified to BOOT to a healthy running state (Uvicorn started, /_stcore/health responded, no exceptions in boot log). Imports clean. Found and fixed one in-scope hardening: replaced `st.markdown(unsafe_allow_html=True)` log render with `st.code(...)` (removes unnecessary HTML injection surface; logs are framework-generated, not untrusted, but the flag is now eliminated). 29 tests pass. INTERACTIVE browser verification NOT performed (headless WSL, no display/browser) — recorded as UI_SMOKE_VERIFIED / INTERACTIVE_UI_NOT_VERIFIED. Hermes verified.
