@@ -97,3 +97,20 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   (T-LOOP-INSTRUMENT) — not smuggled.
 - **Affected files:** 05 (this log), 03/07/09_TASK_REGISTER/TEST_STATUS/BENCHMARK_EVIDENCE (reverted),
   core/agent_graph.py + tests/evaluate.py (reverted), stray files removed.
+
+## D-010 — 2026-08-24 — Top-level authority authorizes LIMITED continuation (T-README, then T-UI); freeze otherwise.
+- **Decision:** End the full freeze with narrow scope. AUTHORIZED: T-README (Phase 1), T-UI (Phase 2), in that
+  order; then STOP and return to authority review. T-DOCKER remains BLOCKED (deferred pending a separate
+  experiment protocol — do NOT start Docker validation). T-GITHUB remains OPTIONAL/DEFERRED (no token request).
+  GAP-1/GAP-2 declared SUBSTANTIALLY COMPLETE for the current (simulation) phase; do NOT claim universal
+  accuracy / universal loop prevention / real-world superiority.
+- **Rationale:** The handover report + authority review manifest were committed; the authority reviewed the
+  state and permitted the two documentation/UI polish tasks that close known doc gaps, while keeping the
+  thesis-critical real-validation (T-DOCKER) behind an explicit future protocol gate.
+- **Action (this session):** T-README executed — README reconciled with verified evidence (stale SMART=1→5,
+  three-tier SIMULATION/CONTROLLED VALIDATION/REAL OBSERVED RESULT distinction, T-SAFE-aligned real-mode
+  wording, explicit "NOT claimed" disclaimers). 29 tests pass; numbers verified against benchmark_results.csv.
+  T-UI pending (Phase 2). After both, restore 01_PROJECT_STATE phase to TOP-LEVEL AUTHORITY REVIEW with status
+  FROZEN PENDING T-DOCKER EXPERIMENT DECISION.
+- **Affected files:** README.md, 03_TASK_REGISTER.md (T-README DONE), this log (D-010). 01/02/05/07/08/10 PM
+  docs to be reconciled after Phase 2.

@@ -220,8 +220,7 @@ TODO / IN_PROGRESS / IN_REVIEW / VERIFIED / DONE / BLOCKED.
 - **Acceptance:** README numbers match CSV; env/deploy present; wording consistent.
 - **Test command:** `python tests/evaluate.py` then diff README vs CSV
 - **Impl agent:** sw-dev. **Review agent:** verify-agent.
-- **Status:** TODO
-
+- **Status:** DONE (2026-08-24, commit pending) — README reconciled with verified evidence: fixed stale SMART=1→5 (matched benchmark_results.csv); added explicit SIMULATION / CONTROLLED VALIDATION / REAL OBSERVED RESULT tiers; aligned "Real mode" wording with T-SAFE (connectivity-ONLY default, SKIPPED, danger_mode opt-in only); added "NOT claimed" disclaimer (no faster/real-success/universal claims). 29 tests pass; numbers verified against evidence. Hermes verified.
 ## T-DEADCODE (P4)
 - **Objective:** Remove dead get_poc export.
 - **GAP mapping:** polish.
