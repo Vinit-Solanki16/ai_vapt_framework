@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  emulator:
+    build:
+      context: ./emulator
+      dockerfile: Dockerfile
+    container_name: vuln-emulator
+    # No ports published to host - internal communication only
+    networks:
+      - lab-network
+    # Restart policy for reliability
+    restart: unless-stopped
+    # Resource limits for isolation
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+
+networks:
+  lab-network:
+    driver: bridge
+    # internal: true prevents any external egress from this network
+    # Containers on this network can only communicate with each other
+    internal: true
+    name: vuln-lab-network
+    # Use a specific subnet for predictable IP allocation
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1

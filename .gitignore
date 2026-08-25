@@ -7,3 +7,7 @@ data/benchmark_results.csv
 
 # Student's personal thesis papers (untracked, unrelated to framework)
 docs/MTech_Project/
+
+# T-DOCKER Stage B controlled-validation run artifacts (reproducible via
+# tests/run_tdocker_scenarios.py; keep metadata + runner in git, raw logs out)
+data/experiment_runs/

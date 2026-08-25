@@ -37,7 +37,7 @@ import subprocess
 import sys
 import time
 import warnings
-from typing import Optional
+from typing import Iterable, Optional
 
 from core.schemas import ExecutionOutcome, ExecutionResult, Finding, UsabilityRank
 
@@ -53,7 +53,8 @@ _DEP_TOKENS = ("ModuleNotFoundError", "ImportError", "No module named", "command
 
 class Executor:
     def __init__(self, mode: str = "simulation", timeout: float = 3.0,
-                 danger_mode: bool = False):
+                 danger_mode: bool = False,
+                 target_allowlist: Optional[Iterable[str]] = None):
         """
         mode: "simulation" (ground-truth labels) or "real" (live probe).
 
@@ -62,10 +63,23 @@ class Executor:
         module. When True, an explicit, opt-in, sandboxed path may execute a
         corpus PoC module and parse its real output. Enabling this prints a
         prominent warning — use only in an authorised, isolated lab.
+
+        target_allowlist: T-DOCKER Stage B, fail-closed authorisation for
+        danger_mode. ONLY hosts listed here may be attacked when
+        danger_mode=True. The DEFAULT (empty) allowlist refuses EVERY target:
+        nothing is executed until an operator explicitly authorises hosts.
+        Entries are matched after stripping surrounding whitespace and
+        case-folding. Ignored outside danger_mode.
         """
         self.mode = mode
         self.timeout = timeout
         self.danger_mode = danger_mode
+        # Fail-closed: normalise to a stripped/case-folded set. None or empty
+        # => danger_mode is authorised against NOTHING until set explicitly.
+        self.target_allowlist = {
+            str(h).strip().casefold() for h in (target_allowlist or [])
+            if str(h).strip()
+        }
         self._labels = self._load_labels()
         if self.mode == "real" and self.danger_mode:
             warnings.warn(
@@ -166,6 +180,11 @@ class Executor:
         REAL (opt-in danger_mode=True): runs the corpus exploit module for the
         CVE in an isolated subprocess and parses its REAL stdout/stderr to set
         the outcome. A prominent warning is emitted at construction time.
+        T-DOCKER Stage B: even with danger_mode=True, ONLY hosts explicitly
+        present in target_allowlist are attacked — any other host is refused
+        (FAIL_NO_TARGET, "target not allowlisted"). The default empty
+        allowlist is fail-closed: danger_mode refuses EVERYTHING until
+        targets are explicitly authorised.
         """
         cve = finding.cve
         host = target
@@ -210,6 +229,21 @@ class Executor:
             )
 
         # ---- Opt-in dangerous path (danger_mode=True) ----
+        # T-DOCKER Stage B gate (fail-closed, BEFORE any subprocess.run):
+        # danger_mode only ever fires against explicitly authorised hosts.
+        # Default allowlist is empty => refuse EVERYTHING until the operator
+        # authorises targets via Executor(target_allowlist=[...]).
+        if str(host).strip().casefold() not in self.target_allowlist:
+            return ExecutionResult(
+                cve=cve, outcome=ExecutionOutcome.FAIL_NO_TARGET,
+                request_count=1,
+                detail=(
+                    f"target not allowlisted ({host}); danger_mode refused. "
+                    "Add the host to Executor(target_allowlist=[...]) to "
+                    "explicitly authorise exploitation."
+                ),
+            )
+
         module = os.path.join(CORPUS_DIR, f"{cve}.py")
         if not os.path.exists(module):
             return ExecutionResult(
