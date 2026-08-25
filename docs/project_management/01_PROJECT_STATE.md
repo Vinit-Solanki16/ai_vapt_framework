@@ -3,16 +3,14 @@
 _Last updated: 2026-08-24 (implementation/remediation phase COMPLETE; entering TOP-LEVEL AUTHORITY EVIDENCE REVIEW)._
 
 ## Current phase
-TOP-LEVEL AUTHORITY REVIEW
+PHASE 6 — INDEPENDENT FINAL EVIDENCE REVIEW
 
 ## Implementation status
-FROZEN PENDING T-DOCKER EXPERIMENT DECISION
+FROZEN PENDING FINAL REVIEW (T-DOCKER loopback observed tier achieved; Docker-isolated optional/deferred)
 
-(Limited continuation authorized 2026-08-24: T-README and T-UI executed and
-committed; both DONE. T-DOCKER remains BLOCKED — deferred pending a separate
-approved experiment protocol; do NOT start Docker validation. T-GITHUB remains
-OPTIONAL/DEFERRED. GAP-1/GAP-2 remain SUBSTANTIALLY COMPLETE for the simulation
-phase; do NOT claim universal accuracy or universal loop prevention.)
+(Authority decision 2026-08-25: accept T-DOCKER Stage B loopback observed validation as a
+separate, honestly-scoped CONTROLLED OBSERVED-VALIDATION tier — NOT Docker-isolated. Docker
+is an optional future evidence upgrade. PHASE 5 partial; PHASE 6 evidence review now open.)
 
 ## Git baseline (STEP A — DONE)
 - Branch: `master`

@@ -46,6 +46,21 @@ unless measured.
   updated accordingly (YES with scope conditions).
 - T-DOCKER: REAL OBSERVED RESULT — success from actual module output in container (not label).
 
+## Controlled observed validation achieved (2026-08-25, loopback tier — NOT container-isolated)
+T-DOCKER Stage B was executed against a purpose-built Flask lab emulator on **loopback
+(127.0.0.1)** because the Docker daemon was unavailable. This is a separate, honestly-scoped
+**CONTROLLED OBSERVED-VALIDATION** tier:
+- Execution I/O flowed to a REAL subprocess; module stdout/stderr were parsed by
+  `core/executor.py:_parse_module_output` (NOT labels.json).
+- Emulator access logs independently corroborate each attempt (S1: 1 GET /vuln; S2: exactly 2 GET /fail).
+- GAP-1 (RQ1): observed SUCCESS reached at attempt 1 via the HIGH-usability candidate (module printed `VULNERABLE`).
+- GAP-2 (RQ2): observed FAILURE -> pivot after `max_attempts=2`; exactly 2 executions, then pivot, clean termination, NO 3rd attempt (no loop).
+- **Honest limitation:** runs were on loopback process isolation with benign GET probes, NOT a
+  container/bridge network with no egress. Do NOT label this "Docker-isolated" or "container-sandboxed."
+  Full T-DOCKER-as-specified (bridge/internal network) remains an OPTIONAL future upgrade.
+- Reproducible via `tests/run_tdocker_scenarios.py`; raw run artifacts gitignored, metadata retained.
+- 39 tests pass (incl. `test_executor_allowlist`, `test_danger_mode_mock`).
+
 ## Latest raw run (2026-08-21, simulation)
 ```
 agent          runtime_s  requests  validated  completion_%  loop_events

@@ -42,13 +42,13 @@ VERIFICATION_BACKLOG.md, Claude independent review, and live test evidence._
 | PHASE 2 Core Remediation | T-SAFE, T-BENCH-LOOP, T-TESTS, T-DEADCODE | COMPLETE |
 | PHASE 3 Research Validation | T-CORPUS, T-BENCH-VAR, T-GAP1-VALID(+v2), T-OPENAI, T-CHECKPOINT | COMPLETE (simulation) |
 | PHASE 4 Evidence+Demo Polish | T-README, T-UI smoke, handover report, authority manifest | COMPLETE |
-| PHASE 5 Controlled Real Validation | T-DOCKER (Stage A design DONE; Stage B blocked) | DESIGN_DONE / BLOCKED |
-| PHASE 6 Final Evidence Review | independent final review after T-DOCKER | PENDING |
+| PHASE 5 Controlled Real Validation | T-DOCKER Stage B (loopback observed tier DONE; Docker-isolated OPTIONAL/deferred) | PARTIAL (loopback observed validation achieved; container-isolation optional) |
+| PHASE 6 Final Evidence Review | independent final review of full evidence package | IN PROGRESS (open 2026-08-25) |
 | PHASE 7 Thesis/Paper/Defense | thesis authoring + demo | PENDING (not started) |
 
-> Frozen status: TOP-LEVEL AUTHORITY REVIEW; FROZEN PENDING T-DOCKER EXPERIMENT DECISION.
-> No source change; project intentionally frozen. Next real work = T-DOCKER Stage B, gated by
-> T_DOCKER_READINESS_ASSESSMENT (NO-GO until Docker up + lab corpus + allowlist guard).
+> Frozen status: PHASE 6 FINAL EVIDENCE REVIEW; implementation frozen. T-DOCKER loopback
+> observed tier achieved; Docker-isolated validation OPTIONAL/deferred. No source change
+> without authority approval.
 
 ## Execution order (dependency-based)
 1. T-SAFE (P0) — safety gate; blocks safe demoing + Docker

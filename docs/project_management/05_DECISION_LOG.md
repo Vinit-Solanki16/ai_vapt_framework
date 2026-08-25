@@ -130,3 +130,24 @@ Format: D-NNN — date — decision — rationale — evidence — affected file
   "trusts label" claim; flagged DVWA/Metasploitable incompatibility). 29 tests pass; no source changed.
 - **Affected files:** T_DOCKER_EXPERIMENT_PROTOCOL.md, T_DOCKER_READINESS_ASSESSMENT.md (DESIGN ONLY),
   03_TASK_REGISTER.md (T-DOCKER updated), this log (D-011).
+
+## D-012 — 2026-08-25 — T-DOCKER Stage B executed (loopback observed tier); move to PHASE 6.
+- **Decision:** Authority accepted Option 1: treat T-DOCKER Stage B as a separate, honestly-scoped
+  CONTROLLED OBSERVED-VALIDATION tier on LOOPBACK (subprocess isolation), NOT Docker-isolated.
+  Docker-isolated validation is an OPTIONAL future upgrade. Do NOT claim container-sandboxed.
+- **What happened:** 5 implementation agents (serialized risk noted) delivered: (a) `core/executor.py`
+  fail-closed `target_allowlist` gate before subprocess.run in danger_mode; (b) `lab/emulator` Flask
+  /vuln+/fail with docker-compose; (c) `data/poc_corpus_lab` A/B/C modules reading argv + emitting
+  success tokens (fixes the corpus NO-GO root cause); (d) `tests/run_tdocker_scenarios.py` running
+  S1 (observed SUCCESS: emulator GET /vuln + module stdout "VULNERABLE") and S2 (observed FAILURE ->
+  pivot: exactly 2 GET /fail, then pivot, no 3rd attempt, clean termination). Transient test failures
+  during concurrent agent writes resolved; full suite now 39 passed, stable.
+- **Evidence class:** CONTROLLED OBSERVED VALIDATION (loopback). Outcomes parsed from REAL module
+  stdout/stderr, corroborated by emulator access logs; labels.json NOT used. NOT container-isolated
+  (Docker daemon unavailable; runs on 127.0.0.1 with benign GET probes only).
+- **Action:** Committed Stage B impl (b7fb86); gitignored raw run artifacts (reproducible via runner).
+  Updated 03_TASK_REGISTER (T-DOCKER PARTIAL_VERIFIED_LOOPBACK), 01_PROJECT_STATE (PHASE 6 freeze),
+  02 master plan mapping, 07 test status (39), 09 benchmark evidence (observed tier), this log.
+  PHASE 5 = PARTIAL; PHASE 6 INDEPENDENT FINAL EVIDENCE REVIEW now open.
+- **Affected files:** core/executor.py, lab/, data/poc_corpus_lab/, tests/ (+ .gitignore, runner),
+  03/01/02/07/09 PM docs, this log (D-012).
