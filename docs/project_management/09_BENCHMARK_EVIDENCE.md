@@ -44,7 +44,7 @@ unless measured.
   routing mistakes at portfolio level. Scoring's measurable value is ROUTING EFFICIENCY:
   fewer wasted attempts BEFORE the first validated success and earlier foothold. Claim row
   updated accordingly (YES with scope conditions).
-- T-DOCKER: REAL OBSERVED RESULT — success from actual module output in container (not label).
+- T-DOCKER: REAL OBSERVED RESULT — success from actual module output in container-isolated testbed (not label) [future gate].
 
 ## Controlled observed validation achieved (2026-08-25, loopback tier — NOT container-isolated)
 T-DOCKER Stage B was executed against a purpose-built Flask lab emulator on **loopback

@@ -80,7 +80,8 @@ Three evidence tiers — keep them distinct:
   are not permitted to test.
 - To progress to **true exploitation**, provision an isolated Docker testbed
   (DVWA / OWASP crAPI / Metasploitable) and register sandboxed modules under
-  `data/poc_corpus/<CVE>.py`; the executor already shells them out in danger_mode.
+  `data/poc_corpus/<CVE>.py`; the executor can shell them out in danger_mode
+  (opt-in, requires authorized isolated lab).
 
 ## Benchmark result (sample run, SIMULATION)
 
