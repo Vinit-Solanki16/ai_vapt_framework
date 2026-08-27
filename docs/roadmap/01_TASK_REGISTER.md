@@ -1,37 +1,55 @@
-# TASK REGISTER — Two-Track Roadmap
+# TASK REGISTER — Two-Track Roadmap (authority-reviewed 2026-08-27)
 
-Status: TODO / IN_PROGRESS / DONE. Each Track-A item that needs a writing agent
-has a ready prompt in `docs/roadmap/AGENT_PROMPTS.md`.
+Status: TODO / IN_PROGRESS / DONE. Tasks are atomic; one agent modifies one
+workstream at a time; Hermes verifies before any commit.
 
-## TRACK A — Research paper / thesis prototype
-| ID | Title | Owner | Status | Note |
-|----|-------|-------|--------|------|
-| A1 | Freeze implementation | Hermes | DONE | core/ frozen; 39 tests pass |
-| A2 | Related-work + novelty audit | agent (user dispatches) | TODO | R1 + R2 prompts ready |
-| A3 | Define precise research questions | agent | TODO | R3 claim register prompt ready |
-| A4 | Hypotheses + experimental methodology | agent | TODO | R5–R7 prompts ready |
-| A5 | Validate methodology (SMART vs DUMB, ablation) | Hermes | PARTIAL | agnostic + VAPT benchmarks exist; needs formal protocol |
-| A6 | Final evidence review → GO/NO-GO | user+agent | TODO | |
-| A7 | Thesis / research paper | user | TODO | |
-
-## TRACK B — Full long-term project (Stage 2)
+## TRACK 0 — FROZEN VAPT EVIDENCE BASELINE
 | ID | Title | Status | Note |
 |----|-------|--------|------|
-| B1 | Extract/generalize the decision engine | DONE | decision_engine/ built + benchmarked |
-| B2 | Define plugin/tool adapter API | TODO | formalize adapters/vapt_adapter.py contract |
-| B3 | Add discovery / recon layer | TODO | future |
-| B4 | Add URL/IP/network target ingestion | TODO | future |
-| B5 | Add multiple VAPT tools (Nmap, Nuclei) | TODO | future |
-| B6 | Feed findings into the engine | TODO | adapter already maps corpus→candidates |
-| B7 | Controlled validation env (Docker, Level 3) | PARKED | T-DOCKER optional upgrade |
-| B8 | Full evidence/reporting system | TODO | future |
+| T0-BASE | Original VAPT prototype | FROZEN | core/; 39/39 tests; GAP-1/2 + L2 observed evidence |
 
-## Stage-1 engine acceptance (already met)
-- [x] Domain-independent schemas (no CVE/exploit references in core/)
-- [x] Gap-1 pre-execution quality scoring (assessor)
-- [x] Gap-2 per-candidate attempt counter + N-threshold pivot
-- [x] Bounded termination (no infinite loop)
-- [x] Checkpoint/resume (core/ behaviour ported)
-- [x] Agnostic benchmark: SMART < DUMB attempts on a non-VAPT domain
-- [x] VAPT adapter drives engine from existing corpus without touching core/
-- [x] Original 39 tests still green
+## TRACK 1 — GENERALIZED DECISION ENGINE (verify before claiming)
+| ID | Title | Owner | Status | Gate |
+|----|-------|-------|--------|------|
+| T-DE-TESTS | Dedicated regression suite for decision_engine/ | impl agent | TODO | GATE 1 |
+| T-DE-BOUNDARY | Independent architecture / domain-leakage review | reviewer (RO) | TODO | GATE 2 |
+| T-DE-BENCH | Benchmark fairness / reproducibility / structural-bias review | reviewer (RO) | TODO | GATE 3 |
+| T-DE-EVIDENCE | Reconcile evidence tiers + claims (TRACK0 vs TRACK1) | Hermes+review | TODO | GATE 4 |
+
+## TRACK A — THESIS / RESEARCH (after gates)
+| ID | Title | Status |
+|----|-------|--------|
+| R1 | Related work + dated Strix snapshot | TODO (after gates) |
+| R2 | Novelty / threat-to-novelty matrix | TODO |
+| R3 | Claim register A/B/C | TODO |
+| R4 | Independent challenge review | TODO |
+| R5-R7 | Methodology + evidence + GO/NO-GO | TODO |
+| A7 | Thesis / paper writing | BLOCKED until GO |
+
+## TRACK B — LONG-TERM FULL VAPT PLATFORM (not started)
+| ID | Title | Status |
+|----|-------|--------|
+| B2 | Formal adapter API | TODO (future) |
+| B3 | Discovery / recon layer | TODO (future) |
+| B4 | URL/IP/network ingestion | TODO (future) |
+| B5 | Multiple VAPT tools (Nmap/Nuclei) | TODO (future) |
+| B6 | Feed findings into engine | TODO (future) |
+| B7 | Level-3 Docker validation | PARKED |
+| B8 | Full reporting/UI | TODO (future) |
+
+## Acceptance for T-DE-TESTS (required tests)
+TEST-DE-01 candidate schema validation
+TEST-DE-02 priority/ranking ordering
+TEST-DE-03 successful outcome advances immediately
+TEST-DE-04 failed outcome increments attempt counter
+TEST-DE-05 below threshold allows controlled retry
+TEST-DE-06 threshold triggers pivot
+TEST-DE-07 repeated failures terminate within bound
+TEST-DE-08 no infinite transition loop
+TEST-DE-09 checkpoint creation
+TEST-DE-10 resume reproduces expected state
+TEST-DE-11 generic executor calls supplied execute_fn
+TEST-DE-12 VAPT adapter isolated from engine core (import boundary)
+
+After T-DE-TESTS: report separately — "Frozen VAPT baseline: 39/39; General
+engine: X/X" — do NOT blur the counts.
