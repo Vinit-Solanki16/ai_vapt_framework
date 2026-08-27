@@ -46,7 +46,8 @@ research prototype and evidence baseline.
 | Real mode fires no offensive send by default (safety) | TRACK 0 | Code review | `tests/test_executor_allowlist.py`; `test_danger_mode_mock.py` | danger_mode parses real subprocess I/O | YES (safety claim) |
 | Checkpoint / resume | TRACK 0 | Level 1 | `tests/test_checkpoint.py` | — | YES |
 | Engine is domain-independent (architecturally) | TRACK 1 | Code inspection | import-grep boundary check (this report §A) | Architectural only; not experimental proof | YES (architectural claim only) |
-| Engine bounds repeated failure on a NON-VAPT domain | TRACK 1 | Loop-bound demo (NOT a fair baseline win) | `decision_engine/benchmarks/agnostic_benchmark.py` | **BIASED (T-DE-BOUNDARY Q5 FAIL):** SMART cap=2 vs DUMB cap=5 — the 8-vs-17 gap is the cap asymmetry, not Gap-1 priority. With a fair DUMB cap=2, DUMB also = 8. Single synthetic family; deterministic assessor; Gap-1 never isolated. | NO — do NOT use 8-vs-17 as evidence of SMART superiority. Re-scope via T-DE-BENCH (same cap + budget-at-N + priority-isolation). |
+| Engine bounds repeated failure on a NON-VAPT domain (Gap-2 pivot) | TRACK 1 | FAIR benchmark, 4-agent ablation | `decision_engine/benchmarks/fair_benchmark.py` + `fair_vapt_benchmark.py` (T-DE-BENCH-IMPL) | Under identical per-candidate cap T, pivot component (PRIORITY-ONLY − SMART) is positive and grows with T: VAPT corpus T=2:+77, T=5:+200 requests saved; agnostic sparse T=5:+175. 6 families × ≥30 seeds × 4 caps × 10 rankers. | YES (B) — MUST QUALIFY: this proves Gap-2 (bounded failure-driven pivoting) reduces wasted attempts under fair cap; it does NOT by itself prove Gap-1 priority benefit. |
+| Gap-1 (pre-execution priority) improves outcomes | TRACK 1 | NOT isolated | `fair_benchmark.py` ablation | Priority component (DUMB − PRIORITY-ONLY) = 0 under per-visit cap with deterministic execution — ordering does not change total attempts when no agent is budget-constrained at candidate level. Confirmed by T-DE-BENCH §4 and T-DE-BENCH-IMPL. | **PROHIBITED as a proven claim** until a total-attempt-budget protocol is added (would let ordering decide what fits). Currently QUALIFY (B) at most: priority ranking is necessary scaffolding for the pivot order, not an independently-measured win. |
 | LLM assessor accuracy on unseen CVEs | TRACK 0/1 | NOT proven | — | No experiment | NO (prohibited) |
 | Universal domain independence | TRACK 1 | NOT proven | — | One synthetic family | NO (prohibited) |
 | Real-world VAPT superiority | TRACK 0/1 | NOT proven | — | No live multi-target eval | NO (prohibited) |
@@ -54,21 +55,16 @@ research prototype and evidence baseline.
 
 ## C. NEW GENERALIZED ENGINE STATUS
 
-`decision_engine/` is classified as a **Stage-1 generalized architecture branch**.
-Its maintenance-task benchmark is explicitly classified as:
+`decision_engine/` is classified as a **Stage-1 generalized architecture branch**, now
+with a **FAIR, reproducible benchmark** (T-DE-BENCH-IMPL, commit 7001c61).
 
-> **Loop-bound demonstration (NOT a fair-baseline win).**
+T-DE-BENCH-IMPL findings (verified, 30 seeds):
+- **Gap-2 (bounded failure-driven pivoting) is now measured fairly and is positive.** Under an identical per-candidate cap T, the pivot component (PRIORITY-ONLY − SMART) is large and grows with T: VAPT corpus T=2:+77, T=5:+200 requests saved; agnostic sparse T=5:+175. This is a legitimate, defensible contribution.
+- **Gap-1 (priority) benefit is NOT isolated by the current design.** Priority component (DUMB − PRIORITY-ONLY) = 0 under a per-visit cap, because ordering alone doesn't change total attempts when no agent is candidate-budget-constrained. To claim Gap-1 improves outcomes, a *total-attempt-budget* protocol is required. Until then, Gap-1 may only be presented as QUALIFY (B): necessary scaffolding for pivot ordering, not an independently-measured win.
 
-T-DE-BOUNDARY (Q5, FAIL) found the benchmark structurally biased: SMART uses
-`max_attempts=2` while DUMB retries up to 5, so the reported "8 vs 17" gap is the
-retry-cap asymmetry, not Gap-1 priority. With a fair DUMB cap=2, DUMB also = 8.
-The benchmark therefore proves only that the engine runs and bounds a retry loop
-on a non-VAPT domain — a narrow proof-of-mechanism. It does NOT validly show
-"SMART beats DUMB because of intelligent prioritization," and the 8-vs-17 figure
-must NOT appear as evidence of superiority in any thesis text. The engine's
-**architectural** domain independence (Q1–Q4 PASS) stands; the cross-domain
-*evidence* must be re-scoped through T-DE-BENCH (same cap + budget-at-N +
-priority-isolation + scoring-noise sweeps).
+Architectural domain independence stands (T-DE-BOUNDARY Q1–Q4 PASS). The engine's
+cross-domain evidence is now "fair-benchmark validated for Gap-2," not the old
+biased 8-vs-17 figure.
 
 ## D. FREEZE STATUS
 
