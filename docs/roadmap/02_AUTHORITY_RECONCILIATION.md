@@ -46,7 +46,7 @@ research prototype and evidence baseline.
 | Real mode fires no offensive send by default (safety) | TRACK 0 | Code review | `tests/test_executor_allowlist.py`; `test_danger_mode_mock.py` | danger_mode parses real subprocess I/O | YES (safety claim) |
 | Checkpoint / resume | TRACK 0 | Level 1 | `tests/test_checkpoint.py` | — | YES |
 | Engine is domain-independent (architecturally) | TRACK 1 | Code inspection | import-grep boundary check (this report §A) | Architectural only; not experimental proof | YES (architectural claim only) |
-| Engine bounds repeated failure on a NON-VAPT domain | TRACK 1 | Proof-of-mechanism | `decision_engine/benchmarks/agnostic_benchmark.py` (8 vs 17 on synthetic maintenance tasks) | SINGLE synthetic task family; deterministic assessor | PARTIAL — "initial cross-domain proof-of-mechanism" only |
+| Engine bounds repeated failure on a NON-VAPT domain | TRACK 1 | Loop-bound demo (NOT a fair baseline win) | `decision_engine/benchmarks/agnostic_benchmark.py` | **BIASED (T-DE-BOUNDARY Q5 FAIL):** SMART cap=2 vs DUMB cap=5 — the 8-vs-17 gap is the cap asymmetry, not Gap-1 priority. With a fair DUMB cap=2, DUMB also = 8. Single synthetic family; deterministic assessor; Gap-1 never isolated. | NO — do NOT use 8-vs-17 as evidence of SMART superiority. Re-scope via T-DE-BENCH (same cap + budget-at-N + priority-isolation). |
 | LLM assessor accuracy on unseen CVEs | TRACK 0/1 | NOT proven | — | No experiment | NO (prohibited) |
 | Universal domain independence | TRACK 1 | NOT proven | — | One synthetic family | NO (prohibited) |
 | Real-world VAPT superiority | TRACK 0/1 | NOT proven | — | No live multi-target eval | NO (prohibited) |
@@ -57,14 +57,18 @@ research prototype and evidence baseline.
 `decision_engine/` is classified as a **Stage-1 generalized architecture branch**.
 Its maintenance-task benchmark is explicitly classified as:
 
-> **Proof-of-mechanism (preliminary cross-domain evidence).**
+> **Loop-bound demonstration (NOT a fair-baseline win).**
 
-It proves the mechanisms run and bind failure on a non-VAPT domain, but it is a
-single synthetic task family with a deterministic (not LLM) assessor. It is NOT
-"stronger validated cross-domain evidence" and is NOT a claim of universal
-domain independence. The engine currently has **no dedicated regression test
-suite** (0 tests) — this must be fixed before any engine claim is used in the
-thesis.
+T-DE-BOUNDARY (Q5, FAIL) found the benchmark structurally biased: SMART uses
+`max_attempts=2` while DUMB retries up to 5, so the reported "8 vs 17" gap is the
+retry-cap asymmetry, not Gap-1 priority. With a fair DUMB cap=2, DUMB also = 8.
+The benchmark therefore proves only that the engine runs and bounds a retry loop
+on a non-VAPT domain — a narrow proof-of-mechanism. It does NOT validly show
+"SMART beats DUMB because of intelligent prioritization," and the 8-vs-17 figure
+must NOT appear as evidence of superiority in any thesis text. The engine's
+**architectural** domain independence (Q1–Q4 PASS) stands; the cross-domain
+*evidence* must be re-scoped through T-DE-BENCH (same cap + budget-at-N +
+priority-isolation + scoring-noise sweeps).
 
 ## D. FREEZE STATUS
 
