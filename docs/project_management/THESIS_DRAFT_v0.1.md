@@ -179,7 +179,7 @@ The engine is a faithful copy-and-refactor of `core/agent_graph.py`, stripped of
 
 **Seeds and statistical reporting.** Results are reported over ≥30 seeds per configuration. Where applicable, statistics are expressed as mean ± 95% CI [MASTER_RESEARCH_PROJECT_REPORT.md §8; fair_benchmark.py].
 
-**Safety protocol.** The executor supports three modes: simulation (outcome from label; no network), real (connectivity check only; reports SKIPPED, sends no payload), and danger_mode (opt-in subprocess exploit; fail-closed allowlist refuses non-authorized targets) [executor.py:42, 220-229, 236-245; MASTER_RESEARCH_PROJECT_REPORT.md §12].
+**Safety protocol.** The original VAPT executor (`core/executor.py`) supports three modes: simulation (outcome from label; no network), real (connectivity check only; reports SKIPPED, sends no payload), and danger_mode (opt-in subprocess exploit; fail-closed allowlist refuses non-authorized targets) [core/executor.py:56-72 (constructor + empty allowlist refuses all), core/executor.py:219-245 (safe-mode SKIPPED / danger gate); MASTER_RESEARCH_PROJECT_REPORT.md §12]. The generalized engine's executor (`decision_engine/core/executor.py`) is domain-independent and delegates real execution to a pluggable `execute_fn`; it does not itself implement danger_mode. Verified in `tests/test_executor_allowlist.py` and `tests/test_danger_mode_mock.py` (which exercise `core/executor.py`).
 
 **Checkpoint/resume.** `save_checkpoint` (engine.py:172) serializes state to JSON; `load_checkpoint` (engine.py:183) restores it. Verified in `tests/test_checkpoint.py` [MASTER_RESEARCH_PROJECT_REPORT.md §4; R3_CLAIM_REGISTER.md A4].
 
@@ -283,7 +283,7 @@ Every thesis sentence maps to an R3 tier and an evidence anchor. C-prohibited cl
 |---|---------------------------|---------|-----------------|
 | 1 | A general autonomous decision & pivot engine was built; its core logic is domain-independent | A1 | `decision_engine/core/engine.py:1-12`; `vapt_adapter.py:52`; `03_TDE_EVIDENCE.md` E1 |
 | 2 | Gap-2 bounded pivot reduces wasted attempts under fair identical cap; scales with cap | A2 | `fair_vapt_benchmark.py` output; `fair_benchmark.py`; engine.py:112, engine.py:98 |
-| 3 | Framework safely bounds execution; opt-in fail-closed dangerous path | A3 | `tests/test_executor_allowlist.py`; `tests/test_danger_mode_mock.py`; engine.py:236-245 |
+| 3 | Framework safely bounds execution; opt-in fail-closed dangerous path | A3 | `tests/test_executor_allowlist.py`; `tests/test_danger_mode_mock.py`; `core/executor.py:56-72` (constructor + empty allowlist refuses all), `core/executor.py:219-245` (safe-mode SKIPPED / danger gate) |
 | 4 | Stateful execution with checkpoint/resume is supported | A4 | `tests/test_checkpoint.py`; engine.py:172, engine.py:183 |
 | 5 | VAPT domain is one adapter instantiation of the engine | A5 | `vapt_adapter.py:52`; `03_TDE_EVIDENCE.md` E1, E2 |
 | 6 | Priority formula `probability × (0.5 + 0.5 × quality)` | A6 | `schemas.py:77`; `QUALITY_WEIGHT` at schemas.py:26 |
