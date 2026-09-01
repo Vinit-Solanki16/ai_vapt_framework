@@ -16,6 +16,7 @@ Supports:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from prototype.demo_data import SCENARIOS
@@ -104,8 +105,13 @@ def _run_scenario(
     target: str | None = None,
     port: int = 8080,
     assessor: str = "deterministic",
+    scan_file: str | None = None,
 ) -> None:
-    if scenario_name in SCENARIOS:
+    if scan_file:
+        from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
+        candidates = candidates_to_scenario(candidates_from_scan(scan_file))
+        scenario_name = f"scan:{os.path.basename(scan_file)}"
+    elif scenario_name in SCENARIOS:
         fn, kwargs = SCENARIOS[scenario_name]
         candidates = fn(**kwargs)
     elif scenario_name == "corpus":
@@ -164,6 +170,11 @@ def main() -> None:
         help="Scenario name: success, failure_pivot, multi_candidate, or corpus",
     )
     run_parser.add_argument(
+        "--scan", "-S",
+        default=None,
+        help="Path to scan file (Nmap XML/JSON or custom JSON). Overrides --scenario.",
+    )
+    run_parser.add_argument(
         "--max-attempts", "-m",
         type=int,
         default=2,
@@ -203,8 +214,8 @@ def main() -> None:
         return
 
     if args.command == "run":
-        if args.scenario is None:
-            print("--scenario is required for 'run' command", file=sys.stderr)
+        if args.scenario is None and args.scan is None:
+            print("--scenario or --scan is required for 'run' command", file=sys.stderr)
             sys.exit(1)
         _run_scenario(
             args.scenario,
@@ -213,6 +224,7 @@ def main() -> None:
             target=args.target,
             port=args.port,
             assessor=args.assessor,
+            scan_file=args.scan,
         )
 
 
