@@ -5,11 +5,12 @@ Usage:
     python prototype/cli.py run --scenario failure_pivot --max-attempts 2
     python prototype/cli.py run --scenario multi_candidate --max-attempts 2
     python prototype/cli.py run --corpus --max-attempts 2
+    python prototype/cli.py run --scenario success --mode lab --target 172.28.0.2 --port 8080
 
 Supports:
-- Scenario selection (success / failure_pivot / multi_candidate)
-- Corpus mode (from VAPT data via adapter)
-- Simulation mode (no external network access)
+- Scenario selection (success / failure_pivot / multi_candidate / corpus)
+- Execution mode (simulation / lab)
+- Lab mode targets the Docker emulator (OBSERVED outcomes)
 """
 
 from __future__ import annotations
@@ -83,15 +84,26 @@ def _display_output(
     print()
 
     print("=" * 64)
-    print("SAFETY")
+    print("SAFETY / EVIDENCE TIER")
     print("=" * 64)
-    print("SIMULATION MODE")
-    print("Outcomes are resolved from supplied demo ground truth.")
-    print("No external targets contacted. No real vulnerabilities validated.")
+    if mode == "lab":
+        print("LAB MODE (OBSERVED)")
+        print("Outcomes are observed from the Docker emulator (real HTTP responses).")
+        print("Target is allowlisted. No external targets contacted.")
+    else:
+        print("SIMULATION MODE")
+        print("Outcomes are resolved from supplied demo ground truth.")
+        print("No external targets contacted. No real vulnerabilities validated.")
     print("=" * 64)
 
 
-def _run_scenario(scenario_name: str, max_attempts: int, mode: str = "simulation") -> None:
+def _run_scenario(
+    scenario_name: str,
+    max_attempts: int,
+    mode: str = "simulation",
+    target: str | None = None,
+    port: int = 8080,
+) -> None:
     if scenario_name in SCENARIOS:
         fn, kwargs = SCENARIOS[scenario_name]
         candidates = fn(**kwargs)
@@ -107,10 +119,24 @@ def _run_scenario(scenario_name: str, max_attempts: int, mode: str = "simulation
 
     _validate_scenario(candidates)
 
+    # Build executor kwargs based on mode
+    executor_kwargs = {}
+    if mode == "lab":
+        if target is None:
+            print(
+                "--target is required for lab mode (e.g., --target 172.28.0.2)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        from prototype.execution_layer import create_lab_executor
+
+        executor_kwargs["executor"] = create_lab_executor(target, port)
+
     final_state = run_decision_scenario(
         candidates,
         max_attempts=max_attempts,
         mode=mode,
+        **executor_kwargs,
     )
 
     _display_output(scenario_name, final_state, max_attempts, mode)
@@ -141,6 +167,23 @@ def main() -> None:
         default=2,
         help="Maximum attempts per candidate before pivot",
     )
+    run_parser.add_argument(
+        "--mode", "-M",
+        choices=["simulation", "lab"],
+        default="simulation",
+        help="Execution mode: simulation (default) or lab (Docker emulator, OBSERVED)",
+    )
+    run_parser.add_argument(
+        "--target", "-t",
+        default=None,
+        help="Lab target IP (required for lab mode). Allowlisted: 127.0.0.1, 172.28.0.2",
+    )
+    run_parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=8080,
+        help="Lab target port (default: 8080)",
+    )
 
     version_parser = sub.add_parser("version", help="Print version")
 
@@ -155,7 +198,13 @@ def main() -> None:
         if args.scenario is None:
             print("--scenario is required for 'run' command", file=sys.stderr)
             sys.exit(1)
-        _run_scenario(args.scenario, args.max_attempts)
+        _run_scenario(
+            args.scenario,
+            args.max_attempts,
+            mode=args.mode,
+            target=args.target,
+            port=args.port,
+        )
 
 
 if __name__ == "__main__":

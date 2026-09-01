@@ -85,14 +85,16 @@ def run_decision_scenario(
     scenario: List[dict],
     max_attempts: int = 2,
     mode: str = "simulation",
+    executor: Executor | None = None,
+    assessor: str = "deterministic",
 ) -> dict:
     """Run a scenario through the real decision engine.
 
     Steps:
       1. Validate scenario input
       2. Convert scenario dicts via candidate_from_dict (existing schema)
-      3. Construct the real Executor
-      4. Use the real deterministic_assessor
+      3. Construct the real Executor (or use a pre-built one)
+      4. Use the real assessor (deterministic or LLM)
       5. Call the real run_engine()
       6. Return the actual final engine state
       7. Compute presentation-level metadata outside the engine
@@ -100,7 +102,9 @@ def run_decision_scenario(
     Args:
         scenario: List of candidate dicts
         max_attempts: Pivot threshold (max attempts per candidate)
-        mode: "simulation" (default) or "real"
+        mode: "simulation" (default), "real", or "lab"
+        executor: pre-built Executor (optional; overrides mode-based construction)
+        assessor: "deterministic" (default) or "llm" (requires Ollama)
 
     Returns:
         Final engine state dict with presentation metadata appended
@@ -118,11 +122,16 @@ def run_decision_scenario(
             normalized["ground_truth"] = str(normalized["ground_truth"]).upper()
         candidates.append(normalized)
 
-    # 3. Construct the real Executor
-    executor = build_executor(mode=mode)
+    # 3. Construct the real Executor (or use pre-built)
+    if executor is None:
+        executor = build_executor(mode=mode)
 
-    # 4. Use the real deterministic assessor
-    assess_fn = deterministic_assessor
+    # 4. Use the real assessor
+    if assessor == "llm":
+        from decision_engine.adapters.vapt_adapter import vapt_assess_fn
+        assess_fn = vapt_assess_fn(use_llm=True)
+    else:
+        assess_fn = deterministic_assessor
 
     # 5. Call the real run_engine()
     final_state = run_engine(
