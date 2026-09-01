@@ -103,6 +103,7 @@ def _run_scenario(
     mode: str = "simulation",
     target: str | None = None,
     port: int = 8080,
+    assessor: str = "deterministic",
 ) -> None:
     if scenario_name in SCENARIOS:
         fn, kwargs = SCENARIOS[scenario_name]
@@ -136,7 +137,8 @@ def _run_scenario(
         candidates,
         max_attempts=max_attempts,
         mode=mode,
-        **executor_kwargs,
+        executor=executor_kwargs.get("executor"),
+        assessor=assessor,
     )
 
     _display_output(scenario_name, final_state, max_attempts, mode)
@@ -174,6 +176,12 @@ def main() -> None:
         help="Execution mode: simulation (default) or lab (Docker emulator, OBSERVED)",
     )
     run_parser.add_argument(
+        "--assessor", "-a",
+        choices=["deterministic", "llm"],
+        default="deterministic",
+        help="Assessor: deterministic (default, offline) or llm (requires Ollama)",
+    )
+    run_parser.add_argument(
         "--target", "-t",
         default=None,
         help="Lab target IP (required for lab mode). Allowlisted: 127.0.0.1, 172.28.0.2",
@@ -204,6 +212,7 @@ def main() -> None:
             mode=args.mode,
             target=args.target,
             port=args.port,
+            assessor=args.assessor,
         )
 
 
