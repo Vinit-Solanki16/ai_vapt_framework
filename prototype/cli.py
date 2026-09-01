@@ -106,7 +106,7 @@ def _run_scenario(
     port: int = 8080,
     assessor: str = "deterministic",
     scan_file: str | None = None,
-) -> None:
+) -> dict:
     if scan_file:
         from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
         candidates = candidates_to_scenario(candidates_from_scan(scan_file))
@@ -156,6 +156,8 @@ def _run_scenario(
 
     print(f"\nReports written: {json_path}, {txt_path}")
 
+    return final_state
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -204,6 +206,19 @@ def main() -> None:
         help="Lab target port (default: 8080)",
     )
 
+    run_parser.add_argument(
+        "--checkpoint", "-c",
+        default=None,
+        help="Path to save checkpoint after run (e.g., ./ckpt.json)",
+    )
+
+    resume_parser = sub.add_parser("resume", help="Resume from checkpoint")
+    resume_parser.add_argument(
+        "--path", "-p",
+        required=True,
+        help="Path to checkpoint file to resume from",
+    )
+
     version_parser = sub.add_parser("version", help="Print version")
 
     args = parser.parse_args()
@@ -217,7 +232,7 @@ def main() -> None:
         if args.scenario is None and args.scan is None:
             print("--scenario or --scan is required for 'run' command", file=sys.stderr)
             sys.exit(1)
-        _run_scenario(
+        final_state = _run_scenario(
             args.scenario,
             args.max_attempts,
             mode=args.mode,
@@ -226,6 +241,50 @@ def main() -> None:
             assessor=args.assessor,
             scan_file=args.scan,
         )
+        if args.checkpoint and final_state:
+            from prototype.checkpoints import save_run_checkpoint
+            save_run_checkpoint(final_state, args.checkpoint)
+            print(f"Checkpoint saved: {args.checkpoint}")
+
+    elif args.command == "resume":
+        _resume_from_checkpoint(args.path)
+
+
+def _resume_from_checkpoint(checkpoint_path: str) -> None:
+    """Resume a run from a checkpoint file."""
+    from prototype.checkpoints import resume_from_checkpoint
+    from prototype.report_generator import save_json_report, save_text_report
+    from prototype.trace_formatter import format_engine_trace, format_candidate_ranking, format_execution_results
+    from decision_engine.core.engine import build_graph, initial_state, EngineStatus
+
+    state = resume_from_checkpoint(checkpoint_path)
+
+    # Display the resumed state
+    print("\n" + "=" * 64)
+    print("AI VAPT DECISION ENGINE — RESUMED FROM CHECKPOINT")
+    print("=" * 64)
+    print(f"Checkpoint: {checkpoint_path}")
+    print(f"Status: {state.get('status', 'UNKNOWN')}")
+    print(f"Current index: {state.get('current_index', 0)}")
+    print(f"Attempt count: {state.get('attempt_count', 0)}")
+    print()
+
+    print("CANDIDATE RANKING")
+    print("-" * 40)
+    print(format_candidate_ranking(state))
+    print()
+
+    print("DECISION TRACE")
+    print("-" * 40)
+    print(format_engine_trace(state))
+    print()
+
+    # Save reports
+    json_path = f"./report_resumed_vapt.json"
+    txt_path = f"./report_resumed_vapt.txt"
+    save_json_report("resumed", state, json_path, state.get("max_attempts", 2), state.get("mode", "simulation"))
+    save_text_report("resumed", state, txt_path, state.get("max_attempts", 2), state.get("mode", "simulation"))
+    print(f"\nReports written: {json_path}, {txt_path}")
 
 
 if __name__ == "__main__":
