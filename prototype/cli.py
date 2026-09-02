@@ -135,6 +135,15 @@ def _run_scenario(
                 file=sys.stderr,
             )
             sys.exit(1)
+        
+        # Explicit allowlist validation before creating executor
+        from prototype.lab_runner import _validate_target
+        try:
+            _validate_target(target)
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            sys.exit(400)
+
         from prototype.execution_layer import create_lab_executor
 
         executor_kwargs["executor"] = create_lab_executor(target, port)

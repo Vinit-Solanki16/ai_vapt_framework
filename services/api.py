@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
+from prototype.lab_runner import LAB_TARGET_ALLOWLIST
 from services.schemas import (
     RunRequest, RunResponse, RunStatus, RunTrace, ReportResponse,
     CheckpointResponse, ErrorResponse, TraceEvent
@@ -61,7 +62,7 @@ def _run_engine(run_id: str, req: RunRequest):
 @app.post("/runs", response_model=RunResponse)
 def start_run(req: RunRequest):
     """Start a new decision engine run."""
-    if req.mode == "lab" and req.target not in {"127.0.0.1", "172.28.0.2"}:
+    if req.mode == "lab" and req.target not in LAB_TARGET_ALLOWLIST:
         raise HTTPException(status_code=400, detail="Target not in allowlist")
 
     run_id = job_manager.create(req.scenario, req.mode)
