@@ -63,7 +63,12 @@ def _parse_executor_success(rest: str) -> Tuple[str, dict]:
     # "Attempt 1 -> SUCCESS on DEMO-SUCCESS-A"
     parts = rest.split("->")
     attempt_part = parts[0].replace("Attempt", "").strip()
-    id_part = parts[1].replace("SUCCESS", "").replace("on", "").strip()
+    # Extract candidate id from "SUCCESS on <id>" — candidate id may contain "SUCCESS"
+    after_arrow = parts[1]
+    if " on " in after_arrow:
+        id_part = after_arrow.rsplit(" on ", 1)[-1].strip()
+    else:
+        id_part = after_arrow.strip()
     return ("EXECUTE_SUCCESS", {"attempt": attempt_part, "candidate": id_part})
 
 
