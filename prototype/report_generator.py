@@ -68,7 +68,7 @@ def _get_evidence_tier(mode: str) -> str:
     """
     mode_map = {
         "simulation": "SIMULATED",
-        "lab": "OBSERVED",
+        "lab": "DOCKER_OBSERVED",
         "real": "CONTROLLED VALIDATION"
     }
     return mode_map.get(mode.lower(), "UNKNOWN")
@@ -159,7 +159,7 @@ def _build_report_dict(
             "SIMULATION MODE — Outcomes are resolved from supplied demo ground truth. "
             "No real vulnerabilities were validated."
         ) if mode.lower() == "simulation" else (
-            "OBSERVED MODE — Outcomes are from real emulator responses. "
+            "DOCKER OBSERVED MODE — Outcomes are from Docker-isolated emulator responses. "
             "No external systems were targeted."
         ) if mode.lower() == "lab" else (
             "REAL MODE — Outcomes are from live systems. "
@@ -277,7 +277,7 @@ def _get_evidence_tier_description(mode: str) -> str:
     """
     descriptions = {
         "simulation": "Outcomes resolved from supplied demo ground truth (labels)",
-        "lab": "Outcomes observed from real Docker vulnerability emulator responses",
+        "lab": "Outcomes observed from Docker-isolated vulnerability emulator",
         "real": "Outcomes from live target systems (requires authorization)"
     }
     return descriptions.get(mode.lower(), "Unknown evidence tier")

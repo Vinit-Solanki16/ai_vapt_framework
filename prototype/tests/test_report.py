@@ -225,19 +225,19 @@ def test_evidence_tier_lab():
     import json
     data = json.loads(json_report)
 
-    # Lab mode must label evidence tier as OBSERVED
-    assert data["evidence_tier"] == "OBSERVED"
-    assert "OBSERVED" in data["evidence_tier_label"]
+    # Lab mode must label evidence tier as DOCKER_OBSERVED
+    assert data["evidence_tier"] == "DOCKER_OBSERVED"
+    assert "DOCKER_OBSERVED" in data["evidence_tier_label"]
 
-    # Text report must also say OBSERVED
-    assert "OBSERVED" in text_report
+    # Text report must also say DOCKER_OBSERVED
+    assert "DOCKER_OBSERVED" in text_report
     assert "Evidence Tier:" in text_report
 
 
 def test_evidence_tier_helper():
     """Verify the evidence tier helper maps modes correctly."""
     assert _get_evidence_tier("simulation") == "SIMULATED"
-    assert _get_evidence_tier("lab") == "OBSERVED"
+    assert _get_evidence_tier("lab") == "DOCKER_OBSERVED"
     assert _get_evidence_tier("real") == "CONTROLLED VALIDATION"
     assert _get_evidence_tier("unknown") == "UNKNOWN"
 
@@ -245,7 +245,7 @@ def test_evidence_tier_helper():
 def test_evidence_tier_description_helper():
     """Verify the evidence tier description helper."""
     assert "ground truth" in _get_evidence_tier_description("simulation").lower()
-    assert "emulator" in _get_evidence_tier_description("lab").lower()
+    assert "docker" in _get_evidence_tier_description("lab").lower()
     assert "live" in _get_evidence_tier_description("real").lower()
 
 
