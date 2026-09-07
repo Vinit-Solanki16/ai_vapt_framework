@@ -13,7 +13,7 @@ No open defects. All three documents agree. All live checks pass.
 | Item | Result |
 |------|--------|
 | Claim tiers A/B/C | Identical across all three docs (A1–A9 stated, B1–B4 qualified, C1–C6 omitted) |
-| Gap-2 numbers (+77 / +200 / +175) | Identical in draft §15, R3 A2, master report §21 |
+| Gap-2 numbers (+77 / +200 / +772) | Identical in draft §15, R3 A2, master report §21 |
 | Gap-1 null (priority component = 0) | Identical in draft §5/§10/§16, R3 B1, master report §6 |
 | Loopback L2 scope (stubbed, not container-isolated) | Identical in draft §15/§17/§18, master report §5, R3 C5 |
 | Limitations list | Identical (10 items, draft §18 = master report §16) |

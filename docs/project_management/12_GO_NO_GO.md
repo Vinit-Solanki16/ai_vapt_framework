@@ -4,7 +4,7 @@
 
 ### ✅ A — MAY CLAIM (Backed by E1–E6)
 - **A1. Domain-Independent Engine** – Engine is architecturally domain-independent (E1). Verified via code inspection of `decision_engine/core/engine.py` (imports only `decision_engine.core.*`); VAPT integration via `vapt_adapter.py` (sole boundary).
-- **A2. Gap-2 Fair Benchmark (Reduced Wasted Attempts)** – Level‑1 simulation + 4‑agent ablation (E2). VAPT corpus (12 CVEs) + synthetic family, under identical per‑candidate cap T. Pivot component (PRIORITY‑ONLY − SMART) is positive and grows with T: VAPT T=2 +77 requests saved, T=5 +200; agnostic sparse T=5 +175. Eliminates cap‑asymmetry bias (B2) and proves bounded failure‑driven pivoting.
+- **A2. Gap-2 Fair Benchmark (Reduced Wasted Attempts)** – Level‑1 simulation + 4‑agent ablation (E2). VAPT corpus (12 CVEs) + synthetic family, under identical per‑candidate cap T. Pivot component (PRIORITY‑ONLY − SMART) is positive and grows with T: VAPT T=2 +77 requests saved, T=5 +200; agnostic sparse T=5 +772. Eliminates cap‑asymmetry bias (B2) and proves bounded failure‑driven pivoting.
 - **A3. Safe Bounds + Fail‑Closed Dangerous Path** – Stateful execution with checkpoint/resume (E3). Verified in `tests/test_checkpoint.py` (save/load/resume round‑trip) and `tests/test_executor_allowlist.py` (danger_mode opt‑in + fail‑closed allowlist).
 - **A4. Checkpoint/Resume Reproducibility** – `tests/test_checkpoint.py` confirms state serialization (JSON) and safe resumption without duplicated executions.
 - **A5. VAPT Domain as Adapter** – The engine is a reusable “Stage 1” core; VAPT is attached via `vapt_adapter.py` (single boundary). The engine’s mechanisms are demonstrated in vulnerability‑testing workflows (E1, E2).

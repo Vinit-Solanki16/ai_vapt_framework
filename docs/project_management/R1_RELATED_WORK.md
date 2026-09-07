@@ -35,6 +35,6 @@ Two defects recur: (a) cap/threshold bias — a "smart" agent wins via a tighter
 | Ours — real-world superiority | — | — | — | — | **C — prohibited (C3,C4)** |
 
 ## 8. Bottom line
-- **A2:** fair identical cap → bounded pivot reduces wasted attempts (VAPT T=2: +77, T=5: +200; agnostic sparse T=5: +175).
+- **A2:** fair identical cap → bounded pivot reduces wasted attempts (VAPT T=2: +77, T=5: +200; agnostic sparse T=5: +772).
 - **B-qualify:** Gap-1 priority scaffolding (B1); cross-domain Gap-2-only (B2); LLM-assessor offline/local only (B3); cite only fair SMART-vs-DUMB (B4).
 - **C-prohibited:** universal independence, unseen-CVE LLM accuracy, real-world superiority, "better than Strix/PentestGPT" (C1–C4).

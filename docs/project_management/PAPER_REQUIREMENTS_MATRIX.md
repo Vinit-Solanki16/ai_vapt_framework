@@ -11,7 +11,7 @@
 | Generalized Engine | Domain-independent design; adapter pattern; import audit | decision_engine/core/engine.py:1-12 (imports only core.*); vapt_adapter.py:52 (VAPT boundary) | No | decision_engine/core/engine.py, vapt_adapter.py | NO |
 | Methodology | Fair 4-agent ablation; identical per-visit cap; ≥30 seeds | fair_benchmark.py:1-20 (4-agent ablation); tests/decision_engine/tests/ | No | fair_benchmark.py, decision_engine/tests/ | OPTIONAL (total-budget Gap-1 experiment only to upgrade B1→A; not required for v1) |
 | Datasets | CISA KEV (1,682 CVEs); EPSS scores (365k); poC labels | datasets/cisa_kev.json; datasets/epss_scores.csv.gz; data/poc_corpus/labels.json | Yes (full dataset evidence) | datasets/cisa_kev.json, datasets/epss_scores.csv.gz, data/poc_corpus/labels.json | NO |
-| Results | Gap-2 pivot savings (+77 at T=2, +200 at T=5, +175 sparse); loopback observations | fair_vapt_benchmark.py decomposition output; emulator_access_s1.log / emulator_access_s2.log (loopback) | No (numbers available) | fair_vapt_benchmark.py, data/experiment_runs/ | NO (experiment already done; results confirmed) |
+| Results | Gap-2 pivot savings (+77 at T=2, +200 at T=5, +772 sparse); loopback observations | fair_vapt_benchmark.py decomposition output; fair_benchmark.py output; emulator_access_s1.log / emulator_access_s2.log (loopback) | No (numbers available) | fair_vapt_benchmark.py, decision_engine/benchmarks/fair_benchmark.py, data/experiment_runs/ | NO (experiment already done; results confirmed) |
 | Discussion | Why priority component=0 under fair cap; fairness discipline; bounded termination | engine.py:112-114 (attempt counting); engine.py:102 (pivot node) | No | decision_engine/core/engine.py | NO |
 | Threats to Validity | Stubbed assessor; L2 not L3; n=2 runs; unseen-CVE LLM accuracy | R3_CLAIM_REGISTER.md (C1-C6); emulator_access_*.log | No | R3_CLAIM_REGISTER.md | NO |
 | Limitations | Loopback not container-isolated; stubbed assessor; small n; no real-world validation | 03_TDE_EVIDENCE.md §5; 12_GO_NO_GO.md | No | 03_TDE_EVIDENCE.md, 12_GO_NO_GO.md | NO |
@@ -40,7 +40,7 @@
 - **pytest tests/**: 39 passed - verified.
 - **pytest decision_engine/tests/**: 16 passed - verified.
 - **grep decision_engine/core/ for 'from core'/'import core'/'poc_corpus'**: 0 real imports - verified (no real dependencies).
-- **fair_vapt_benchmark.py --seeds 5 --caps 2 5**: Confirmed pivot component +77 at T=2, +200 at T=5, +175 at T=5 sparse - verified.
+- **fair_vapt_benchmark.py --seeds 5 --caps 2 5**: Confirmed pivot component +77 at T=2, +200 at T=5; **fair_benchmark.py --seeds 30 --caps 5 --families sparse_success**: confirmed +772 at T=5 for sparse_success - verified.
 - **R3_CLAIM_REGISTER.md** exists and defines the claim hierarchy.
 - **Paper matrix** created at `docs/project_management/PAPER_REQUIREMENTS_MATRIX.md`.
 

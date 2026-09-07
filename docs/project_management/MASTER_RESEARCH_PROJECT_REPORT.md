@@ -27,7 +27,7 @@ evidence auditor / project historian (READ-ONLY).
    per-corpus EPSS 12).
 3. **What has been proven:** Gap-2 (bounded pivot reduces wasted attempts) under a
    *fair, identical cap* — VAPT T=2 +77 requests saved, T=5 +200; agnostic sparse
-   T=5 +175. Architecture is domain-independent (no VAPT leakage in `core/`).
+   T=5 +772. Architecture is domain-independent (no VAPT leakage in `core/`).
    Loopback observed validation (Level 2) confirmed pivot-on-failure with no loop.
 4. **What is only partially validated:** Gap-1 (pre-execution prioritization). Under
    the fair per-visit-cap protocol the priority component = 0 (no independent win);
@@ -203,9 +203,9 @@ the index progression.
 |-------|-----------|--------|------|--------|
 | Bounded retries / pivot on failure | loopback S2 | exactly 2 attempts, pivot, COMPLETED, no 3rd | Level 2 | VERIFIED |
 | Pivot reduces wasted attempts (fair cap) | 4-agent ablation VAPT | T=2 +77 saved, T=5 +200 saved | Level 1 (fair) | VERIFIED (A2) |
-| Pivot reduces wasted attempts (agnostic) | 4-agent ablation sparse | T=5 +175 saved | Level 1 (fair) | VERIFIED (A2) |
+| Pivot reduces wasted attempts (agnostic) | 4-agent ablation sparse | T=5 +772 saved | Level 1 (fair) | VERIFIED (A2) |
 | No loop under threshold | T-BENCH-LOOP, fair_benchmark | loop_events=0 for pivot agents | Level 1 | VERIFIED |
-| Multi-seed behaviour | fair benchmark 30 seeds × 4 caps × 6 families × 10 rankers | stable positive pivot component | Level 1 | VERIFIED (28,800 rows) |
+| Multi-seed behaviour | fair benchmark 30 seeds × 4 caps × 6 families × 10 rankers | stable positive pivot component | Level 1 | VERIFIED (regenerable via `fair_benchmark.py --jsonl`) |
 
 **Confidence: Gap-2 is the defensible, proven contribution (A2).**
 
@@ -221,7 +221,7 @@ the index progression.
 | T-BENCH-LOOP | loop measured not asserted | — | — | — | loop_events instrumented | `tests/` | L1 | — |
 | T-BENCH-VAR | multi-seed variance | — | — | 5 seeds | variance harness | `tests/` | L1 | planned gate; not in current 16 |
 | Agnostic benchmark (orig) | domain independence | DUMB | SMART | 5 tasks | 8 vs 17 (BIASED) | `agnostic_benchmark.py` | L1 (BIASED) | cap asymmetry (Q5 FAIL) |
-| **Fair 4-agent ablation** | **Gap-2 under fair cap** | DUMB/PIVOT-ONLY | PRIORITY-ONLY/SMART | 6 fam × 30 seed × 4 cap × 10 ranker | VAPT +77/+200, sparse +175 pivot comp | `fair_benchmark.py`, JSONL 28,800 rows | L1 (FAIR) | priority comp=0 |
+| **Fair 4-agent ablation** | **Gap-2 under fair cap** | DUMB/PIVOT-ONLY | PRIORITY-ONLY/SMART | 6 fam × 30 seed × 4 cap × 10 ranker | VAPT +77/+200, sparse +772 pivot comp | `fair_benchmark.py`, regenerable JSONL via `--jsonl` | L1 (FAIR) | priority comp=0 |
 | VAPT fair bench | Gap-2 on full corpus | same 4 agents | same | 12 CVE × 30 seed | T=2 +77, T=5 +200 | `fair_vapt_benchmark.py` | L1 (FAIR) | per-visit cap |
 | T-DOCKER Stage B (loopback) | observed pivot/success | — | real subprocess | 2 scenarios × 1 run | S1 SUCCESS attempt1, S2 pivot@2 | `data/experiment_runs/20260825T*/*` | **L2** | stubbed assessor; loopback only |
 | Docker Level-3 | container-isolated | — | — | — | NOT RUN (daemon down) | `T_DOCKER_EXPERIMENT_PROTOCOL.md` NO-GO | — | parked |
@@ -335,7 +335,7 @@ Reproduce: `source venv/bin/activate && pip install -r requirements.txt && pytho
 |------------------|--------|----------|--------|
 | Original VAPT prototype | DONE / VERIFIED | 39 tests | frozen |
 | Generalized engine (domain-free) | DONE / VERIFIED | 16 tests; import audit | `97eef40` |
-| Gap-2 fair benchmark | DONE / VERIFIED | +77/+200/+175 | `7001c61` |
+| Gap-2 fair benchmark | DONE / VERIFIED | +77/+200/+772 | `7001c61` |
 | Gap-2 observed (loopback) | DONE / VERIFIED (L2, stubbed assessor) | `data/experiment_runs/` | `6330a29` |
 | Checkpoint/resume | DONE / VERIFIED | `test_checkpoint.py` | `f1561be` |
 | Fail-closed safety | DONE / VERIFIED | `test_executor_allowlist.py` | `e5d31ba` |
@@ -441,7 +441,7 @@ incremental (adapter pattern). Novelty = demonstration + honest evidence discipl
 attempts?
 - Hypothesis H2: per-candidate counter + pivot guarantees bounded termination and cuts
   wasted attempts vs no-pivot baseline.
-- Experiment: fair 4-agent ablation (VAPT +77/+200; sparse +175) + loopback S2 (pivot@2,
+- Experiment: fair 4-agent ablation (VAPT +77/+200; sparse +772) + loopback S2 (pivot@2,
   no loop). Evidence: STRONG (A2). Confidence: high.
 
 **RQ3:** Can the mechanisms operate without VAPT-specific logic via an adapter?
@@ -463,7 +463,7 @@ attempts?
    abandonment of failing candidates is the separable mechanism. Limitation: per-visit
    cap; priority component = 0.
 2. **Gap-2 pivot saves attempts (agnostic sparse family, 50 candidates, 30 seeds):**
-   +175 at T=5. Interpretation: mechanism is not CVE-specific. Limitation: one synthetic
+   +772 at T=5. Interpretation: mechanism is not CVE-specific. Limitation: one synthetic
    family only (B2).
 3. **Loopback observed pivot (L2):** candidate attempted exactly 2×, pivot logged,
    COMPLETED, no 3rd attempt. Interpretation: pivot responds to real observed failure.

@@ -10,7 +10,7 @@ no source modified._
 | # | Claim | Workstream | Tier | Evidence |
 |---|-------|-----------|------|----------|
 | E1 | Engine is domain-independent (architecturally) | TRACK 1 | Code inspection | `decision_engine/core/*` imports only `decision_engine.core.*`; `vapt_adapter.py` sole boundary (T-DE-BOUNDARY Q1–Q4 PASS) |
-| E2 | Gap-2: bounded failure-driven pivoting reduces wasted attempts under FAIR identical cap | TRACK 1 (on TRACK0 data) | Level 1 sim, 4-agent ablation | `fair_benchmark.py` + `fair_vapt_benchmark.py`, 6 families × ≥30 seeds × 4 caps × 10 rankers. VAPT corpus T=2: DUMB 96 → SMART 19 (+77); T=5: +200. Agnostic sparse T=5: +175 |
+| E2 | Gap-2: bounded failure-driven pivoting reduces wasted attempts under FAIR identical cap | TRACK 1 (on TRACK0 data) | Level 1 sim, 4-agent ablation | `fair_benchmark.py` + `fair_vapt_benchmark.py`, 6 families × ≥30 seeds × 4 caps × 10 rankers. VAPT corpus T=2: DUMB 96 → SMART 19 (+77); T=5: +200. Agnostic sparse T=5: +772 |
 | E3 | Real mode fires no offensive send by default; danger_mode opt-in + fail-closed allowlist | TRACK 0 | Code review | `tests/test_executor_allowlist.py`, `test_danger_mode_mock.py`; FINAL_EVIDENCE_AUDIT verdict PASS |
 | E4 | Checkpoint / resume reproduces state | TRACK 0 + TRACK 1 | Level 1 | `tests/test_checkpoint.py`; `test_de09` (engine) |
 | E5 | EPSS-based priority ranking + corpus labelling pipeline | TRACK 0 + TRACK 1 | Level 1 | `data/poc_corpus/labels.json` (12 CVEs), `datasets/epss_corpus_enrichment.json` (live EPSS), `datasets/cisa_kev.json` (1682), `datasets/epss_scores.csv.gz` (365k) |

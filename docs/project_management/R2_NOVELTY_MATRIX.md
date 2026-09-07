@@ -27,7 +27,7 @@ Novelty focuses on Gap-1 (pre-execution priority) and Gap-2 (bounded failure-dri
 - **Attempt tracking:** `EngineState.attempt_count` per candidate (engine.py:140)
 - **Threshold check:** `_evaluate` pivots at `attempt_count >= max_attempts` (engine.py:112)
 - **Per-candidate reset:** `_pivot_node` zeroes `attempt_count` on candidate advance (engine.py:98)
-- **Evidence:** E2 — fair identical cap reduces wasted attempts (VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +175). Proven on 12-CVE VAPT corpus + synthetic family.
+- **Evidence:** E2 — fair identical cap reduces wasted attempts (VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +772). Proven on 12-CVE VAPT corpus + synthetic family.
 - **Ours?** Yes ours (A2) — decision_engine/core/engine.py:_evaluate (112) & _pivot_node (98)
 
 ### 3.3 Priority = probability × (0.5 + 0.5×quality)

@@ -7,7 +7,7 @@ _Single source of truth for all thesis claims. Every sentence in the thesis must
 | ID | Claim | Evidence anchor |
 |----|-------|-----------------|
 | **A1** | A general autonomous decision & pivot engine was built; its core logic is domain-independent | `03_TDE_EVIDENCE.md` E1; `decision_engine/core/engine.py` imports only `decision_engine.core.*`; `vapt_adapter.py` sole boundary |
-| **A2** | Under a fair, identical attempt cap, state-aware failure-threshold pivoting (Gap-2) measurably reduces wasted attempts vs a no-pivot baseline, scaling with the cap | `03_TDE_EVIDENCE.md` E2; VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +175; `engine.py:_evaluate` (line 112), `engine.py:_pivot_node` (line 98) |
+| **A2** | Under a fair, identical attempt cap, state-aware failure-threshold pivoting (Gap-2) measurably reduces wasted attempts vs a no-pivot baseline, scaling with the cap | `03_TDE_EVIDENCE.md` E2; VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +772; `engine.py:_evaluate` (line 112), `engine.py:_pivot_node` (line 98) |
 | **A3** | The framework/engine safely bounds execution by default and supports an opt-in, fail-closed, authorised-lab-only dangerous path | `03_TDE_EVIDENCE.md` E3; `tests/test_executor_allowlist.py`, `test_danger_mode_mock.py` |
 | **A4** | Stateful execution with checkpoint/resume is supported | `03_TDE_EVIDENCE.md` E4; `tests/test_checkpoint.py`, `test_de09`; `engine.py:save_checkpoint` (line 172), `load_checkpoint` (line 183) |
 | **A5** | The VAPT domain is one instantiation/adapter of the engine; the engine's mechanisms are demonstrated primarily in vulnerability-testing workflows | `03_TDE_EVIDENCE.md` E1, E2; `vapt_adapter.py` |
