@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   emulator:
     build:
       context: ./emulator
       dockerfile: Dockerfile
     container_name: vuln-emulator
-    # No ports published to host - internal communication only
+    # Internal network only - no host access
     networks:
       - lab-network
     # Restart policy for reliability
@@ -28,15 +26,47 @@ services:
       - /tmp
       - /var/run
 
+  executor:
+    build:
+      context: .
+      dockerfile: executor.Dockerfile
+    container_name: vuln-executor
+    # Expose HTTP API on port 9090 for host development access
+    ports:
+      - "9090:9090"
+    # Connect to both networks:
+    # - lab-network: can reach emulator at 172.28.0.2:8080
+    # - default bridge: port 9090 published to host
+    networks:
+      - lab-network
+      - default
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+
 networks:
+  # Internal network for emulator - no external egress
   lab-network:
     driver: bridge
-    # internal: true prevents any external egress from this network
-    # Containers on this network can only communicate with each other
     internal: true
     name: vuln-lab-network
-    # Use a specific subnet for predictable IP allocation
     ipam:
       config:
         - subnet: 172.28.0.0/16
           gateway: 172.28.0.1
+  # Default network for executor host access
+  default:
+    driver: bridge
+    name: executor-network

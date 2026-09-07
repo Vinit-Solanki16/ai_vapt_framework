@@ -10,7 +10,7 @@
 
 ## 1. Abstract
 
-Autonomous action-selection agents that repeatedly fail on a candidate route often loop indefinitely instead of abandoning that route and trying alternatives. This thesis presents a domain-independent decision and pivot engine that bounds repeated failure by tracking per-candidate attempt counts and pivoting away when a configurable threshold is reached. Under a fair ablation protocol using identical per-visit caps, the pivot mechanism reduces wasted attempts versus a no-pivot baseline on the VAPT corpus: the pivot component (PRIORITY-ONLY minus SMART) saves **+77 requests at cap T=2** and **+200 requests at cap T=5**, with an additional **+175** on an agnostic sparse task family at T=5 [fair_vapt_benchmark.py output]. The engine's core imports only `decision_engine.core.*` and isolates the VAPT domain behind a single adapter (`vapt_adapter.py:52`), demonstrating architectural domain-independence [decision_engine/core/engine.py:1-12]. A secondary mechanism — pre-execution candidate prioritization — is reported honestly: under the identical-cap protocol its independent contribution is zero, qualifying it as scaffolding rather than an independent win. All quantitative claims follow the R3 register [R3_CLAIM_REGISTER.md]; no C-prohibited wording is used.
+Autonomous action-selection agents that repeatedly fail on a candidate route often loop indefinitely instead of abandoning that route and trying alternatives. This thesis presents a domain-independent decision and pivot engine that bounds repeated failure by tracking per-candidate attempt counts and pivoting away when a configurable threshold is reached. Under a fair ablation protocol using identical per-visit caps, the pivot mechanism reduces wasted attempts versus a no-pivot baseline on the VAPT corpus: the pivot component (PRIORITY-ONLY minus SMART) saves **+77 requests at cap T=2** and **+200 requests at cap T=5**, with an additional **+772** on an agnostic sparse task family at T=5 [fair_vapt_benchmark.py output]. The engine's core imports only `decision_engine.core.*` and isolates the VAPT domain behind a single adapter (`vapt_adapter.py:52`), demonstrating architectural domain-independence [decision_engine/core/engine.py:1-12]. A secondary mechanism — pre-execution candidate prioritization — is reported honestly: under the identical-cap protocol its independent contribution is zero, qualifying it as scaffolding rather than an independent win. All quantitative claims follow the R3 register [R3_CLAIM_REGISTER.md]; no C-prohibited wording is used.
 
 **Claim tiers:** A (A1, A2, A3, A4, A5) stated directly; B (B1) with caveat; C (C1–C6) omitted.
 
@@ -72,7 +72,7 @@ Two research gaps motivate this work.
 *Evidence:* partial — `tests/ablation.py` shows A=1 vs B=3 requests to first success (label-correlated best case); under the fair per-visit cap the priority component = 0 [MASTER_RESEARCH_PROJECT_REPORT.md §6; R3_CLAIM_REGISTER.md B1].
 
 **H2 (RQ2 — Gap-2):** Per-candidate counter plus pivot guarantees bounded termination and cuts wasted attempts versus a no-pivot baseline under identical cap.  
-*Evidence:* strong — fair 4-agent ablation (VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +175) plus loopback L2 observed pivot at attempt 2 with no loop [fair_vapt_benchmark.py output; emulator_access_*.log].
+*Evidence:* strong — fair 4-agent ablation (VAPT T=2 +77, T=5 +200; agnostic sparse T=5 +772) plus loopback L2 observed pivot at attempt 2 with no loop [fair_vapt_benchmark.py output; emulator_access_*.log].
 
 **H3 (RQ3):** The engine imports only `decision_engine.core.*` and VAPT is isolated in `vapt_adapter.py`.  
 *Evidence:* strong — import audit (T-DE-BOUNDARY Q1–Q4 PASS) [decision_engine/core/engine.py:1-12; 12_GO_NO_GO.md §1].
@@ -153,7 +153,7 @@ Candidate/Action (id, probability, quality_rank, ground_truth)
 |-------|-----------|--------|------|
 | Bounded retries / pivot on failure | loopback S2 | exactly 2 attempts, pivot, COMPLETED, no 3rd | Level 2 |
 | Pivot reduces wasted attempts (fair cap) | 4-agent ablation VAPT | T=2 +77 saved, T=5 +200 saved | Level 1 (fair) |
-| Pivot reduces wasted attempts (agnostic) | 4-agent ablation sparse | T=5 +175 saved | Level 1 (fair) |
+| Pivot reduces wasted attempts (agnostic) | 4-agent ablation sparse | T=5 +772 saved | Level 1 (fair) |
 | No loop under threshold | T-BENCH-LOOP | loop_events=0 for pivot agents | Level 1 |
 | Multi-seed behaviour | fair benchmark 30 seeds × 4 caps × 6 families × 10 rankers | stable positive pivot component | Level 1 |
 
@@ -205,7 +205,7 @@ The engine is a faithful copy-and-refactor of `core/agent_graph.py`, stripped of
 
 **Result 1 — Gap-2 pivot saves attempts under fair cap (VAPT corpus, 12 CVEs).** Pivot component (PRIORITY-ONLY − SMART) = **+77 requests at T=2**, **+200 at T=5**. Baseline = no-pivot (DUMB/PRIORITY-ONLY cycle to budget). Interpretation: bounded abandonment of failing candidates is the separable mechanism. Limitation: per-visit cap; priority component = 0 [fair_vapt_benchmark.py output; MASTER_RESEARCH_PROJECT_REPORT.md §21].
 
-**Result 2 — Gap-2 pivot saves attempts (agnostic sparse family).** +175 saved at T=5. Interpretation: mechanism is not CVE-specific. Limitation: one synthetic family only (B2) [fair_benchmark.py output; MASTER_RESEARCH_PROJECT_REPORT.md §21].
+**Result 2 — Gap-2 pivot saves attempts (agnostic sparse family).** +772 saved at T=5. Interpretation: mechanism is not CVE-specific. Limitation: one synthetic family only (B2) [fair_benchmark.py output; MASTER_RESEARCH_PROJECT_REPORT.md §21].
 
 **Result 3 — Loopback observed pivot (L2).** Candidate attempted exactly 2×, pivot logged, COMPLETED, no 3rd attempt. Interpretation: pivot responds to real observed failure. Limitation: stubbed assessor, loopback (127.0.0.1), n=2, single run [data/experiment_runs/.../emulator_access_s2.log; MASTER_RESEARCH_PROJECT_REPORT.md §5].
 
@@ -271,7 +271,7 @@ The engine is a faithful copy-and-refactor of `core/agent_graph.py`, stripped of
 
 ## 20. Conclusion
 
-This thesis demonstrates a domain-independent decision and pivot engine with a fair-validated, failure-driven pivot mechanism (Gap-2) as its primary contribution. Under identical per-visit caps, the pivot component reduces wasted attempts by +77 requests at T=2 and +200 requests at T=5 on the VAPT corpus, with +175 on an agnostic sparse family [fair_vapt_benchmark.py output]. The engine's core imports only `decision_engine.core.*`, isolating VAPT behind a single adapter [decision_engine/core/engine.py:1-12; vapt_adapter.py:52]. A secondary mechanism (Gap-1: pre-execution prioritization) is reported honestly: its independent contribution is zero under the fair per-visit-cap protocol, qualifying it as scaffolding rather than an independent win [R3_CLAIM_REGISTER.md B1]. All claims follow the R3 register (A stated directly, B qualified with exact caveats, C omitted). The work is positioned as a credible research-prototype mechanism paper, not a complete platform [MASTER_RESEARCH_PROJECT_REPORT.md §27].
+This thesis demonstrates a domain-independent decision and pivot engine with a fair-validated, failure-driven pivot mechanism (Gap-2) as its primary contribution. Under identical per-visit caps, the pivot component reduces wasted attempts by +77 requests at T=2 and +200 requests at T=5 on the VAPT corpus, with +772 on an agnostic sparse family [fair_vapt_benchmark.py output]. The engine's core imports only `decision_engine.core.*`, isolating VAPT behind a single adapter [decision_engine/core/engine.py:1-12; vapt_adapter.py:52]. A secondary mechanism (Gap-1: pre-execution prioritization) is reported honestly: its independent contribution is zero under the fair per-visit-cap protocol, qualifying it as scaffolding rather than an independent win [R3_CLAIM_REGISTER.md B1]. All claims follow the R3 register (A stated directly, B qualified with exact caveats, C omitted). The work is positioned as a credible research-prototype mechanism paper, not a complete platform [MASTER_RESEARCH_PROJECT_REPORT.md §27].
 
 ---
 

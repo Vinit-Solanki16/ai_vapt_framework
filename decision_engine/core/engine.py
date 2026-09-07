@@ -149,6 +149,11 @@ def initial_state(candidates: List[dict], max_attempts: int = 2, mode: str = "si
 def run_engine(candidates: List[dict], assess_fn=None, executor=None,
                max_attempts: int = 2, mode: str = "simulation") -> dict:
     state = initial_state(candidates, max_attempts=max_attempts, mode=mode)
+    # Guard: empty candidates -> return COMPLETED immediately
+    if not state["candidates"]:
+        state["status"] = EngineStatus.COMPLETED.value
+        state["logs"].append("[Engine] No candidates provided. Workflow complete.")
+        return state
     app = build_graph(assess_fn=assess_fn, executor=executor)
     final = app.invoke(state)
     # promote validated status for the router
