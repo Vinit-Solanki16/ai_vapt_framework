@@ -122,6 +122,15 @@ python -m prototype.cli run --scenario success --max-attempts 2
 # Multiple candidates
 python -m prototype.cli run --scenario multi_candidate --max-attempts 2
 
+# Single candidate succeeds immediately
+python -m prototype.cli run --scenario single_success --max-attempts 2
+
+# All candidates fail (bounded termination)
+python -m prototype.cli run --scenario all_fail --max-attempts 2
+
+# Threshold = 1 (immediate pivot)
+python -m prototype.cli run --scenario threshold_one --max-attempts 1
+
 # Full VAPT corpus (12 CVEs)
 python -m prototype.cli run --scenario corpus --max-attempts 2
 ```
