@@ -61,7 +61,7 @@ assessor_name = st.sidebar.radio(
 
 # --- Safety indicator ---
 if mode == "lab":
-    st.sidebar.success("🟡 LAB MODE (OBSERVED)")
+    st.sidebar.success("🟡 LAB MODE (DOCKER OBSERVED)")
 else:
     st.sidebar.info("🔵 SIMULATION MODE")
 
@@ -103,27 +103,36 @@ if st.button("🚀 Run Decision Engine", type="primary"):
     else:
         st.info("**EVIDENCE TIER: SIMULATED** — outcomes from ground-truth labels")
 
-    # Candidate ranking
-    st.subheader("📊 Candidate Ranking")
-    st.text(format_candidate_ranking(final_state))
-
-    # Execution results
-    st.subheader("⚙️ Engine Execution")
-    st.text(format_execution_results(final_state))
-
-    # Decision trace
-    st.subheader("🔍 Decision Trace")
-    st.text(format_engine_trace(final_state))
-
-    # Final result
+    # Final result metrics
     st.subheader("🏁 Final Result")
     status = final_state.get("status", "UNKNOWN")
     presentation = final_state.get("_presentation", {})
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Status", status)
-    col2.metric("Total Attempts", presentation.get("total_attempts", 0))
-    col3.metric("Pivot Count", presentation.get("pivot_count", 0))
+    total_attempts = presentation.get("total_attempts", 0)
+    pivot_count = presentation.get("pivot_count", 0)
+    candidates_processed = presentation.get("candidates_processed", [])
 
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Status", status)
+    col2.metric("Total Attempts", total_attempts)
+    col3.metric("Pivot Count", pivot_count)
+    col4.metric("Candidates Processed", len(candidates_processed))
+
+    # Candidate ranking table
+    st.subheader("📊 Candidate Ranking")
+    ranking_text = format_candidate_ranking(final_state)
+    st.text(ranking_text)
+
+    # Execution results
+    st.subheader("⚙️ Engine Execution")
+    results_text = format_execution_results(final_state)
+    st.text(results_text)
+
+    # Decision trace
+    st.subheader("🔍 Decision Trace")
+    trace_text = format_engine_trace(final_state)
+    st.text(trace_text)
+
+    # Report download
     st.markdown("---")
     st.subheader("📄 Report")
     json_report = generate_json_report(scenario_name, final_state, max_attempts, mode)
@@ -135,3 +144,17 @@ if st.button("🚀 Run Decision Engine", type="primary"):
 
     with st.expander("View JSON Report"):
         st.json(json_report)
+
+    # Safety notice
+    st.markdown("---")
+    st.subheader("🛡️ Safety Notice")
+    if mode == "lab":
+        st.warning(
+            "LAB MODE (DOCKER OBSERVED): Outcomes are from the Docker-isolated emulator. "
+            "Target is allowlisted. No external systems were targeted."
+        )
+    else:
+        st.info(
+            "SIMULATION MODE: Outcomes are resolved from supplied demo ground truth. "
+            "No real vulnerabilities were validated."
+        )
