@@ -57,7 +57,7 @@ def success_scenario() -> list[dict]:
     ]
 
 
-def failure_pivot_scenario(max_attempts: int = 2) -> list[dict]:
+def failure_pivot_scenario(**kwargs) -> list[dict]:
     """Scenario B: bounded failure then pivot to next candidate.
 
     Expected trace:
@@ -83,11 +83,48 @@ def multi_candidate_scenario() -> list[dict]:
     ]
 
 
+def single_success_scenario() -> list[dict]:
+    """Scenario D: single candidate succeeds immediately.
+
+    Demonstrates the simplest case: one candidate, one success.
+    """
+    return [
+        {"id": "DEMO-SINGLE", "probability": 0.90, "ground_truth": "SUCCESS"},
+    ]
+
+
+def all_fail_scenario(**kwargs) -> list[dict]:
+    """Scenario E: all candidates fail (bounded termination).
+
+    Demonstrates that the engine terminates safely when no candidate succeeds.
+    All candidates reach their threshold and the workflow completes.
+    """
+    return [
+        {"id": "DEMO-FAIL-A", "probability": 0.80, "ground_truth": "FAIL_TIMEOUT"},
+        {"id": "DEMO-FAIL-B", "probability": 0.60, "ground_truth": "FAIL_SYNTAX"},
+        {"id": "DEMO-FAIL-C", "probability": 0.40, "ground_truth": "FAIL_TIMEOUT"},
+    ]
+
+
+def threshold_one_scenario(**kwargs) -> list[dict]:
+    """Scenario F: threshold = 1 (immediate pivot after first failure).
+
+    Demonstrates the engine with the most aggressive pivot setting.
+    """
+    return [
+        {"id": "DEMO-INSTANT-FAIL", "probability": 0.75, "ground_truth": "FAIL_TIMEOUT"},
+        {"id": "DEMO-INSTANT-SUCCESS", "probability": 0.65, "ground_truth": "SUCCESS"},
+    ]
+
+
 # Canonical registry mapping scenario names to callables + kwargs.
 SCENARIOS = {
     "success": (success_scenario, {}),
     "failure_pivot": (failure_pivot_scenario, {"max_attempts": 2}),
     "multi_candidate": (multi_candidate_scenario, {}),
+    "single_success": (single_success_scenario, {}),
+    "all_fail": (all_fail_scenario, {"max_attempts": 2}),
+    "threshold_one": (threshold_one_scenario, {"max_attempts": 1}),
 }
 
 
