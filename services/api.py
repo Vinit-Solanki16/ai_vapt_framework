@@ -123,7 +123,7 @@ def get_report(run_id: str):
         total_attempts=presentation.get("total_attempts", 0),
         pivot_count=presentation.get("pivot_count", 0),
         candidates_processed=presentation.get("candidates_processed", []),
-        safety_notice="SIMULATION MODE" if job.get("mode") == "simulation" else "LAB MODE (OBSERVED)",
+        safety_notice="SIMULATION MODE" if job.get("mode") == "simulation" else "LAB MODE (DOCKER OBSERVED)",
     )
 
 

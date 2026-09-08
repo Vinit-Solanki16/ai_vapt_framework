@@ -41,7 +41,7 @@ max_attempts = st.sidebar.slider("Pivot Threshold (N)", 1, 5, 2)
 mode = st.sidebar.radio(
     "Execution Mode",
     ["simulation", "lab"],
-    help="simulation = ground-truth labels; lab = OBSERVED against Docker emulator",
+    help="simulation = ground-truth labels; lab = DOCKER OBSERVED against emulator",
 )
 
 target = None
@@ -51,7 +51,7 @@ if mode == "lab":
         ["127.0.0.1", "172.28.0.2"],
         help="Allowlisted targets only — no free-text input",
     )
-    st.sidebar.warning("⚠️ LAB MODE: Outcomes are OBSERVED from the emulator, not simulated.")
+    st.sidebar.warning("⚠️ LAB MODE: Outcomes are DOCKER OBSERVED from the emulator, not simulated.")
 
 assessor_name = st.sidebar.radio(
     "Assessor",
@@ -99,9 +99,9 @@ if st.button("🚀 Run Decision Engine", type="primary"):
 
     # Evidence tier badge
     if mode == "lab":
-        st.success("**EVIDENCE TIER: OBSERVED** — outcomes from Docker emulator (real HTTP)")
+        st.success("**EVIDENCE TIER: DOCKER OBSERVED** — outcomes from Docker-isolated emulator (real HTTP)")
     else:
-        st.info("**EVIDENCE TIER: SIMULATION** — outcomes from ground-truth labels")
+        st.info("**EVIDENCE TIER: SIMULATED** — outcomes from ground-truth labels")
 
     # Candidate ranking
     st.subheader("📊 Candidate Ranking")

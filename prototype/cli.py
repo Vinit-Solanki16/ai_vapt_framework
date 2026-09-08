@@ -10,7 +10,7 @@ Usage:
 Supports:
 - Scenario selection (success / failure_pivot / multi_candidate / corpus)
 - Execution mode (simulation / lab)
-- Lab mode targets the Docker emulator (OBSERVED outcomes)
+- Lab mode targets the Docker emulator (DOCKER OBSERVED outcomes)
 """
 
 from __future__ import annotations
@@ -88,8 +88,8 @@ def _display_output(
     print("SAFETY / EVIDENCE TIER")
     print("=" * 64)
     if mode == "lab":
-        print("LAB MODE (OBSERVED)")
-        print("Outcomes are observed from the Docker emulator (real HTTP responses).")
+        print("LAB MODE (DOCKER OBSERVED)")
+        print("Outcomes are observed from the Docker-isolated emulator (real HTTP responses).")
         print("Target is allowlisted. No external targets contacted.")
     else:
         print("SIMULATION MODE")
@@ -195,7 +195,7 @@ def main() -> None:
         "--mode", "-M",
         choices=["simulation", "lab"],
         default="simulation",
-        help="Execution mode: simulation (default) or lab (Docker emulator, OBSERVED)",
+        help="Execution mode: simulation (default) or lab (Docker emulator, DOCKER OBSERVED)",
     )
     run_parser.add_argument(
         "--assessor", "-a",
