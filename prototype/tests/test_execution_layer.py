@@ -10,6 +10,7 @@ from decision_engine.core.engine import run_engine
 from prototype.execution_layer import (
     create_simulation_executor,
     create_executor,
+    create_lab_executor,
     simulate_execution,
 )
 
@@ -75,3 +76,15 @@ def test_simulation_mode_no_external_calls():
     e = create_simulation_executor()
     assert type(e).__module__.startswith("decision_engine")
     assert e.mode == "simulation"
+
+
+def test_create_lab_executor_loopback():
+    """Verify create_lab_executor returns mode='lab_loopback' for 127.0.0.1."""
+    executor = create_lab_executor("127.0.0.1", 8080, "/vuln")
+    assert executor.mode == "lab_loopback"
+
+
+def test_create_lab_executor_docker():
+    """Verify create_lab_executor returns mode='lab_docker' for 172.28.0.2."""
+    executor = create_lab_executor("172.28.0.2", 8080, "/vuln")
+    assert executor.mode == "lab_docker"

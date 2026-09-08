@@ -82,7 +82,7 @@ def create_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor
     if target == "172.28.0.2":
         return create_docker_lab_executor(target, port, path)
 
-    # For loopback, use raw sockets directly
+    # For loopback targets, use raw sockets directly
     def _lab_execute(candidate: ActionCandidate) -> ExecutionResult:
         outcome = run_lab_attempt(target, port, path=path)
         return ExecutionResult(
@@ -92,7 +92,7 @@ def create_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor
             detail=f"lab-observed(http://{target}:{port}{path})",
         )
 
-    return Executor(mode="real", execute_fn=_lab_execute)
+    return Executor(mode="lab_loopback", execute_fn=_lab_execute)
 
 
 def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor:
@@ -156,7 +156,7 @@ def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> E
                 detail=f"docker-executor-unreachable({e})",
             )
 
-    return Executor(mode="real", execute_fn=_docker_execute)
+    return Executor(mode="lab_docker", execute_fn=_docker_execute)
 
 
 def simulate_execution(candidate: ActionCandidate) -> ExecutionResult:

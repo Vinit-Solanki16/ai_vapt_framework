@@ -128,7 +128,7 @@ class TestCreateLabExecutor:
     def test_returns_real_executor(self):
         executor = create_lab_executor("127.0.0.1", 8080, "/vuln")
         assert isinstance(executor, Executor)
-        assert executor.mode == "real"
+        assert executor.mode == "lab_loopback"
 
     def test_non_allowlisted_raises_at_construction(self):
         with pytest.raises(ValueError, match="not in the lab allowlist"):

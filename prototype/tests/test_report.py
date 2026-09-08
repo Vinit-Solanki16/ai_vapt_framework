@@ -210,33 +210,42 @@ def test_evidence_tier_simulation():
     assert "Evidence Tier:" in text_report
 
 
-def test_evidence_tier_lab():
-    """Verify a report from lab mode labels the evidence tier as OBSERVED."""
+def test_evidence_tier_loopback():
+    """Verify a report from lab_loopback mode labels the evidence tier as OBSERVED_LOCAL."""
     # Use the lab executor with a mocked HTTP call
     executor = create_lab_executor("127.0.0.1", 8080, "/vuln")
     candidates = [{"id": "CVE-LAB-1", "probability": 0.8}]
 
     with patch("prototype.lab_runner.http_get", return_value=(200, "VULNERABLE")):
-        state = run_decision_scenario(candidates, max_attempts=2, mode="lab", executor=executor)
+        state = run_decision_scenario(candidates, max_attempts=2, mode="lab_loopback", executor=executor)
 
-    json_report = generate_json_report("lab_test", state, max_attempts=2, mode="lab")
-    text_report = generate_text_report("lab_test", state, max_attempts=2, mode="lab")
+    json_report = generate_json_report("loopback_test", state, max_attempts=2, mode="lab_loopback")
+    text_report = generate_text_report("loopback_test", state, max_attempts=2, mode="lab_loopback")
 
     import json
     data = json.loads(json_report)
 
-    # Lab mode must label evidence tier as DOCKER_OBSERVED
-    assert data["evidence_tier"] == "DOCKER_OBSERVED"
-    assert "DOCKER_OBSERVED" in data["evidence_tier_label"]
+    # Loopback mode must label evidence tier as OBSERVED_LOCAL
+    assert data["evidence_tier"] == "OBSERVED_LOCAL"
+    assert "OBSERVED_LOCAL" in data["evidence_tier_label"]
 
-    # Text report must also say DOCKER_OBSERVED
-    assert "DOCKER_OBSERVED" in text_report
+    # Text report must also say OBSERVED_LOCAL and show Evidence Tier section
+    assert "OBSERVED_LOCAL" in text_report
     assert "Evidence Tier:" in text_report
+
+
+def test_evidence_tier_docker():
+    """Verify a report from lab_docker mode labels the evidence tier as DOCKER_OBSERVED."""
+    # Verify that lab mode still maps to DOCKER_OBSERVED (backward compatibility)
+    assert _get_evidence_tier("lab") == "DOCKER_OBSERVED"
+    assert _get_evidence_tier("lab_docker") == "DOCKER_OBSERVED"
 
 
 def test_evidence_tier_helper():
     """Verify the evidence tier helper maps modes correctly."""
     assert _get_evidence_tier("simulation") == "SIMULATED"
+    assert _get_evidence_tier("lab_loopback") == "OBSERVED_LOCAL"
+    assert _get_evidence_tier("lab_docker") == "DOCKER_OBSERVED"
     assert _get_evidence_tier("lab") == "DOCKER_OBSERVED"
     assert _get_evidence_tier("real") == "CONTROLLED VALIDATION"
     assert _get_evidence_tier("unknown") == "UNKNOWN"
@@ -245,6 +254,7 @@ def test_evidence_tier_helper():
 def test_evidence_tier_description_helper():
     """Verify the evidence tier description helper."""
     assert "ground truth" in _get_evidence_tier_description("simulation").lower()
+    assert "loopback" in _get_evidence_tier_description("lab_loopback").lower()
     assert "docker" in _get_evidence_tier_description("lab").lower()
     assert "live" in _get_evidence_tier_description("real").lower()
 

@@ -61,13 +61,15 @@ def _get_evidence_tier(mode: str) -> str:
     """Map execution mode to evidence tier for reporting.
 
     Args:
-        mode: Execution mode (simulation, lab, real)
+        mode: Execution mode (simulation, lab, real, lab_loopback, lab_docker)
 
     Returns:
         Evidence tier string for reporting
     """
     mode_map = {
         "simulation": "SIMULATED",
+        "lab_loopback": "OBSERVED_LOCAL",
+        "lab_docker": "DOCKER_OBSERVED",
         "lab": "DOCKER_OBSERVED",
         "real": "CONTROLLED VALIDATION"
     }
@@ -159,9 +161,12 @@ def _build_report_dict(
             "SIMULATION MODE — Outcomes are resolved from supplied demo ground truth. "
             "No real vulnerabilities were validated."
         ) if mode.lower() == "simulation" else (
+            "LOOPBACK OBSERVED MODE — Outcomes are from loopback (127.0.0.1) target. "
+            "No external systems were targeted."
+        ) if mode.lower() == "lab_loopback" else (
             "DOCKER OBSERVED MODE — Outcomes are from Docker-isolated emulator responses. "
             "No external systems were targeted."
-        ) if mode.lower() == "lab" else (
+        ) if mode.lower() in ("lab", "lab_docker") else (
             "REAL MODE — Outcomes are from live systems. "
             "Ensure proper authorization before execution."
         ),
@@ -277,6 +282,8 @@ def _get_evidence_tier_description(mode: str) -> str:
     """
     descriptions = {
         "simulation": "Outcomes resolved from supplied demo ground truth (labels)",
+        "lab_loopback": "Outcomes observed from loopback (127.0.0.1) target",
+        "lab_docker": "Outcomes observed from Docker-isolated vulnerability emulator",
         "lab": "Outcomes observed from Docker-isolated vulnerability emulator",
         "real": "Outcomes from live target systems (requires authorization)"
     }
