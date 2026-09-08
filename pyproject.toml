@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-vapt-framework"
+version = "0.1.0"
+description = "AI-driven Vulnerability Assessment & Penetration Testing framework"
+authors = [
+    {name = "M.Tech Cybersecurity Student"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "langchain==1.3.15",
+    "langchain-core==1.6.0",
+    "langchain-openai==1.6.0",
+    "langchain-ollama==1.1.0",
+    "langgraph==1.2.11",
+    "pydantic==2.13.4",
+    "python-nmap==0.7.1",
+    "requests==2.34.2",
+    "streamlit==1.62.0",
+    "pandas==2.3.3",
+    "reportlab==5.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+]
+
+[project.scripts]
+vapt-cli = "prototype.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["decision_engine*", "prototype*", "frontend*"]
+
+[tool.setuptools.package-dir]
+"" = "."

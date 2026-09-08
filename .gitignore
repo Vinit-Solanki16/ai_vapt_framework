@@ -11,3 +11,24 @@ docs/MTech_Project/
 # T-DOCKER Stage B controlled-validation run artifacts (reproducible via
 # tests/run_tdocker_scenarios.py; keep metadata + runner in git, raw logs out)
 data/experiment_runs/
+
+# Generated demo reports (produced by CLI runs at repo root)
+demo_report_*.json
+demo_report_*.txt
+report_*.json
+report_*.txt
+
+# Logs
+*.log
+emulator.log
+streamlit_output.log
+
+# Package artifacts
+*.egg-info/
+ai_vapt_framework.egg-info/
+
+# Pytest cache
+.pytest_cache/
+
+# Streamlit
+.streamlit/
