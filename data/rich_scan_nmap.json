@@ -1,0 +1,149 @@
+{
+  "scanner": "nmap",
+  "args": "nmap -sV -sC -p 22,80,443,3306,8080,8443 -oJ data/rich_scan.json 10.0.0.0/24",
+  "start": "1789045200",
+  "version": "7.94",
+  "hosts": [
+    {
+      "addr": "10.0.0.10",
+      "hostname": "web-server.local",
+      "ports": [
+        {
+          "port": 22,
+          "state": "open",
+          "service": "ssh",
+          "product": "OpenSSH",
+          "version": "8.9p1",
+          "cve": "CVE-2023-38408"
+        },
+        {
+          "port": 80,
+          "state": "open",
+          "service": "http",
+          "product": "Apache httpd",
+          "version": "2.4.54",
+          "cve": "CVE-2023-25690"
+        },
+        {
+          "port": 443,
+          "state": "open",
+          "service": "https",
+          "product": "Apache httpd",
+          "version": "2.4.54",
+          "cve": null
+        },
+        {
+          "port": 8080,
+          "state": "open",
+          "service": "http-proxy",
+          "product": "Apache Tomcat",
+          "version": "9.0.68",
+          "cve": "CVE-2023-28708"
+        },
+        {
+          "port": 3306,
+          "state": "closed",
+          "service": "mysql"
+        },
+        {
+          "port": 8443,
+          "state": "closed",
+          "service": "https-alt"
+        }
+      ]
+    },
+    {
+      "addr": "10.0.0.20",
+      "hostname": "db-server.local",
+      "ports": [
+        {
+          "port": 22,
+          "state": "open",
+          "service": "ssh",
+          "product": "OpenSSH",
+          "version": "7.4p1",
+          "cve": "CVE-2023-38408"
+        },
+        {
+          "port": 3306,
+          "state": "open",
+          "service": "mysql",
+          "product": "MySQL",
+          "version": "5.7.38",
+          "cve": "CVE-2023-21977"
+        },
+        {
+          "port": 80,
+          "state": "closed",
+          "service": "http"
+        },
+        {
+          "port": 443,
+          "state": "closed",
+          "service": "https"
+        },
+        {
+          "port": 8080,
+          "state": "closed",
+          "service": "http-proxy"
+        },
+        {
+          "port": 8443,
+          "state": "closed",
+          "service": "https-alt"
+        }
+      ]
+    },
+    {
+      "addr": "10.0.0.30",
+      "hostname": "app-server.local",
+      "ports": [
+        {
+          "port": 22,
+          "state": "open",
+          "service": "ssh",
+          "product": "OpenSSH",
+          "version": "9.1p1",
+          "cve": null
+        },
+        {
+          "port": 80,
+          "state": "open",
+          "service": "http",
+          "product": "nginx",
+          "version": "1.22.1",
+          "cve": "CVE-2023-44487"
+        },
+        {
+          "port": 443,
+          "state": "open",
+          "service": "https",
+          "product": "nginx",
+          "version": "1.22.1",
+          "cve": null
+        },
+        {
+          "port": 8080,
+          "state": "open",
+          "service": "http",
+          "product": "Node.js",
+          "version": "18.12.1",
+          "cve": "CVE-2023-30589"
+        },
+        {
+          "port": 8443,
+          "state": "open",
+          "service": "https-alt",
+          "product": "Spring Boot",
+          "version": "2.7.5",
+          "cve": "CVE-2023-20860"
+        },
+        {
+          "port": 3306,
+          "state": "closed",
+          "service": "mysql"
+        }
+      ]
+    }
+  ]
+}

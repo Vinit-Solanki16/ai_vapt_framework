@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94 scan initiated Wed Sep 09 10:00:00 2026 as: nmap -sV -sC -p 22,80,443,3306,8080,8443 -oX data/rich_scan.xml 192.168.1.0/24 -->
+<nmaprun scanner="nmap" args="nmap -sV -sC -p 22,80,443,3306,8080,8443 -oX data/rich_scan.xml 192.168.1.0/24" start="1789045200" startstr="Wed Sep 09 10:00:00 2026" version="7.94" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="6" services="22,80,443,3306,8080,8443"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1789045200" endtime="1789045210"><status state="up" reason="syn-ack" reason_ttl="64"/>
+<address addr="192.168.1.10" addrtype="ipv4"/>
+<hostnames>
+<hostname name="web-server" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="8.9p1" extrainfo="Ubuntu Linux" method="probed" conf="10"><cpe>cpe:/a:openssh:openssh:8.9p1</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Apache httpd" version="2.4.54" extrainfo="(Ubuntu)" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.54</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="https" product="Apache httpd" version="2.4.54" extrainfo="(Ubuntu) OpenSSL" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.54</cpe></service></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http-proxy" product="Apache Tomcat" version="9.0.68" method="probed" conf="10"><cpe>cpe:/a:apache:tomcat:9.0.68</cpe></service></port>
+<port protocol="tcp" portid="3306"><state state="closed" reason="reset" reason_ttl="64"/><service name="mysql" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8443"><state state="closed" reason="reset" reason_ttl="64"/><service name="https-alt" method="table" conf="3"/></port>
+</ports>
+<times srtt="120" rttvar="50" to="100000"/>
+</host>
+<host starttime="1789045211" endtime="1789045220"><status state="up" reason="syn-ack" reason_ttl="64"/>
+<address addr="192.168.1.20" addrtype="ipv4"/>
+<hostnames>
+<hostname name="db-server" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="7.4p1" extrainfo="Debian" method="probed" conf="10"><cpe>cpe:/a:openssh:openssh:7.4p1</cpe></service></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="mysql" product="MySQL" version="5.7.38" method="probed" conf="10"><cpe>cpe:/a:mysql:mysql:5.7.38</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="closed" reason="reset" reason_ttl="64"/><service name="http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="closed" reason="reset" reason_ttl="64"/><service name="https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="closed" reason="reset" reason_ttl="64"/><service name="http-proxy" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8443"><state state="closed" reason="reset" reason_ttl="64"/><service name="https-alt" method="table" conf="3"/></port>
+</ports>
+<times srtt="150" rttvar="60" to="100000"/>
+</host>
+<host starttime="1789045221" endtime="1789045230"><status state="up" reason="syn-ack" reason_ttl="64"/>
+<address addr="192.168.1.30" addrtype="ipv4"/>
+<hostnames>
+<hostname name="app-server" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="ssh" product="OpenSSH" version="9.1p1" extrainfo="Ubuntu" method="probed" conf="10"><cpe>cpe:/a:openssh:openssh:9.1p1</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="nginx" version="1.22.1" method="probed" conf="10"><cpe>cpe:/a:nginx:nginx:1.22.1</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="https" product="nginx" version="1.22.1" method="probed" conf="10"><cpe>cpe:/a:nginx:nginx:1.22.1</cpe></service></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="http" product="Node.js" version="18.12.1" method="probed" conf="10"><cpe>cpe:/a:nodejs:node.js:18.12.1</cpe></service></port>
+<port protocol="tcp" portid="8443"><state state="open" reason="syn-ack" reason_ttl="64"/><service name="https-alt" product="Spring Boot" version="2.7.5" method="probed" conf="10"><cpe>cpe:/a:pivotal:spring_boot:2.7.5</cpe></service></port>
+<port protocol="tcp" portid="3306"><state state="closed" reason="reset" reason_ttl="64"/><service name="mysql" method="table" conf="3"/></port>
+</ports>
+<times srtt="90" rttvar="40" to="100000"/>
+</host>
+<host starttime="1789045231" endtime="1789045232"><status state="down" reason="no-response" reason_ttl="0"/>
+<address addr="192.168.1.40" addrtype="ipv4"/>
+<hostnames/>
+</host>
+<runstats><finished time="1789045235" timestr="Wed Sep 09 10:00:35 2026" elapsed="35.20" summary="Nmap done at Wed Sep 09 10:00:35 2026; 4 IP addresses (3 hosts up) scanned in 35.20 seconds" exit="success"/><hosts up="3" down="1" total="4"/>
+</runstats>
+</nmaprun>

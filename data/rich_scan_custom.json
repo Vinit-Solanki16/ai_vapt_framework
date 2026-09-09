@@ -1,0 +1,49 @@
+{
+  "target": "10.0.0.0/24",
+  "scanner": "custom",
+  "scan_date": "2026-09-09T10:00:00Z",
+  "findings": [
+    {
+      "port": 22,
+      "service": "ssh",
+      "cve": "CVE-2023-38408",
+      "description": "OpenSSH PKCS#11 Remote Code Execution"
+    },
+    {
+      "port": 80,
+      "service": "http",
+      "cve": "CVE-2023-25690",
+      "description": "Apache HTTP Request Smuggling"
+    },
+    {
+      "port": 443,
+      "service": "https",
+      "cve": "CVE-2023-44487",
+      "description": "HTTP/2 Rapid Reset DDoS"
+    },
+    {
+      "port": 3306,
+      "service": "mysql",
+      "cve": "CVE-2023-21977",
+      "description": "MySQL Server Remote Code Execution"
+    },
+    {
+      "port": 8080,
+      "service": "http-proxy",
+      "cve": "CVE-2023-28708",
+      "description": "Apache Tomcat HTTP Request Smuggling"
+    },
+    {
+      "port": 8443,
+      "service": "https-alt",
+      "cve": "CVE-2023-20860",
+      "description": "Spring Boot Security Bypass"
+    },
+    {
+      "port": 9090,
+      "service": "prometheus",
+      "cve": "CVE-2022-46146",
+      "description": "Prometheus Server-Side Request Forgery"
+    }
+  ]
+}
