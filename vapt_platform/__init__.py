@@ -7,6 +7,10 @@ a unified finding representation.
 Submodules:
     parsers: Scanner-specific parsers (Nuclei, etc.)
     normalization: Canonical finding normalization and deduplication
+    enrichment: Vulnerability intelligence enrichment (CVSS, CISA KEV, EPSS)
+    graph_builder: Asset/vulnerability graph builder
+    orchestration: Multi-agent orchestration (Planner, Executor, Validator)
+    authorization: Authorization tracking, scope enforcement, audit logging
 """
 from vapt_platform.parsers.nuclei_parser import (
     NucleiParser,
