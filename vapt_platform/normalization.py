@@ -1,629 +1,333 @@
-"""Platform-level canonical finding normalization layer.
+"""Canonical finding normalization layer.
 
-This module provides a stable, scanner-independent representation of security
-findings that different scanner output formats converge into BEFORE candidate
-generation.
+This module provides a platform-level boundary between scanner-specific
+output formats and downstream VAPT decision processing.
 
-Target architecture:
-
-    Nmap XML          Nmap JSON          Nuclei JSON          Custom scan input
-         │                   │                   │                   │
-         ▼                   ▼                   ▼                   ▼
-    Parser-specific structures
-         │
-         ▼
-    CANONICAL NORMALIZATION  (this module)
-         │
-         ▼
-    CanonicalFinding[]
-         │
-         ▼
-    canonical_to_candidates()  (bridge to the existing candidate bridge)
-         │
-         ▼
-    ActionCandidate[]
-         │
-         ▼
-    Existing research decision engine
-         │
-         ▼
-    Execution / Pivot / Report
-
-The normalization layer is PLATFORM ENGINEERING. It does not modify any
-research-protected schema (decision_engine/core/schemas.py,
-decision_engine/adapters/scan_adapter.py, core/scanner.py).
+It does NOT modify the research engine. It provides a clean adapter
+between scanner outputs and the existing candidate generation pipeline.
 
 Architecture:
-    Parser-specific structures (dicts from core.scanner, NucleiFinding from
-    vapt_platform.parsers.nuclei_parser)
-        ↓
-    CANONICAL NORMALIZATION (this module)
-        ↓
-    CanonicalFinding[] (platform-level canonical representation)
-        ↓
-    canonical_to_candidates() (bridge)
-        ↓
-    ActionCandidate[] (decision_engine.core.schemas)
-        ↓
-    Existing research decision engine
+    Nmap XML/JSON/Custom ──> parser-specific structures ──> CanonicalFinding
+    Nuclei JSON ──────────> NucleiFinding ───────────────> CanonicalFinding
+                                                      │
+                                                      v
+                                              Candidate Generation
+                                                      │
+                                                      v
+                                              Decision Engine
 """
 from __future__ import annotations
 
 import hashlib
-from typing import Any, Dict, List, Optional
-
-from pydantic import BaseModel, Field
-
-from decision_engine.core.schemas import ActionCandidate
-from vapt_platform.parsers.nuclei_parser import NucleiFinding
+from dataclasses import dataclass, field
+from typing import Any, Optional
+from urllib.parse import urlparse
 
 
 # ---------------------------------------------------------------------------
 # Severity normalization
 # ---------------------------------------------------------------------------
 
-# Standard severity levels in order of increasing severity
-SEVERITY_LEVELS = ["unknown", "info", "low", "medium", "high", "critical"]
-DEFAULT_SEVERITY = "unknown"
-
-# Map CVSS qualitative ratings to canonical severity
-CVSS_SEVERITY_MAP = {
-    "none": "info",
+SEVERITY_MAP = {
+    # Standard levels
+    "info": "informational",
+    "informational": "informational",
     "low": "low",
     "medium": "medium",
+    "moderate": "medium",
     "high": "high",
     "critical": "critical",
+    "severe": "critical",
+    "important": "high",
+    "unknown": "unknown",
+    # Numeric mappings
+    "0": "informational",
+    "1": "low",
+    "2": "medium",
+    "3": "high",
+    "4": "critical",
 }
 
+SEVERITY_ORDER = ["informational", "low", "medium", "high", "critical", "unknown"]
 
-def normalize_severity(severity: Optional[str]) -> str:
-    """Normalize a severity string to canonical lowercase form.
 
-    Args:
-        severity: Raw severity string from a scanner.
-
-    Returns:
-        Normalized severity (one of SEVERITY_LEVELS). Unknown if not present
-        or not a recognized value.
-    """
-    if not severity:
-        return DEFAULT_SEVERITY
+def normalize_severity(severity: Any) -> str:
+    """Normalize any severity representation to canonical form."""
+    if severity is None:
+        return "unknown"
     s = str(severity).strip().lower()
-    if s in SEVERITY_LEVELS:
-        return s
-    if s in CVSS_SEVERITY_MAP:
-        return CVSS_SEVERITY_MAP[s]
-    return DEFAULT_SEVERITY
-
-
-def cvss_score_to_severity(score: Optional[float]) -> str:
-    """Convert a CVSS base score (0.0-10.0) to canonical severity.
-
-    Uses the CVSS v3.x severity rating ranges:
-        0.0: None -> info
-        0.1-3.9: Low
-        4.0-6.9: Medium
-        7.0-8.9: High
-        9.0-10.0: Critical
-    """
-    if score is None:
-        return DEFAULT_SEVERITY
+    if s in SEVERITY_MAP:
+        return SEVERITY_MAP[s]
+    # Try numeric
     try:
-        s = float(score)
+        num = float(s)
+        if num >= 9.0:
+            return "critical"
+        elif num >= 7.0:
+            return "high"
+        elif num >= 4.0:
+            return "medium"
+        elif num > 0:
+            return "low"
+        else:
+            return "informational"
     except (ValueError, TypeError):
-        return DEFAULT_SEVERITY
-    if s == 0.0:
-        return "info"
-    if s < 4.0:
-        return "low"
-    if s < 7.0:
-        return "medium"
-    if s < 9.0:
-        return "high"
-    return "critical"
+        return "unknown"
 
 
 # ---------------------------------------------------------------------------
-# Canonical finding model
+# Canonical Finding
 # ---------------------------------------------------------------------------
 
-class CanonicalFinding(BaseModel):
-    """Platform-level canonical finding representation.
+@dataclass
+class CanonicalFinding:
+    """A normalized, scanner-agnostic finding representation.
 
-    This is a deliberately minimal, scanner-agnostic representation. All
-    scanner-specific data is preserved in metadata and raw_record.
+    This is the single canonical format that all scanner outputs converge to
+    before candidate generation.
 
-    Required fields:
-        finding_id: Deterministic unique identifier for this finding.
-        source: Scanner source ("nmap", "nuclei", "custom").
-        target: Primary target URL or IP.
-        host: Host IP or hostname.
-        port: TCP/UDP port number (None if not applicable).
-        protocol: Network protocol ("tcp", "udp", "http", "dns", etc.).
-        title: Human-readable finding title.
-        severity: Canonical severity level (info/low/medium/high/critical/unknown).
-
-    Optional fields:
-        template_or_rule_id: Scanner template/rule identifier (e.g., Nuclei
-            template-id, CVE ID, or a derived rule key). Used for
-            deduplication and candidate ID derivation.
-        description: Detailed description of the finding.
-        evidence: List of evidence strings (extracted results, CPEs, references).
-        metadata: Scanner-specific metadata that does not fit other fields.
-        cve_ids: List of CVE identifiers associated with this finding.
-        cvss_score: CVSS base score (0.0-10.0) if available.
-        cvss_metrics: CVSS vector string if available.
-        cwe_ids: List of CWE identifiers.
-        raw_record: Original scanner-specific record for forward compatibility.
-
-    Source-specific fields are preserved in metadata/raw_record and do not
-    leak into the decision engine (which only consumes ActionCandidate).
+    Fields:
+        finding_id: Stable deterministic identity for deduplication
+        source: Scanner/parser that produced this finding (e.g., "nmap", "nuclei")
+        target: The primary target (host URL/IP)
+        host: The hostname or IP
+        port: TCP/UDP port number (0 if not applicable)
+        protocol: Transport protocol (tcp/udp)
+        title: Short finding name/title
+        severity: Normalized severity (informational/low/medium/high/critical/unknown)
+        rule_id: Scanner-specific rule/template identifier
+        description: Detailed description
+        evidence: Evidence or reference strings
+        tags: Classification tags
+        metadata: Scanner-specific data preserved for downstream use
     """
+    finding_id: str = ""
+    source: str = "unknown"
+    target: str = ""
+    host: str = ""
+    port: int = 0
+    protocol: str = "tcp"
+    title: str = ""
+    severity: str = "unknown"
+    rule_id: str = ""
+    description: str = ""
+    evidence: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    finding_id: str = Field(..., description="Deterministic unique identifier.")
-    source: str = Field(..., description="Scanner source (nmap, nuclei, custom).")
-    target: str = Field(..., description="Primary target URL or IP.")
-    host: str = Field(..., description="Host IP or hostname.")
-    port: Optional[int] = Field(default=None, description="TCP/UDP port number.")
-    protocol: str = Field(default="unknown", description="Network protocol.")
-    title: str = Field(..., description="Human-readable finding title.")
-    severity: str = Field(default=DEFAULT_SEVERITY, description="Canonical severity level.")
+    def compute_finding_id(self) -> str:
+        """Compute a deterministic identity for deduplication."""
+        parts = [
+            self.source,
+            self.host,
+            str(self.port),
+            self.protocol,
+            self.rule_id,
+            self.target,
+        ]
+        key = "|".join(p.strip().lower() for p in parts)
+        return hashlib.sha256(key.encode()).hexdigest()[:16]
 
-    template_or_rule_id: Optional[str] = Field(
-        default=None, description="Scanner template/rule identifier or CVE ID."
-    )
-    description: Optional[str] = Field(default=None, description="Detailed description.")
-    evidence: List[str] = Field(
-        default_factory=list, description="Evidence strings (results, CPEs, references)."
-    )
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Scanner-specific metadata."
-    )
-    cve_ids: List[str] = Field(
-        default_factory=list, description="CVE identifiers."
-    )
-    cvss_score: Optional[float] = Field(
-        default=None, description="CVSS base score (0.0-10.0)."
-    )
-    cvss_metrics: Optional[str] = Field(
-        default=None, description="CVSS vector string."
-    )
-    cwe_ids: List[str] = Field(
-        default_factory=list, description="CWE identifiers."
-    )
-    raw_record: Optional[Dict[str, Any]] = Field(
-        default=None, description="Original scanner-specific record."
+
+# ---------------------------------------------------------------------------
+# Source-specific mappers
+# ---------------------------------------------------------------------------
+
+def from_nmap_xml_dict(d: dict[str, Any]) -> CanonicalFinding:
+    """Convert Nmap XML parser output dict to CanonicalFinding."""
+    port = d.get("port", 0)
+    try:
+        port = int(port) if port else 0
+    except (ValueError, TypeError):
+        port = 0
+
+    cpe_list = d.get("cpe", []) or []
+    if isinstance(cpe_list, str):
+        cpe_list = [cpe_list]
+
+    return CanonicalFinding(
+        source="nmap-xml",
+        host=d.get("host", "unknown"),
+        target=d.get("host", "unknown"),
+        port=port,
+        protocol="tcp",
+        title=d.get("service") or d.get("description") or "open port",
+        severity="unknown",
+        rule_id=f"port-{port}" if port else "unknown",
+        description=d.get("description") or "",
+        evidence=cpe_list,
+        tags=["nmap", "port-scan"] + ([d["service"]] if d.get("service") else []),
+        metadata={
+            "service": d.get("service"),
+            "product": d.get("product") or d.get("description", "").split()[0] if d.get("description") else None,
+            "cpe": cpe_list,
+        },
     )
 
-    @property
-    def severity_rank(self) -> int:
-        """Numeric rank for severity comparison (higher = more severe)."""
+
+def from_nmap_json_dict(d: dict[str, Any]) -> CanonicalFinding:
+    """Convert Nmap JSON parser output dict to CanonicalFinding."""
+    port = d.get("port", 0)
+    try:
+        port = int(port) if port else 0
+    except (ValueError, TypeError):
+        port = 0
+
+    cve = d.get("cve")
+    rule_id = cve if cve and cve != "UNKNOWN-CVE" else f"port-{port}"
+
+    return CanonicalFinding(
+        source="nmap-json",
+        host=d.get("host", "unknown"),
+        target=d.get("host", "unknown"),
+        port=port,
+        protocol="tcp",
+        title=d.get("service") or d.get("description") or "open port",
+        severity="unknown",
+        rule_id=rule_id,
+        description=d.get("description") or "",
+        evidence=[cve] if cve and cve != "UNKNOWN-CVE" else [],
+        tags=["nmap", "port-scan"] + ([d["service"]] if d.get("service") else []),
+        metadata={
+            "service": d.get("service"),
+            "cve": cve,
+        },
+    )
+
+
+def from_custom_json_dict(d: dict[str, Any]) -> CanonicalFinding:
+    """Convert custom JSON parser output dict to CanonicalFinding."""
+    port = d.get("port", 0)
+    try:
+        port = int(port) if port else 0
+    except (ValueError, TypeError):
+        port = 0
+
+    cve = d.get("cve")
+    rule_id = cve if cve and cve not in ("", "UNKNOWN-CVE") else f"port-{port}"
+
+    return CanonicalFinding(
+        source="custom",
+        host=d.get("host", "unknown"),
+        target=d.get("host", "unknown"),
+        port=port,
+        protocol="tcp",
+        title=d.get("service") or d.get("description") or "finding",
+        severity="unknown",
+        rule_id=rule_id,
+        description=d.get("description") or "",
+        evidence=[cve] if cve and cve not in ("", "UNKNOWN-CVE") else [],
+        tags=["custom"] + ([d.get("service")] if d.get("service") else []),
+        metadata={
+            "service": d.get("service"),
+            "cve": cve,
+        },
+    )
+
+
+def from_nuclei_finding(f: Any) -> CanonicalFinding:
+    """Convert NucleiFinding to CanonicalFinding."""
+    # Determine port from target URL
+    port = 0
+    if f.target:
         try:
-            return SEVERITY_LEVELS.index(self.severity.lower())
-        except ValueError:
-            return SEVERITY_LEVELS.index(DEFAULT_SEVERITY)
+            parsed = urlparse(f.target)
+            if parsed.port:
+                port = parsed.port
+            elif parsed.scheme == "https":
+                port = 443
+            elif parsed.scheme == "http":
+                port = 80
+        except Exception:
+            pass
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary representation."""
-        return self.model_dump()
+    # Build evidence list
+    evidence = list(f.extracted_results) if f.extracted_results else []
+    if f.references:
+        evidence.extend(f.references[:3])  # Limit references
+
+    return CanonicalFinding(
+        source="nuclei",
+        host=f.host or f.ip or "unknown",
+        target=f.target or f.host or "unknown",
+        port=port,
+        protocol="tcp",
+        title=f.name or f.template_id,
+        severity=normalize_severity(f.severity),
+        rule_id=f.template_id or "unknown",
+        description=f.description or "",
+        evidence=evidence,
+        tags=list(f.tags) if f.tags else [],
+        metadata={
+            "template_id": f.template_id,
+            "info": f.info if hasattr(f, "info") else {},
+            "cvss_score": f.cvss_score,
+            "cvss_metrics": f.cvss_metrics,
+            "cve_ids": f.cve_ids,
+            "cwe_ids": f.cwe_ids,
+            "ip": f.ip,
+            "timestamp": f.timestamp,
+            "curl_command": f.curl_command,
+            "matcher_status": f.matcher_status,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
-# Identity and deduplication
+# Batch normalization
 # ---------------------------------------------------------------------------
 
-def asset_identity(finding: CanonicalFinding) -> str:
-    """Compute a deterministic asset identity for a canonical finding.
-
-    Identity is based on host + port + protocol. This is the minimal identity
-    needed for normalized findings and serves as the foundation for the future
-    asset graph.
-    """
-    port_part = str(finding.port) if finding.port is not None else "any"
-    return f"{finding.host}:{port_part}/{finding.protocol}"
+def normalize_nmap_findings(findings: list[dict[str, Any]], format: str = "xml") -> list[CanonicalFinding]:
+    """Normalize a list of Nmap finding dicts."""
+    mapper = from_nmap_xml_dict if format == "xml" else from_nmap_json_dict
+    return [mapper(f) for f in findings]
 
 
-def finding_identity(finding: CanonicalFinding) -> str:
-    """Compute the deterministic identity key for deduplication.
-
-    Two findings are duplicates when they share the same identity key. The
-    identity is composed of:
-
-        source + host + port + protocol + vulnerability/rule identity
-
-    The vulnerability/rule identity is taken from template_or_rule_id when
-    available (e.g., a CVE or Nuclei template-id). If no rule identifier is
-    present, the first CVE ID is used. If neither exists, a hash of the title
-    is used as a fallback so that findings without CVEs can still be
-    deduplicated deterministically.
-
-    Note: source is intentionally NOT part of the identity. The purpose of
-    normalization is to let different scanner formats converge; a finding
-    reported by both Nmap and Nuclei for the same CVE on the same host/port
-    should be deduplicated as one canonical finding.
-    """
-    port_part = str(finding.port) if finding.port is not None else "any"
-
-    # Determine vulnerability/rule identity (most specific available)
-    rule_id = finding.template_or_rule_id
-    if not rule_id and finding.cve_ids:
-        rule_id = finding.cve_ids[0]
-    if not rule_id:
-        # Fallback: hash of the title (first 12 chars)
-        title_hash = hashlib.sha256(finding.title.encode()).hexdigest()[:12]
-        rule_id = f"hash-{title_hash}"
-
-    return f"{finding.host}:{port_part}/{finding.protocol}|{rule_id}"
+def normalize_custom_findings(findings: list[dict[str, Any]]) -> list[CanonicalFinding]:
+    """Normalize a list of custom JSON finding dicts."""
+    return [from_custom_json_dict(f) for f in findings]
 
 
-def deduplicate(findings: List[CanonicalFinding]) -> List[CanonicalFinding]:
-    """Deterministically deduplicate canonical findings.
+def normalize_nuclei_findings(findings: list[Any]) -> list[CanonicalFinding]:
+    """Normalize a list of NucleiFinding objects."""
+    return [from_nuclei_finding(f) for f in findings]
 
-    Two findings are duplicates when finding_identity(finding) matches.
 
-    When duplicates are found, information is MERGED rather than discarded:
-      - the first occurrence's core fields are kept
-      - evidence from later occurrences is appended (duplicates removed)
-      - metadata from later occurrences is merged (later values win)
-      - cve_ids and cwe_ids are unioned
-      - severity is upgraded to the most severe value
-      - cvss_score is upgraded to the highest value
+# ---------------------------------------------------------------------------
+# Deduplication
+# ---------------------------------------------------------------------------
 
-    Args:
-        findings: List of CanonicalFinding objects.
-
-    Returns:
-        Deduplicated list of CanonicalFinding objects in deterministic order
-        (order of first occurrence).
-    """
-    seen: Dict[str, CanonicalFinding] = {}
+def deduplicate(findings: list[CanonicalFinding]) -> list[CanonicalFinding]:
+    """Deduplicate findings by deterministic identity."""
+    seen: dict[str, CanonicalFinding] = {}
     for f in findings:
-        key = finding_identity(f)
-        if key in seen:
-            existing = seen[key]
-            # Merge evidence (dedupe within the merged list)
+        fid = f.compute_finding_id()
+        if fid not in seen:
+            seen[fid] = f
+        else:
+            # Merge evidence from duplicate
+            existing = seen[fid]
             for ev in f.evidence:
                 if ev not in existing.evidence:
                     existing.evidence.append(ev)
-            # Merge metadata (later values win)
-            existing.metadata.update(f.metadata)
-            # Union CVEs and CWEs
-            for cve in f.cve_ids:
-                if cve not in existing.cve_ids:
-                    existing.cve_ids.append(cve)
-            for cwe in f.cwe_ids:
-                if cwe not in existing.cwe_ids:
-                    existing.cwe_ids.append(cwe)
-            # Upgrade severity to the most severe value
-            if f.severity_rank > existing.severity_rank:
-                existing.severity = f.severity
-            # Upgrade CVSS score to the highest value
-            if f.cvss_score is not None and (
-                existing.cvss_score is None or f.cvss_score > existing.cvss_score
-            ):
-                existing.cvss_score = f.cvss_score
-        else:
-            seen[key] = f
+            for tag in f.tags:
+                if tag not in existing.tags:
+                    existing.tags.append(tag)
     return list(seen.values())
 
 
 # ---------------------------------------------------------------------------
-# Normalization functions (mapping rules)
+# Severity utilities
 # ---------------------------------------------------------------------------
 
-def _as_int(value: Any) -> Optional[int]:
-    """Safely convert a value to an integer, returning None on failure."""
+def severity_rank(severity: str) -> int:
+    """Return numeric rank for severity comparison (higher = more severe)."""
     try:
-        return int(value) if value is not None else None
-    except (ValueError, TypeError):
-        return None
+        return SEVERITY_ORDER.index(severity.lower())
+    except ValueError:
+        return SEVERITY_ORDER.index("unknown")
 
 
-def _as_list(value: Any) -> List[str]:
-    """Safely convert a value to a list of strings."""
-    if not value:
-        return []
-    if isinstance(value, list):
-        return [str(v) for v in value if v]
-    return [str(value)]
-
-
-def _build_title(service: str, description: str) -> str:
-    """Build a human-readable title from service and description."""
-    if description:
-        return description
-    if service:
-        return service
-    return "Open port"
-
-
-def _build_evidence(cpe: Any) -> List[str]:
-    """Build an evidence list from CPE data."""
-    return _as_list(cpe)
-
-
-def _build_metadata(service: str, description: str, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Build metadata dict for Nmap/custom findings."""
-    metadata = {
-        "service": service,
-        "raw_description": description,
-    }
-    if extra:
-        metadata.update(extra)
-    return metadata
-
-
-# ---------------------------------------------------------------------------
-# Nmap normalization
-# ---------------------------------------------------------------------------
-
-def normalize_nmap_findings(raw_findings: List[Dict[str, Any]]) -> List[CanonicalFinding]:
-    """Normalize Nmap parser output into CanonicalFinding objects.
-
-    Accepts the raw dict structures produced by core.scanner.parse_nmap_xml()
-    and core.scanner.parse_nmap_json():
-
-        {"host": "192.168.1.10", "port": 22, "service": "ssh",
-         "description": "OpenSSH 8.9p1", "cpe": [...], "cve": "CVE-..."}
-
-    Mapping rules (Nmap -> CanonicalFinding):
-        host          -> host + target
-        port          -> port
-        protocol      -> "tcp" (Nmap scan protocol; UDP not represented in
-                        the current parser)
-        service       -> metadata["service"] + title fallback
-        description   -> description + title fallback
-        cpe           -> evidence + metadata["cpe"]
-        cve           -> template_or_rule_id + cve_ids
-        severity      -> "unknown" (Nmap does not emit severity)
-        source        -> "nmap"
-    """
-    results = []
-    for item in raw_findings:
-        host = str(item.get("host") or "unknown")
-        port = _as_int(item.get("port"))
-        service = str(item.get("service") or "")
-        description = str(item.get("description") or "")
-        cve = str(item.get("cve")) if item.get("cve") else None
-        cpe = _as_list(item.get("cpe"))
-
-        title = _build_title(service, description)
-        evidence = _build_evidence(cpe)
-
-        finding = CanonicalFinding(
-            finding_id=f"nmap|{host}:{port or 'any'}/tcp|{cve or 'none'}",
-            source="nmap",
-            target=host,
-            host=host,
-            port=port,
-            protocol="tcp",
-            title=title,
-            severity=DEFAULT_SEVERITY,
-            template_or_rule_id=cve,
-            description=description or None,
-            evidence=evidence,
-            metadata=_build_metadata(service, description, {"cpe": cpe}),
-            cve_ids=[cve] if cve else [],
-            raw_record=item,
-        )
-        results.append(finding)
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Nuclei normalization
-# ---------------------------------------------------------------------------
-
-def normalize_nuclei_findings(nuclei_findings: List[NucleiFinding]) -> List[CanonicalFinding]:
-    """Normalize Nuclei parser output into CanonicalFinding objects.
-
-    Accepts the NucleiFinding dataclass objects produced by
-    vapt_platform.parsers.nuclei_parser.NucleiParser.
-
-    Mapping rules (Nuclei -> CanonicalFinding):
-        template-id   -> template_or_rule_id + cve_ids (from classification)
-        info.name     -> title
-        info.severity -> severity (already lowercase by the parser)
-        type          -> protocol
-        host          -> host
-        matched-at    -> target (takes precedence over host)
-        description   -> description
-        reference     -> evidence
-        extracted-results -> evidence
-        ip            -> metadata["ip"]
-        cvss-*        -> cvss_score / cvss_metrics + metadata
-        cwe-id        -> cwe_ids + metadata
-        curl-command  -> evidence
-        timestamp     -> metadata["timestamp"]
-        source        -> "nuclei"
-    """
-    results = []
-    for nf in nuclei_findings:
-        host = nf.host or nf.ip or "unknown"
-        target = nf.target or nf.host or "unknown"
-
-        # Extract port from URL when possible
-        port = None
-        if target:
-            try:
-                from urllib.parse import urlparse
-
-                parsed = urlparse(target)
-                if parsed.port:
-                    port = parsed.port
-                elif nf.type == "http" and target.startswith("https://"):
-                    port = 443
-                elif nf.type == "http" and target.startswith("http://"):
-                    port = 80
-            except (ValueError, TypeError):
-                port = None
-
-        protocol = str(nf.type or "unknown")
-        evidence = _as_list(nf.extracted_results)
-        if nf.references:
-            evidence.extend(_as_list(nf.references))
-        if nf.curl_command:
-            evidence.append(f"curl: {nf.curl_command}")
-
-        metadata: Dict[str, Any] = {
-            "matched_at": nf.matched_at,
-            "matcher_name": nf.matcher_name,
-            "tags": list(nf.tags),
-            "type": nf.type,
-            "ip": nf.ip,
-            "timestamp": nf.timestamp,
-            "matcher_status": nf.matcher_status,
-        }
-        if nf.error_message:
-            metadata["error_message"] = nf.error_message
-
-        finding = CanonicalFinding(
-            finding_id=f"nuclei|{host}:{port or 'any'}/{protocol}|{nf.template_id}",
-            source="nuclei",
-            target=target,
-            host=host,
-            port=port,
-            protocol=protocol,
-            title=nf.name,
-            severity=nf.severity,
-            template_or_rule_id=nf.template_id,
-            description=nf.description or None,
-            evidence=evidence,
-            metadata=metadata,
-            cve_ids=list(nf.cve_ids) if nf.cve_ids else [],
-            cvss_score=nf.cvss_score,
-            cvss_metrics=nf.cvss_metrics,
-            cwe_ids=list(nf.cwe_ids) if nf.cwe_ids else [],
-            raw_record=nf.raw,
-        )
-        results.append(finding)
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Custom normalization
-# ---------------------------------------------------------------------------
-
-def normalize_custom_findings(raw_findings: List[Dict[str, Any]]) -> List[CanonicalFinding]:
-    """Normalize custom JSON parser output into CanonicalFinding objects.
-
-    Accepts the raw dict structures produced by core.scanner.parse_custom_json():
-
-        {"host": "10.0.0.0/24", "port": 22, "service": "ssh",
-         "cve": "CVE-2023-38408", "description": "OpenSSH PKCS#11 RCE"}
-
-    Mapping rules (Custom -> CanonicalFinding):
-        target (top-level, inherited as host) -> host + target
-        port          -> port
-        protocol      -> "tcp" (custom schema does not specify protocol)
-        service       -> metadata["service"] + title fallback
-        description   -> description + title fallback
-        cve           -> template_or_rule_id + cve_ids
-        severity      -> "unknown" (custom schema does not emit severity)
-        source        -> "custom"
-    """
-    results = []
-    for item in raw_findings:
-        host = str(item.get("host") or "unknown")
-        port = _as_int(item.get("port"))
-        service = str(item.get("service") or "")
-        description = str(item.get("description") or "")
-        cve = str(item.get("cve")) if item.get("cve") else None
-
-        title = _build_title(service, description)
-
-        finding = CanonicalFinding(
-            finding_id=f"custom|{host}:{port or 'any'}/tcp|{cve or 'none'}",
-            source="custom",
-            target=host,
-            host=host,
-            port=port,
-            protocol="tcp",
-            title=title,
-            severity=DEFAULT_SEVERITY,
-            template_or_rule_id=cve,
-            description=description or None,
-            metadata=_build_metadata(service, description),
-            cve_ids=[cve] if cve else [],
-            raw_record=item,
-        )
-        results.append(finding)
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Bridge to ActionCandidate (existing candidate bridge)
-# ---------------------------------------------------------------------------
-
-def canonical_to_candidates(findings: List[CanonicalFinding]) -> List[ActionCandidate]:
-    """Convert canonical findings into engine ActionCandidates.
-
-    This is the bridge between the platform-level normalization layer and the
-    existing research-protected candidate bridge. The mapping mirrors
-    decision_engine.adapters.scan_adapter.findings_to_candidates():
-
-        id      = first CVE in cve_ids, else template_or_rule_id, else finding_id
-        probability = 0.0 (EPSS enrichment happens AFTER normalization)
-        quality_rank = None (to be filled by the assessor)
-        ground_truth = None (no simulation label)
-
-    Args:
-        findings: List of CanonicalFinding objects.
-
-    Returns:
-        List of ActionCandidate objects ready for run_engine().
-    """
-    candidates = []
-    for f in findings:
-        if f.cve_ids:
-            cid = f.cve_ids[0]
-        elif f.template_or_rule_id:
-            cid = f.template_or_rule_id
-        else:
-            cid = f.finding_id
-        candidates.append(
-            ActionCandidate(
-                id=cid,
-                probability=0.0,
-                quality_rank=None,
-                ground_truth=None,
-            )
-        )
-    return candidates
-
-
-# ---------------------------------------------------------------------------
-# Unified normalization entry point
-# ---------------------------------------------------------------------------
-
-def normalize_findings(raw_findings: List[Any], source: str) -> List[CanonicalFinding]:
-    """Unified normalization entry point.
-
-    Dispatches parser-specific structures to the appropriate normalizer.
-
-    Args:
-        raw_findings: Parser-specific output:
-            - "nmap": list of dicts from core.scanner.parse_nmap_xml() or
-              parse_nmap_json()
-            - "nuclei": list of NucleiFinding objects from the Nuclei parser
-            - "custom": list of dicts from core.scanner.parse_custom_json()
-        source: Scanner source ("nmap", "nuclei", "custom").
-
-    Returns:
-        List of CanonicalFinding objects.
-
-    Raises:
-        ValueError: If source is unknown.
-    """
-    if source == "nmap":
-        return normalize_nmap_findings(raw_findings)
-    if source == "nuclei":
-        return normalize_nuclei_findings(raw_findings)
-    if source == "custom":
-        return normalize_custom_findings(raw_findings)
-    raise ValueError(f"Unknown source: {source!r}")
-
-
-def deduplicate_findings(findings: List[CanonicalFinding]) -> List[CanonicalFinding]:
-    """Convenience wrapper around deduplicate()."""
-    return deduplicate(findings)
+def highest_severity(a: str, b: str) -> str:
+    """Return the more severe of two severity levels."""
+    return a if severity_rank(a) >= severity_rank(b) else b

@@ -20,13 +20,10 @@ from vapt_platform.normalization import (
     normalize_nmap_findings,
     normalize_nuclei_findings,
     normalize_custom_findings,
-    normalize_findings,
-    deduplicate_findings,
-    canonical_to_candidates,
-    asset_identity,
-    finding_identity,
+    deduplicate,
     normalize_severity,
-    cvss_score_to_severity,
+    severity_rank,
+    highest_severity,
 )
 
 __all__ = [
@@ -40,11 +37,8 @@ __all__ = [
     "normalize_nmap_findings",
     "normalize_nuclei_findings",
     "normalize_custom_findings",
-    "normalize_findings",
-    "deduplicate_findings",
-    "canonical_to_candidates",
-    "asset_identity",
-    "finding_identity",
+    "deduplicate",
     "normalize_severity",
-    "cvss_score_to_severity",
+    "severity_rank",
+    "highest_severity",
 ]
