@@ -21,12 +21,18 @@ from prototype.trace_formatter import (
 from prototype.report_generator import (
     generate_text_report,
     generate_json_report,
+    generate_html_report,
+    generate_markdown_report,
     save_text_report,
     save_json_report,
+    save_html_report,
+    save_markdown_report,
     _get_evidence_tier,
     _count_attempts_per_candidate,
     _extract_pivot_events,
     _get_evidence_tier_description,
+    _get_evidence_tier_color,
+    _get_evidence_tier_emoji,
 )
 
 
@@ -416,3 +422,264 @@ def test_safety_notice_section_is_prominent():
     # The safety notice should contain the simulation warning
     assert "SIMULATION MODE" in text_report
     assert "No real vulnerabilities were validated" in text_report
+
+
+# --- HTML Report Tests ---
+
+def test_html_report_contains_all_sections():
+    """Verify the HTML report contains all required sections."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    html_report = generate_html_report("success", state, max_attempts=2, mode="simulation")
+
+    assert "<!DOCTYPE html>" in html_report
+    assert "Run Metadata" in html_report
+    assert "Evidence Tier" in html_report
+    assert "Per-Candidate Attempts" in html_report
+    assert "Pivot Events" in html_report
+    assert "Candidate Ranking" in html_report
+    assert "Engine Execution" in html_report
+    assert "Decision Trace" in html_report
+    assert "Final Result" in html_report
+    assert "Safety Notice" in html_report
+    assert "SIMULATION MODE" in html_report
+    assert "No real vulnerabilities were validated" in html_report
+
+
+def test_html_report_contains_engine_data():
+    """Verify the HTML report contains actual engine results."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    html_report = generate_html_report("success", state, max_attempts=2, mode="simulation")
+
+    # Should contain candidate IDs from the scenario
+    assert "DEMO-SUCCESS-A" in html_report
+    assert "DEMO-SUCCESS-B" in html_report
+    assert "DEMO-WORKER" in html_report
+
+    # Should contain evidence tier badge
+    assert "SIMULATED" in html_report
+
+
+def test_html_report_evidence_tier_color():
+    """Verify the HTML report has color-coded evidence tier badge."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    html_report = generate_html_report("success", state, max_attempts=2, mode="simulation")
+
+    # Should contain CSS color for SIMULATED (orange)
+    assert "#ff9800" in html_report
+
+
+def test_html_report_is_valid_html():
+    """Verify the HTML report is well-formed."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    html_report = generate_html_report("success", state, max_attempts=2, mode="simulation")
+
+    # Check basic HTML structure
+    assert html_report.strip().startswith("<!DOCTYPE html>")
+    assert "</html>" in html_report
+    assert "<head>" in html_report
+    assert "</head>" in html_report
+    assert "<body>" in html_report
+    assert "</body>" in html_report
+
+
+def test_save_html_report():
+    """Verify saving an HTML report works."""
+    import tempfile
+    import os
+
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        html_path = os.path.join(tmpdir, "test_report.html")
+
+        saved_path = save_html_report("success", state, html_path, 2, "simulation")
+
+        assert saved_path == html_path
+        assert os.path.exists(html_path)
+
+        with open(html_path, encoding="utf-8") as f:
+            content = f.read()
+
+        assert "<!DOCTYPE html>" in content
+        assert "SIMULATION MODE" in content
+
+
+# --- Markdown Report Tests ---
+
+def test_markdown_report_contains_all_sections():
+    """Verify the Markdown report contains all required sections."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    md_report = generate_markdown_report("success", state, max_attempts=2, mode="simulation")
+
+    assert "# AI VAPT Decision Engine" in md_report
+    assert "## Run Metadata" in md_report
+    assert "Evidence Tier" in md_report
+    assert "## Per-Candidate Attempts" in md_report
+    assert "## Pivot Events" in md_report
+    assert "## Candidate Ranking" in md_report
+    assert "## Engine Execution" in md_report
+    assert "## Decision Trace" in md_report
+    assert "## Final Result" in md_report
+    assert "## Safety Notice" in md_report
+    assert "SIMULATION MODE" in md_report
+    assert "No real vulnerabilities were validated" in md_report
+
+
+def test_markdown_report_contains_engine_data():
+    """Verify the Markdown report contains actual engine results."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    md_report = generate_markdown_report("success", state, max_attempts=2, mode="simulation")
+
+    # Should contain candidate IDs
+    assert "DEMO-SUCCESS-A" in md_report
+    assert "DEMO-SUCCESS-B" in md_report
+    assert "DEMO-WORKER" in md_report
+
+
+def test_markdown_report_evidence_tier_emoji():
+    """Verify the Markdown report has emoji indicators for evidence tier."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    md_report = generate_markdown_report("success", state, max_attempts=2, mode="simulation")
+
+    # Should contain test tube emoji for SIMULATED
+    assert "🧪" in md_report
+
+
+def test_markdown_report_contains_tables():
+    """Verify the Markdown report contains properly formatted tables."""
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    md_report = generate_markdown_report("success", state, max_attempts=2, mode="simulation")
+
+    # Should contain markdown table syntax
+    assert "|-------|" in md_report
+    assert "| Field | Value |" in md_report
+
+
+def test_save_markdown_report():
+    """Verify saving a Markdown report works."""
+    import tempfile
+    import os
+
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        md_path = os.path.join(tmpdir, "test_report.md")
+
+        saved_path = save_markdown_report("success", state, md_path, 2, "simulation")
+
+        assert saved_path == md_path
+        assert os.path.exists(md_path)
+
+        with open(md_path, encoding="utf-8") as f:
+            content = f.read()
+
+        assert "# AI VAPT Decision Engine" in content
+        assert "SIMULATION MODE" in content
+
+
+# --- Evidence Tier Helper Tests ---
+
+def test_evidence_tier_color_helper():
+    """Verify the evidence tier color helper."""
+    assert _get_evidence_tier_color("SIMULATED") == "#ff9800"
+    assert _get_evidence_tier_color("OBSERVED_LOCAL") == "#2196f3"
+    assert _get_evidence_tier_color("DOCKER_OBSERVED") == "#00bcd4"
+    assert _get_evidence_tier_color("CONTROLLED VALIDATION") == "#4caf50"
+    assert _get_evidence_tier_color("UNKNOWN") == "#9e9e9e"
+    assert _get_evidence_tier_color("nonexistent") == "#9e9e9e"
+
+
+def test_evidence_tier_emoji_helper():
+    """Verify the evidence tier emoji helper."""
+    assert _get_evidence_tier_emoji("SIMULATED") == "🧪"
+    assert _get_evidence_tier_emoji("OBSERVED_LOCAL") == "👁️"
+    assert _get_evidence_tier_emoji("DOCKER_OBSERVED") == "🐳"
+    assert _get_evidence_tier_emoji("CONTROLLED VALIDATION") == "✅"
+    assert _get_evidence_tier_emoji("UNKNOWN") == "❓"
+    assert _get_evidence_tier_emoji("nonexistent") == "❓"
+
+
+# --- Cross-format Consistency Tests ---
+
+def test_html_and_json_report_consistency():
+    """Verify HTML and JSON reports contain the same core data."""
+    import json
+
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    json_report = generate_json_report("success", state, max_attempts=2, mode="simulation")
+    html_report = generate_html_report("success", state, max_attempts=2, mode="simulation")
+
+    data = json.loads(json_report)
+
+    # Both should contain the same scenario name
+    assert data["scenario"] in html_report
+    # Both should contain the same final status
+    assert data["final_status"] in html_report
+
+
+def test_markdown_and_json_report_consistency():
+    """Verify Markdown and JSON reports contain the same core data."""
+    import json
+
+    candidates = success_scenario()
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    json_report = generate_json_report("success", state, max_attempts=2, mode="simulation")
+    md_report = generate_markdown_report("success", state, max_attempts=2, mode="simulation")
+
+    data = json.loads(json_report)
+
+    # Both should contain the same scenario name
+    assert data["scenario"] in md_report
+    # Both should contain the same final status
+    assert data["final_status"] in md_report
+
+
+def test_html_report_with_pivot_events():
+    """Verify the HTML report correctly shows pivot events."""
+    candidates = failure_pivot_scenario(max_attempts=2)
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    html_report = generate_html_report("failure_pivot", state, max_attempts=2, mode="simulation")
+
+    # Should contain pivot event types
+    assert "ABANDON" in html_report
+    assert "REDIRECT" in html_report
+    # Should contain candidate IDs
+    assert "DEMO-DEAD-END" in html_report
+    assert "DEMO-WORKER" in html_report
+
+
+def test_markdown_report_with_pivot_events():
+    """Verify the Markdown report correctly shows pivot events."""
+    candidates = failure_pivot_scenario(max_attempts=2)
+    state = run_decision_scenario(candidates, max_attempts=2, mode="simulation")
+
+    md_report = generate_markdown_report("failure_pivot", state, max_attempts=2, mode="simulation")
+
+    # Should contain pivot event types
+    assert "ABANDON" in md_report
+    assert "REDIRECT" in md_report
+    # Should contain candidate IDs
+    assert "DEMO-DEAD-END" in md_report
+    assert "DEMO-WORKER" in md_report
