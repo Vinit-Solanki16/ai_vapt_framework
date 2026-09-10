@@ -87,6 +87,9 @@ def run_decision_scenario(
     mode: str = "simulation",
     executor: Executor | None = None,
     assessor: str = "deterministic",
+    assessment_mode: str = "deterministic",
+    assessment_provider: str = "ollama",
+    assessment_api_key: Optional[str] = None,
 ) -> dict:
     """Run a scenario through the real decision engine.
 
@@ -126,21 +129,34 @@ def run_decision_scenario(
     if executor is None:
         executor = build_executor(mode=mode)
 
-    # 4. Use the real assessor
-    if assessor == "llm":
-        from decision_engine.adapters.vapt_adapter import vapt_assess_fn
-        assess_fn = vapt_assess_fn(use_llm=True)
-    else:
-        assess_fn = deterministic_assessor
+    # 4. Use the pluggable assessor
+    from vapt_platform.assessment import create_assessor, AssessmentResult
+
+    assessor_fn = create_assessor(
+        mode=assessment_mode,
+        provider=assessment_provider,
+        api_key=assessment_api_key,
+    )
+
+    # Wrap the pluggable assessor to work with the engine's assess_fn interface
+    def _assess_fn(candidate: ActionCandidate) -> QualityRank:
+        result: AssessmentResult = assessor_fn(candidate)
+        return result.quality_rank
 
     # 5. Call the real run_engine()
     final_state = run_engine(
         candidates,
-        assess_fn=assess_fn,
+        assess_fn=_assess_fn,
         executor=executor,
         max_attempts=max_attempts,
         mode=mode,
     )
+
+    # Store assessment provenance in state
+    final_state["_assessment"] = {
+        "mode": assessment_mode,
+        "provider": assessment_provider,
+    }
 
     # 6-7. Presentation-level metadata (computed OUTSIDE the engine)
     final_state["_presentation"] = _compute_presentation(final_state, scenario, max_attempts, mode)
@@ -224,3 +240,29 @@ def run_corpus_scenario(max_attempts: int = 2, mode: str = "simulation") -> dict
     """
     candidates = load_vapt_corpus_scenario()
     return run_decision_scenario(candidates, max_attempts=max_attempts, mode=mode)
+
+
+def run_scan_file(scan_path: str, max_attempts: int = 2, mode: str = "simulation") -> dict:
+    """Run a scan file through the real decision engine.
+
+    Steps:
+      1. Call scan_adapter.candidates_from_scan() to parse + enrich the scan
+      2. Convert candidates to scenario dicts
+      3. Call run_decision_scenario() with the real engine
+
+    Args:
+        scan_path: Path to scan file (Nmap XML/JSON or custom JSON)
+        max_attempts: Pivot threshold (max attempts per candidate)
+        mode: "simulation" (default) or "lab"
+
+    Returns:
+        Final engine state dict with presentation metadata appended
+    """
+    from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
+
+    candidates = candidates_to_scenario(candidates_from_scan(scan_path))
+    return run_decision_scenario(
+        candidates,
+        max_attempts=max_attempts,
+        mode=mode,
+    )
