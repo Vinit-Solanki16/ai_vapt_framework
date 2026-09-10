@@ -6,7 +6,8 @@ services:
     container_name: vuln-emulator
     # Internal network only - no host access
     networks:
-      - lab-network
+      lab-network:
+        ipv4_address: 172.28.0.2
     # Restart policy for reliability
     restart: unless-stopped
     # Resource limits for isolation
@@ -38,8 +39,10 @@ services:
     # - lab-network: can reach emulator at 172.28.0.2:8080
     # - default bridge: port 9090 published to host
     networks:
-      - lab-network
-      - default
+      lab-network:
+        ipv4_address: 172.28.0.3
+      default:
+        ipv4_address: 172.18.0.3
     restart: unless-stopped
     deploy:
       resources:
