@@ -153,7 +153,7 @@ def _run_scenario(
         max_attempts=max_attempts,
         mode=mode,
         executor=executor_kwargs.get("executor"),
-        assessor=assessor,
+        assessment_mode="ai" if assessor == "llm" else "deterministic",
     )
 
     _display_output(scenario_name, final_state, max_attempts, mode)

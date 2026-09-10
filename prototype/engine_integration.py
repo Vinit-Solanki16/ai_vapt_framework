@@ -131,6 +131,7 @@ def run_decision_scenario(
 
     # 4. Use the pluggable assessor
     from vapt_platform.assessment import create_assessor, AssessmentResult
+    from decision_engine.core.schemas import QualityRank
 
     assessor_fn = create_assessor(
         mode=assessment_mode,
