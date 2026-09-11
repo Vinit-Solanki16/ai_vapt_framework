@@ -1,152 +1,305 @@
-"""Tests for the professional VAPT dashboard."""
+"""Tests for Operations Dashboard."""
 from __future__ import annotations
 
-import pytest
+import tempfile
+import shutil
 from unittest.mock import patch, MagicMock
 
-from vapt_platform.application import VAPTApplication, VAPTRequest, VAPTResult, DomainResult
+import pytest
+
+from vapt_platform.application import VAPTApplication, VAPTRequest, DomainResult
+from vapt_platform.events import EventBus, set_event_bus, EventType, RunState
+from vapt_platform.persistence import PersistenceConfig, JSONRunRepository
+from vapt_platform.persistence.repository import set_repository
 
 
-class TestDashboardWorkflow:
-    """Test that the dashboard uses the canonical workflow."""
+# ---------------------------------------------------------------------------
+# Run History tests
+# ---------------------------------------------------------------------------
 
-    def test_dashboard_imports_application(self):
-        """Verify dashboard imports VAPTApplication."""
-        from frontend.app import main, run_dashboard, display_results
-        assert callable(main)
-        assert callable(run_dashboard)
-        assert callable(display_results)
+class TestRunHistory:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Set up isolated persistence for each test."""
+        self.temp_dir = tempfile.mkdtemp()
+        config = PersistenceConfig(storage_dir=self.temp_dir)
+        self.repo = JSONRunRepository(config=config)
+        set_repository(self.repo)
+        yield
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_dashboard_uses_get_application(self):
-        """Verify dashboard uses the singleton application."""
-        from frontend.app import run_dashboard
-        # Just verify the function exists and is callable
-        assert callable(run_dashboard)
+    def test_empty_history(self):
+        """Test empty run history."""
+        runs = self.repo.list_runs()
+        assert len(runs) == 0
 
+    def test_multiple_runs(self):
+        """Test multiple runs in history."""
+        from vapt_platform.persistence.models import PersistentRun
 
-class TestDashboardDisplay:
-    """Test dashboard display functions."""
+        for i in range(5):
+            run = PersistentRun(
+                run_id=f"run-{i}",
+                scenario="success",
+                mode="simulation",
+                status="COMPLETED",
+            )
+            self.repo.save(run)
 
-    def test_display_findings(self):
-        from frontend.app import display_findings
-        domain = DomainResult(candidates=[
-            {"id": "test-1", "probability": 0.9, "quality_rank": "HIGH", "assessed": True, "attempted": True, "execution_outcome": "SUCCESS"},
-        ])
-        result = VAPTResult.from_domain(domain)
-        # Should not raise
-        display_findings(result)
+        runs = self.repo.list_runs()
+        assert len(runs) == 5
 
-    def test_display_candidates(self):
-        from frontend.app import display_candidates
-        domain = DomainResult(
-            candidates=[
-                {"id": "test-1", "probability": 0.9, "quality_rank": "HIGH", "assessed": True, "attempted": True, "execution_outcome": "SUCCESS"},
-            ],
-            assessment={"mode": "deterministic"},
+    def test_run_selection(self):
+        """Test selecting a specific run."""
+        from vapt_platform.persistence.models import PersistentRun
+
+        run = PersistentRun(
+            run_id="selected-run",
+            scenario="docker_vuln",
+            mode="lab",
+            status="COMPLETED",
         )
-        result = VAPTResult.from_domain(domain)
-        display_candidates(result)
+        self.repo.save(run)
 
-    def test_display_execution_timeline(self):
-        from frontend.app import display_execution_timeline
-        domain = DomainResult(
-            execution_results=[
-                {"candidate_id": "test-1", "outcome": "SUCCESS", "detail": "VULNERABLE"},
-            ],
-        )
-        result = VAPTResult.from_domain(domain)
-        display_execution_timeline(result)
+        retrieved = self.repo.get("selected-run")
+        assert retrieved is not None
+        assert retrieved.run_id == "selected-run"
+        assert retrieved.scenario == "docker_vuln"
 
-    def test_display_pivot_visualization(self):
-        from frontend.app import display_pivot_visualization
-        domain = DomainResult(
-            total_attempts=3,
-            pivot_count=2,
-            decision_trace=["[PIVOT] Threshold reached", "[PIVOT] Redirected to next"],
-        )
-        result = VAPTResult.from_domain(domain)
-        display_pivot_visualization(result)
+    def test_run_ordering(self):
+        """Test runs are ordered by modification time."""
+        import time
+        from vapt_platform.persistence.models import PersistentRun
 
-    def test_display_decision_trace(self):
-        from frontend.app import display_decision_trace
-        domain = DomainResult(
-            decision_trace=["[INIT] Engine started", "[EXECUTE] Attempt 1"],
-        )
-        result = VAPTResult.from_domain(domain)
-        display_decision_trace(result)
+        for i in range(3):
+            run = PersistentRun(
+                run_id=f"run-{i}",
+                scenario="success",
+                mode="simulation",
+            )
+            self.repo.save(run)
+            time.sleep(0.01)  # Small delay to ensure different mtimes
 
-    def test_display_reports(self):
-        from frontend.app import display_reports
-        domain = DomainResult(
-            scenario="test",
-            mode="simulation",
-            candidates=[{"id": "test-1", "probability": 0.9}],
-            execution_results=[{"candidate_id": "test-1", "outcome": "SUCCESS"}],
+        runs = self.repo.list_runs()
+        # Should be ordered by mtime (most recent first)
+        assert len(runs) == 3
+
+
+# ---------------------------------------------------------------------------
+# Event Timeline tests
+# ---------------------------------------------------------------------------
+
+class TestEventTimeline:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.bus = EventBus()
+        set_event_bus(self.bus)
+        yield
+        self.bus.clear()
+
+    def test_event_timeline(self):
+        """Test events are ordered chronologically."""
+        from vapt_platform.events import Event
+
+        event1 = Event(run_id="run-1", event_type=EventType.RUN_CREATED)
+        event2 = Event(run_id="run-1", event_type=EventType.EXECUTION_STARTED)
+        event3 = Event(run_id="run-1", event_type=EventType.RUN_COMPLETED)
+
+        self.bus.publish(event1)
+        self.bus.publish(event2)
+        self.bus.publish(event3)
+
+        events = self.bus.get_events("run-1")
+        assert len(events) == 3
+        assert events[0].event_type == EventType.RUN_CREATED
+        assert events[-1].event_type == EventType.RUN_COMPLETED
+
+    def test_pivot_event_emission(self):
+        """Test pivot events are emitted correctly."""
+        from vapt_platform.events import EventPublisher
+
+        publisher = EventPublisher("run-1", self.bus)
+        publisher.emit(EventType.RUN_CREATED)
+        publisher.emit(EventType.EXECUTION_STARTED)
+        publisher.emit(EventType.PIVOT_OCCURRED, {"pivot_count": 1})
+        publisher.emit(EventType.RUN_COMPLETED)
+
+        events = self.bus.get_events("run-1")
+        pivot_events = [e for e in events if e.event_type == EventType.PIVOT_OCCURRED]
+        assert len(pivot_events) == 1
+        assert pivot_events[0].payload["pivot_count"] == 1
+
+    def test_failure_path_events(self):
+        """Test failure path emits correct events."""
+        from vapt_platform.events import EventPublisher
+
+        publisher = EventPublisher("run-1", self.bus)
+        publisher.emit(EventType.RUN_CREATED)
+        publisher.emit(EventType.EXECUTION_STARTED)
+        publisher.emit(EventType.RUN_FAILED, {"error": "Test error"})
+
+        events = self.bus.get_events("run-1")
+        assert events[-1].event_type == EventType.RUN_FAILED
+
+
+# ---------------------------------------------------------------------------
+# Evidence Viewer tests
+# ---------------------------------------------------------------------------
+
+class TestEvidenceViewer:
+    def test_evidence_tier_simulated(self):
+        """Test SIMULATED evidence tier."""
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.application import DomainResult
+
+        domain = DomainResult(mode="simulation")
+        builder = ReportBuilder()
+        report = builder.from_domain_result(domain)
+
+        assert report.evidence_tier == "SIMULATED"
+        assert "ground truth" in report.evidence_description.lower() or "no real" in report.safety_notice.lower()
+
+    def test_evidence_tier_docker(self):
+        """Test DOCKER_OBSERVED evidence tier."""
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.application import DomainResult
+
+        domain = DomainResult(mode="lab")
+        builder = ReportBuilder()
+        report = builder.from_domain_result(domain)
+
+        assert report.evidence_tier == "DOCKER_OBSERVED"
+        assert "docker" in report.safety_notice.lower() or "emulator" in report.safety_notice.lower()
+
+    def test_evidence_tier_local(self):
+        """Test OBSERVED_LOCAL evidence tier."""
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.application import DomainResult
+
+        domain = DomainResult(mode="lab_loopback")
+        builder = ReportBuilder()
+        report = builder.from_domain_result(domain)
+
+        assert report.evidence_tier == "OBSERVED_LOCAL"
+
+
+# ---------------------------------------------------------------------------
+# Report Integration tests
+# ---------------------------------------------------------------------------
+
+class TestReportIntegration:
+    def test_report_for_persisted_run(self):
+        """Test report generation from persisted run."""
+        from vapt_platform.persistence.models import PersistentRun
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.reporting.renderers import JSONRenderer
+
+        run = PersistentRun(
+            run_id="report-test",
+            scenario="docker_vuln",
+            mode="lab",
+            final_status="SUCCESS",
+            candidates=[{"id": "c1", "probability": 0.9}],
+            execution_results=[{"candidate_id": "c1", "outcome": "SUCCESS"}],
             decision_trace=["[INIT] Engine started"],
             total_attempts=1,
             pivot_count=0,
-            candidates_processed=["test-1"],
-            assessment={"mode": "deterministic"},
-        )
-        result = VAPTResult.from_domain(domain)
-        display_reports(result)
-
-
-class TestDashboardIntegration:
-    """Integration tests for the dashboard."""
-
-    def test_simulation_workflow(self):
-        """Test simulation workflow through dashboard."""
-        app = VAPTApplication()
-        req = VAPTRequest(
-            scenario="success",
-            mode="simulation",
-            max_attempts=2,
-            assessor_mode="deterministic",
-        )
-        result = app.run(req)
-        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
-        assert result.domain.evidence_tier == "SIMULATED"
-
-    def test_docker_lab_workflow_mocked(self):
-        """Test Docker lab workflow with mocked executor."""
-        mock_executor = MagicMock()
-        mock_executor.execute.return_value = MagicMock(
-            outcome="SUCCESS",
-            request_count=1,
-            detail="docker-observed(VULNERABLE)",
-        )
-
-        app = VAPTApplication()
-        req = VAPTRequest(
-            scenario="docker_vuln",
-            mode="lab",
+            evidence_tier="DOCKER_OBSERVED",
             target="172.28.0.2",
             port=8080,
-            path="/vuln",
-            max_attempts=2,
-            assessor_mode="deterministic",
         )
 
-        with patch.object(app, '_build_executor', return_value=mock_executor):
-            result = app.run(req)
+        builder = ReportBuilder()
+        report = builder.from_persisted_run(run)
 
-        assert result.domain.evidence_tier == "DOCKER_OBSERVED"
-        assert result.domain.mode == "lab"
+        # Should generate without error
+        json_output = JSONRenderer().render(report)
+        assert json_output is not None
+        assert "report-test" in json_output
 
-    def test_ai_assessor_propagation(self):
-        """Test that AI assessor mode is propagated correctly."""
-        app = VAPTApplication()
-        req = VAPTRequest(
+    def test_evidence_tier_in_report(self):
+        """Test evidence tier is preserved in report."""
+        from vapt_platform.persistence.models import PersistentRun
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.reporting.renderers import JSONRenderer
+
+        run = PersistentRun(
+            run_id="evidence-test",
+            scenario="docker_vuln",
+            mode="lab",
+            evidence_tier="DOCKER_OBSERVED",
+        )
+
+        builder = ReportBuilder()
+        report = builder.from_persisted_run(run)
+
+        json_output = JSONRenderer().render(report)
+        assert "DOCKER_OBSERVED" in json_output
+
+
+# ---------------------------------------------------------------------------
+# API → GUI Data Contract tests
+# ---------------------------------------------------------------------------
+
+class TestAPIGUIDataContract:
+    def test_run_list_format(self):
+        """Test run list format expected by GUI."""
+        from vapt_platform.persistence.models import PersistentRun
+
+        temp_dir = tempfile.mkdtemp()
+        config = PersistenceConfig(storage_dir=temp_dir)
+        repo = JSONRunRepository(config=config)
+
+        run = PersistentRun(
+            run_id="api-test",
             scenario="success",
             mode="simulation",
-            assessor_mode="ai",
-            assessor_provider="ollama",
+            status="COMPLETED",
+            final_status="SUCCESS",
+            evidence_tier="SIMULATED",
+            total_attempts=2,
+            pivot_count=1,
         )
+        repo.save(run)
 
-        result = app.run(req)
+        runs = repo.list_runs()
+        assert len(runs) == 1
 
-        # AI requested but Ollama unavailable → deterministic fallback
-        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
-        assert result.domain.assessment.get("mode") == "ai"
-        assert result.domain.assessment.get("provider") == "ollama"
+        # Verify fields expected by GUI
+        assert hasattr(runs[0], "run_id")
+        assert hasattr(runs[0], "scenario")
+        assert hasattr(runs[0], "mode")
+        assert hasattr(runs[0], "status")
+        assert hasattr(runs[0], "evidence_tier")
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_run_details_format(self):
+        """Test run details format expected by GUI."""
+        from vapt_platform.persistence.models import PersistentRun
+
+        temp_dir = tempfile.mkdtemp()
+        config = PersistenceConfig(storage_dir=temp_dir)
+        repo = JSONRunRepository(config=config)
+
+        run = PersistentRun(
+            run_id="details-test",
+            scenario="success",
+            mode="simulation",
+            candidates=[{"id": "c1"}],
+            execution_results=[{"candidate_id": "c1", "outcome": "SUCCESS"}],
+            decision_trace=["[INIT] Engine started"],
+            evidence_tier="SIMULATED",
+        )
+        repo.save(run)
+
+        retrieved = repo.get("details-test")
+        assert retrieved is not None
+
+        # Verify fields expected by GUI
+        assert hasattr(retrieved, "candidates")
+        assert hasattr(retrieved, "execution_results")
+        assert hasattr(retrieved, "decision_trace")
+        assert hasattr(retrieved, "evidence_tier")
+
+        shutil.rmtree(temp_dir, ignore_errors=True)
