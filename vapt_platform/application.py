@@ -134,18 +134,82 @@ class VAPTApplication:
             # Step 1: Load candidates
             candidates = self._load_candidates(request)
 
-            # Step 2: Build executor
+            # Step 2: Enrich candidates with vulnerability intelligence
+            candidates = self._enrich_candidates(candidates)
+
+            # Step 3: Build executor
             executor = self._build_executor(request, candidates)
 
-            # Step 3: Run decision engine
+            # Step 4: Run decision engine
             final_state = self._run_engine(request, candidates, executor)
 
-            # Step 4: Build result from engine state
+            # Step 5: Build result from engine state
             self._build_result(result, final_state, request)
 
         except Exception as e:
             result.final_status = "FAILED"
             result.safety_notice = f"Error: {str(e)}"
+
+        return result
+
+    def _enrich_candidates(self, candidates: list[dict]) -> list[dict]:
+        """Enrich candidates with vulnerability intelligence."""
+        from vapt_platform.enrichment import enrich_findings
+        from vapt_platform.normalization import CanonicalFinding
+
+        # Convert dicts to CanonicalFinding objects
+        findings = []
+        for c in candidates:
+            if isinstance(c, dict):
+                # Create a minimal CanonicalFinding from candidate dict
+                finding = CanonicalFinding(
+                    finding_id=c.get("id", ""),
+                    source=c.get("source", "unknown"),
+                    target=c.get("target", c.get("host", "")),
+                    host=c.get("host", ""),
+                    port=c.get("port", 0),
+                    protocol=c.get("protocol", "tcp"),
+                    title=c.get("title", c.get("id", "")),
+                    severity=c.get("severity", "unknown"),
+                    rule_id=c.get("rule_id", c.get("id", "")),
+                    description=c.get("description", ""),
+                    evidence=c.get("evidence", []),
+                    tags=c.get("tags", []),
+                    metadata=c.get("metadata", {}),
+                )
+                findings.append(finding)
+            else:
+                findings.append(c)
+
+        # Enrich findings
+        enriched = enrich_findings(findings)
+
+        # Convert back to dicts, preserving original fields
+        result = []
+        for i, f in enumerate(enriched):
+            # Start with original candidate to preserve all fields
+            if i < len(candidates) and isinstance(candidates[i], dict):
+                enriched_dict = dict(candidates[i])
+            else:
+                enriched_dict = {}
+
+            # Add/update with enriched fields
+            enriched_dict.update({
+                "id": f.finding_id or f.rule_id or enriched_dict.get("id"),
+                "source": f.source or enriched_dict.get("source"),
+                "target": f.target or enriched_dict.get("target"),
+                "host": f.host or enriched_dict.get("host"),
+                "port": f.port or enriched_dict.get("port"),
+                "protocol": f.protocol or enriched_dict.get("protocol"),
+                "title": f.title or enriched_dict.get("title"),
+                "severity": f.severity or enriched_dict.get("severity"),
+                "rule_id": f.rule_id or enriched_dict.get("rule_id"),
+                "description": f.description or enriched_dict.get("description"),
+                "evidence": f.evidence or enriched_dict.get("evidence"),
+                "tags": f.tags or enriched_dict.get("tags"),
+                "metadata": {**(enriched_dict.get("metadata", {})), **f.metadata},
+            })
+            result.append(enriched_dict)
 
         return result
 
