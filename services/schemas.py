@@ -7,12 +7,15 @@ from pydantic import BaseModel, Field
 
 class RunRequest(BaseModel):
     """Request to start a new decision engine run."""
-    scenario: Optional[str] = Field(None, description="Scenario name (success, failure_pivot, multi_candidate, corpus)")
+    scenario: str = Field("failure_pivot", description="Scenario name")
     max_attempts: int = Field(2, ge=1, le=10, description="Max attempts per candidate before pivot")
     mode: Literal["simulation", "lab"] = Field("simulation", description="Execution mode")
     target: Optional[str] = Field(None, description="Lab target IP (required for lab mode)")
     port: int = Field(8080, ge=1, le=65535, description="Lab target port")
+    path: str = Field("/vuln", description="Lab target path")
     assessor: Literal["deterministic", "llm"] = Field("deterministic", description="Assessor type")
+    assessor_provider: Literal["ollama", "openai"] = Field("ollama", description="AI provider")
+    assessor_api_key: Optional[str] = Field(None, description="OpenAI API key")
     scan_file: Optional[str] = Field(None, description="Path to scan file (overrides scenario)")
 
 

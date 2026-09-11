@@ -1,31 +1,13 @@
 """Mentor-facing CLI for the decision engine prototype.
 
-Usage:
-    python prototype/cli.py run --scenario success --max-attempts 2
-    python prototype/cli.py run --scenario failure_pivot --max-attempts 2
-    python prototype/cli.py run --scenario multi_candidate --max-attempts 2
-    python prototype/cli.py run --corpus --max-attempts 2
-    python prototype/cli.py run --scenario success --mode lab --target 172.28.0.2 --port 8080
-
-Supports:
-- Scenario selection (success / failure_pivot / multi_candidate / corpus)
-- Execution mode (simulation / lab)
-- Lab mode targets the Docker emulator (DOCKER OBSERVED outcomes)
+Uses the canonical VAPTApplication workflow service.
 """
-
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 
-from prototype.demo_data import SCENARIOS
-from prototype.docker_demo_data import DOCKER_SCENARIOS
-from prototype.engine_integration import (
-    load_vapt_corpus_scenario,
-    run_decision_scenario,
-    validate_scenario,
-)
+from vapt_platform.application import VAPTRequest, get_application
 from prototype.report_generator import (
     save_json_report,
     save_text_report,
@@ -36,21 +18,10 @@ from prototype.trace_formatter import (
     format_execution_results,
 )
 
-# Combined scenario registry
-ALL_SCENARIOS = {**SCENARIOS, **DOCKER_SCENARIOS}
-
-
-def _validate_scenario(candidates: list) -> None:
-    try:
-        validate_scenario(candidates)
-    except ValueError as e:
-        print(f"Invalid scenario: {e}", file=sys.stderr)
-        sys.exit(1)
-
 
 def _display_output(
     scenario_name: str,
-    final_state: dict,
+    result,
     max_attempts: int,
     mode: str,
 ) -> None:
@@ -64,6 +35,17 @@ def _display_output(
 
     print("CANDIDATE RANKING")
     print("-" * 40)
+    # Reconstruct final_state from result for trace formatters
+    final_state = {
+        "candidates": result.candidates,
+        "results": result.execution_results,
+        "logs": result.decision_trace,
+        "_presentation": {
+            "total_attempts": result.total_attempts,
+            "pivot_count": result.pivot_count,
+            "candidates_processed": result.candidates_processed,
+        },
+    }
     print(format_candidate_ranking(final_state))
     print()
 
@@ -79,12 +61,10 @@ def _display_output(
 
     print("FINAL RESULT")
     print("-" * 40)
-    status = final_state.get("status", "UNKNOWN")
-    presentation = final_state.get("_presentation", {})
-    print(f"Status:         {status}")
-    print(f"Total Attempts: {presentation.get('total_attempts', 0)}")
-    print(f"Pivot Count:    {presentation.get('pivot_count', 0)}")
-    cids = presentation.get("candidates_processed", [])
+    print(f"Status:         {result.final_status}")
+    print(f"Total Attempts: {result.total_attempts}")
+    print(f"Pivot Count:    {result.pivot_count}")
+    cids = result.candidates_processed
     print(f"Candidates Processed: {len(cids)} ({', '.join(cids) if cids else '(none)'})")
     print()
 
@@ -112,36 +92,8 @@ def _run_scenario(
     assessor: str = "deterministic",
     scan_file: str | None = None,
 ) -> dict:
-    if scan_file:
-        from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
-        candidates = candidates_to_scenario(candidates_from_scan(scan_file))
-        scenario_name = f"scan:{os.path.basename(scan_file)}"
-    elif scenario_name in ALL_SCENARIOS:
-        fn, kwargs = ALL_SCENARIOS[scenario_name]
-        candidates = fn(**kwargs)
-    elif scenario_name == "corpus":
-        candidates = load_vapt_corpus_scenario()
-    else:
-        print(
-            f"Unknown scenario: {scenario_name!r}. "
-            f"Choose from: {', '.join(list(SCENARIOS.keys()) + ['corpus'])}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    _validate_scenario(candidates)
-
-    # Build executor kwargs based on mode
-    executor_kwargs = {}
-    if mode == "lab":
-        if target is None:
-            print(
-                "--target is required for lab mode (e.g., --target 172.28.0.2)",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        # Explicit allowlist validation before creating executor
+    # Explicit allowlist validation for lab mode (fail-closed)
+    if mode == "lab" and target:
         from prototype.lab_runner import _validate_target
         try:
             _validate_target(target)
@@ -149,36 +101,65 @@ def _run_scenario(
             print(f"ERROR: {exc}", file=sys.stderr)
             sys.exit(400)
 
-        from prototype.execution_layer import create_lab_executor
-
-        # Build path_map from candidates that have a 'path' key
-        path_map = {}
-        for c in candidates:
-            if "path" in c and c["path"] != path:
-                path_map[c["id"]] = c["path"]
-
-        executor_kwargs["executor"] = create_lab_executor(
-            target, port, path, path_map=path_map if path_map else None
-        )
-
-    final_state = run_decision_scenario(
-        candidates,
-        max_attempts=max_attempts,
+    # Build unified request
+    request = VAPTRequest(
+        scenario=scenario_name,
         mode=mode,
-        executor=executor_kwargs.get("executor"),
-        assessment_mode="ai" if assessor == "llm" else "deterministic",
+        target=target,
+        port=port,
+        path=path,
+        assessor_mode="ai" if assessor == "llm" else "deterministic",
+        max_attempts=max_attempts,
+        scan_file=scan_file,
     )
 
-    _display_output(scenario_name, final_state, max_attempts, mode)
+    # Run canonical workflow
+    application = get_application()
+    result = application.run(request)
 
+    # Display output
+    _display_output(scenario_name, result, max_attempts, mode)
+
+    # Save reports
     json_path = f"./report_{scenario_name}_vapt.json"
     txt_path = f"./report_{scenario_name}_vapt.txt"
-    save_json_report(scenario_name, final_state, json_path, max_attempts, mode)
-    save_text_report(scenario_name, final_state, txt_path, max_attempts, mode)
+    save_json_report(scenario_name, {
+        "candidates": result.candidates,
+        "results": result.execution_results,
+        "logs": result.decision_trace,
+        "_presentation": {
+            "total_attempts": result.total_attempts,
+            "pivot_count": result.pivot_count,
+            "candidates_processed": result.candidates_processed,
+        },
+    }, json_path, max_attempts, mode)
+    save_text_report(scenario_name, {
+        "candidates": result.candidates,
+        "results": result.execution_results,
+        "logs": result.decision_trace,
+        "_presentation": {
+            "total_attempts": result.total_attempts,
+            "pivot_count": result.pivot_count,
+            "candidates_processed": result.candidates_processed,
+        },
+    }, txt_path, max_attempts, mode)
 
     print(f"\nReports written: {json_path}, {txt_path}")
 
-    return final_state
+    return {
+        "run_id": result.run_id,
+        "status": result.final_status,
+        "candidates": result.candidates,
+        "execution_results": result.execution_results,
+        "decision_trace": result.decision_trace,
+        "total_attempts": result.total_attempts,
+        "pivot_count": result.pivot_count,
+        "candidates_processed": result.candidates_processed,
+        "evidence_tier": result.evidence_tier,
+        "assessment": result.assessment,
+        "safety_notice": result.safety_notice,
+        "report": result.report,
+    }
 
 
 def main() -> None:
@@ -190,8 +171,8 @@ def main() -> None:
     run_parser = sub.add_parser("run", help="Run a scenario")
     run_parser.add_argument(
         "--scenario", "-s",
-        choices=list(ALL_SCENARIOS.keys()) + ["corpus"],
-        help="Scenario name: success, failure_pivot, multi_candidate, docker_vuln, docker_fail, docker_pivot, docker_multi, or corpus",
+        default="failure_pivot",
+        help="Scenario name (success, failure_pivot, multi_candidate, docker_vuln, docker_fail, docker_pivot, docker_multi, or corpus)",
     )
     run_parser.add_argument(
         "--scan", "-S",
@@ -233,11 +214,7 @@ def main() -> None:
         help="Lab target path (default: /vuln)",
     )
 
-    run_parser.add_argument(
-        "--checkpoint", "-c",
-        default=None,
-        help="Path to save checkpoint after run (e.g., ./ckpt.json)",
-    )
+    version_parser = sub.add_parser("version", help="Print version")
 
     resume_parser = sub.add_parser("resume", help="Resume from checkpoint")
     resume_parser.add_argument(
@@ -245,8 +222,6 @@ def main() -> None:
         required=True,
         help="Path to checkpoint file to resume from",
     )
-
-    version_parser = sub.add_parser("version", help="Print version")
 
     args = parser.parse_args()
 
@@ -256,10 +231,7 @@ def main() -> None:
         return
 
     if args.command == "run":
-        if args.scenario is None and args.scan is None:
-            print("--scenario or --scan is required for 'run' command", file=sys.stderr)
-            sys.exit(1)
-        final_state = _run_scenario(
+        _run_scenario(
             args.scenario,
             args.max_attempts,
             mode=args.mode,
@@ -269,10 +241,6 @@ def main() -> None:
             assessor=args.assessor,
             scan_file=args.scan,
         )
-        if args.checkpoint and final_state:
-            from prototype.checkpoints import save_run_checkpoint
-            save_run_checkpoint(final_state, args.checkpoint)
-            print(f"Checkpoint saved: {args.checkpoint}")
 
     elif args.command == "resume":
         _resume_from_checkpoint(args.path)

@@ -1,4 +1,7 @@
-"""FastAPI backend for the decision engine."""
+"""FastAPI backend for the decision engine.
+
+Uses the canonical VAPTApplication workflow service.
+"""
 from __future__ import annotations
 
 import os
@@ -13,50 +16,51 @@ from services.schemas import (
     CheckpointResponse, ErrorResponse, TraceEvent
 )
 from services.jobs import job_manager
+from vapt_platform.application import VAPTRequest, get_application
 
 app = FastAPI(title="AI VAPT Decision Engine API", version="0.1.0")
 
 
 def _run_engine(run_id: str, req: RunRequest):
-    """Execute the decision engine for a run."""
-    from prototype.engine_integration import run_decision_scenario
-    from prototype.execution_layer import create_lab_executor
-    from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
-    from prototype.demo_data import SCENARIOS
-    from prototype.engine_integration import load_vapt_corpus_scenario
+    """Execute the decision engine for a run using the canonical workflow."""
+    # Convert API request to unified request
+    vapt_request = VAPTRequest(
+        scenario=req.scenario,
+        mode=req.mode,
+        target=req.target,
+        port=req.port,
+        path=req.path,
+        assessor_mode="ai" if req.assessor == "llm" else "deterministic",
+        assessor_provider=req.assessor_provider,
+        assessor_api_key=req.assessor_api_key,
+        max_attempts=req.max_attempts,
+        scan_file=req.scan_file,
+    )
 
     job_manager.update(run_id, status="running")
 
-    candidates = None
-    scenario_name = req.scenario
+    # Run the canonical workflow
+    application = get_application()
+    result = application.run(vapt_request)
 
-    if req.scan_file:
-        candidates = candidates_to_scenario(candidates_from_scan(req.scan_file))
-        scenario_name = f"scan:{os.path.basename(req.scan_file)}"
-    elif req.scenario in SCENARIOS:
-        fn, kwargs = SCENARIOS[req.scenario]
-        candidates = fn(**kwargs)
-    elif req.scenario == "corpus":
-        candidates = load_vapt_corpus_scenario()
-    else:
-        raise ValueError(f"Unknown scenario: {req.scenario}")
+    # Store result in job manager
+    job_manager.set_state(run_id, {
+        "scenario": result.scenario,
+        "mode": result.mode,
+        "status": result.final_status,
+        "candidates": result.candidates,
+        "execution_results": result.execution_results,
+        "decision_trace": result.decision_trace,
+        "total_attempts": result.total_attempts,
+        "pivot_count": result.pivot_count,
+        "candidates_processed": result.candidates_processed,
+        "evidence_tier": result.evidence_tier,
+        "assessment": result.assessment,
+        "safety_notice": result.safety_notice,
+        "report": result.report,
+    })
 
-    executor = None
-    if req.mode == "lab":
-        if not req.target:
-            raise ValueError("--target required for lab mode")
-        executor = create_lab_executor(req.target, req.port)
-
-    final_state = run_decision_scenario(
-        candidates,
-        max_attempts=req.max_attempts,
-        mode=req.mode,
-        executor=executor,
-        assessor=req.assessor,
-    )
-
-    job_manager.set_state(run_id, final_state)
-    return final_state
+    return result
 
 
 @app.post("/runs", response_model=RunResponse)
@@ -90,7 +94,7 @@ def get_trace(run_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")
     state = job.get("state", {}) or {}
-    logs = state.get("logs", []) if isinstance(state, dict) else []
+    logs = state.get("decision_trace", []) if isinstance(state, dict) else []
     events = [TraceEvent(phase="log", detail=log) for log in logs]
     return RunTrace(run_id=run_id, events=events)
 
@@ -102,29 +106,61 @@ def get_report(run_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")
     state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
-    presentation = state.get("_presentation", {})
-    # Convert ActionCandidate objects to dicts for the response schema
-    candidates = []
-    for c in (state.get("candidates", []) if isinstance(state, dict) else []):
-        if hasattr(c, 'model_dump'):
-            candidates.append(c.model_dump(mode="json"))
-        elif hasattr(c, '__dict__'):
-            candidates.append(c.__dict__)
-        else:
-            candidates.append(c)
     return ReportResponse(
         run_id=run_id,
-        scenario=job.get("scenario"),
-        execution_mode=job.get("mode", "simulation"),
-        final_status=state.get("status") if isinstance(state, dict) else None,
-        candidates=candidates,
-        execution_results=state.get("results", []) if isinstance(state, dict) else [],
-        decision_trace=state.get("logs", []) if isinstance(state, dict) else [],
-        total_attempts=presentation.get("total_attempts", 0),
-        pivot_count=presentation.get("pivot_count", 0),
-        candidates_processed=presentation.get("candidates_processed", []),
-        safety_notice="SIMULATION MODE" if job.get("mode") == "simulation" else "LAB MODE (DOCKER OBSERVED)",
+        scenario=state.get("scenario", ""),
+        execution_mode=state.get("mode", "simulation"),
+        final_status=state.get("status"),
+        candidates=state.get("candidates", []),
+        execution_results=state.get("execution_results", []),
+        decision_trace=state.get("decision_trace", []),
+        total_attempts=state.get("total_attempts", 0),
+        pivot_count=state.get("pivot_count", 0),
+        candidates_processed=state.get("candidates_processed", []),
+        safety_notice=state.get("safety_notice", ""),
     )
+
+
+@app.get("/runs/{run_id}/evidence")
+def get_evidence(run_id: str):
+    """Get evidence tier and assessment provenance."""
+    job = job_manager.get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Run not found")
+    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
+    return {
+        "run_id": run_id,
+        "evidence_tier": state.get("evidence_tier", "UNKNOWN"),
+        "assessment": state.get("assessment", {}),
+        "safety_notice": state.get("safety_notice", ""),
+    }
+
+
+@app.get("/runs/{run_id}/findings")
+def get_findings(run_id: str):
+    """Get processed candidates/findings."""
+    job = job_manager.get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Run not found")
+    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
+    return {
+        "run_id": run_id,
+        "candidates": state.get("candidates", []),
+    }
+
+
+@app.get("/runs/{run_id}/candidates")
+def get_candidates(run_id: str):
+    """Get candidate ranking."""
+    job = job_manager.get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Run not found")
+    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
+    return {
+        "run_id": run_id,
+        "candidates": state.get("candidates", []),
+        "candidates_processed": state.get("candidates_processed", []),
+    }
 
 
 @app.get("/health")
