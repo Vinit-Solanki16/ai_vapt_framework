@@ -1,302 +1,517 @@
-"""Streamlit frontend for the decision engine.
+"""Professional AI-VAPT Dashboard.
 
-Provides:
-- Scenario selection (success / failure_pivot / multi_candidate / corpus)
-- Scan file ingestion (upload .xml or .json, run through engine)
-- Mode selection (simulation / lab)
-- Lab target dropdown (allowlisted only)
-- Candidate ranking table
-- Execution timeline
-- Attempt counters
-- Pivot event markers
-- Decision trace
-- Final report with evidence tier
-- HTML / Markdown report download buttons
+A security-focused interface for the canonical VAPT application workflow.
 """
 from __future__ import annotations
 
 import json
 import tempfile
+from datetime import datetime
 
 import streamlit as st
 
-from decision_engine.core.engine import run_engine
-from decision_engine.core.executor import Executor
-from decision_engine.core.schemas import candidate_from_dict
-from decision_engine.core.assessor import deterministic_assessor
-
+from vapt_platform.application import VAPTRequest, get_application
+from vapt_platform.assessment import create_assessor
+from prototype.docker_demo_data import DOCKER_SCENARIOS
 from prototype.demo_data import SCENARIOS
-from prototype.engine_integration import (
-    load_vapt_corpus_scenario,
-    run_scan_file,
-)
-from prototype.execution_layer import create_simulation_executor, create_lab_executor
 from prototype.report_generator import (
-    generate_html_report,
     generate_json_report,
-    generate_markdown_report,
     generate_text_report,
-)
-from prototype.trace_formatter import (
-    format_engine_trace,
-    format_candidate_ranking,
-    format_execution_results,
+    generate_html_report,
+    generate_markdown_report,
 )
 
-st.set_page_config(page_title="AI VAPT Decision Engine", page_icon="🛡️", layout="wide")
-st.title("🛡️ AI VAPT Decision Engine")
-st.caption("Domain-independent decision engine with bounded retry & pivot")
+# All scenarios
+ALL_SCENARIOS = {**SCENARIOS, **DOCKER_SCENARIOS}
 
-# --- Sidebar ---
-st.sidebar.header("⚙️ Run Configuration")
-tab_mode = st.sidebar.radio(
-    "Mode",
-    ["Demo Scenario", "Scan Ingestion"],
-    help="Demo = built-in scenarios; Scan = upload scan file for enrichment + execution",
+# Page config
+st.set_page_config(
+    page_title="AI-VAPT Dashboard",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-scan_file_obj = None
-scan_run_id = None
-scenario_name = None
-max_attempts = 2
-mode = "simulation"
-assessor_name = "deterministic"
-target = None
-scan_max_attempts = 2
+# Custom CSS for professional look
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 0.5rem;
+    }
+    .section-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #16213e;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        border-bottom: 2px solid #0f3460;
+        padding-bottom: 0.3rem;
+    }
+    .metric-card {
+        background: #f8f9fa;
+        border-left: 4px solid #0f3460;
+        padding: 0.8rem;
+        margin: 0.3rem 0;
+        border-radius: 0 4px 4px 0;
+    }
+    .evidence-docker {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 0.8rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .evidence-simulated {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 0.8rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .ai-badge {
+        background: #e7f3ff;
+        border: 1px solid #b8daff;
+        color: #004085;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .fallback-badge {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .pivot-event {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin: 0.3rem 0;
+        font-weight: 500;
+    }
+    .success-event {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin: 0.3rem 0;
+        font-weight: 500;
+    }
+    .trace-event {
+        background: #f8f9fa;
+        border-left: 3px solid #6c757d;
+        padding: 0.4rem 0.8rem;
+        margin: 0.2rem 0;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+    .safety-box {
+        background: #e2e3e5;
+        border: 1px solid #d6d8db;
+        color: #383d41;
+        padding: 0.8rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-if tab_mode == "Demo Scenario":
-    scenario_name = st.sidebar.selectbox(
-        "Scenario",
-        list(SCENARIOS.keys()) + ["corpus"],
-        help="Select a demo scenario or load from the VAPT corpus",
-    )
-    max_attempts = st.sidebar.slider("Pivot Threshold (N)", 1, 5, 2)
-    mode = st.sidebar.radio(
-        "Execution Mode",
-        ["simulation", "lab"],
-        help="simulation = ground-truth labels; lab = DOCKER OBSERVED against emulator",
-    )
 
-    target = None
-    if mode == "lab":
-        target = st.sidebar.selectbox(
-            "Lab Target",
-            ["127.0.0.1", "172.28.0.2"],
-            help="Allowlisted targets only — no free-text input",
+def main():
+    """Main dashboard entry point."""
+    # Header
+    st.markdown('<div class="main-header">🛡️ AI-Assisted Vulnerability Assessment</div>', unsafe_allow_html=True)
+    st.caption("State-aware bounded failure-threshold pivoting for controlled VAPT validation")
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### ⚙️ Configuration")
+
+        # Execution mode
+        mode = st.radio(
+            "Execution Mode",
+            ["Docker Lab", "Loopback", "Simulation"],
+            help="Docker Lab = real HTTP to emulator | Loopback = local | Simulation = ground-truth labels",
         )
-        st.sidebar.warning("⚠️ LAB MODE: Outcomes are DOCKER OBSERVED from the emulator, not simulated.")
 
-    assessor_name = st.sidebar.radio(
-        "Assessor",
-        ["deterministic", "llm"],
-        help="deterministic = offline fallback; llm = requires Ollama",
-    )
-else:
-    # --- Scan Ingestion tab ---
-    st.sidebar.subheader("📁 Scan Upload")
-    scan_file_obj = st.sidebar.file_uploader(
-        "Upload Scan File",
-        type=["xml", "json"],
-        help="Accepts Nmap XML, Nmap JSON, or custom JSON (sample_scan.json schema)",
-    )
-    scan_max_attempts = st.sidebar.slider("Pivot Threshold (N)", 1, 5, 2)
-    scan_mode = st.sidebar.radio(
-        "Execution Mode",
-        ["simulation"],
-        help="Scan ingestion runs in simulation mode (EPSS-enriched candidates)",
-    )
-
-    scenario_name = None
-    max_attempts = scan_max_attempts
-    mode = scan_mode
-    assessor_name = "deterministic"
-    target = None
-
-# --- Safety indicator ---
-if mode == "lab":
-    st.sidebar.success("🟡 LAB MODE (DOCKER OBSERVED)")
-else:
-    st.sidebar.info("🔵 SIMULATION MODE")
-
-st.sidebar.markdown("---")
-st.sidebar.write("**Literature basis**")
-st.sidebar.caption("Paul et al. 2024 (EPSS) · Lu et al. 2024 (PoC quality) · Deng et al. 2025 (pivot)")
-
-# --- Main area ---
-final_state = None
-source_label = None
-
-if tab_mode == "Demo Scenario":
-    if st.button("🚀 Run Decision Engine", type="primary"):
-        # Load candidates
-        if scenario_name == "corpus":
-            candidates = load_vapt_corpus_scenario()
-        else:
-            fn, kwargs = SCENARIOS[scenario_name]
-            candidates = fn(**kwargs)
-
-        # Build executor
-        if mode == "lab" and target:
-            executor = create_lab_executor(target, 8080)
-        else:
-            executor = create_simulation_executor()
-
-        # Run engine
-        with st.spinner("Running decision engine (assess → execute → pivot)..."):
-            final_state = run_engine(
-                candidates,
-                assess_fn=deterministic_assessor if assessor_name == "deterministic" else None,
-                executor=executor,
-                max_attempts=max_attempts,
-                mode=mode,
+        # Target configuration
+        if mode == "Docker Lab":
+            target = st.selectbox(
+                "Target",
+                ["172.28.0.2"],
+                help="Allowlisted Docker emulator target",
             )
-        source_label = scenario_name
+            port = st.number_input("Port", value=8080, min_value=1, max_value=65535)
+            path = st.text_input("Path", value="/vuln", help="HTTP path (e.g., /vuln, /fail)")
+        elif mode == "Loopback":
+            target = st.selectbox("Target", ["127.0.0.1"])
+            port = st.number_input("Port", value=8080, min_value=1, max_value=65535)
+            path = st.text_input("Path", value="/vuln")
+        else:
+            target = None
+            port = 8080
+            path = "/vuln"
 
-elif tab_mode == "Scan Ingestion":
-    if scan_file_obj is not None:
-        if st.button("🔍 Ingest Scan & Run Engine", type="primary"):
-            with st.spinner("Parsing scan file, enriching with EPSS, running engine..."):
-                # Save uploaded file to temp
-                suffix = ".xml" if scan_file_obj.name.endswith(".xml") else ".json"
-                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                    tmp.write(scan_file_obj.read())
-                    tmp_path = tmp.name
+        st.markdown("---")
 
-                with st.spinner("Running real engine on scan results..."):
-                    final_state = run_scan_file(tmp_path, max_attempts=scan_max_attempts, mode="simulation")
-                source_label = f"scan:{scan_file_obj.name}"
+        # Scenario selection
+        scenario_name = st.selectbox(
+            "Scenario",
+            list(ALL_SCENARIOS.keys()) + ["corpus"],
+            help="Select a demo scenario",
+        )
 
-                # Show raw findings before engine run
-                from decision_engine.adapters.scan_adapter import candidates_from_scan
+        # Scan file upload
+        scan_file_obj = st.file_uploader(
+            "Or Upload Scan File",
+            type=["xml", "json"],
+            help="Nmap XML/JSON or custom JSON",
+        )
 
-                findings = candidates_from_scan(tmp_path)
+        st.markdown("---")
 
-                st.subheader("📋 Parsed & Enriched Findings")
-                st.caption("Display only — no direct execution. Data sourced from uploaded scan file.")
+        # Assessor configuration
+        assessor_mode = st.radio(
+            "Assessor",
+            ["deterministic", "ai"],
+            help="deterministic = offline | AI = requires Ollama",
+        )
 
-                # Build a summary table for display
-                rows = []
-                for c in findings:
-                    # Extract metadata from engine's final_state if available
-                    rows.append({
-                        "id": c.id,
-                        "probability": c.probability,
-                        "quality_rank": c.quality_rank.value if c.quality_rank else "PENDING",
-                        "assessed": c.assessed,
-                        "attempted": c.attempted,
-                        "execution_outcome": c.execution_outcome.value if c.execution_outcome else "-",
-                        "ground_truth": c.ground_truth.value if c.ground_truth else "-",
-                    })
+        max_attempts = st.slider("Pivot Threshold (N)", 1, 5, 2)
 
-                if rows:
-                    import pandas as pd
-                    df = pd.DataFrame(rows)
+        st.markdown("---")
 
-                    # Severity badge styling
-                    def _sev_color(val):
-                        colors = {
-                            "critical": "red",
-                            "high": "orange",
-                            "medium": "yellow",
-                            "low": "green",
-                            "informational": "grey",
-                            "unknown": "grey",
-                            "none": "grey",
-                        }
-                        return colors.get(str(val).lower(), "grey")
+        # Safety status
+        st.markdown("### 🔒 Safety Status")
+        if mode == "Docker Lab":
+            st.success("✅ ALLOWLISTED")
+            st.caption("Target: 172.28.0.2 (Docker emulator)")
+        elif mode == "Loopback":
+            st.info("🔵 LOOPBACK")
+            st.caption("Target: 127.0.0.1")
+        else:
+            st.warning("🟡 SIMULATION")
+            st.caption("No real execution")
 
-                    # Show as a styled dataframe
-                    st.dataframe(
-                        df,
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+        st.markdown("---")
 
-                    # Per-finding detail
-                    with st.expander("View Detailed Findings", expanded=False):
-                        for r in rows:
-                            st.markdown(f"**`{r['id']}`**")
-                            c1, c2, c3, c4 = st.columns(4)
-                            c1.metric("EPSS", f"{r['probability']:.4f}")
-                            c2.metric("Quality", r["quality_rank"])
-                            c3.metric("Outcome", r["execution_outcome"])
-                            c4.metric("Attempts", "✅" if r["attempted"] else "—")
-                            st.markdown("---")
-                else:
-                    st.info("No findings extracted from scan file.")
+        # Run button
+        run_clicked = st.button("🚀 Run Assessment", type="primary", use_container_width=True)
 
-                # Now show engine results
-                if final_state:
-                    st.markdown("---")
-                    st.subheader("🏁 Engine Execution Result")
-
-                    # Evidence tier badge
-                    st.info("**EVIDENCE TIER: SIMULATED** — outcomes from ground-truth labels (scan ingestion uses simulation mode)")
-
-                    # Final result metrics
-                    status = final_state.get("status", "UNKNOWN")
-                    presentation = final_state.get("_presentation", {})
-                    total_attempts = presentation.get("total_attempts", 0)
-                    pivot_count = presentation.get("pivot_count", 0)
-                    candidates_processed = presentation.get("candidates_processed", [])
-
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Status", status)
-                    col2.metric("Total Attempts", total_attempts)
-                    col3.metric("Pivot Count", pivot_count)
-                    col4.metric("Candidates Processed", len(candidates_processed))
-
-                    # Candidate ranking table
-                    st.subheader("📊 Candidate Ranking")
-                    ranking_text = format_candidate_ranking(final_state)
-                    st.text(ranking_text)
-
-                    # Execution results
-                    st.subheader("⚙️ Engine Execution")
-                    results_text = format_execution_results(final_state)
-                    st.text(results_text)
-
-                    # Decision trace
-                    st.subheader("🔍 Decision Trace")
-                    trace_text = format_engine_trace(final_state)
-                    st.text(trace_text)
-
-                    # Report download buttons (HTML + Markdown + JSON + Text)
-                    st.markdown("---")
-                    st.subheader("📄 Reports")
-                    json_report = generate_json_report(source_label, final_state, scan_max_attempts, "simulation")
-                    txt_report = generate_text_report(source_label, final_state, scan_max_attempts, "simulation")
-                    html_report = generate_html_report(source_label, final_state, scan_max_attempts, "simulation")
-                    md_report = generate_markdown_report(source_label, final_state, scan_max_attempts, "simulation")
-
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.download_button("⬇️ Download JSON", json_report, file_name="report.json")
-                    c2.download_button("⬇️ Download Text", txt_report, file_name="report.txt")
-                    c3.download_button("⬇️ Download HTML", html_report, file_name="report.html")
-                    c4.download_button("⬇️ Download Markdown", md_report, file_name="report.md")
-
-                    with st.expander("View JSON Report"):
-                        st.json(json_report)
-
+    # Main dashboard area
+    if run_clicked:
+        run_dashboard(
+            mode=mode,
+            target=target,
+            port=port,
+            path=path,
+            scenario_name=scenario_name,
+            assessor_mode=assessor_mode,
+            max_attempts=max_attempts,
+            scan_file_obj=scan_file_obj,
+        )
     else:
-        st.info("👈 Upload a scan file (.xml or .json) in the sidebar to begin.")
+        show_welcome()
 
-# --- Safety notice ---
-st.markdown("---")
-st.subheader("🛡️ Safety Notice")
-if mode == "lab":
-    st.warning(
-        "LAB MODE (DOCKER OBSERVED): Outcomes are from the Docker-isolated emulator. "
-        "Target is allowlisted. No external systems were targeted."
+
+def show_welcome():
+    """Show welcome/info screen before run."""
+    st.info("👈 Configure your assessment in the sidebar and click **Run Assessment** to begin.")
+
+    st.markdown("### 📋 Quick Start")
+    st.markdown("""
+    1. Select **Docker Lab** mode for real HTTP execution
+    2. Choose a scenario (e.g., `docker_pivot`)
+    3. Select **AI** assessor for LLM-based grading
+    4. Click **Run Assessment**
+    """)
+
+    st.markdown("### 🔬 Research Contribution")
+    st.markdown("""
+    This platform demonstrates **state-aware bounded failure-threshold pivoting**:
+    - Per-candidate attempt counting
+    - Configurable failure threshold
+    - Automatic pivot to next candidate
+    - Bounded termination
+    """)
+
+
+def run_dashboard(
+    mode: str,
+    target: str | None,
+    port: int,
+    path: str,
+    scenario_name: str,
+    assessor_mode: str,
+    max_attempts: int,
+    scan_file_obj,
+):
+    """Execute the assessment and display results."""
+    # Map mode string to internal mode
+    mode_map = {
+        "Docker Lab": "lab",
+        "Loopback": "lab",
+        "Simulation": "simulation",
+    }
+    internal_mode = mode_map[mode]
+
+    # Handle scan file
+    scan_file_path = None
+    if scan_file_obj is not None:
+        suffix = ".xml" if scan_file_obj.name.endswith(".xml") else ".json"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(scan_file_obj.read())
+            scan_file_path = tmp.name
+
+    # Build request
+    request = VAPTRequest(
+        scenario=scenario_name,
+        mode=internal_mode,
+        target=target,
+        port=port,
+        path=path,
+        assessor_mode=assessor_mode,
+        max_attempts=max_attempts,
+        scan_file=scan_file_path,
     )
-elif tab_mode == "Scan Ingestion":
-    st.info(
-        "SCAN INGESTION (DISPLAY ONLY): Scan findings are enriched with EPSS scores and "
-        "processed through the engine in simulation mode. No real exploits are executed. "
-        "No external systems are targeted."
-    )
-else:
-    st.info(
-        "SIMULATION MODE: Outcomes are resolved from supplied demo ground truth. "
-        "No real vulnerabilities were validated."
-    )
+
+    # Run with spinner
+    with st.spinner("Running assessment..."):
+        application = get_application()
+        result = application.run(request)
+
+    # Display results
+    display_results(result, mode)
+
+
+def display_results(result, mode: str):
+    """Display assessment results."""
+    # Status header
+    st.markdown(f"### 📊 Assessment Results")
+    st.caption(f"Run ID: {result.run_id} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Summary cards
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Status", result.final_status)
+    col2.metric("Candidates", len(result.candidates))
+    col3.metric("Attempts", result.total_attempts)
+    col4.metric("Pivots", result.pivot_count)
+    col5.metric("Evidence", result.evidence_tier)
+
+    st.markdown("---")
+
+    # Evidence tier
+    if result.evidence_tier == "DOCKER_OBSERVED":
+        st.markdown(
+            '<div class="evidence-docker">'
+            "🔬 DOCKER_OBSERVED — Outcomes from controlled Docker lab emulator. "
+            "Target is allowlisted. No external systems targeted."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="evidence-simulated">'
+            "🟡 SIMULATED — Outcomes from ground-truth labels. No real execution."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
+    # Two-column layout
+    left_col, right_col = st.columns(2)
+
+    with left_col:
+        display_findings(result)
+        display_candidates(result)
+
+    with right_col:
+        display_execution_timeline(result)
+        display_pivot_visualization(result)
+
+    st.markdown("---")
+
+    # Decision trace
+    display_decision_trace(result)
+
+    st.markdown("---")
+
+    # Reports
+    display_reports(result)
+
+
+def display_findings(result):
+    """Display findings panel."""
+    st.markdown('<div class="section-header">📋 Findings</div>', unsafe_allow_html=True)
+
+    if not result.candidates:
+        st.info("No findings")
+        return
+
+    for c in result.candidates:
+        with st.expander(f"**{c.get('id', 'Unknown')}**"):
+            cols = st.columns(2)
+            cols[0].markdown(f"**Probability:** {c.get('probability', 0):.4f}")
+            cols[1].markdown(f"**Quality:** {c.get('quality_rank', 'N/A')}")
+            cols[0].markdown(f"**Assessed:** {'✅' if c.get('assessed') else '❌'}")
+            cols[1].markdown(f"**Attempted:** {'✅' if c.get('attempted') else '❌'}")
+            if c.get('execution_outcome'):
+                st.markdown(f"**Outcome:** `{c.get('execution_outcome')}`")
+
+
+def display_candidates(result):
+    """Display candidate/AI assessment panel."""
+    st.markdown('<div class="section-header">🤖 AI Assessment</div>', unsafe_allow_html=True)
+
+    # Assessment provenance
+    assessment = result.assessment
+    if assessment:
+        mode_label = assessment.get("mode", "unknown")
+        provider = assessment.get("provider")
+
+        if mode_label == "ai":
+            if provider:
+                st.markdown(
+                    f'<span class="ai-badge">🤖 AI / {provider.upper()}</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<span class="ai-badge">🤖 AI</span>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                '<span class="fallback-badge">📊 Deterministic</span>',
+                unsafe_allow_html=True,
+            )
+
+    if not result.candidates:
+        st.info("No candidates assessed")
+        return
+
+    # Candidate table
+    for c in result.candidates:
+        quality = c.get("quality_rank", "N/A")
+        prob = c.get("probability", 0)
+        score = prob * (0.5 + 0.5 * {"HIGH": 1.0, "MEDIUM": 0.6, "LOW": 0.3}.get(quality, 0))
+
+        st.markdown(f"**{c.get('id', 'Unknown')}**")
+        cols = st.columns(3)
+        cols[0].markdown(f"Quality: `{quality}`")
+        cols[1].markdown(f"Score: `{score:.4f}`")
+        cols[2].markdown(f"Outcome: `{c.get('execution_outcome', '-')}`")
+
+
+def display_execution_timeline(result):
+    """Display execution timeline."""
+    st.markdown('<div class="section-header">⏱️ Execution Timeline</div>', unsafe_allow_html=True)
+
+    if not result.execution_results:
+        st.info("No execution results")
+        return
+
+    for i, r in enumerate(result.execution_results, 1):
+        outcome = r.get("outcome", "UNKNOWN")
+        candidate = r.get("candidate_id", "Unknown")
+        detail = r.get("detail", "")
+
+        if outcome == "SUCCESS":
+            st.markdown(
+                f'<div class="success-event">'
+                f"✅ Attempt {i}: {candidate} → {outcome}<br/>"
+                f"<small>{detail}</small>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="pivot-event">'
+                f"❌ Attempt {i}: {candidate} → {outcome}<br/>"
+                f"<small>{detail}</small>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+
+def display_pivot_visualization(result):
+    """Display pivot visualization."""
+    st.markdown('<div class="section-header">🔄 Pivot Analysis</div>', unsafe_allow_html=True)
+
+    st.markdown(f"**Threshold:** {result.total_attempts} attempts")
+    st.markdown(f"**Pivots:** {result.pivot_count}")
+
+    if result.decision_trace:
+        pivots = [log for log in result.decision_trace if "[PIVOT]" in log]
+        if pivots:
+            for p in pivots:
+                st.markdown(
+                    f'<div class="pivot-event">{p}</div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.info("No pivot events")
+    else:
+        st.info("No trace available")
+
+
+def display_decision_trace(result):
+    """Display decision trace."""
+    st.markdown('<div class="section-header">🔍 Decision Trace</div>', unsafe_allow_html=True)
+
+    if not result.decision_trace:
+        st.info("No trace available")
+        return
+
+    with st.expander("View Full Trace", expanded=False):
+        for log in result.decision_trace:
+            st.markdown(
+                f'<div class="trace-event">{log}</div>',
+                unsafe_allow_html=True,
+            )
+
+
+def display_reports(result):
+    """Display report download options."""
+    st.markdown('<div class="section-header">📄 Reports</div>', unsafe_allow_html=True)
+
+    # Generate reports
+    final_state = {
+        "candidates": result.candidates,
+        "results": result.execution_results,
+        "logs": result.decision_trace,
+        "_presentation": {
+            "total_attempts": result.total_attempts,
+            "pivot_count": result.pivot_count,
+            "candidates_processed": result.candidates_processed,
+        },
+        "_assessment": result.assessment,
+    }
+
+    json_report = generate_json_report(result.scenario, final_state, 2, result.mode)
+    txt_report = generate_text_report(result.scenario, final_state, 2, result.mode)
+    html_report = generate_html_report(result.scenario, final_state, 2, result.mode)
+    md_report = generate_markdown_report(result.scenario, final_state, 2, result.mode)
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.download_button("⬇️ JSON", json_report, file_name="report.json")
+    col2.download_button("⬇️ Text", txt_report, file_name="report.txt")
+    col3.download_button("⬇️ HTML", html_report, file_name="report.html")
+    col4.download_button("⬇️ Markdown", md_report, file_name="report.md")
+
+
+if __name__ == "__main__":
+    main()
