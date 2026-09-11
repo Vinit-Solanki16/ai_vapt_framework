@@ -281,11 +281,36 @@ class VAPTApplication:
         from prototype.docker_demo_data import DOCKER_SCENARIOS
         from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
         from prototype.engine_integration import load_vapt_corpus_scenario
+        from vapt_platform.scanners import get_scanner_registry
+        from vapt_platform.enrichment import enrich_findings
 
         all_scenarios = {**SCENARIOS, **DOCKER_SCENARIOS}
 
         if request.scan_file:
-            return candidates_to_scenario(candidates_from_scan(request.scan_file))
+            # Use new scanner adapter system
+            registry = get_scanner_registry()
+            findings = registry.parse(request.scan_file)
+            # Enrich findings
+            enriched = enrich_findings(findings)
+            # Convert to candidate dicts
+            return [
+                {
+                    "id": f.finding_id or f.rule_id,
+                    "source": f.source,
+                    "target": f.target,
+                    "host": f.host,
+                    "port": f.port,
+                    "protocol": f.protocol,
+                    "title": f.title,
+                    "severity": f.severity,
+                    "rule_id": f.rule_id,
+                    "description": f.description,
+                    "evidence": f.evidence,
+                    "tags": f.tags,
+                    "metadata": f.metadata,
+                }
+                for f in enriched
+            ]
         elif request.scenario in all_scenarios:
             fn, kwargs = all_scenarios[request.scenario]
             return fn(**kwargs)
