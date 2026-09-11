@@ -82,6 +82,7 @@ class VAPTResult:
         assessment: Assessment provenance info
         safety_notice: Safety notice text
         report: Generated report dict
+        graph: Asset/vulnerability graph (if built)
     """
     run_id: str = ""
     scenario: str = ""
@@ -97,6 +98,7 @@ class VAPTResult:
     assessment: dict[str, Any] = field(default_factory=dict)
     safety_notice: str = ""
     report: dict[str, Any] = field(default_factory=dict)
+    graph: Any = None
 
 
 # ---------------------------------------------------------------------------
@@ -137,13 +139,17 @@ class VAPTApplication:
             # Step 2: Enrich candidates with vulnerability intelligence
             candidates = self._enrich_candidates(candidates)
 
-            # Step 3: Build executor
+            # Step 3: Build asset/vulnerability graph
+            graph = self._build_graph(candidates)
+            result.graph = graph
+
+            # Step 4: Build executor
             executor = self._build_executor(request, candidates)
 
-            # Step 4: Run decision engine
+            # Step 5: Run decision engine
             final_state = self._run_engine(request, candidates, executor)
 
-            # Step 5: Build result from engine state
+            # Step 6: Build result from engine state
             self._build_result(result, final_state, request)
 
         except Exception as e:
@@ -193,25 +199,63 @@ class VAPTApplication:
             else:
                 enriched_dict = {}
 
-            # Add/update with enriched fields
-            enriched_dict.update({
-                "id": f.finding_id or f.rule_id or enriched_dict.get("id"),
-                "source": f.source or enriched_dict.get("source"),
-                "target": f.target or enriched_dict.get("target"),
-                "host": f.host or enriched_dict.get("host"),
-                "port": f.port or enriched_dict.get("port"),
-                "protocol": f.protocol or enriched_dict.get("protocol"),
-                "title": f.title or enriched_dict.get("title"),
-                "severity": f.severity or enriched_dict.get("severity"),
-                "rule_id": f.rule_id or enriched_dict.get("rule_id"),
-                "description": f.description or enriched_dict.get("description"),
-                "evidence": f.evidence or enriched_dict.get("evidence"),
-                "tags": f.tags or enriched_dict.get("tags"),
-                "metadata": {**(enriched_dict.get("metadata", {})), **f.metadata},
-            })
+            # Add/update with enriched fields (only if finding has a value)
+            if f.finding_id or f.rule_id:
+                enriched_dict["id"] = f.finding_id or f.rule_id
+            if f.source:
+                enriched_dict["source"] = f.source
+            if f.target:
+                enriched_dict["target"] = f.target
+            if f.host:
+                enriched_dict["host"] = f.host
+            if f.port:
+                enriched_dict["port"] = f.port
+            if f.protocol:
+                enriched_dict["protocol"] = f.protocol
+            if f.title:
+                enriched_dict["title"] = f.title
+            if f.severity:
+                enriched_dict["severity"] = f.severity
+            if f.rule_id:
+                enriched_dict["rule_id"] = f.rule_id
+            if f.description:
+                enriched_dict["description"] = f.description
+            if f.evidence is not None:
+                enriched_dict["evidence"] = f.evidence
+            if f.tags is not None:
+                enriched_dict["tags"] = f.tags
+            # Always update metadata with enriched data
+            enriched_dict["metadata"] = {**(enriched_dict.get("metadata", {})), **f.metadata}
             result.append(enriched_dict)
 
         return result
+
+    def _build_graph(self, candidates: list[dict]) -> Any:
+        """Build asset/vulnerability graph from candidates."""
+        from vapt_platform.graph_builder import VAPTGraph
+        from vapt_platform.normalization import CanonicalFinding
+
+        findings = []
+        for c in candidates:
+            if isinstance(c, dict):
+                finding = CanonicalFinding(
+                    finding_id=c.get("id", ""),
+                    source=c.get("source", "unknown"),
+                    target=c.get("target", c.get("host", "")),
+                    host=c.get("host", ""),
+                    port=c.get("port", 0),
+                    protocol=c.get("protocol", "tcp"),
+                    title=c.get("title", c.get("id", "")),
+                    severity=c.get("severity", "unknown"),
+                    rule_id=c.get("rule_id", c.get("id", "")),
+                    description=c.get("description", ""),
+                    evidence=c.get("evidence", []),
+                    tags=c.get("tags", []),
+                    metadata=c.get("metadata", {}),
+                )
+                findings.append(finding)
+
+        return VAPTGraph.from_findings(findings)
 
     def _load_candidates(self, request: VAPTRequest) -> list[dict]:
         """Load candidates from scenario or scan file."""
