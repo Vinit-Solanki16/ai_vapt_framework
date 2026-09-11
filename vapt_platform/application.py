@@ -144,33 +144,67 @@ class VAPTApplication:
         """Execute the full VAPT workflow."""
         run_id = self._generate_run_id()
         domain = DomainResult(run_id=run_id, scenario=request.scenario, mode=request.mode)
+        
+        # Initialize event publisher
+        from vapt_platform.events import EventPublisher, EventType, RunState
+        publisher = EventPublisher(run_id)
+        publisher.emit(EventType.RUN_CREATED, {"scenario": request.scenario, "mode": request.mode})
+        publisher.transition_to(RunState.CREATED)
 
         try:
             # Step 1: Load candidates
+            publisher.transition_to(RunState.INGESTING)
             candidates = self._load_candidates(request)
+            publisher.emit(EventType.FINDINGS_INGESTED, {"count": len(candidates)})
 
             # Step 2: Enrich candidates with vulnerability intelligence
+            publisher.transition_to(RunState.NORMALIZING)
             candidates = self._enrich_candidates(candidates)
+            publisher.emit(EventType.FINDINGS_NORMALIZED, {"count": len(candidates)})
 
             # Step 3: Build asset/vulnerability graph
             graph = self._build_graph(candidates)
+            publisher.emit(EventType.CANDIDATES_GENERATED, {"count": len(candidates)})
 
             # Step 4: Decision intelligence scoring
+            publisher.transition_to(RunState.ASSESSING)
             scored_candidates = self._score_candidates(candidates, graph)
+            publisher.emit(EventType.ASSESSMENT_COMPLETED, {"count": len(scored_candidates)})
 
             # Step 5: Build executor
+            publisher.transition_to(RunState.PLANNING)
             executor = self._build_executor(request, candidates)
 
             # Step 6: Controlled validation pipeline
             pipeline_result = self._run_validation_pipeline(scored_candidates, executor, request)
+            publisher.emit(EventType.DECISION_MADE, {"pipeline": pipeline_result.get("status", "unknown")})
 
             # Step 7: Run decision engine
+            publisher.transition_to(RunState.EXECUTING)
+            publisher.emit(EventType.EXECUTION_STARTED, {"candidate_count": len(candidates)})
             final_state = self._run_engine(request, candidates, executor)
+            
+            # Emit attempt completed events
+            for i, result in enumerate(final_state.get("results", [])):
+                publisher.emit(EventType.ATTEMPT_COMPLETED, {
+                    "candidate_id": result.get("candidate_id", "?"),
+                    "outcome": result.get("outcome", "?"),
+                    "attempt_number": i + 1,
+                })
+            
+            # Emit pivot events
+            presentation = final_state.get("_presentation", {})
+            pivot_count = presentation.get("pivot_count", 0)
+            if pivot_count > 0:
+                publisher.emit(EventType.PIVOT_OCCURRED, {"pivot_count": pivot_count})
 
             # Step 8: Build result from engine state
+            publisher.transition_to(RunState.VERIFYING)
             self._build_result(domain, final_state, request)
+            publisher.emit(EventType.VERIFICATION_COMPLETED, {"status": domain.final_status})
 
             # Create presentation result
+            publisher.transition_to(RunState.REPORTING)
             report = self._generate_report(domain, final_state, request)
             result = PresentationResult.from_domain(
                 domain,
@@ -182,6 +216,11 @@ class VAPTApplication:
 
             # Persist the run
             self._persist_run(domain, request, pipeline_result)
+            publisher.emit(EventType.EVIDENCE_CAPTURED, {"evidence_tier": domain.evidence_tier})
+
+            # Complete
+            publisher.transition_to(RunState.COMPLETED)
+            publisher.emit(EventType.RUN_COMPLETED, {"status": domain.final_status})
 
             return result
 
@@ -190,6 +229,8 @@ class VAPTApplication:
             domain.safety_notice = f"Error: {str(e)}"
             # Persist failed run too
             self._persist_run(domain, request, {})
+            publisher.transition_to(RunState.FAILED)
+            publisher.emit(EventType.RUN_FAILED, {"error": str(e)})
             return PresentationResult.from_domain(domain)
 
     def _persist_run(self, domain: DomainResult, request: VAPTRequest, pipeline_summary: dict) -> None:

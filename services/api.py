@@ -150,6 +150,19 @@ def get_trace(run_id: str):
     return RunTrace(run_id=run_id, events=events)
 
 
+@app.get("/runs/{run_id}/events")
+def get_run_events(run_id: str):
+    """Get events for a run."""
+    from vapt_platform.events import get_event_bus
+    event_bus = get_event_bus()
+    events = event_bus.get_events(run_id)
+    return {
+        "run_id": run_id,
+        "events": [e.to_dict() for e in events],
+        "current_state": event_bus.get_run_state(run_id),
+    }
+
+
 @app.get("/runs/{run_id}/report")
 def get_report(run_id: str, format: str = "json"):
     """Get a report for a persisted run.
