@@ -100,6 +100,7 @@ class VAPTResult:
     report: dict[str, Any] = field(default_factory=dict)
     graph: Any = None
     scored_candidates: list[dict] = field(default_factory=list)
+    pipeline: dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -150,10 +151,14 @@ class VAPTApplication:
             # Step 5: Build executor
             executor = self._build_executor(request, candidates)
 
-            # Step 6: Run decision engine
+            # Step 6: Controlled validation pipeline
+            pipeline_result = self._run_validation_pipeline(scored_candidates, executor, request)
+            result.pipeline = pipeline_result
+
+            # Step 7: Run decision engine
             final_state = self._run_engine(request, candidates, executor)
 
-            # Step 7: Build result from engine state
+            # Step 8: Build result from engine state
             self._build_result(result, final_state, request, scored_candidates)
 
         except Exception as e:
@@ -355,6 +360,18 @@ class VAPTApplication:
             assessment_provider=request.assessor_provider,
             assessment_api_key=request.assessor_api_key,
         )
+
+    def _run_validation_pipeline(self, candidates: list[dict], executor, request: VAPTRequest) -> dict:
+        """Run the controlled validation pipeline."""
+        from vapt_platform.pipeline import ValidationPipeline
+
+        # Build allowlist from request
+        allowlist = set()
+        if request.target:
+            allowlist.add(request.target)
+
+        pipeline = ValidationPipeline(allowlist=allowlist)
+        return pipeline.run(candidates, graph=None, executor=executor)
 
     def _build_result(self, result: VAPTResult, final_state: dict, request: VAPTRequest, scored_candidates: Optional[list[dict]] = None) -> None:
         """Build the unified result from engine state."""
