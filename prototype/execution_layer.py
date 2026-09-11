@@ -52,7 +52,7 @@ def create_executor(
     return Executor(mode=mode, execute_fn=execute_fn)
 
 
-def create_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor:
+def create_lab_executor(target: str, port: int, path: str = "/vuln", path_map: Optional[dict] = None) -> Executor:
     """Create an Executor wired to the Docker vulnerability emulator (OBSERVED mode).
 
     This is the real-mode executor whose execute_fn performs an HTTP GET to the
@@ -65,7 +65,8 @@ def create_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor
     Args:
         target: IP/hostname of the emulator (must be in LAB_TARGET_ALLOWLIST)
         port: TCP port of the emulator
-        path: HTTP path to hit (e.g., /vuln for success, /fail for failure)
+        path: Default HTTP path to hit (e.g., /vuln for success, /fail for failure)
+        path_map: Optional dict mapping candidate_id to specific path (overrides default)
 
     Returns:
         Configured Executor instance in "real" mode
@@ -80,22 +81,23 @@ def create_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor
 
     # For Docker internal targets, use the executor container
     if target == "172.28.0.2":
-        return create_docker_lab_executor(target, port, path)
+        return create_docker_lab_executor(target, port, path, path_map=path_map)
 
     # For loopback targets, use raw sockets directly
     def _lab_execute(candidate: ActionCandidate) -> ExecutionResult:
-        outcome = run_lab_attempt(target, port, path=path)
+        candidate_path = path_map.get(candidate.id, path) if path_map else path
+        outcome = run_lab_attempt(target, port, path=candidate_path)
         return ExecutionResult(
             candidate_id=candidate.id,
             outcome=outcome,
             request_count=1,
-            detail=f"lab-observed(http://{target}:{port}{path})",
+            detail=f"lab-observed(http://{target}:{port}{candidate_path})",
         )
 
     return Executor(mode="lab_loopback", execute_fn=_lab_execute)
 
 
-def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> Executor:
+def create_docker_lab_executor(target: str, port: int, path: str = "/vuln", path_map: Optional[dict] = None) -> Executor:
     """Create an Executor that proxies through the Docker executor container.
 
     The executor container runs on vuln-lab-network and can reach the emulator
@@ -105,7 +107,8 @@ def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> E
     Args:
         target: IP/hostname of the emulator (must be in LAB_TARGET_ALLOWLIST)
         port: TCP port of the emulator
-        path: HTTP path to hit (e.g., /vuln for success, /fail for failure)
+        path: Default HTTP path to hit (e.g., /vuln for success, /fail for failure)
+        path_map: Optional dict mapping candidate_id to specific path (overrides default)
 
     Returns:
         Configured Executor instance in "real" mode
@@ -124,14 +127,16 @@ def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> E
 
     def _docker_execute(candidate: ActionCandidate) -> ExecutionResult:
         """Send execution request to the Docker executor container."""
+        # Allow per-candidate path override via path_map
+        candidate_path = path_map.get(candidate.id, path) if path_map else path
         payload = json.dumps({
             "target": target,
             "port": port,
-            "path": path,
+            "path": candidate_path,
         }).encode("utf-8")
 
         req = urllib.request.Request(
-            "http://localhost:9090/execute",
+            f"http://localhost:9090/execute",
             data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -160,9 +165,7 @@ def create_docker_lab_executor(target: str, port: int, path: str = "/vuln") -> E
 
 
 def simulate_execution(candidate: ActionCandidate) -> ExecutionResult:
-    """Simulate executing a single candidate.
-
-    This is a convenience function that uses the simulation Executor
+    """Convenience function that uses the simulation Executor
     without explicit state management.
 
     Args:

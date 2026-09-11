@@ -20,6 +20,7 @@ import os
 import sys
 
 from prototype.demo_data import SCENARIOS
+from prototype.docker_demo_data import DOCKER_SCENARIOS
 from prototype.engine_integration import (
     load_vapt_corpus_scenario,
     run_decision_scenario,
@@ -34,6 +35,9 @@ from prototype.trace_formatter import (
     format_engine_trace,
     format_execution_results,
 )
+
+# Combined scenario registry
+ALL_SCENARIOS = {**SCENARIOS, **DOCKER_SCENARIOS}
 
 
 def _validate_scenario(candidates: list) -> None:
@@ -104,6 +108,7 @@ def _run_scenario(
     mode: str = "simulation",
     target: str | None = None,
     port: int = 8080,
+    path: str = "/vuln",
     assessor: str = "deterministic",
     scan_file: str | None = None,
 ) -> dict:
@@ -111,8 +116,8 @@ def _run_scenario(
         from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
         candidates = candidates_to_scenario(candidates_from_scan(scan_file))
         scenario_name = f"scan:{os.path.basename(scan_file)}"
-    elif scenario_name in SCENARIOS:
-        fn, kwargs = SCENARIOS[scenario_name]
+    elif scenario_name in ALL_SCENARIOS:
+        fn, kwargs = ALL_SCENARIOS[scenario_name]
         candidates = fn(**kwargs)
     elif scenario_name == "corpus":
         candidates = load_vapt_corpus_scenario()
@@ -135,7 +140,7 @@ def _run_scenario(
                 file=sys.stderr,
             )
             sys.exit(1)
-        
+
         # Explicit allowlist validation before creating executor
         from prototype.lab_runner import _validate_target
         try:
@@ -146,7 +151,15 @@ def _run_scenario(
 
         from prototype.execution_layer import create_lab_executor
 
-        executor_kwargs["executor"] = create_lab_executor(target, port)
+        # Build path_map from candidates that have a 'path' key
+        path_map = {}
+        for c in candidates:
+            if "path" in c and c["path"] != path:
+                path_map[c["id"]] = c["path"]
+
+        executor_kwargs["executor"] = create_lab_executor(
+            target, port, path, path_map=path_map if path_map else None
+        )
 
     final_state = run_decision_scenario(
         candidates,
@@ -177,8 +190,8 @@ def main() -> None:
     run_parser = sub.add_parser("run", help="Run a scenario")
     run_parser.add_argument(
         "--scenario", "-s",
-        choices=list(SCENARIOS.keys()) + ["corpus"],
-        help="Scenario name: success, failure_pivot, multi_candidate, or corpus",
+        choices=list(ALL_SCENARIOS.keys()) + ["corpus"],
+        help="Scenario name: success, failure_pivot, multi_candidate, docker_vuln, docker_fail, docker_pivot, docker_multi, or corpus",
     )
     run_parser.add_argument(
         "--scan", "-S",
@@ -214,6 +227,11 @@ def main() -> None:
         default=8080,
         help="Lab target port (default: 8080)",
     )
+    run_parser.add_argument(
+        "--path", "-P",
+        default="/vuln",
+        help="Lab target path (default: /vuln)",
+    )
 
     run_parser.add_argument(
         "--checkpoint", "-c",
@@ -247,6 +265,7 @@ def main() -> None:
             mode=args.mode,
             target=args.target,
             port=args.port,
+            path=args.path,
             assessor=args.assessor,
             scan_file=args.scan,
         )
