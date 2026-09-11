@@ -99,6 +99,7 @@ class VAPTResult:
     safety_notice: str = ""
     report: dict[str, Any] = field(default_factory=dict)
     graph: Any = None
+    scored_candidates: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -143,14 +144,17 @@ class VAPTApplication:
             graph = self._build_graph(candidates)
             result.graph = graph
 
-            # Step 4: Build executor
+            # Step 4: Decision intelligence scoring
+            scored_candidates = self._score_candidates(candidates, graph)
+
+            # Step 5: Build executor
             executor = self._build_executor(request, candidates)
 
-            # Step 5: Run decision engine
+            # Step 6: Run decision engine
             final_state = self._run_engine(request, candidates, executor)
 
-            # Step 6: Build result from engine state
-            self._build_result(result, final_state, request)
+            # Step 7: Build result from engine state
+            self._build_result(result, final_state, request, scored_candidates)
 
         except Exception as e:
             result.final_status = "FAILED"
@@ -257,6 +261,20 @@ class VAPTApplication:
 
         return VAPTGraph.from_findings(findings)
 
+    def _score_candidates(self, candidates: list[dict], graph: Any) -> list[dict]:
+        """Add decision intelligence scores to candidates."""
+        from vapt_platform.decision_intelligence import get_decision_intelligence
+
+        di = get_decision_intelligence()
+        scored = []
+
+        for c in candidates:
+            factors = di.compute_score(c, graph=graph)
+            c["_score"] = factors.to_dict()
+            scored.append(c)
+
+        return scored
+
     def _load_candidates(self, request: VAPTRequest) -> list[dict]:
         """Load candidates from scenario or scan file."""
         from prototype.demo_data import SCENARIOS
@@ -313,7 +331,7 @@ class VAPTApplication:
             assessment_api_key=request.assessor_api_key,
         )
 
-    def _build_result(self, result: VAPTResult, final_state: dict, request: VAPTRequest) -> None:
+    def _build_result(self, result: VAPTResult, final_state: dict, request: VAPTRequest, scored_candidates: Optional[list[dict]] = None) -> None:
         """Build the unified result from engine state."""
         # Extract presentation metadata
         presentation = final_state.get("_presentation", {})
@@ -335,6 +353,10 @@ class VAPTApplication:
                 result.candidates.append(c.__dict__)
             else:
                 result.candidates.append(c)
+
+        # Add scoring information if available
+        if scored_candidates:
+            result.scored_candidates = scored_candidates
 
         # Extract execution results
         for r in final_state.get("results", []):
