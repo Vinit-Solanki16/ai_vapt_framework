@@ -69,12 +69,28 @@ def start_run(req: RunRequest):
     if req.mode == "lab" and req.target not in LAB_TARGET_ALLOWLIST:
         raise HTTPException(status_code=400, detail="Target not in allowlist")
 
-    run_id = job_manager.create(req.scenario, req.mode)
+    # Convert API request to unified request
+    vapt_request = VAPTRequest(
+        scenario=req.scenario,
+        mode=req.mode,
+        target=req.target,
+        port=req.port,
+        path=req.path,
+        assessor_mode="ai" if req.assessor == "llm" else "deterministic",
+        assessor_provider=req.assessor_provider,
+        assessor_api_key=req.assessor_api_key,
+        max_attempts=req.max_attempts,
+        scan_file=req.scan_file,
+    )
+
+    # Run the canonical workflow
+    application = get_application()
     try:
-        _run_engine(run_id, req)
+        result = application.run(vapt_request)
+        run_id = result.domain.run_id
+        
         return RunResponse(run_id=run_id, status="completed", message="Run completed")
     except Exception as e:
-        job_manager.set_failed(run_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -134,26 +150,22 @@ def get_trace(run_id: str):
     return RunTrace(run_id=run_id, events=events)
 
 
-@app.get("/runs/{run_id}/report", response_model=ReportResponse)
-def get_report(run_id: str):
-    """Get JSON report."""
-    job = job_manager.get(run_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
-    return ReportResponse(
-        run_id=run_id,
-        scenario=state.get("scenario", ""),
-        execution_mode=state.get("mode", "simulation"),
-        final_status=state.get("status"),
-        candidates=state.get("candidates", []),
-        execution_results=state.get("execution_results", []),
-        decision_trace=state.get("decision_trace", []),
-        total_attempts=state.get("total_attempts", 0),
-        pivot_count=state.get("pivot_count", 0),
-        candidates_processed=state.get("candidates_processed", []),
-        safety_notice=state.get("safety_notice", ""),
-    )
+@app.get("/runs/{run_id}/report")
+def get_report(run_id: str, format: str = "json"):
+    """Get a report for a persisted run.
+    
+    Args:
+        run_id: The run ID
+        format: Report format (json, html, markdown, txt)
+    """
+    application = get_application()
+    try:
+        report = application.generate_report(run_id, format)
+        return JSONResponse(content={"run_id": run_id, "format": format, "report": report})
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/runs/{run_id}/evidence")

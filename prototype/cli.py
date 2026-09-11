@@ -241,6 +241,23 @@ def main() -> None:
         help="Run ID to display",
     )
 
+    report_parser = sub.add_parser("report", help="Generate report for a persisted run")
+    report_parser.add_argument(
+        "run_id",
+        help="Run ID to generate report for",
+    )
+    report_parser.add_argument(
+        "--format", "-f",
+        choices=["json", "html", "markdown", "txt"],
+        default="json",
+        help="Report format (default: json)",
+    )
+    report_parser.add_argument(
+        "--output", "-o",
+        default=None,
+        help="Output file path (default: stdout)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -268,6 +285,31 @@ def main() -> None:
 
     elif args.command == "show":
         _show_run(args.run_id)
+
+    elif args.command == "report":
+        _generate_report(args.run_id, args.format, args.output)
+
+
+def _generate_report(run_id: str, format: str, output_path: str | None) -> None:
+    """Generate a report for a persisted run."""
+    from vapt_platform.application import get_application
+    
+    application = get_application()
+    try:
+        report = application.generate_report(run_id, format)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+    except Exception as e:
+        print(f"Error generating report: {e}")
+        return
+    
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(report)
+        print(f"Report written to: {output_path}")
+    else:
+        print(report)
 
 
 def _list_runs(limit: int) -> None:

@@ -195,9 +195,14 @@ class VAPTApplication:
     def _persist_run(self, domain: DomainResult, request: VAPTRequest, pipeline_summary: dict) -> None:
         """Persist a completed run to the repository."""
         from vapt_platform.persistence import get_repository, PersistentRun, RunStatus
+        from vapt_platform.reporting.builder import ReportBuilder
 
         # Determine status
         status = RunStatus.COMPLETED.value if domain.final_status in ("SUCCESS", "COMPLETED") else RunStatus.FAILED.value
+
+        # Build report for persistence
+        builder = ReportBuilder()
+        report = builder.from_domain_result(domain, request, pipeline_summary)
 
         # Build persistent run
         persistent = PersistentRun(
@@ -230,6 +235,33 @@ class VAPTApplication:
         except Exception:
             # Persistence failures should not break the workflow
             pass
+
+    def generate_report(self, run_id: str, format: str = "json") -> str:
+        """Generate a report for a persisted run.
+        
+        Args:
+            run_id: The run ID to generate report for
+            format: Report format (json, html, markdown, txt)
+            
+        Returns:
+            Rendered report string
+            
+        Raises:
+            ValueError: If run not found
+        """
+        from vapt_platform.persistence import get_repository
+        from vapt_platform.reporting.builder import ReportBuilder
+        from vapt_platform.reporting.renderers import get_renderer
+
+        repository = get_repository()
+        run = repository.get(run_id)
+        if run is None:
+            raise ValueError(f"Run not found: {run_id}")
+
+        builder = ReportBuilder()
+        report = builder.from_persisted_run(run)
+        renderer = get_renderer(format)
+        return renderer.render(report)
 
     def _enrich_candidates(self, candidates: list[dict]) -> list[dict]:
         """Enrich candidates with vulnerability intelligence."""

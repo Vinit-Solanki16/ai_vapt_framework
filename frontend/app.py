@@ -497,23 +497,17 @@ def display_reports(result):
     domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">📄 Reports</div>', unsafe_allow_html=True)
 
-    # Generate reports
-    final_state = {
-        "candidates": domain.candidates,
-        "results": domain.execution_results,
-        "logs": domain.decision_trace,
-        "_presentation": {
-            "total_attempts": domain.total_attempts,
-            "pivot_count": domain.pivot_count,
-            "candidates_processed": domain.candidates_processed,
-        },
-        "_assessment": domain.assessment,
-    }
+    # Generate reports using canonical reporting layer
+    from vapt_platform.reporting.builder import ReportBuilder
+    from vapt_platform.reporting.renderers import JSONRenderer, HTMLRenderer, MarkdownRenderer, TXTRenderer
 
-    json_report = generate_json_report(domain.scenario, final_state, 2, domain.mode)
-    txt_report = generate_text_report(domain.scenario, final_state, 2, domain.mode)
-    html_report = generate_html_report(domain.scenario, final_state, 2, domain.mode)
-    md_report = generate_markdown_report(domain.scenario, final_state, 2, domain.mode)
+    builder = ReportBuilder()
+    report = builder.from_domain_result(domain)
+    
+    json_report = JSONRenderer().render(report)
+    html_report = HTMLRenderer().render(report)
+    md_report = MarkdownRenderer().render(report)
+    txt_report = TXTRenderer().render(report)
 
     col1, col2, col3, col4 = st.columns(4)
     col1.download_button("⬇️ JSON", json_report, file_name="report.json")

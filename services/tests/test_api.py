@@ -1,6 +1,8 @@
 """Tests for the FastAPI backend."""
 from __future__ import annotations
 
+import tempfile
+import shutil
 from unittest.mock import patch
 
 import pytest
@@ -8,11 +10,23 @@ from fastapi.testclient import TestClient
 
 from services.api import app
 from services.jobs import job_manager
+from vapt_platform.persistence import PersistenceConfig, JSONRunRepository
+from vapt_platform.persistence.repository import set_repository
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    """Create a test client with isolated persistence."""
+    # Create isolated temp directory for this test
+    temp_dir = tempfile.mkdtemp()
+    config = PersistenceConfig(storage_dir=temp_dir)
+    repo = JSONRunRepository(config=config)
+    set_repository(repo)
+    
+    yield TestClient(app)
+    
+    # Cleanup
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 class TestHealth:
@@ -51,12 +65,12 @@ class TestGetStatus:
         # Create a run first
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
-        resp = client.get(f"/runs/{run_id}")
+        resp = client.get(f"/runs/{run_id}/persisted")
         assert resp.status_code == 200
         assert resp.json()["run_id"] == run_id
 
     def test_get_status_missing(self, client):
-        resp = client.get("/runs/nonexistent")
+        resp = client.get("/runs/nonexistent/persisted")
         assert resp.status_code == 404
 
 
@@ -64,9 +78,10 @@ class TestGetTrace:
     def test_get_trace(self, client):
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
-        resp = client.get(f"/runs/{run_id}/trace")
+        resp = client.get(f"/runs/{run_id}/persisted")
         assert resp.status_code == 200
-        assert "events" in resp.json()
+        data = resp.json()
+        assert "decision_trace" in data
 
 
 class TestGetReport:
@@ -77,4 +92,5 @@ class TestGetReport:
         assert resp.status_code == 200
         data = resp.json()
         assert data["run_id"] == run_id
-        assert "safety_notice" in data
+        assert "report" in data
+        assert "format" in data
