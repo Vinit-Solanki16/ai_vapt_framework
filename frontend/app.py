@@ -298,22 +298,25 @@ def run_dashboard(
 
 def display_results(result, mode: str):
     """Display assessment results."""
+    # Access domain result
+    domain = result.domain if hasattr(result, 'domain') else result
+    
     # Status header
     st.markdown(f"### 📊 Assessment Results")
-    st.caption(f"Run ID: {result.run_id} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    st.caption(f"Run ID: {domain.run_id} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Summary cards
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Status", result.final_status)
-    col2.metric("Candidates", len(result.candidates))
-    col3.metric("Attempts", result.total_attempts)
-    col4.metric("Pivots", result.pivot_count)
-    col5.metric("Evidence", result.evidence_tier)
+    col1.metric("Status", domain.final_status)
+    col2.metric("Candidates", len(domain.candidates))
+    col3.metric("Attempts", domain.total_attempts)
+    col4.metric("Pivots", domain.pivot_count)
+    col5.metric("Evidence", domain.evidence_tier)
 
     st.markdown("---")
 
     # Evidence tier
-    if result.evidence_tier == "DOCKER_OBSERVED":
+    if domain.evidence_tier == "DOCKER_OBSERVED":
         st.markdown(
             '<div class="evidence-docker">'
             "🔬 DOCKER_OBSERVED — Outcomes from controlled Docker lab emulator. "
@@ -355,13 +358,14 @@ def display_results(result, mode: str):
 
 def display_findings(result):
     """Display findings panel."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">📋 Findings</div>', unsafe_allow_html=True)
 
-    if not result.candidates:
+    if not domain.candidates:
         st.info("No findings")
         return
 
-    for c in result.candidates:
+    for c in domain.candidates:
         with st.expander(f"**{c.get('id', 'Unknown')}**"):
             cols = st.columns(2)
             cols[0].markdown(f"**Probability:** {c.get('probability', 0):.4f}")
@@ -374,10 +378,11 @@ def display_findings(result):
 
 def display_candidates(result):
     """Display candidate/AI assessment panel."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">🤖 AI Assessment</div>', unsafe_allow_html=True)
 
     # Assessment provenance
-    assessment = result.assessment
+    assessment = domain.assessment
     if assessment:
         mode_label = assessment.get("mode", "unknown")
         provider = assessment.get("provider")
@@ -399,12 +404,12 @@ def display_candidates(result):
                 unsafe_allow_html=True,
             )
 
-    if not result.candidates:
+    if not domain.candidates:
         st.info("No candidates assessed")
         return
 
     # Candidate table
-    for c in result.candidates:
+    for c in domain.candidates:
         quality = c.get("quality_rank", "N/A")
         prob = c.get("probability", 0)
         score = prob * (0.5 + 0.5 * {"HIGH": 1.0, "MEDIUM": 0.6, "LOW": 0.3}.get(quality, 0))
@@ -418,13 +423,14 @@ def display_candidates(result):
 
 def display_execution_timeline(result):
     """Display execution timeline."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">⏱️ Execution Timeline</div>', unsafe_allow_html=True)
 
-    if not result.execution_results:
+    if not domain.execution_results:
         st.info("No execution results")
         return
 
-    for i, r in enumerate(result.execution_results, 1):
+    for i, r in enumerate(domain.execution_results, 1):
         outcome = r.get("outcome", "UNKNOWN")
         candidate = r.get("candidate_id", "Unknown")
         detail = r.get("detail", "")
@@ -449,13 +455,14 @@ def display_execution_timeline(result):
 
 def display_pivot_visualization(result):
     """Display pivot visualization."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">🔄 Pivot Analysis</div>', unsafe_allow_html=True)
 
-    st.markdown(f"**Threshold:** {result.total_attempts} attempts")
-    st.markdown(f"**Pivots:** {result.pivot_count}")
+    st.markdown(f"**Threshold:** {domain.total_attempts} attempts")
+    st.markdown(f"**Pivots:** {domain.pivot_count}")
 
-    if result.decision_trace:
-        pivots = [log for log in result.decision_trace if "[PIVOT]" in log]
+    if domain.decision_trace:
+        pivots = [log for log in domain.decision_trace if "[PIVOT]" in log]
         if pivots:
             for p in pivots:
                 st.markdown(
@@ -470,14 +477,15 @@ def display_pivot_visualization(result):
 
 def display_decision_trace(result):
     """Display decision trace."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">🔍 Decision Trace</div>', unsafe_allow_html=True)
 
-    if not result.decision_trace:
+    if not domain.decision_trace:
         st.info("No trace available")
         return
 
     with st.expander("View Full Trace", expanded=False):
-        for log in result.decision_trace:
+        for log in domain.decision_trace:
             st.markdown(
                 f'<div class="trace-event">{log}</div>',
                 unsafe_allow_html=True,
@@ -486,25 +494,26 @@ def display_decision_trace(result):
 
 def display_reports(result):
     """Display report download options."""
+    domain = result.domain if hasattr(result, 'domain') else result
     st.markdown('<div class="section-header">📄 Reports</div>', unsafe_allow_html=True)
 
     # Generate reports
     final_state = {
-        "candidates": result.candidates,
-        "results": result.execution_results,
-        "logs": result.decision_trace,
+        "candidates": domain.candidates,
+        "results": domain.execution_results,
+        "logs": domain.decision_trace,
         "_presentation": {
-            "total_attempts": result.total_attempts,
-            "pivot_count": result.pivot_count,
-            "candidates_processed": result.candidates_processed,
+            "total_attempts": domain.total_attempts,
+            "pivot_count": domain.pivot_count,
+            "candidates_processed": domain.candidates_processed,
         },
-        "_assessment": result.assessment,
+        "_assessment": domain.assessment,
     }
 
-    json_report = generate_json_report(result.scenario, final_state, 2, result.mode)
-    txt_report = generate_text_report(result.scenario, final_state, 2, result.mode)
-    html_report = generate_html_report(result.scenario, final_state, 2, result.mode)
-    md_report = generate_markdown_report(result.scenario, final_state, 2, result.mode)
+    json_report = generate_json_report(domain.scenario, final_state, 2, domain.mode)
+    txt_report = generate_text_report(domain.scenario, final_state, 2, domain.mode)
+    html_report = generate_html_report(domain.scenario, final_state, 2, domain.mode)
+    md_report = generate_markdown_report(domain.scenario, final_state, 2, domain.mode)
 
     col1, col2, col3, col4 = st.columns(4)
     col1.download_button("⬇️ JSON", json_report, file_name="report.json")

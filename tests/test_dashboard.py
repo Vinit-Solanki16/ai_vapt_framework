@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import patch, MagicMock
 
-from vapt_platform.application import VAPTApplication, VAPTRequest, VAPTResult
+from vapt_platform.application import VAPTApplication, VAPTRequest, VAPTResult, DomainResult
 
 
 class TestDashboardWorkflow:
@@ -29,50 +29,55 @@ class TestDashboardDisplay:
 
     def test_display_findings(self):
         from frontend.app import display_findings
-        result = VAPTResult(candidates=[
+        domain = DomainResult(candidates=[
             {"id": "test-1", "probability": 0.9, "quality_rank": "HIGH", "assessed": True, "attempted": True, "execution_outcome": "SUCCESS"},
         ])
+        result = VAPTResult.from_domain(domain)
         # Should not raise
         display_findings(result)
 
     def test_display_candidates(self):
         from frontend.app import display_candidates
-        result = VAPTResult(
+        domain = DomainResult(
             candidates=[
                 {"id": "test-1", "probability": 0.9, "quality_rank": "HIGH", "assessed": True, "attempted": True, "execution_outcome": "SUCCESS"},
             ],
             assessment={"mode": "deterministic"},
         )
+        result = VAPTResult.from_domain(domain)
         display_candidates(result)
 
     def test_display_execution_timeline(self):
         from frontend.app import display_execution_timeline
-        result = VAPTResult(
+        domain = DomainResult(
             execution_results=[
                 {"candidate_id": "test-1", "outcome": "SUCCESS", "detail": "VULNERABLE"},
             ],
         )
+        result = VAPTResult.from_domain(domain)
         display_execution_timeline(result)
 
     def test_display_pivot_visualization(self):
         from frontend.app import display_pivot_visualization
-        result = VAPTResult(
+        domain = DomainResult(
             total_attempts=3,
             pivot_count=2,
             decision_trace=["[PIVOT] Threshold reached", "[PIVOT] Redirected to next"],
         )
+        result = VAPTResult.from_domain(domain)
         display_pivot_visualization(result)
 
     def test_display_decision_trace(self):
         from frontend.app import display_decision_trace
-        result = VAPTResult(
+        domain = DomainResult(
             decision_trace=["[INIT] Engine started", "[EXECUTE] Attempt 1"],
         )
+        result = VAPTResult.from_domain(domain)
         display_decision_trace(result)
 
     def test_display_reports(self):
         from frontend.app import display_reports
-        result = VAPTResult(
+        domain = DomainResult(
             scenario="test",
             mode="simulation",
             candidates=[{"id": "test-1", "probability": 0.9}],
@@ -83,6 +88,7 @@ class TestDashboardDisplay:
             candidates_processed=["test-1"],
             assessment={"mode": "deterministic"},
         )
+        result = VAPTResult.from_domain(domain)
         display_reports(result)
 
 
@@ -99,8 +105,8 @@ class TestDashboardIntegration:
             assessor_mode="deterministic",
         )
         result = app.run(req)
-        assert result.final_status in ("SUCCESS", "COMPLETED")
-        assert result.evidence_tier == "SIMULATED"
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.evidence_tier == "SIMULATED"
 
     def test_docker_lab_workflow_mocked(self):
         """Test Docker lab workflow with mocked executor."""
@@ -125,8 +131,8 @@ class TestDashboardIntegration:
         with patch.object(app, '_build_executor', return_value=mock_executor):
             result = app.run(req)
 
-        assert result.evidence_tier == "DOCKER_OBSERVED"
-        assert result.mode == "lab"
+        assert result.domain.evidence_tier == "DOCKER_OBSERVED"
+        assert result.domain.mode == "lab"
 
     def test_ai_assessor_propagation(self):
         """Test that AI assessor mode is propagated correctly."""
@@ -141,6 +147,6 @@ class TestDashboardIntegration:
         result = app.run(req)
 
         # AI requested but Ollama unavailable → deterministic fallback
-        assert result.final_status in ("SUCCESS", "COMPLETED")
-        assert result.assessment.get("mode") == "ai"
-        assert result.assessment.get("provider") == "ollama"
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.assessment.get("mode") == "ai"
+        assert result.domain.assessment.get("provider") == "ollama"

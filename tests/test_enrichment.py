@@ -203,9 +203,9 @@ class TestApplicationEnrichment:
             assessor_mode="deterministic",
         )
         result = app.run(req)
-        assert result.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
         # Verify candidates were enriched
-        for c in result.candidates:
+        for c in result.domain.candidates:
             if "metadata" in c:
                 # Enrichment should have added fields
                 pass  # Some candidates may not have CVEs to enrich

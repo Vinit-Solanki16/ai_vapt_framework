@@ -128,6 +128,6 @@ class TestApplicationScoring:
             assessor_mode="deterministic",
         )
         result = app.run(req)
-        assert result.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
         # Scored candidates should be in result
         assert hasattr(result, "scored_candidates")

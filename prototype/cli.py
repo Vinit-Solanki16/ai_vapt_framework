@@ -33,17 +33,20 @@ def _display_output(
     print(f"Max Attempts: {max_attempts}")
     print()
 
+    # Access domain result
+    domain = result.domain if hasattr(result, 'domain') else result
+
     print("CANDIDATE RANKING")
     print("-" * 40)
     # Reconstruct final_state from result for trace formatters
     final_state = {
-        "candidates": result.candidates,
-        "results": result.execution_results,
-        "logs": result.decision_trace,
+        "candidates": domain.candidates,
+        "results": domain.execution_results,
+        "logs": domain.decision_trace,
         "_presentation": {
-            "total_attempts": result.total_attempts,
-            "pivot_count": result.pivot_count,
-            "candidates_processed": result.candidates_processed,
+            "total_attempts": domain.total_attempts,
+            "pivot_count": domain.pivot_count,
+            "candidates_processed": domain.candidates_processed,
         },
     }
     print(format_candidate_ranking(final_state))
@@ -61,10 +64,10 @@ def _display_output(
 
     print("FINAL RESULT")
     print("-" * 40)
-    print(f"Status:         {result.final_status}")
-    print(f"Total Attempts: {result.total_attempts}")
-    print(f"Pivot Count:    {result.pivot_count}")
-    cids = result.candidates_processed
+    print(f"Status:         {domain.final_status}")
+    print(f"Total Attempts: {domain.total_attempts}")
+    print(f"Pivot Count:    {domain.pivot_count}")
+    cids = domain.candidates_processed
     print(f"Candidates Processed: {len(cids)} ({', '.join(cids) if cids else '(none)'})")
     print()
 
@@ -121,44 +124,45 @@ def _run_scenario(
     _display_output(scenario_name, result, max_attempts, mode)
 
     # Save reports
+    domain = result.domain if hasattr(result, 'domain') else result
     json_path = f"./report_{scenario_name}_vapt.json"
     txt_path = f"./report_{scenario_name}_vapt.txt"
     save_json_report(scenario_name, {
-        "candidates": result.candidates,
-        "results": result.execution_results,
-        "logs": result.decision_trace,
+        "candidates": domain.candidates,
+        "results": domain.execution_results,
+        "logs": domain.decision_trace,
         "_presentation": {
-            "total_attempts": result.total_attempts,
-            "pivot_count": result.pivot_count,
-            "candidates_processed": result.candidates_processed,
+            "total_attempts": domain.total_attempts,
+            "pivot_count": domain.pivot_count,
+            "candidates_processed": domain.candidates_processed,
         },
     }, json_path, max_attempts, mode)
     save_text_report(scenario_name, {
-        "candidates": result.candidates,
-        "results": result.execution_results,
-        "logs": result.decision_trace,
+        "candidates": domain.candidates,
+        "results": domain.execution_results,
+        "logs": domain.decision_trace,
         "_presentation": {
-            "total_attempts": result.total_attempts,
-            "pivot_count": result.pivot_count,
-            "candidates_processed": result.candidates_processed,
+            "total_attempts": domain.total_attempts,
+            "pivot_count": domain.pivot_count,
+            "candidates_processed": domain.candidates_processed,
         },
     }, txt_path, max_attempts, mode)
 
     print(f"\nReports written: {json_path}, {txt_path}")
 
     return {
-        "run_id": result.run_id,
-        "status": result.final_status,
-        "candidates": result.candidates,
-        "execution_results": result.execution_results,
-        "decision_trace": result.decision_trace,
-        "total_attempts": result.total_attempts,
-        "pivot_count": result.pivot_count,
-        "candidates_processed": result.candidates_processed,
-        "evidence_tier": result.evidence_tier,
-        "assessment": result.assessment,
-        "safety_notice": result.safety_notice,
-        "report": result.report,
+        "run_id": domain.run_id,
+        "status": domain.final_status,
+        "candidates": domain.candidates,
+        "execution_results": domain.execution_results,
+        "decision_trace": domain.decision_trace,
+        "total_attempts": domain.total_attempts,
+        "pivot_count": domain.pivot_count,
+        "candidates_processed": domain.candidates_processed,
+        "evidence_tier": domain.evidence_tier,
+        "assessment": domain.assessment,
+        "safety_notice": domain.safety_notice,
+        "report": result.report if hasattr(result, 'report') else {},
     }
 
 

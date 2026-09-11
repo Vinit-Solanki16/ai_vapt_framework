@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import patch, MagicMock
 
-from vapt_platform.application import VAPTApplication, VAPTRequest, VAPTResult, get_application
+from vapt_platform.application import VAPTApplication, VAPTRequest, VAPTResult, DomainResult, get_application
 from vapt_platform.assessment import AssessmentResult, QualityRank
 
 
@@ -59,16 +59,33 @@ class TestVAPTRequest:
 # Result model tests
 # ---------------------------------------------------------------------------
 
-class TestVAPTResult:
+class TestDomainResult:
     def test_default_values(self):
-        result = VAPTResult()
+        result = DomainResult()
         assert result.run_id == ""
         assert result.final_status == "UNKNOWN"
         assert result.evidence_tier == "SIMULATED"
 
     def test_lab_result(self):
-        result = VAPTResult(mode="lab", evidence_tier="DOCKER_OBSERVED")
+        result = DomainResult(mode="lab", evidence_tier="DOCKER_OBSERVED")
         assert result.evidence_tier == "DOCKER_OBSERVED"
+
+
+class TestPresentationResult:
+    def test_default_values(self):
+        result = VAPTResult()
+        assert result.domain.run_id == ""
+        assert result.domain.final_status == "UNKNOWN"
+        assert result.domain.evidence_tier == "SIMULATED"
+
+    def test_from_domain(self):
+        domain = DomainResult(run_id="test-123", final_status="SUCCESS")
+        graph = MagicMock()
+        graph.summary.return_value = {"total_nodes": 5}
+        result = VAPTResult.from_domain(domain, report={"test": True}, graph=graph)
+        assert result.domain.run_id == "test-123"
+        assert result.report == {"test": True}
+        assert result.graph_summary == {"total_nodes": 5}
 
 
 # ---------------------------------------------------------------------------
@@ -86,9 +103,9 @@ class TestWorkflowIntegration:
             assessor_mode="deterministic",
         )
         result = app.run(req)
-        assert result.final_status in ("SUCCESS", "COMPLETED")
-        assert result.evidence_tier == "SIMULATED"
-        assert result.total_attempts > 0
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.evidence_tier == "SIMULATED"
+        assert result.domain.total_attempts > 0
 
     def test_docker_lab_workflow_mocked(self):
         """Test Docker lab workflow with mocked executor."""
@@ -113,8 +130,8 @@ class TestWorkflowIntegration:
         with patch.object(app, '_build_executor', return_value=mock_executor):
             result = app.run(req)
 
-        assert result.evidence_tier == "DOCKER_OBSERVED"
-        assert result.mode == "lab"
+        assert result.domain.evidence_tier == "DOCKER_OBSERVED"
+        assert result.domain.mode == "lab"
 
     def test_ai_assessor_propagation(self):
         """Test that AI assessor mode is propagated correctly."""
@@ -129,9 +146,9 @@ class TestWorkflowIntegration:
         result = app.run(req)
 
         # AI requested but Ollama unavailable → deterministic fallback
-        assert result.final_status in ("SUCCESS", "COMPLETED")
-        assert result.assessment.get("mode") == "ai"
-        assert result.assessment.get("provider") == "ollama"
+        assert result.domain.final_status in ("SUCCESS", "COMPLETED")
+        assert result.domain.assessment.get("mode") == "ai"
+        assert result.domain.assessment.get("provider") == "ollama"
 
 
 # ---------------------------------------------------------------------------

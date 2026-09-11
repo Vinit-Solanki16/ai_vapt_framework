@@ -64,25 +64,11 @@ class VAPTRequest:
 
 
 @dataclass
-class VAPTResult:
-    """Unified result model for the VAPT workflow.
+class DomainResult:
+    """Pure domain result — no presentation concerns.
 
-    Fields:
-        run_id: Unique run identifier
-        scenario: Scenario name
-        mode: Execution mode
-        final_status: Final engine status
-        candidates: List of processed candidates
-        execution_results: List of execution outcomes
-        decision_trace: List of trace events
-        total_attempts: Total execution attempts
-        pivot_count: Total pivot events
-        candidates_processed: List of processed candidate IDs
-        evidence_tier: Evidence tier label
-        assessment: Assessment provenance info
-        safety_notice: Safety notice text
-        report: Generated report dict
-        graph: Asset/vulnerability graph (if built)
+    This is the canonical output of the VAPT workflow.
+    CLI, API, and GUI create their own presentation from this.
     """
     run_id: str = ""
     scenario: str = ""
@@ -97,10 +83,42 @@ class VAPTResult:
     evidence_tier: str = "SIMULATED"
     assessment: dict[str, Any] = field(default_factory=dict)
     safety_notice: str = ""
+
+
+@dataclass
+class PresentationResult:
+    """Presentation-layer result for display/export.
+
+    Created from DomainResult by the presentation layer.
+    """
+    domain: DomainResult = field(default_factory=DomainResult)
     report: dict[str, Any] = field(default_factory=dict)
-    graph: Any = None
+    graph_summary: dict[str, Any] = field(default_factory=dict)
     scored_candidates: list[dict] = field(default_factory=list)
-    pipeline: dict[str, Any] = field(default_factory=dict)
+    pipeline_summary: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_domain(
+        cls,
+        domain: DomainResult,
+        report: dict[str, Any] | None = None,
+        graph: Any = None,
+        scored_candidates: list[dict] | None = None,
+        pipeline: dict[str, Any] | None = None,
+    ) -> "PresentationResult":
+        """Create presentation result from domain result."""
+        graph_summary = graph.summary() if graph and hasattr(graph, "summary") else {}
+        return cls(
+            domain=domain,
+            report=report or {},
+            graph_summary=graph_summary,
+            scored_candidates=scored_candidates or [],
+            pipeline_summary=pipeline or {},
+        )
+
+
+# Backward compatibility alias
+VAPTResult = PresentationResult
 
 
 # ---------------------------------------------------------------------------
@@ -123,16 +141,9 @@ class VAPTApplication:
         return f"run-{self._run_counter:04d}-{uuid.uuid4().hex[:8]}"
 
     def run(self, request: VAPTRequest) -> VAPTResult:
-        """Execute the full VAPT workflow.
-
-        Args:
-            request: Unified request model
-
-        Returns:
-            Unified result model
-        """
+        """Execute the full VAPT workflow."""
         run_id = self._generate_run_id()
-        result = VAPTResult(run_id=run_id, scenario=request.scenario, mode=request.mode)
+        domain = DomainResult(run_id=run_id, scenario=request.scenario, mode=request.mode)
 
         try:
             # Step 1: Load candidates
@@ -143,7 +154,6 @@ class VAPTApplication:
 
             # Step 3: Build asset/vulnerability graph
             graph = self._build_graph(candidates)
-            result.graph = graph
 
             # Step 4: Decision intelligence scoring
             scored_candidates = self._score_candidates(candidates, graph)
@@ -153,19 +163,27 @@ class VAPTApplication:
 
             # Step 6: Controlled validation pipeline
             pipeline_result = self._run_validation_pipeline(scored_candidates, executor, request)
-            result.pipeline = pipeline_result
 
             # Step 7: Run decision engine
             final_state = self._run_engine(request, candidates, executor)
 
             # Step 8: Build result from engine state
-            self._build_result(result, final_state, request, scored_candidates)
+            self._build_result(domain, final_state, request)
+
+            # Create presentation result
+            report = self._generate_report(domain, final_state, request)
+            return PresentationResult.from_domain(
+                domain,
+                report=report,
+                graph=graph,
+                scored_candidates=scored_candidates,
+                pipeline=pipeline_result,
+            )
 
         except Exception as e:
-            result.final_status = "FAILED"
-            result.safety_notice = f"Error: {str(e)}"
-
-        return result
+            domain.final_status = "FAILED"
+            domain.safety_notice = f"Error: {str(e)}"
+            return PresentationResult.from_domain(domain)
 
     def _enrich_candidates(self, candidates: list[dict]) -> list[dict]:
         """Enrich candidates with vulnerability intelligence."""
@@ -284,7 +302,6 @@ class VAPTApplication:
         """Load candidates from scenario or scan file."""
         from prototype.demo_data import SCENARIOS
         from prototype.docker_demo_data import DOCKER_SCENARIOS
-        from decision_engine.adapters.scan_adapter import candidates_from_scan, candidates_to_scenario
         from prototype.engine_integration import load_vapt_corpus_scenario
         from vapt_platform.scanners import get_scanner_registry
         from vapt_platform.enrichment import enrich_findings
@@ -373,66 +390,59 @@ class VAPTApplication:
         pipeline = ValidationPipeline(allowlist=allowlist)
         return pipeline.run(candidates, graph=None, executor=executor)
 
-    def _build_result(self, result: VAPTResult, final_state: dict, request: VAPTRequest, scored_candidates: Optional[list[dict]] = None) -> None:
-        """Build the unified result from engine state."""
+    def _build_result(self, domain: DomainResult, final_state: dict, request: VAPTRequest) -> None:
+        """Build the domain result from engine state."""
         # Extract presentation metadata
         presentation = final_state.get("_presentation", {})
         assessment = final_state.get("_assessment", {})
 
         # Build result
-        result.final_status = final_state.get("status", "UNKNOWN")
-        result.total_attempts = presentation.get("total_attempts", 0)
-        result.pivot_count = presentation.get("pivot_count", 0)
-        result.candidates_processed = presentation.get("candidates_processed", [])
-        result.decision_trace = final_state.get("logs", [])
-        result.assessment = assessment
+        domain.final_status = final_state.get("status", "UNKNOWN")
+        domain.total_attempts = presentation.get("total_attempts", 0)
+        domain.pivot_count = presentation.get("pivot_count", 0)
+        domain.candidates_processed = presentation.get("candidates_processed", [])
+        domain.decision_trace = final_state.get("logs", [])
+        domain.assessment = assessment
 
         # Extract candidates
         for c in final_state.get("candidates", []):
             if hasattr(c, 'model_dump'):
-                result.candidates.append(c.model_dump(mode="json"))
+                domain.candidates.append(c.model_dump(mode="json"))
             elif hasattr(c, '__dict__'):
-                result.candidates.append(c.__dict__)
+                domain.candidates.append(c.__dict__)
             else:
-                result.candidates.append(c)
-
-        # Add scoring information if available
-        if scored_candidates:
-            result.scored_candidates = scored_candidates
+                domain.candidates.append(c)
 
         # Extract execution results
         for r in final_state.get("results", []):
             if hasattr(r, 'model_dump'):
-                result.execution_results.append(r.model_dump(mode="json"))
+                domain.execution_results.append(r.model_dump(mode="json"))
             elif hasattr(r, '__dict__'):
-                result.execution_results.append(r.__dict__)
+                domain.execution_results.append(r.__dict__)
             else:
-                result.execution_results.append(r)
+                domain.execution_results.append(r)
 
         # Evidence tier
         if request.mode == "lab":
-            result.evidence_tier = "DOCKER_OBSERVED"
-            result.safety_notice = (
+            domain.evidence_tier = "DOCKER_OBSERVED"
+            domain.safety_notice = (
                 "LAB MODE (DOCKER OBSERVED): Outcomes are from the Docker-isolated emulator. "
                 "Target is allowlisted. No external systems were targeted."
             )
         else:
-            result.evidence_tier = "SIMULATED"
-            result.safety_notice = (
+            domain.evidence_tier = "SIMULATED"
+            domain.safety_notice = (
                 "SIMULATION MODE: Outcomes are resolved from supplied demo ground truth. "
                 "No real vulnerabilities were validated."
             )
 
-        # Generate report
-        result.report = self._generate_report(result, final_state, request)
-
-    def _generate_report(self, result: VAPTResult, final_state: dict, request: VAPTRequest) -> dict[str, Any]:
+    def _generate_report(self, domain: DomainResult, final_state: dict, request: VAPTRequest) -> dict[str, Any]:
         """Generate the final report."""
         import json
         from prototype.report_generator import generate_json_report
 
         report_str = generate_json_report(
-            result.scenario,
+            domain.scenario,
             final_state,
             request.max_attempts,
             request.mode,

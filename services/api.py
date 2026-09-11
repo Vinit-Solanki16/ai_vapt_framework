@@ -45,18 +45,18 @@ def _run_engine(run_id: str, req: RunRequest):
 
     # Store result in job manager
     job_manager.set_state(run_id, {
-        "scenario": result.scenario,
-        "mode": result.mode,
-        "status": result.final_status,
-        "candidates": result.candidates,
-        "execution_results": result.execution_results,
-        "decision_trace": result.decision_trace,
-        "total_attempts": result.total_attempts,
-        "pivot_count": result.pivot_count,
-        "candidates_processed": result.candidates_processed,
-        "evidence_tier": result.evidence_tier,
-        "assessment": result.assessment,
-        "safety_notice": result.safety_notice,
+        "scenario": result.domain.scenario,
+        "mode": result.domain.mode,
+        "status": result.domain.final_status,
+        "candidates": result.domain.candidates,
+        "execution_results": result.domain.execution_results,
+        "decision_trace": result.domain.decision_trace,
+        "total_attempts": result.domain.total_attempts,
+        "pivot_count": result.domain.pivot_count,
+        "candidates_processed": result.domain.candidates_processed,
+        "evidence_tier": result.domain.evidence_tier,
+        "assessment": result.domain.assessment,
+        "safety_notice": result.domain.safety_notice,
         "report": result.report,
     })
 
