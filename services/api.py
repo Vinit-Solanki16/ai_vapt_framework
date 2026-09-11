@@ -78,6 +78,41 @@ def start_run(req: RunRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/runs")
+def list_runs(limit: int = 100):
+    """List recent runs."""
+    from vapt_platform.persistence import get_repository
+    repository = get_repository()
+    runs = repository.list_runs(limit=limit)
+    return {
+        "runs": [
+            {
+                "run_id": run.run_id,
+                "scenario": run.scenario,
+                "mode": run.mode,
+                "status": run.status,
+                "final_status": run.final_status,
+                "evidence_tier": run.evidence_tier,
+                "total_attempts": run.total_attempts,
+                "pivot_count": run.pivot_count,
+                "created_at": run.created_at,
+            }
+            for run in runs
+        ]
+    }
+
+
+@app.get("/runs/{run_id}/persisted")
+def get_persisted_run(run_id: str):
+    """Get a persisted run by ID."""
+    from vapt_platform.persistence import get_repository
+    repository = get_repository()
+    run = repository.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run.to_dict()
+
+
 @app.get("/runs/{run_id}", response_model=RunStatus)
 def get_status(run_id: str):
     """Get run status."""

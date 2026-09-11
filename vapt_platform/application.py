@@ -172,7 +172,7 @@ class VAPTApplication:
 
             # Create presentation result
             report = self._generate_report(domain, final_state, request)
-            return PresentationResult.from_domain(
+            result = PresentationResult.from_domain(
                 domain,
                 report=report,
                 graph=graph,
@@ -180,10 +180,56 @@ class VAPTApplication:
                 pipeline=pipeline_result,
             )
 
+            # Persist the run
+            self._persist_run(domain, request, pipeline_result)
+
+            return result
+
         except Exception as e:
             domain.final_status = "FAILED"
             domain.safety_notice = f"Error: {str(e)}"
+            # Persist failed run too
+            self._persist_run(domain, request, {})
             return PresentationResult.from_domain(domain)
+
+    def _persist_run(self, domain: DomainResult, request: VAPTRequest, pipeline_summary: dict) -> None:
+        """Persist a completed run to the repository."""
+        from vapt_platform.persistence import get_repository, PersistentRun, RunStatus
+
+        # Determine status
+        status = RunStatus.COMPLETED.value if domain.final_status in ("SUCCESS", "COMPLETED") else RunStatus.FAILED.value
+
+        # Build persistent run
+        persistent = PersistentRun(
+            run_id=domain.run_id,
+            scenario=domain.scenario,
+            mode=domain.mode,
+            status=status,
+            final_status=domain.final_status,
+            candidates=domain.candidates,
+            execution_results=domain.execution_results,
+            decision_trace=domain.decision_trace,
+            total_attempts=domain.total_attempts,
+            pivot_count=domain.pivot_count,
+            candidates_processed=domain.candidates_processed,
+            evidence_tier=domain.evidence_tier,
+            assessment=domain.assessment,
+            safety_notice=domain.safety_notice,
+            target=request.target,
+            port=request.port,
+            path=request.path,
+            max_attempts=request.max_attempts,
+            assessor_mode=request.assessor_mode,
+            assessor_provider=request.assessor_provider,
+            pipeline_summary=pipeline_summary,
+        )
+
+        try:
+            repository = get_repository()
+            repository.save(persistent)
+        except Exception:
+            # Persistence failures should not break the workflow
+            pass
 
     def _enrich_candidates(self, candidates: list[dict]) -> list[dict]:
         """Enrich candidates with vulnerability intelligence."""

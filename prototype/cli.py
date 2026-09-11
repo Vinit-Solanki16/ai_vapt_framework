@@ -227,6 +227,20 @@ def main() -> None:
         help="Path to checkpoint file to resume from",
     )
 
+    history_parser = sub.add_parser("history", help="List persisted runs")
+    history_parser.add_argument(
+        "--limit", "-l",
+        type=int,
+        default=20,
+        help="Maximum number of runs to display",
+    )
+
+    show_parser = sub.add_parser("show", help="Show details of a persisted run")
+    show_parser.add_argument(
+        "run_id",
+        help="Run ID to display",
+    )
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -248,6 +262,76 @@ def main() -> None:
 
     elif args.command == "resume":
         _resume_from_checkpoint(args.path)
+
+    elif args.command == "history":
+        _list_runs(args.limit)
+
+    elif args.command == "show":
+        _show_run(args.run_id)
+
+
+def _list_runs(limit: int) -> None:
+    """List persisted runs."""
+    from vapt_platform.persistence import get_repository
+    repository = get_repository()
+    runs = repository.list_runs(limit=limit)
+    
+    if not runs:
+        print("No persisted runs found.")
+        return
+    
+    print(f"\n{'=' * 80}")
+    print(f"{'RUN ID':<25} {'SCENARIO':<20} {'MODE':<10} {'STATUS':<12} {'EVIDENCE':<12}")
+    print(f"{'-' * 80}")
+    for run in runs:
+        print(f"{run.run_id:<25} {run.scenario:<20} {run.mode:<10} {run.status:<12} {run.evidence_tier:<12}")
+    print(f"{'=' * 80}")
+    print(f"Total: {len(runs)} runs")
+
+
+def _show_run(run_id: str) -> None:
+    """Show details of a persisted run."""
+    from vapt_platform.persistence import get_repository
+    repository = get_repository()
+    run = repository.get(run_id)
+    
+    if not run:
+        print(f"Run not found: {run_id}")
+        return
+    
+    print(f"\n{'=' * 64}")
+    print(f"RUN: {run.run_id}")
+    print(f"{'=' * 64}")
+    print(f"Scenario:       {run.scenario}")
+    print(f"Mode:           {run.mode}")
+    print(f"Status:         {run.status}")
+    print(f"Final Status:   {run.final_status}")
+    print(f"Evidence Tier:  {run.evidence_tier}")
+    print(f"Target:         {run.target or 'N/A'}")
+    print(f"Port:           {run.port}")
+    print(f"Path:           {run.path}")
+    print(f"Max Attempts:   {run.max_attempts}")
+    print(f"Assessor:       {run.assessor_mode} ({run.assessor_provider})")
+    print(f"Created:        {run.created_at}")
+    print(f"Updated:        {run.updated_at}")
+    print(f"Total Attempts: {run.total_attempts}")
+    print(f"Pivot Count:    {run.pivot_count}")
+    print(f"Candidates:     {len(run.candidates)}")
+    print(f"Processed:      {', '.join(run.candidates_processed) if run.candidates_processed else '(none)'}")
+    print(f"{'=' * 64}")
+    
+    if run.decision_trace:
+        print(f"\nDECISION TRACE:")
+        print(f"{'-' * 40}")
+        for log in run.decision_trace:
+            print(f"  {log}")
+    
+    if run.safety_notice:
+        print(f"\nSAFETY NOTICE:")
+        print(f"{'-' * 40}")
+        print(f"  {run.safety_notice}")
+    
+    print(f"{'=' * 64}\n")
 
 
 def _resume_from_checkpoint(checkpoint_path: str) -> None:
