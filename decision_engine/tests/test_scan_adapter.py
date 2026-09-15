@@ -24,9 +24,10 @@ class TestFindingsToCandidates:
 
     def test_single_finding(self):
         f = MagicMock()
-        f.cve = "CVE-2021-44228"
-        f.epss_score = 0.95
+        f.finding_id = "CVE-2021-44228"
+        f.rule_id = ""
         f.port = 8080
+        f.metadata = {"epss_score": 0.95}
         result = findings_to_candidates([f])
         assert len(result) == 1
         assert isinstance(result[0], ActionCandidate)
@@ -35,35 +36,48 @@ class TestFindingsToCandidates:
         assert result[0].quality_rank is None
         assert result[0].ground_truth is None
 
-    def test_finding_with_no_cve_uses_port(self):
+    def test_finding_with_no_id_uses_rule_id(self):
         f = MagicMock()
-        f.cve = "UNKNOWN-CVE"
-        f.epss_score = 0.0
+        f.finding_id = ""
+        f.rule_id = "RULE-001"
         f.port = 80
+        f.metadata = {}
+        result = findings_to_candidates([f])
+        assert result[0].id == "RULE-001"
+
+    def test_finding_with_port_only(self):
+        f = MagicMock()
+        f.finding_id = ""
+        f.rule_id = ""
+        f.port = 80
+        f.metadata = {}
         result = findings_to_candidates([f])
         assert result[0].id == "PORT-80"
 
     def test_finding_with_no_port(self):
         f = MagicMock()
-        f.cve = None
-        f.epss_score = 0.5
+        f.finding_id = ""
+        f.rule_id = ""
         f.port = None
+        f.metadata = {}
         result = findings_to_candidates([f])
         assert result[0].id == "PORT-UNKNOWN"
 
     def test_probability_clamped_to_0_1(self):
         f = MagicMock()
-        f.cve = "CVE-TEST"
-        f.epss_score = 1.5  # >1 should be clamped
+        f.finding_id = "CVE-TEST"
+        f.rule_id = ""
         f.port = 80
+        f.metadata = {"epss_score": 1.5}
         result = findings_to_candidates([f])
         assert result[0].probability == 1.0
 
     def test_negative_probability_clamped(self):
         f = MagicMock()
-        f.cve = "CVE-TEST"
-        f.epss_score = -0.5  # <0 should be clamped
+        f.finding_id = "CVE-TEST"
+        f.rule_id = ""
         f.port = 80
+        f.metadata = {"epss_score": -0.5}
         result = findings_to_candidates([f])
         assert result[0].probability == 0.0
 
@@ -71,9 +85,10 @@ class TestFindingsToCandidates:
         findings = []
         for i in range(5):
             f = MagicMock()
-            f.cve = f"CVE-2021-000{i}"
-            f.epss_score = 0.1 * (i + 1)
+            f.finding_id = f"CVE-2021-000{i}"
+            f.rule_id = ""
             f.port = 8000 + i
+            f.metadata = {"epss_score": 0.1 * (i + 1)}
             findings.append(f)
         result = findings_to_candidates(findings)
         assert len(result) == 5
@@ -81,20 +96,21 @@ class TestFindingsToCandidates:
 
 
 class TestCandidatesFromScan:
-    def test_calls_process_scan(self):
-        with patch("decision_engine.adapters.scan_adapter.process_scan") as mock_scan:
-            mock_scan.return_value = []
+    def test_calls_registry_parse(self):
+        with patch("decision_engine.adapters.scan_adapter.get_scanner_registry") as mock_reg:
+            mock_reg.return_value.parse.return_value = []
             result = candidates_from_scan("test.json")
-            mock_scan.assert_called_once_with("test.json", timeout=5)
+            mock_reg.return_value.parse.assert_called_once_with("test.json")
         assert result == []
 
     def test_with_findings(self):
         mock_f = MagicMock()
-        mock_f.cve = "CVE-2021-44228"
-        mock_f.epss_score = 0.95
+        mock_f.finding_id = "CVE-2021-44228"
+        mock_f.rule_id = ""
         mock_f.port = 8080
-        with patch("decision_engine.adapters.scan_adapter.process_scan") as mock_scan:
-            mock_scan.return_value = [mock_f]
+        mock_f.metadata = {"epss_score": 0.95}
+        with patch("decision_engine.adapters.scan_adapter.get_scanner_registry") as mock_reg:
+            mock_reg.return_value.parse.return_value = [mock_f]
             result = candidates_from_scan("test.json")
         assert len(result) == 1
         assert result[0].id == "CVE-2021-44228"

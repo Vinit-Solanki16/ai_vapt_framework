@@ -23,7 +23,6 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from core.scanner import process_scan
 from core.agent_graph import build_vapt_graph, AgentState
 from core.executor import Executor
 from core.schemas import (

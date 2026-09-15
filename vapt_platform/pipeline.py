@@ -206,18 +206,37 @@ class Planner:
 # ---------------------------------------------------------------------------
 
 class SafetyGate:
-    """Validates actions before execution."""
+    """Validates actions before execution.
 
-    def __init__(self, allowlist: Optional[set[str]] = None) -> None:
-        self._allowlist = allowlist or set()
+    Uses the platform AuthorizationTracker/ScopeEnforcer for target
+    authorization and scope enforcement. When no tracker is supplied, a
+    lightweight internal allowlist is used for backward compatibility.
+    """
+
+    def __init__(
+        self,
+        allowlist: Optional[set[str]] = None,
+        authorization_tracker: Any = None,
+    ) -> None:
+        self._allowlist = set(allowlist or [])
+        self._tracker = authorization_tracker
+        self._enforcer = None
+
+        if self._tracker is not None:
+            from vapt_platform.authorization import ScopeEnforcer
+            self._enforcer = ScopeEnforcer(self._tracker)
 
     @property
     def allowlist(self) -> set[str]:
+        if self._tracker is not None:
+            return self._tracker.allowlist | self._allowlist
         return self._allowlist.copy()
 
     def add_to_allowlist(self, target: str) -> None:
         """Add a target to the allowlist."""
         self._allowlist.add(target)
+        if self._tracker is not None:
+            self._tracker.authorize(target, authorized_by="SafetyGate")
 
     def validate(self, action: PlannedAction) -> ValidationResult:
         """Validate a planned action.
@@ -230,9 +249,16 @@ class SafetyGate:
         """
         # Scope check: target must be in allowlist
         scope_check = action.target in self._allowlist or not self._allowlist
-
-        # Authorization check: must have explicit authorization
-        authorization_check = action.target in self._allowlist
+        if self._enforcer is not None:
+            try:
+                self._enforcer.validate_target(action.target)
+                self._enforcer.validate_scope(action.target, ports=[action.port] if action.port else None)
+                authorization_check = True
+            except ValueError:
+                authorization_check = False
+        else:
+            # Authorization check: must have explicit authorization
+            authorization_check = action.target in self._allowlist
 
         # Risk check: risk score must be acceptable
         risk_check = action.risk_score <= 1.0  # Always true for normalized scores
@@ -400,9 +426,13 @@ class ValidationPipeline:
         self,
         allowlist: Optional[set[str]] = None,
         max_actions: int = 10,
+        authorization_tracker: Any = None,
     ) -> None:
         self.planner = Planner(max_actions=max_actions)
-        self.safety_gate = SafetyGate(allowlist=allowlist)
+        self.safety_gate = SafetyGate(
+            allowlist=allowlist,
+            authorization_tracker=authorization_tracker,
+        )
         self.verifier = Verifier()
         self.evidence = EvidenceCollector()
 
@@ -444,8 +474,42 @@ class ValidationPipeline:
         execution_results = []
         for action in validated:
             if executor:
-                # Execute through the executor
-                result = executor.execute(action)
+                # Find the original candidate for this action
+                original_candidate = None
+                for c in candidates:
+                    if c.get("id") == action.candidate_id:
+                        original_candidate = c
+                        break
+
+                # Execute through the executor with the original candidate
+                if original_candidate:
+                    try:
+                        # Convert dict to ActionCandidate if needed
+                        from decision_engine.core.schemas import ActionCandidate, candidate_from_dict
+                        if isinstance(original_candidate, dict):
+                            candidate_obj = candidate_from_dict(original_candidate)
+                        else:
+                            candidate_obj = original_candidate
+
+                        result = executor.execute(candidate_obj)
+                        # Convert ExecutionResult to dict if needed
+                        if hasattr(result, 'to_dict'):
+                            result = result.to_dict()
+                        elif hasattr(result, '__dict__'):
+                            result = {
+                                'candidate_id': getattr(result, 'candidate_id', ''),
+                                'outcome': getattr(result, 'outcome', 'UNKNOWN'),
+                                'request_count': getattr(result, 'request_count', 0),
+                                'detail': getattr(result, 'detail', ''),
+                            }
+                        # Ensure outcome is a string
+                        if hasattr(result.get('outcome'), 'value'):
+                            result['outcome'] = result['outcome'].value
+                    except Exception as e:
+                        result = {"outcome": "SKIPPED", "detail": f"Execution error: {e}"}
+                else:
+                    result = {"outcome": "SKIPPED", "detail": "No original candidate found"}
+
                 action.status = ValidationStatus.EXECUTED
                 execution_results.append((action, result))
             else:

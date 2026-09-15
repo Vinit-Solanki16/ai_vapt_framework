@@ -303,9 +303,23 @@ def resume_agent(checkpoint_path: str) -> AgentState:
 
 
 if __name__ == "__main__":
-    from core.scanner import process_scan
-    findings = process_scan("data/sample_scan.json")
-    final = run_agent("127.0.0.1", [f.model_dump() for f in findings])
+    from core.schemas import finding_from_dict
+    from vapt_platform.scanners import get_scanner_registry
+
+    def _to_core_finding(cf):
+        meta = cf.metadata or {}
+        return finding_from_dict({
+            "cve": meta.get("cve") or "UNKNOWN-CVE",
+            "port": cf.port or None,
+            "service": meta.get("service"),
+            "description": cf.description,
+            "epss_score": meta.get("epss_score", 0.0),
+        })
+
+    findings = [f.model_dump() for f in map(
+        _to_core_finding, get_scanner_registry().parse("data/sample_scan.json")
+    )]
+    final = run_agent("127.0.0.1", findings)
     print("\n--- Execution Log ---")
     for log in final["logs"]:
         print(log)

@@ -123,9 +123,15 @@ class TestDockerLabIntegration:
 # ---------------------------------------------------------------------------
 
 class TestCLIDockerLab:
-    def test_cli_scenarios_include_docker(self):
-        from prototype.cli import ALL_SCENARIOS
-        assert "docker_vuln" in ALL_SCENARIOS
-        assert "docker_fail" in ALL_SCENARIOS
-        assert "docker_pivot" in ALL_SCENARIOS
-        assert "docker_multi" in ALL_SCENARIOS
+    def test_cli_uses_application(self):
+        """Verify CLI uses VAPTApplication."""
+        from prototype.cli import _run_scenario
+        assert callable(_run_scenario)
+
+    def test_docker_scenarios_exist(self):
+        """Verify Docker scenarios are registered."""
+        from prototype.docker_demo_data import DOCKER_SCENARIOS
+        assert "docker_vuln" in DOCKER_SCENARIOS
+        assert "docker_fail" in DOCKER_SCENARIOS
+        assert "docker_pivot" in DOCKER_SCENARIOS
+        assert "docker_multi" in DOCKER_SCENARIOS

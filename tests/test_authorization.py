@@ -1,20 +1,9 @@
-"""Tests for multi-agent orchestration layer (M8)."""
+"""Tests for authorization tracking, scope enforcement, and audit logging."""
 
 from __future__ import annotations
 
 import pytest
 
-from vapt_platform.orchestration import (
-    AttackAction,
-    AttackPlan,
-    ExecutionResult,
-    OrchestrationResult,
-    OrchestrationStatus,
-    Orchestrator,
-    Planner,
-    ValidationResult,
-    Validator,
-)
 from vapt_platform.authorization import (
     AuditAction,
     AuditLogger,
@@ -23,109 +12,6 @@ from vapt_platform.authorization import (
     AuthorizationTracker,
     ScopeEnforcer,
 )
-
-
-# ---------------------------------------------------------------------------
-# Planner tests
-# ---------------------------------------------------------------------------
-
-
-class TestPlanner:
-    def test_empty_graph_returns_empty_plan(self):
-        planner = Planner(graph=None)
-        plan = planner.generate_plan()
-        assert plan.actions == []
-
-    def test_plan_has_valid_id(self):
-        planner = Planner(graph=None)
-        plan = planner.generate_plan()
-        assert plan.plan_id == "empty"
-
-
-# ---------------------------------------------------------------------------
-# Executor tests
-# ---------------------------------------------------------------------------
-
-
-class TestExecutor:
-    def test_empty_plan_returns_empty_results(self):
-        from vapt_platform.orchestration import Executor
-        executor = Executor()
-        results = executor.execute_plan(AttackPlan(plan_id="test", actions=[]))
-        assert results == []
-
-
-# ---------------------------------------------------------------------------
-# Validator tests
-# ---------------------------------------------------------------------------
-
-
-class TestValidator:
-    def test_validates_success_outcome(self):
-        validator = Validator()
-        plan = AttackPlan(
-            plan_id="test",
-            actions=[AttackAction(action_id="a1", target="host1", cve="CVE-2021-44228")],
-        )
-        results = [
-            ExecutionResult(action_id="a1", status="completed", outcome="SUCCESS", attempts=1),
-        ]
-        validations = validator.validate(plan, results)
-        assert len(validations) == 1
-        assert validations[0].is_valid is True
-        assert validations[0].confidence == 0.95
-
-    def test_validates_failure_outcome(self):
-        validator = Validator()
-        plan = AttackPlan(
-            plan_id="test",
-            actions=[AttackAction(action_id="a1", target="host1")],
-        )
-        results = [
-            ExecutionResult(action_id="a1", status="completed", outcome="FAIL_TIMEOUT", attempts=2),
-        ]
-        validations = validator.validate(plan, results)
-        assert len(validations) == 1
-        assert validations[0].is_valid is True
-        assert validations[0].confidence == 0.8
-
-    def test_missing_result_is_invalid(self):
-        validator = Validator()
-        plan = AttackPlan(
-            plan_id="test",
-            actions=[AttackAction(action_id="a1", target="host1")],
-        )
-        validations = validator.validate(plan, [])
-        assert len(validations) == 1
-        assert validations[0].is_valid is False
-        assert validations[0].confidence == 0.0
-
-
-# ---------------------------------------------------------------------------
-# Orchestrator tests
-# ---------------------------------------------------------------------------
-
-
-class TestOrchestrator:
-    def test_orchestrator_initializes(self):
-        orch = Orchestrator(graph=None)
-        assert orch.planner is not None
-        assert orch.executor is not None
-        assert orch.validator is not None
-
-    def test_run_with_no_graph(self):
-        orch = Orchestrator(graph=None)
-        result = orch.run()
-        assert result.status == OrchestrationStatus.COMPLETED
-        assert result.plan is not None
-        assert result.plan.actions == []
-
-    def test_run_result_has_expected_fields(self):
-        orch = Orchestrator(graph=None)
-        result = orch.run()
-        assert hasattr(result, "total_attempts")
-        assert hasattr(result, "candidates_processed")
-        assert hasattr(result, "validation_results")
 
 
 # ---------------------------------------------------------------------------
@@ -280,18 +166,3 @@ class TestIntegration:
 
         # Check audit trail
         assert audit.entry_count == 2
-
-    def test_orchestrator_with_graph(self):
-        """Test orchestrator with a mock graph."""
-        class MockGraph:
-            def get_attack_paths(self, source, target):
-                return [[{"host": "10.0.0.1", "cve": "CVE-2021-44228", "port": 8080}]]
-
-            def get_critical_vulns(self, host):
-                return [{"host": "10.0.0.1", "cve": "CVE-2021-44228", "port": 8080, "severity": "critical"}]
-
-        orch = Orchestrator(graph=MockGraph())
-        result = orch.run()
-        assert result.status == OrchestrationStatus.COMPLETED
-        assert result.plan is not None
-        assert len(result.plan.actions) >= 1

@@ -1,63 +1,67 @@
 """Scan adapter — converts scanner output (Finding[]) into engine candidates (ActionCandidate[]).
 
-This is the bridge between the VAPT input layer (core/scanner.py) and the
+This is the bridge between the VAPT input layer (canonical scanner adapters) and the
 domain-independent decision engine. It normalizes findings into the
 ActionCandidate schema so the engine can rank, assess, and pivot on them.
-
-Read-only w.r.t. core/: imports core.scanner but never modifies it.
 """
 from __future__ import annotations
 
-import os
 from typing import List, Optional
 
 from decision_engine.core.schemas import ActionCandidate, candidate_from_dict
-
-# Import the frozen scanner (read-only)
-from core.scanner import process_scan
+from vapt_platform.scanners import get_scanner_registry
 
 
-def candidates_from_scan(file_path: str, timeout: int = 5) -> List[ActionCandidate]:
+def candidates_from_scan(file_path: str) -> List[ActionCandidate]:
     """Build ActionCandidates from a scan file.
 
     Steps:
-      1. Call core.scanner.process_scan() to parse + enrich (EPSS) the scan.
-      2. Normalize each Finding into an ActionCandidate.
+      1. Call the canonical scanner registry to parse the scan.
+      2. Normalize each CanonicalFinding into an ActionCandidate.
       3. Return the list (unranked — the engine ranks by priority_score).
 
     Args:
         file_path: Path to scan file (Nmap XML/JSON or custom JSON).
-        timeout: EPSS lookup timeout (per finding).
 
     Returns:
         List of ActionCandidate objects ready for run_engine().
     """
-    findings = process_scan(file_path, timeout=timeout)
+    findings = get_scanner_registry().parse(file_path)
     return findings_to_candidates(findings)
 
 
 def findings_to_candidates(findings) -> List[ActionCandidate]:
-    """Convert a list of Finding objects to ActionCandidate objects.
+    """Convert a list of CanonicalFinding objects to ActionCandidate objects.
 
     Mapping:
-      - id = finding.cve (or "UNKNOWN-CVE" if none)
-      - probability = finding.epss_score (0..1, live from FIRST.org)
+      - id = finding.finding_id or rule_id (or CVE from metadata if present)
+      - probability = metadata["epss_score"] if present (0..1)
       - quality_rank = None (to be filled by the assessor)
       - ground_truth = None (no simulation label; real observed outcome)
 
     Args:
-        findings: List of core.schemas.Finding objects.
+        findings: List of CanonicalFinding objects.
 
     Returns:
         List of ActionCandidate objects.
     """
     candidates = []
     for f in findings:
-        cid = f.cve if f.cve and f.cve != "UNKNOWN-CVE" else f"PORT-{f.port or 'UNKNOWN'}"
-        prob = f.epss_score if f.epss_score else 0.0
+        if hasattr(f, 'metadata'):
+            metadata = f.metadata or {}
+            cve = metadata.get("cve")
+            cid = cve or f.finding_id or f.rule_id or f"PORT-{f.port or 'UNKNOWN'}"
+            epss = metadata.get("epss_score", 0.0)
+            prob = float(epss or 0.0)
+        else:
+            metadata = {}
+            cve = getattr(f, 'cve', None)
+            cid = cve or getattr(f, 'finding_id', None) or getattr(f, 'rule_id', None) or f"PORT-{getattr(f, 'port', None) or 'UNKNOWN'}"
+            epss = getattr(f, 'epss_score', 0.0)
+            prob = float(epss or 0.0)
         candidates.append(ActionCandidate(
             id=cid,
-            probability=min(max(float(prob), 0.0), 1.0),  # clamp to [0,1]
+            probability=min(max(prob, 0.0), 1.0),
             quality_rank=None,
             ground_truth=None,
         ))

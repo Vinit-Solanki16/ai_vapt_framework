@@ -279,11 +279,21 @@ class Executor:
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import sys
-    from core.scanner import process_scan
     from core.schemas import finding_from_dict
+    from vapt_platform.scanners import get_scanner_registry
+
+    def _to_core_finding(cf):
+        meta = cf.metadata or {}
+        return finding_from_dict({
+            "cve": meta.get("cve") or "UNKNOWN-CVE",
+            "port": cf.port or None,
+            "service": meta.get("service"),
+            "description": cf.description,
+            "epss_score": meta.get("epss_score", 0.0),
+        })
 
     target = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-    findings = process_scan("data/sample_scan.json")
+    findings = [_to_core_finding(cf) for cf in get_scanner_registry().parse("data/sample_scan.json")]
     ex = Executor(mode="simulation")
     for f in findings:
         r = ex.execute(f, target)

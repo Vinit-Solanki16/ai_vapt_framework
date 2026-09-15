@@ -14,13 +14,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# Make the project root importable so `import core...` works when pytest is
+
+# Make the project root importable so `import vapt_platform...` works when pytest is
 # launched from anywhere (tests/ is also a valid cwd).
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import core.scanner  # noqa: E402  (needs ROOT on path first)
 import requests       # noqa: E402
 import socket         # noqa: E402
 
@@ -33,11 +33,6 @@ def offline_guard(monkeypatch):
     call_count == 0 (the executor must never shell out to a corpus PoC in the
     modes under test).
     """
-    # EPSS live API -> deterministic offline stub
-    monkeypatch.setattr(
-        core.scanner, "fetch_epss_score",
-        lambda cve_id, timeout=5: 0.0,
-    )
     # Any stray HTTP request fails loudly (no Ollama / no EPSS / no GitHub)
     monkeypatch.setattr(
         requests, "get",

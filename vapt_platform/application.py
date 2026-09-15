@@ -306,7 +306,7 @@ class VAPTApplication:
 
     def _enrich_candidates(self, candidates: list[dict]) -> list[dict]:
         """Enrich candidates with vulnerability intelligence."""
-        from vapt_platform.enrichment import enrich_findings
+        from vapt_platform import enrichment
         from vapt_platform.normalization import CanonicalFinding
 
         # Convert dicts to CanonicalFinding objects
@@ -334,7 +334,7 @@ class VAPTApplication:
                 findings.append(c)
 
         # Enrich findings
-        enriched = enrich_findings(findings)
+        enriched = enrichment.enrich_findings(findings)
 
         # Convert back to dicts, preserving original fields
         result = []
@@ -423,7 +423,7 @@ class VAPTApplication:
         from prototype.docker_demo_data import DOCKER_SCENARIOS
         from prototype.engine_integration import load_vapt_corpus_scenario
         from vapt_platform.scanners import get_scanner_registry
-        from vapt_platform.enrichment import enrich_findings
+        from vapt_platform import enrichment
 
         all_scenarios = {**SCENARIOS, **DOCKER_SCENARIOS}
 
@@ -432,7 +432,7 @@ class VAPTApplication:
             registry = get_scanner_registry()
             findings = registry.parse(request.scan_file)
             # Enrich findings
-            enriched = enrich_findings(findings)
+            enriched = enrichment.enrich_findings(findings)
             # Convert to candidate dicts
             return [
                 {
@@ -499,14 +499,15 @@ class VAPTApplication:
 
     def _run_validation_pipeline(self, candidates: list[dict], executor, request: VAPTRequest) -> dict:
         """Run the controlled validation pipeline."""
+        from vapt_platform.authorization import AuthorizationTracker
         from vapt_platform.pipeline import ValidationPipeline
 
-        # Build allowlist from request
-        allowlist = set()
+        # Build authorization tracker seeded from the lab target allowlist
+        tracker = AuthorizationTracker()
         if request.target:
-            allowlist.add(request.target)
+            tracker.authorize(request.target, authorized_by="VAPTApplication")
 
-        pipeline = ValidationPipeline(allowlist=allowlist)
+        pipeline = ValidationPipeline(allowlist=set(), authorization_tracker=tracker)
         return pipeline.run(candidates, graph=None, executor=executor)
 
     def _build_result(self, domain: DomainResult, final_state: dict, request: VAPTRequest) -> None:
