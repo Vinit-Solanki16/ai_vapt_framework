@@ -1,0 +1,571 @@
+{
+  "available": true,
+  "results": [
+    {
+      "candidate_id": "CVE-2021-44228",
+      "run_index": 0,
+      "quality_rank": "MEDIUM",
+      "latency_seconds": 2.4897,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:03.490648+00:00"
+    },
+    {
+      "candidate_id": "CVE-2017-0144",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.8819,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:06.372578+00:00"
+    },
+    {
+      "candidate_id": "CVE-2023-38408",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.4251,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:08.797673+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-22965",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 1.9128,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:10.710551+00:00"
+    },
+    {
+      "candidate_id": "CVE-2020-1472",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.4075,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:13.118125+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-26855",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.9148,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:16.032979+00:00"
+    },
+    {
+      "candidate_id": "CVE-2019-0708",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.3081,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:18.341084+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-1388",
+      "run_index": 0,
+      "quality_rank": "LOW",
+      "latency_seconds": 3.5032,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:21.844309+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-44228",
+      "run_index": 1,
+      "quality_rank": "MEDIUM",
+      "latency_seconds": 2.6418,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:24.486216+00:00"
+    },
+    {
+      "candidate_id": "CVE-2017-0144",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 4.4333,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:28.919585+00:00"
+    },
+    {
+      "candidate_id": "CVE-2023-38408",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.6725,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:31.592094+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-22965",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.0715,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:33.663633+00:00"
+    },
+    {
+      "candidate_id": "CVE-2020-1472",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.7509,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:36.414590+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-26855",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.7551,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:39.169733+00:00"
+    },
+    {
+      "candidate_id": "CVE-2019-0708",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 3.4373,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:42.607119+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-1388",
+      "run_index": 1,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.3751,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:44.982245+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-44228",
+      "run_index": 2,
+      "quality_rank": "MEDIUM",
+      "latency_seconds": 3.025,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:48.007292+00:00"
+    },
+    {
+      "candidate_id": "CVE-2017-0144",
+      "run_index": 2,
+      "quality_rank": "MEDIUM",
+      "latency_seconds": 1.6169,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:49.624195+00:00"
+    },
+    {
+      "candidate_id": "CVE-2023-38408",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.4087,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:52.032951+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-22965",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.083,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:54.115976+00:00"
+    },
+    {
+      "candidate_id": "CVE-2020-1472",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.5115,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:56.627496+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-26855",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.8185,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:37:59.446071+00:00"
+    },
+    {
+      "candidate_id": "CVE-2019-0708",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.3633,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:01.809381+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-1388",
+      "run_index": 2,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.0727,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:03.882152+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-44228",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.3422,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:06.224380+00:00"
+    },
+    {
+      "candidate_id": "CVE-2017-0144",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.7788,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:09.003219+00:00"
+    },
+    {
+      "candidate_id": "CVE-2023-38408",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.3762,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:11.379477+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-22965",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.4219,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:13.801376+00:00"
+    },
+    {
+      "candidate_id": "CVE-2020-1472",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.6134,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:16.414785+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-26855",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.5968,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:19.011604+00:00"
+    },
+    {
+      "candidate_id": "CVE-2019-0708",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 3.2419,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:22.253558+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-1388",
+      "run_index": 3,
+      "quality_rank": "LOW",
+      "latency_seconds": 5.941,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:28.194607+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-44228",
+      "run_index": 4,
+      "quality_rank": "MEDIUM",
+      "latency_seconds": 5.1673,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:33.361958+00:00"
+    },
+    {
+      "candidate_id": "CVE-2017-0144",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.4556,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:35.817639+00:00"
+    },
+    {
+      "candidate_id": "CVE-2023-38408",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.2696,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:38.087278+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-22965",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.1913,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:40.278626+00:00"
+    },
+    {
+      "candidate_id": "CVE-2020-1472",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.7356,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:43.014261+00:00"
+    },
+    {
+      "candidate_id": "CVE-2021-26855",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.8394,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:45.853687+00:00"
+    },
+    {
+      "candidate_id": "CVE-2019-0708",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 4.0787,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:49.932474+00:00"
+    },
+    {
+      "candidate_id": "CVE-2022-1388",
+      "run_index": 4,
+      "quality_rank": "LOW",
+      "latency_seconds": 2.966,
+      "source": "llm",
+      "timestamp": "2026-09-16T09:38:52.898491+00:00"
+    }
+  ],
+  "summary": {
+    "available": true,
+    "repetitions": 5,
+    "total_assessments": 40,
+    "llm_count": 40,
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "all_consistent": false,
+    "consistency_per_candidate": {
+      "CVE-2021-44228": {
+        "ranks": [
+          "MEDIUM",
+          "MEDIUM",
+          "MEDIUM",
+          "LOW",
+          "MEDIUM"
+        ],
+        "unique_ranks": [
+          "MEDIUM",
+          "LOW"
+        ],
+        "consistent": false,
+        "mode": "MEDIUM"
+      },
+      "CVE-2017-0144": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "MEDIUM",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "MEDIUM",
+          "LOW"
+        ],
+        "consistent": false,
+        "mode": "LOW"
+      },
+      "CVE-2023-38408": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2022-22965": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2020-1472": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2021-26855": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2019-0708": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2022-1388": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      }
+    },
+    "latency_stats": {
+      "CVE-2021-44228": {
+        "mean": 3.1332,
+        "median": 2.6418,
+        "stdev": 1.1652,
+        "min": 2.3422,
+        "max": 5.1673,
+        "all": [
+          2.4897,
+          2.6418,
+          3.025,
+          2.3422,
+          5.1673
+        ]
+      },
+      "CVE-2017-0144": {
+        "mean": 2.8333,
+        "median": 2.7788,
+        "stdev": 1.0232,
+        "min": 1.6169,
+        "max": 4.4333,
+        "all": [
+          2.8819,
+          4.4333,
+          1.6169,
+          2.7788,
+          2.4556
+        ]
+      },
+      "CVE-2023-38408": {
+        "mean": 2.4304,
+        "median": 2.4087,
+        "stdev": 0.1482,
+        "min": 2.2696,
+        "max": 2.6725,
+        "all": [
+          2.4251,
+          2.6725,
+          2.4087,
+          2.3762,
+          2.2696
+        ]
+      },
+      "CVE-2022-22965": {
+        "mean": 2.1361,
+        "median": 2.083,
+        "stdev": 0.1881,
+        "min": 1.9128,
+        "max": 2.4219,
+        "all": [
+          1.9128,
+          2.0715,
+          2.083,
+          2.4219,
+          2.1913
+        ]
+      },
+      "CVE-2020-1472": {
+        "mean": 2.6038,
+        "median": 2.6134,
+        "stdev": 0.1467,
+        "min": 2.4075,
+        "max": 2.7509,
+        "all": [
+          2.4075,
+          2.7509,
+          2.5115,
+          2.6134,
+          2.7356
+        ]
+      },
+      "CVE-2021-26855": {
+        "mean": 2.7849,
+        "median": 2.8185,
+        "stdev": 0.1196,
+        "min": 2.5968,
+        "max": 2.9148,
+        "all": [
+          2.9148,
+          2.7551,
+          2.8185,
+          2.5968,
+          2.8394
+        ]
+      },
+      "CVE-2019-0708": {
+        "mean": 3.0859,
+        "median": 3.2419,
+        "stdev": 0.7518,
+        "min": 2.3081,
+        "max": 4.0787,
+        "all": [
+          2.3081,
+          3.4373,
+          2.3633,
+          3.2419,
+          4.0787
+        ]
+      },
+      "CVE-2022-1388": {
+        "mean": 3.3716,
+        "median": 2.966,
+        "stdev": 1.5382,
+        "min": 2.0727,
+        "max": 5.941,
+        "all": [
+          3.5032,
+          2.3751,
+          2.0727,
+          5.941,
+          2.966
+        ]
+      }
+    },
+    "overall_latency": {
+      "mean": 2.7974,
+      "median": 2.6051,
+      "stdev": 0.8382,
+      "min": 1.6169,
+      "max": 5.941
+    }
+  }
+}

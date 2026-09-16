@@ -1,0 +1,1106 @@
+[
+  {
+    "scenario_name": "assessment_changes_ranking",
+    "candidate_count": 3,
+    "scenario_type": "assessment_changes_ranking",
+    "baseline_order": [
+      "HIGH-PROB-FAIL",
+      "MED-PROB-SUCCESS",
+      "LOW-PROB-FAIL"
+    ],
+    "treatment_order": [
+      "HIGH-PROB-FAIL",
+      "MED-PROB-SUCCESS",
+      "LOW-PROB-FAIL"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "HIGH-PROB-FAIL": 0.72,
+      "MED-PROB-SUCCESS": 0.55,
+      "LOW-PROB-FAIL": 0.195
+    },
+    "quality_ranks": {
+      "HIGH-PROB-FAIL": "MEDIUM",
+      "MED-PROB-SUCCESS": "HIGH",
+      "LOW-PROB-FAIL": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "HIGH-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HIGH-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MED-PROB-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LOW-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LOW-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 5,
+    "failed_attempts": 4,
+    "successful_validations": 1,
+    "pivot_count": 4,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0065,
+    "timestamp": "2026-09-16T09:36:56.345621+00:00"
+  },
+  {
+    "scenario_name": "assessment_no_change",
+    "candidate_count": 3,
+    "scenario_type": "no_change",
+    "baseline_order": [
+      "ALL-SUCCESS-A",
+      "ALL-SUCCESS-B",
+      "ALL-SUCCESS-C"
+    ],
+    "treatment_order": [
+      "ALL-SUCCESS-A",
+      "ALL-SUCCESS-B",
+      "ALL-SUCCESS-C"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "ALL-SUCCESS-A": 0.8,
+      "ALL-SUCCESS-B": 0.6,
+      "ALL-SUCCESS-C": 0.4
+    },
+    "quality_ranks": {
+      "ALL-SUCCESS-A": "HIGH",
+      "ALL-SUCCESS-B": "HIGH",
+      "ALL-SUCCESS-C": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "ALL-SUCCESS-A",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "ALL-SUCCESS-B",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "ALL-SUCCESS-C",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 3,
+    "failed_attempts": 0,
+    "successful_validations": 3,
+    "pivot_count": 2,
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0043,
+    "timestamp": "2026-09-16T09:36:56.350031+00:00"
+  },
+  {
+    "scenario_name": "high_prob_poor_quality",
+    "candidate_count": 3,
+    "scenario_type": "high_prob_poor_quality",
+    "baseline_order": [
+      "HP-POOR",
+      "LP-GOOD",
+      "LP-MED"
+    ],
+    "treatment_order": [
+      "HP-POOR",
+      "LP-GOOD",
+      "LP-MED"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "HP-POOR": 0.76,
+      "LP-GOOD": 0.45,
+      "LP-MED": 0.35
+    },
+    "quality_ranks": {
+      "HP-POOR": "MEDIUM",
+      "LP-GOOD": "HIGH",
+      "LP-MED": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "HP-POOR",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HP-POOR",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LP-GOOD",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LP-MED",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 4,
+    "failed_attempts": 2,
+    "successful_validations": 2,
+    "pivot_count": 3,
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0034,
+    "timestamp": "2026-09-16T09:36:56.353520+00:00"
+  },
+  {
+    "scenario_name": "lower_prob_high_quality",
+    "candidate_count": 4,
+    "scenario_type": "lower_prob_high_quality",
+    "baseline_order": [
+      "HP-LOW",
+      "HP-MED",
+      "LP-HIGH-1",
+      "LP-HIGH-2"
+    ],
+    "treatment_order": [
+      "HP-LOW",
+      "HP-MED",
+      "LP-HIGH-1",
+      "LP-HIGH-2"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "HP-LOW": 0.5525,
+      "HP-MED": 0.4875,
+      "LP-HIGH-1": 0.4,
+      "LP-HIGH-2": 0.35
+    },
+    "quality_ranks": {
+      "HP-LOW": "LOW",
+      "HP-MED": "LOW",
+      "LP-HIGH-1": "HIGH",
+      "LP-HIGH-2": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "HP-LOW",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HP-LOW",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HP-MED",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HP-MED",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LP-HIGH-1",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LP-HIGH-2",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 6,
+    "failed_attempts": 4,
+    "successful_validations": 2,
+    "pivot_count": 5,
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0039,
+    "timestamp": "2026-09-16T09:36:56.357505+00:00"
+  },
+  {
+    "scenario_name": "mixed_population",
+    "candidate_count": 5,
+    "scenario_type": "mixed_population",
+    "baseline_order": [
+      "MIX-A",
+      "MIX-B",
+      "MIX-C",
+      "MIX-D",
+      "MIX-E"
+    ],
+    "treatment_order": [
+      "MIX-A",
+      "MIX-B",
+      "MIX-D",
+      "MIX-C",
+      "MIX-E"
+    ],
+    "ranking_changed": true,
+    "assessment_source": "deterministic",
+    "scores": {
+      "MIX-A": 0.72,
+      "MIX-B": 0.7,
+      "MIX-D": 0.4,
+      "MIX-C": 0.325,
+      "MIX-E": 0.13
+    },
+    "quality_ranks": {
+      "MIX-A": "MEDIUM",
+      "MIX-B": "HIGH",
+      "MIX-D": "HIGH",
+      "MIX-C": "LOW",
+      "MIX-E": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "MIX-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-B",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-D",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-C",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-C",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-E",
+        "outcome": "FAIL_DEPENDENCY",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "MIX-E",
+        "outcome": "FAIL_DEPENDENCY",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 8,
+    "failed_attempts": 6,
+    "successful_validations": 2,
+    "pivot_count": 7,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0053,
+    "timestamp": "2026-09-16T09:36:56.362962+00:00"
+  },
+  {
+    "scenario_name": "all_high_quality",
+    "candidate_count": 4,
+    "scenario_type": "all_high_quality",
+    "baseline_order": [
+      "HQ-1",
+      "HQ-2",
+      "HQ-3",
+      "HQ-4"
+    ],
+    "treatment_order": [
+      "HQ-1",
+      "HQ-2",
+      "HQ-3",
+      "HQ-4"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "HQ-1": 0.85,
+      "HQ-2": 0.65,
+      "HQ-3": 0.45,
+      "HQ-4": 0.25
+    },
+    "quality_ranks": {
+      "HQ-1": "HIGH",
+      "HQ-2": "HIGH",
+      "HQ-3": "HIGH",
+      "HQ-4": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "HQ-1",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HQ-2",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HQ-3",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HQ-4",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 4,
+    "failed_attempts": 0,
+    "successful_validations": 4,
+    "pivot_count": 3,
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0044,
+    "timestamp": "2026-09-16T09:36:56.367390+00:00"
+  },
+  {
+    "scenario_name": "all_low_quality",
+    "candidate_count": 4,
+    "scenario_type": "all_low_quality",
+    "baseline_order": [
+      "LQ-1",
+      "LQ-2",
+      "LQ-3",
+      "LQ-4"
+    ],
+    "treatment_order": [
+      "LQ-1",
+      "LQ-2",
+      "LQ-3",
+      "LQ-4"
+    ],
+    "ranking_changed": false,
+    "assessment_source": "deterministic",
+    "scores": {
+      "LQ-1": 0.72,
+      "LQ-2": 0.455,
+      "LQ-3": 0.325,
+      "LQ-4": 0.195
+    },
+    "quality_ranks": {
+      "LQ-1": "MEDIUM",
+      "LQ-2": "LOW",
+      "LQ-3": "LOW",
+      "LQ-4": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "LQ-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-3",
+        "outcome": "FAIL_DEPENDENCY",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-3",
+        "outcome": "FAIL_DEPENDENCY",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-4",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LQ-4",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 8,
+    "failed_attempts": 8,
+    "successful_validations": 0,
+    "pivot_count": 7,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0044,
+    "timestamp": "2026-09-16T09:36:56.371890+00:00"
+  },
+  {
+    "scenario_name": "large_set_10",
+    "candidate_count": 10,
+    "scenario_type": "large_set_10",
+    "baseline_order": [
+      "C00",
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09"
+    ],
+    "treatment_order": [
+      "C00",
+      "C03",
+      "C01",
+      "C02",
+      "C06",
+      "C04",
+      "C05",
+      "C07",
+      "C09",
+      "C08"
+    ],
+    "ranking_changed": true,
+    "assessment_source": "deterministic",
+    "scores": {
+      "C00": 0.95,
+      "C03": 0.71,
+      "C01": 0.5655,
+      "C02": 0.5135,
+      "C06": 0.47,
+      "C04": 0.4095,
+      "C05": 0.3575,
+      "C07": 0.2535,
+      "C09": 0.23,
+      "C08": 0.2015
+    },
+    "quality_ranks": {
+      "C00": "HIGH",
+      "C03": "HIGH",
+      "C01": "LOW",
+      "C02": "LOW",
+      "C06": "HIGH",
+      "C04": "LOW",
+      "C05": "LOW",
+      "C07": "LOW",
+      "C09": "HIGH",
+      "C08": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "C00",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C03",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C06",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C04",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C04",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C05",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C05",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C09",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C08",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C08",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 16,
+    "failed_attempts": 12,
+    "successful_validations": 4,
+    "pivot_count": 15,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0074,
+    "timestamp": "2026-09-16T09:36:56.379411+00:00"
+  },
+  {
+    "scenario_name": "large_set_15",
+    "candidate_count": 15,
+    "scenario_type": "large_set_15",
+    "baseline_order": [
+      "X00",
+      "X01",
+      "X02",
+      "X03",
+      "X04",
+      "X05",
+      "X06",
+      "X07",
+      "X08",
+      "X09",
+      "X10",
+      "X11",
+      "X12",
+      "X13",
+      "X14"
+    ],
+    "treatment_order": [
+      "X00",
+      "X04",
+      "X01",
+      "X02",
+      "X03",
+      "X08",
+      "X05",
+      "X06",
+      "X07",
+      "X09",
+      "X12",
+      "X10",
+      "X11",
+      "X13",
+      "X14"
+    ],
+    "ranking_changed": true,
+    "assessment_source": "deterministic",
+    "scores": {
+      "X00": 0.95,
+      "X04": 0.71,
+      "X01": 0.5785,
+      "X02": 0.5395,
+      "X03": 0.5005,
+      "X08": 0.47,
+      "X05": 0.4225,
+      "X06": 0.3835,
+      "X07": 0.3445,
+      "X09": 0.2665,
+      "X12": 0.23,
+      "X10": 0.2275,
+      "X11": 0.1885,
+      "X13": 0.1105,
+      "X14": 0.0715
+    },
+    "quality_ranks": {
+      "X00": "HIGH",
+      "X04": "HIGH",
+      "X01": "LOW",
+      "X02": "LOW",
+      "X03": "LOW",
+      "X08": "HIGH",
+      "X05": "LOW",
+      "X06": "LOW",
+      "X07": "LOW",
+      "X09": "LOW",
+      "X12": "HIGH",
+      "X10": "LOW",
+      "X11": "LOW",
+      "X13": "LOW",
+      "X14": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "X00",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X04",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X03",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X03",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X08",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X05",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X05",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X06",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X06",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X09",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X09",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X12",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X10",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X10",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X11",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X11",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X13",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X13",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X14",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "X14",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 26,
+    "failed_attempts": 22,
+    "successful_validations": 4,
+    "pivot_count": 25,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0115,
+    "timestamp": "2026-09-16T09:36:56.391056+00:00"
+  },
+  {
+    "scenario_name": "large_set_20",
+    "candidate_count": 20,
+    "scenario_type": "large_set_20",
+    "baseline_order": [
+      "Z00",
+      "Z01",
+      "Z02",
+      "Z03",
+      "Z04",
+      "Z05",
+      "Z06",
+      "Z07",
+      "Z08",
+      "Z09",
+      "Z10",
+      "Z11",
+      "Z12",
+      "Z13",
+      "Z14",
+      "Z15",
+      "Z16",
+      "Z17",
+      "Z18",
+      "Z19"
+    ],
+    "treatment_order": [
+      "Z00",
+      "Z01",
+      "Z05",
+      "Z02",
+      "Z03",
+      "Z04",
+      "Z10",
+      "Z06",
+      "Z07",
+      "Z08",
+      "Z09",
+      "Z11",
+      "Z15",
+      "Z12",
+      "Z13",
+      "Z14",
+      "Z16",
+      "Z17",
+      "Z18",
+      "Z19"
+    ],
+    "ranking_changed": true,
+    "assessment_source": "deterministic",
+    "scores": {
+      "Z00": 0.95,
+      "Z01": 0.72,
+      "Z05": 0.72,
+      "Z02": 0.559,
+      "Z03": 0.5265,
+      "Z04": 0.5005,
+      "Z10": 0.5,
+      "Z06": 0.442,
+      "Z07": 0.416,
+      "Z08": 0.3835,
+      "Z09": 0.351,
+      "Z11": 0.2925,
+      "Z15": 0.28,
+      "Z12": 0.2665,
+      "Z13": 0.234,
+      "Z14": 0.208,
+      "Z16": 0.1495,
+      "Z17": 0.117,
+      "Z18": 0.091,
+      "Z19": 0.0585
+    },
+    "quality_ranks": {
+      "Z00": "HIGH",
+      "Z01": "MEDIUM",
+      "Z05": "HIGH",
+      "Z02": "LOW",
+      "Z03": "LOW",
+      "Z04": "LOW",
+      "Z10": "HIGH",
+      "Z06": "LOW",
+      "Z07": "LOW",
+      "Z08": "LOW",
+      "Z09": "LOW",
+      "Z11": "LOW",
+      "Z15": "HIGH",
+      "Z12": "LOW",
+      "Z13": "LOW",
+      "Z14": "LOW",
+      "Z16": "LOW",
+      "Z17": "LOW",
+      "Z18": "LOW",
+      "Z19": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "Z00",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z01",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z05",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z02",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z03",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z03",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z04",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z04",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z10",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z06",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z06",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z07",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z08",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z08",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z09",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z09",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z11",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z11",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z15",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z12",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z12",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z13",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z13",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z14",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z14",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z16",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z16",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z17",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z17",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z18",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z18",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z19",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "Z19",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 36,
+    "failed_attempts": 32,
+    "successful_validations": 4,
+    "pivot_count": 35,
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0141,
+    "timestamp": "2026-09-16T09:36:56.405327+00:00"
+  }
+]

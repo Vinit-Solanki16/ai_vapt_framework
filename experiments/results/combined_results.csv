@@ -1,0 +1,5 @@
+scenario_name,mode,candidate_count,assessment_source,ranking_order,total_attempts,failed_attempts,successful_validations,pivot_count,final_status,assessment_latency_seconds,total_latency_seconds
+combined_mixed,baseline,4,deterministic,CMB-A|CMB-B|CMB-D|CMB-C,6,4,2,5,COMPLETED,0.0,0.0044
+combined_mixed,treatment,4,llm,CMB-A|CMB-B|CMB-C|CMB-D,6,4,2,5,SUCCESS,7.2027,7.419
+combined_large,baseline,10,deterministic,CL-0|CL-3|CL-1|CL-2|CL-7|CL-4|CL-5|CL-6|CL-8|CL-9,18,16,2,17,COMPLETED,0.0003,0.0079
+combined_large,treatment,10,llm,CL-0|CL-1|CL-2|CL-3|CL-4|CL-5|CL-6|CL-7|CL-8|CL-9,18,16,2,17,COMPLETED,16.8116,17.8814

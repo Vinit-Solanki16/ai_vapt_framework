@@ -1,0 +1,417 @@
+{
+  "timestamp": "2026-09-16T09:39:42.414037+00:00",
+  "gap1": {
+    "total_experiments": 10,
+    "ranking_changed_count": 4,
+    "ranking_changed_rate": 0.4,
+    "ranking_unchanged_count": 6,
+    "attempts": {
+      "mean": 11.6,
+      "median": 7.0,
+      "stdev": 11.1176,
+      "min": 3,
+      "max": 36
+    },
+    "successful_validations": {
+      "mean": 2.6,
+      "median": 2.5,
+      "stdev": 1.4298,
+      "min": 0,
+      "max": 4
+    },
+    "pivots": {
+      "mean": 10.6,
+      "median": 6.0,
+      "stdev": 11.1176,
+      "min": 2,
+      "max": 35
+    },
+    "execution_time": {
+      "mean": 0.0065,
+      "median": 0.0049,
+      "stdev": 0.0036,
+      "min": 0.0034,
+      "max": 0.0141
+    },
+    "by_scenario_type": {
+      "assessment_changes_ranking": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 5,
+        "mean_success": 1
+      },
+      "no_change": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 3,
+        "mean_success": 3
+      },
+      "high_prob_poor_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 4,
+        "mean_success": 2
+      },
+      "lower_prob_high_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 6,
+        "mean_success": 2
+      },
+      "mixed_population": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 8,
+        "mean_success": 2
+      },
+      "all_high_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 4,
+        "mean_success": 4
+      },
+      "all_low_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 8,
+        "mean_success": 0
+      },
+      "large_set_10": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 16,
+        "mean_success": 4
+      },
+      "large_set_15": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 26,
+        "mean_success": 4
+      },
+      "large_set_20": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 36,
+        "mean_success": 4
+      }
+    }
+  },
+  "gap2": {
+    "total_experiments": 30,
+    "all_bounded": true,
+    "bounded_count": 30,
+    "attempts": {
+      "mean": 11.6667,
+      "median": 9.5,
+      "stdev": 10.2329,
+      "min": 3,
+      "max": 46
+    },
+    "pivots": {
+      "mean": 7.1667,
+      "median": 6.0,
+      "stdev": 5.2,
+      "min": 2,
+      "max": 18
+    },
+    "by_threshold": {
+      "1": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 4.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 10
+      },
+      "2": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 8.1667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 19
+      },
+      "3": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 11.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 28
+      },
+      "4": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 15.1667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 37
+      },
+      "5": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 18.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 46
+      }
+    }
+  },
+  "llm_behavior": {
+    "available": true,
+    "repetitions": 5,
+    "total_assessments": 40,
+    "llm_count": 40,
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "all_consistent": false,
+    "consistency_per_candidate": {
+      "CVE-2021-44228": {
+        "ranks": [
+          "MEDIUM",
+          "MEDIUM",
+          "MEDIUM",
+          "LOW",
+          "MEDIUM"
+        ],
+        "unique_ranks": [
+          "MEDIUM",
+          "LOW"
+        ],
+        "consistent": false,
+        "mode": "MEDIUM"
+      },
+      "CVE-2017-0144": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "MEDIUM",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "MEDIUM",
+          "LOW"
+        ],
+        "consistent": false,
+        "mode": "LOW"
+      },
+      "CVE-2023-38408": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2022-22965": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2020-1472": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2021-26855": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2019-0708": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      },
+      "CVE-2022-1388": {
+        "ranks": [
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW",
+          "LOW"
+        ],
+        "unique_ranks": [
+          "LOW"
+        ],
+        "consistent": true,
+        "mode": "LOW"
+      }
+    },
+    "latency_stats": {
+      "CVE-2021-44228": {
+        "mean": 3.1332,
+        "median": 2.6418,
+        "stdev": 1.1652,
+        "min": 2.3422,
+        "max": 5.1673,
+        "all": [
+          2.4897,
+          2.6418,
+          3.025,
+          2.3422,
+          5.1673
+        ]
+      },
+      "CVE-2017-0144": {
+        "mean": 2.8333,
+        "median": 2.7788,
+        "stdev": 1.0232,
+        "min": 1.6169,
+        "max": 4.4333,
+        "all": [
+          2.8819,
+          4.4333,
+          1.6169,
+          2.7788,
+          2.4556
+        ]
+      },
+      "CVE-2023-38408": {
+        "mean": 2.4304,
+        "median": 2.4087,
+        "stdev": 0.1482,
+        "min": 2.2696,
+        "max": 2.6725,
+        "all": [
+          2.4251,
+          2.6725,
+          2.4087,
+          2.3762,
+          2.2696
+        ]
+      },
+      "CVE-2022-22965": {
+        "mean": 2.1361,
+        "median": 2.083,
+        "stdev": 0.1881,
+        "min": 1.9128,
+        "max": 2.4219,
+        "all": [
+          1.9128,
+          2.0715,
+          2.083,
+          2.4219,
+          2.1913
+        ]
+      },
+      "CVE-2020-1472": {
+        "mean": 2.6038,
+        "median": 2.6134,
+        "stdev": 0.1467,
+        "min": 2.4075,
+        "max": 2.7509,
+        "all": [
+          2.4075,
+          2.7509,
+          2.5115,
+          2.6134,
+          2.7356
+        ]
+      },
+      "CVE-2021-26855": {
+        "mean": 2.7849,
+        "median": 2.8185,
+        "stdev": 0.1196,
+        "min": 2.5968,
+        "max": 2.9148,
+        "all": [
+          2.9148,
+          2.7551,
+          2.8185,
+          2.5968,
+          2.8394
+        ]
+      },
+      "CVE-2019-0708": {
+        "mean": 3.0859,
+        "median": 3.2419,
+        "stdev": 0.7518,
+        "min": 2.3081,
+        "max": 4.0787,
+        "all": [
+          2.3081,
+          3.4373,
+          2.3633,
+          3.2419,
+          4.0787
+        ]
+      },
+      "CVE-2022-1388": {
+        "mean": 3.3716,
+        "median": 2.966,
+        "stdev": 1.5382,
+        "min": 2.0727,
+        "max": 5.941,
+        "all": [
+          3.5032,
+          2.3751,
+          2.0727,
+          5.941,
+          2.966
+        ]
+      }
+    },
+    "overall_latency": {
+      "mean": 2.7974,
+      "median": 2.6051,
+      "stdev": 0.8382,
+      "min": 1.6169,
+      "max": 5.941
+    }
+  },
+  "combined": {
+    "total_experiments": 4,
+    "baseline_count": 2,
+    "treatment_count": 2,
+    "baseline": {
+      "mean_attempts": 12,
+      "mean_success": 2,
+      "mean_pivots": 11
+    },
+    "treatment": {
+      "mean_attempts": 12,
+      "mean_success": 2,
+      "mean_pivots": 11,
+      "mean_assess_latency": 12.0071
+    }
+  }
+}

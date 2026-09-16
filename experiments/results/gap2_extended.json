@@ -1,0 +1,2052 @@
+[
+  {
+    "scenario_name": "immediate_success",
+    "threshold": 1,
+    "candidate_count": 3,
+    "scenario_type": "immediate_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 3,
+    "bounded": true,
+    "pivot_count": 2,
+    "candidate_attempt_counters": {
+      "IS-1": 1,
+      "IS-2": 1,
+      "IS-3": 1
+    },
+    "final_status": "SUCCESS",
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-3",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "execution_time_seconds": 0.0088,
+    "timestamp": "2026-09-16T09:38:52.908431+00:00"
+  },
+  {
+    "scenario_name": "immediate_success",
+    "threshold": 2,
+    "candidate_count": 3,
+    "scenario_type": "immediate_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 6,
+    "bounded": true,
+    "pivot_count": 2,
+    "candidate_attempt_counters": {
+      "IS-1": 1,
+      "IS-2": 1,
+      "IS-3": 1
+    },
+    "final_status": "SUCCESS",
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-3",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "execution_time_seconds": 0.0037,
+    "timestamp": "2026-09-16T09:38:52.912125+00:00"
+  },
+  {
+    "scenario_name": "immediate_success",
+    "threshold": 3,
+    "candidate_count": 3,
+    "scenario_type": "immediate_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 9,
+    "bounded": true,
+    "pivot_count": 2,
+    "candidate_attempt_counters": {
+      "IS-1": 1,
+      "IS-2": 1,
+      "IS-3": 1
+    },
+    "final_status": "SUCCESS",
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-3",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "execution_time_seconds": 0.0038,
+    "timestamp": "2026-09-16T09:38:52.915911+00:00"
+  },
+  {
+    "scenario_name": "immediate_success",
+    "threshold": 4,
+    "candidate_count": 3,
+    "scenario_type": "immediate_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 12,
+    "bounded": true,
+    "pivot_count": 2,
+    "candidate_attempt_counters": {
+      "IS-1": 1,
+      "IS-2": 1,
+      "IS-3": 1
+    },
+    "final_status": "SUCCESS",
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-3",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "execution_time_seconds": 0.0032,
+    "timestamp": "2026-09-16T09:38:52.919170+00:00"
+  },
+  {
+    "scenario_name": "immediate_success",
+    "threshold": 5,
+    "candidate_count": 3,
+    "scenario_type": "immediate_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 15,
+    "bounded": true,
+    "pivot_count": 2,
+    "candidate_attempt_counters": {
+      "IS-1": 1,
+      "IS-2": 1,
+      "IS-3": 1
+    },
+    "final_status": "SUCCESS",
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "IS-3",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "execution_time_seconds": 0.0038,
+    "timestamp": "2026-09-16T09:38:52.922946+00:00"
+  },
+  {
+    "scenario_name": "one_fail_then_success",
+    "threshold": 1,
+    "candidate_count": 3,
+    "scenario_type": "one_fail_then_success",
+    "total_attempts": 3,
+    "expected_max_attempts": 3,
+    "bounded": true,
+    "pivot_count": 4,
+    "candidate_attempt_counters": {
+      "OFS-FAIL": 1,
+      "OFS-SUCCESS": 1,
+      "OFS-FAIL2": 1
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "execution_time_seconds": 0.0041,
+    "timestamp": "2026-09-16T09:38:52.927083+00:00"
+  },
+  {
+    "scenario_name": "one_fail_then_success",
+    "threshold": 2,
+    "candidate_count": 3,
+    "scenario_type": "one_fail_then_success",
+    "total_attempts": 5,
+    "expected_max_attempts": 6,
+    "bounded": true,
+    "pivot_count": 4,
+    "candidate_attempt_counters": {
+      "OFS-FAIL": 2,
+      "OFS-SUCCESS": 1,
+      "OFS-FAIL2": 2
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "execution_time_seconds": 0.0075,
+    "timestamp": "2026-09-16T09:38:52.934642+00:00"
+  },
+  {
+    "scenario_name": "one_fail_then_success",
+    "threshold": 3,
+    "candidate_count": 3,
+    "scenario_type": "one_fail_then_success",
+    "total_attempts": 7,
+    "expected_max_attempts": 9,
+    "bounded": true,
+    "pivot_count": 4,
+    "candidate_attempt_counters": {
+      "OFS-FAIL": 3,
+      "OFS-SUCCESS": 1,
+      "OFS-FAIL2": 3
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "execution_time_seconds": 0.0087,
+    "timestamp": "2026-09-16T09:38:52.943368+00:00"
+  },
+  {
+    "scenario_name": "one_fail_then_success",
+    "threshold": 4,
+    "candidate_count": 3,
+    "scenario_type": "one_fail_then_success",
+    "total_attempts": 9,
+    "expected_max_attempts": 12,
+    "bounded": true,
+    "pivot_count": 4,
+    "candidate_attempt_counters": {
+      "OFS-FAIL": 4,
+      "OFS-SUCCESS": 1,
+      "OFS-FAIL2": 4
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "execution_time_seconds": 0.0052,
+    "timestamp": "2026-09-16T09:38:52.948629+00:00"
+  },
+  {
+    "scenario_name": "one_fail_then_success",
+    "threshold": 5,
+    "candidate_count": 3,
+    "scenario_type": "one_fail_then_success",
+    "total_attempts": 11,
+    "expected_max_attempts": 15,
+    "bounded": true,
+    "pivot_count": 4,
+    "candidate_attempt_counters": {
+      "OFS-FAIL": 5,
+      "OFS-SUCCESS": 1,
+      "OFS-FAIL2": 5
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-FAIL",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "OFS-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "OFS-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "execution_time_seconds": 0.0047,
+    "timestamp": "2026-09-16T09:38:52.953334+00:00"
+  },
+  {
+    "scenario_name": "repeated_failure_pivot",
+    "threshold": 1,
+    "candidate_count": 4,
+    "scenario_type": "repeated_failure_pivot",
+    "total_attempts": 4,
+    "expected_max_attempts": 4,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "RFP-FAIL1": 1,
+      "RFP-SUCCESS": 1,
+      "RFP-FAIL2": 1,
+      "RFP-FAIL3": 1
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0037,
+    "timestamp": "2026-09-16T09:38:52.957083+00:00"
+  },
+  {
+    "scenario_name": "repeated_failure_pivot",
+    "threshold": 2,
+    "candidate_count": 4,
+    "scenario_type": "repeated_failure_pivot",
+    "total_attempts": 7,
+    "expected_max_attempts": 8,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "RFP-FAIL1": 2,
+      "RFP-SUCCESS": 1,
+      "RFP-FAIL2": 2,
+      "RFP-FAIL3": 2
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0043,
+    "timestamp": "2026-09-16T09:38:52.961358+00:00"
+  },
+  {
+    "scenario_name": "repeated_failure_pivot",
+    "threshold": 3,
+    "candidate_count": 4,
+    "scenario_type": "repeated_failure_pivot",
+    "total_attempts": 10,
+    "expected_max_attempts": 12,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "RFP-FAIL1": 3,
+      "RFP-SUCCESS": 1,
+      "RFP-FAIL2": 3,
+      "RFP-FAIL3": 3
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0045,
+    "timestamp": "2026-09-16T09:38:52.965877+00:00"
+  },
+  {
+    "scenario_name": "repeated_failure_pivot",
+    "threshold": 4,
+    "candidate_count": 4,
+    "scenario_type": "repeated_failure_pivot",
+    "total_attempts": 13,
+    "expected_max_attempts": 16,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "RFP-FAIL1": 4,
+      "RFP-SUCCESS": 1,
+      "RFP-FAIL2": 4,
+      "RFP-FAIL3": 4
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0054,
+    "timestamp": "2026-09-16T09:38:52.971344+00:00"
+  },
+  {
+    "scenario_name": "repeated_failure_pivot",
+    "threshold": 5,
+    "candidate_count": 4,
+    "scenario_type": "repeated_failure_pivot",
+    "total_attempts": 16,
+    "expected_max_attempts": 20,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "RFP-FAIL1": 5,
+      "RFP-SUCCESS": 1,
+      "RFP-FAIL2": 5,
+      "RFP-FAIL3": 5
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-FAIL1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "RFP-SUCCESS",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "RFP-FAIL3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0056,
+    "timestamp": "2026-09-16T09:38:52.976972+00:00"
+  },
+  {
+    "scenario_name": "multiple_candidates_failing",
+    "threshold": 1,
+    "candidate_count": 4,
+    "scenario_type": "multiple_fail",
+    "total_attempts": 4,
+    "expected_max_attempts": 4,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "MF-1": 1,
+      "MF-2": 1,
+      "MF-OK": 1,
+      "MF-3": 1
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-OK",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0036,
+    "timestamp": "2026-09-16T09:38:52.980541+00:00"
+  },
+  {
+    "scenario_name": "multiple_candidates_failing",
+    "threshold": 2,
+    "candidate_count": 4,
+    "scenario_type": "multiple_fail",
+    "total_attempts": 7,
+    "expected_max_attempts": 8,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "MF-1": 2,
+      "MF-2": 2,
+      "MF-OK": 1,
+      "MF-3": 2
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-OK",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0042,
+    "timestamp": "2026-09-16T09:38:52.984773+00:00"
+  },
+  {
+    "scenario_name": "multiple_candidates_failing",
+    "threshold": 3,
+    "candidate_count": 4,
+    "scenario_type": "multiple_fail",
+    "total_attempts": 10,
+    "expected_max_attempts": 12,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "MF-1": 3,
+      "MF-2": 3,
+      "MF-OK": 1,
+      "MF-3": 3
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-OK",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0057,
+    "timestamp": "2026-09-16T09:38:52.990487+00:00"
+  },
+  {
+    "scenario_name": "multiple_candidates_failing",
+    "threshold": 4,
+    "candidate_count": 4,
+    "scenario_type": "multiple_fail",
+    "total_attempts": 13,
+    "expected_max_attempts": 16,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "MF-1": 4,
+      "MF-2": 4,
+      "MF-OK": 1,
+      "MF-3": 4
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-OK",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0053,
+    "timestamp": "2026-09-16T09:38:52.995787+00:00"
+  },
+  {
+    "scenario_name": "multiple_candidates_failing",
+    "threshold": 5,
+    "candidate_count": 4,
+    "scenario_type": "multiple_fail",
+    "total_attempts": 16,
+    "expected_max_attempts": 20,
+    "bounded": true,
+    "pivot_count": 6,
+    "candidate_attempt_counters": {
+      "MF-1": 5,
+      "MF-2": 5,
+      "MF-OK": 1,
+      "MF-3": 5
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "MF-OK",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "MF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      }
+    ],
+    "execution_time_seconds": 0.0064,
+    "timestamp": "2026-09-16T09:38:53.002240+00:00"
+  },
+  {
+    "scenario_name": "all_candidates_failing",
+    "threshold": 1,
+    "candidate_count": 4,
+    "scenario_type": "all_fail",
+    "total_attempts": 4,
+    "expected_max_attempts": 4,
+    "bounded": true,
+    "pivot_count": 7,
+    "candidate_attempt_counters": {
+      "AF-1": 1,
+      "AF-2": 1,
+      "AF-3": 1,
+      "AF-4": 1
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0044,
+    "timestamp": "2026-09-16T09:38:53.006680+00:00"
+  },
+  {
+    "scenario_name": "all_candidates_failing",
+    "threshold": 2,
+    "candidate_count": 4,
+    "scenario_type": "all_fail",
+    "total_attempts": 8,
+    "expected_max_attempts": 8,
+    "bounded": true,
+    "pivot_count": 7,
+    "candidate_attempt_counters": {
+      "AF-1": 2,
+      "AF-2": 2,
+      "AF-3": 2,
+      "AF-4": 2
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0061,
+    "timestamp": "2026-09-16T09:38:53.012844+00:00"
+  },
+  {
+    "scenario_name": "all_candidates_failing",
+    "threshold": 3,
+    "candidate_count": 4,
+    "scenario_type": "all_fail",
+    "total_attempts": 12,
+    "expected_max_attempts": 12,
+    "bounded": true,
+    "pivot_count": 7,
+    "candidate_attempt_counters": {
+      "AF-1": 3,
+      "AF-2": 3,
+      "AF-3": 3,
+      "AF-4": 3
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0061,
+    "timestamp": "2026-09-16T09:38:53.018974+00:00"
+  },
+  {
+    "scenario_name": "all_candidates_failing",
+    "threshold": 4,
+    "candidate_count": 4,
+    "scenario_type": "all_fail",
+    "total_attempts": 16,
+    "expected_max_attempts": 16,
+    "bounded": true,
+    "pivot_count": 7,
+    "candidate_attempt_counters": {
+      "AF-1": 4,
+      "AF-2": 4,
+      "AF-3": 4,
+      "AF-4": 4
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0065,
+    "timestamp": "2026-09-16T09:38:53.025541+00:00"
+  },
+  {
+    "scenario_name": "all_candidates_failing",
+    "threshold": 5,
+    "candidate_count": 4,
+    "scenario_type": "all_fail",
+    "total_attempts": 20,
+    "expected_max_attempts": 20,
+    "bounded": true,
+    "pivot_count": 7,
+    "candidate_attempt_counters": {
+      "AF-1": 5,
+      "AF-2": 5,
+      "AF-3": 5,
+      "AF-4": 5
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_DEPENDENCY"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "AF-4",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0066,
+    "timestamp": "2026-09-16T09:38:53.032203+00:00"
+  },
+  {
+    "scenario_name": "large_set_bounded",
+    "threshold": 1,
+    "candidate_count": 10,
+    "scenario_type": "large_set_bounded",
+    "total_attempts": 10,
+    "expected_max_attempts": 10,
+    "bounded": true,
+    "pivot_count": 18,
+    "candidate_attempt_counters": {
+      "LB-0": 1,
+      "LB-1": 1,
+      "LB-2": 1,
+      "LB-3": 1,
+      "LB-4": 1,
+      "LB-7": 1,
+      "LB-5": 1,
+      "LB-6": 1,
+      "LB-8": 1,
+      "LB-9": 1
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0067,
+    "timestamp": "2026-09-16T09:38:53.038970+00:00"
+  },
+  {
+    "scenario_name": "large_set_bounded",
+    "threshold": 2,
+    "candidate_count": 10,
+    "scenario_type": "large_set_bounded",
+    "total_attempts": 19,
+    "expected_max_attempts": 20,
+    "bounded": true,
+    "pivot_count": 18,
+    "candidate_attempt_counters": {
+      "LB-0": 2,
+      "LB-1": 2,
+      "LB-2": 2,
+      "LB-3": 2,
+      "LB-4": 2,
+      "LB-7": 1,
+      "LB-5": 2,
+      "LB-6": 2,
+      "LB-8": 2,
+      "LB-9": 2
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0091,
+    "timestamp": "2026-09-16T09:38:53.048090+00:00"
+  },
+  {
+    "scenario_name": "large_set_bounded",
+    "threshold": 3,
+    "candidate_count": 10,
+    "scenario_type": "large_set_bounded",
+    "total_attempts": 28,
+    "expected_max_attempts": 30,
+    "bounded": true,
+    "pivot_count": 18,
+    "candidate_attempt_counters": {
+      "LB-0": 3,
+      "LB-1": 3,
+      "LB-2": 3,
+      "LB-3": 3,
+      "LB-4": 3,
+      "LB-7": 1,
+      "LB-5": 3,
+      "LB-6": 3,
+      "LB-8": 3,
+      "LB-9": 3
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0112,
+    "timestamp": "2026-09-16T09:38:53.059312+00:00"
+  },
+  {
+    "scenario_name": "large_set_bounded",
+    "threshold": 4,
+    "candidate_count": 10,
+    "scenario_type": "large_set_bounded",
+    "total_attempts": 37,
+    "expected_max_attempts": 40,
+    "bounded": true,
+    "pivot_count": 18,
+    "candidate_attempt_counters": {
+      "LB-0": 4,
+      "LB-1": 4,
+      "LB-2": 4,
+      "LB-3": 4,
+      "LB-4": 4,
+      "LB-7": 1,
+      "LB-5": 4,
+      "LB-6": 4,
+      "LB-8": 4,
+      "LB-9": 4
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0129,
+    "timestamp": "2026-09-16T09:38:53.072223+00:00"
+  },
+  {
+    "scenario_name": "large_set_bounded",
+    "threshold": 5,
+    "candidate_count": 10,
+    "scenario_type": "large_set_bounded",
+    "total_attempts": 46,
+    "expected_max_attempts": 50,
+    "bounded": true,
+    "pivot_count": 18,
+    "candidate_attempt_counters": {
+      "LB-0": 5,
+      "LB-1": 5,
+      "LB-2": 5,
+      "LB-3": 5,
+      "LB-4": 5,
+      "LB-7": 1,
+      "LB-5": 5,
+      "LB-6": 5,
+      "LB-8": 5,
+      "LB-9": 5
+    },
+    "final_status": "COMPLETED",
+    "execution_sequence": [
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-3",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "LB-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "execution_time_seconds": 0.0124,
+    "timestamp": "2026-09-16T09:38:53.084615+00:00"
+  }
+]

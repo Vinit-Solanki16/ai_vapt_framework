@@ -1,0 +1,31 @@
+scenario_name,threshold,candidate_count,scenario_type,total_attempts,expected_max_attempts,bounded,pivot_count,candidate_attempt_counters,final_status,execution_time_seconds
+immediate_success,1,3,immediate_success,3,3,True,2,"{""IS-1"": 1, ""IS-2"": 1, ""IS-3"": 1}",SUCCESS,0.0088
+immediate_success,2,3,immediate_success,3,6,True,2,"{""IS-1"": 1, ""IS-2"": 1, ""IS-3"": 1}",SUCCESS,0.0037
+immediate_success,3,3,immediate_success,3,9,True,2,"{""IS-1"": 1, ""IS-2"": 1, ""IS-3"": 1}",SUCCESS,0.0038
+immediate_success,4,3,immediate_success,3,12,True,2,"{""IS-1"": 1, ""IS-2"": 1, ""IS-3"": 1}",SUCCESS,0.0032
+immediate_success,5,3,immediate_success,3,15,True,2,"{""IS-1"": 1, ""IS-2"": 1, ""IS-3"": 1}",SUCCESS,0.0038
+one_fail_then_success,1,3,one_fail_then_success,3,3,True,4,"{""OFS-FAIL"": 1, ""OFS-SUCCESS"": 1, ""OFS-FAIL2"": 1}",COMPLETED,0.0041
+one_fail_then_success,2,3,one_fail_then_success,5,6,True,4,"{""OFS-FAIL"": 2, ""OFS-SUCCESS"": 1, ""OFS-FAIL2"": 2}",COMPLETED,0.0075
+one_fail_then_success,3,3,one_fail_then_success,7,9,True,4,"{""OFS-FAIL"": 3, ""OFS-SUCCESS"": 1, ""OFS-FAIL2"": 3}",COMPLETED,0.0087
+one_fail_then_success,4,3,one_fail_then_success,9,12,True,4,"{""OFS-FAIL"": 4, ""OFS-SUCCESS"": 1, ""OFS-FAIL2"": 4}",COMPLETED,0.0052
+one_fail_then_success,5,3,one_fail_then_success,11,15,True,4,"{""OFS-FAIL"": 5, ""OFS-SUCCESS"": 1, ""OFS-FAIL2"": 5}",COMPLETED,0.0047
+repeated_failure_pivot,1,4,repeated_failure_pivot,4,4,True,6,"{""RFP-FAIL1"": 1, ""RFP-SUCCESS"": 1, ""RFP-FAIL2"": 1, ""RFP-FAIL3"": 1}",COMPLETED,0.0037
+repeated_failure_pivot,2,4,repeated_failure_pivot,7,8,True,6,"{""RFP-FAIL1"": 2, ""RFP-SUCCESS"": 1, ""RFP-FAIL2"": 2, ""RFP-FAIL3"": 2}",COMPLETED,0.0043
+repeated_failure_pivot,3,4,repeated_failure_pivot,10,12,True,6,"{""RFP-FAIL1"": 3, ""RFP-SUCCESS"": 1, ""RFP-FAIL2"": 3, ""RFP-FAIL3"": 3}",COMPLETED,0.0045
+repeated_failure_pivot,4,4,repeated_failure_pivot,13,16,True,6,"{""RFP-FAIL1"": 4, ""RFP-SUCCESS"": 1, ""RFP-FAIL2"": 4, ""RFP-FAIL3"": 4}",COMPLETED,0.0054
+repeated_failure_pivot,5,4,repeated_failure_pivot,16,20,True,6,"{""RFP-FAIL1"": 5, ""RFP-SUCCESS"": 1, ""RFP-FAIL2"": 5, ""RFP-FAIL3"": 5}",COMPLETED,0.0056
+multiple_candidates_failing,1,4,multiple_fail,4,4,True,6,"{""MF-1"": 1, ""MF-2"": 1, ""MF-OK"": 1, ""MF-3"": 1}",COMPLETED,0.0036
+multiple_candidates_failing,2,4,multiple_fail,7,8,True,6,"{""MF-1"": 2, ""MF-2"": 2, ""MF-OK"": 1, ""MF-3"": 2}",COMPLETED,0.0042
+multiple_candidates_failing,3,4,multiple_fail,10,12,True,6,"{""MF-1"": 3, ""MF-2"": 3, ""MF-OK"": 1, ""MF-3"": 3}",COMPLETED,0.0057
+multiple_candidates_failing,4,4,multiple_fail,13,16,True,6,"{""MF-1"": 4, ""MF-2"": 4, ""MF-OK"": 1, ""MF-3"": 4}",COMPLETED,0.0053
+multiple_candidates_failing,5,4,multiple_fail,16,20,True,6,"{""MF-1"": 5, ""MF-2"": 5, ""MF-OK"": 1, ""MF-3"": 5}",COMPLETED,0.0064
+all_candidates_failing,1,4,all_fail,4,4,True,7,"{""AF-1"": 1, ""AF-2"": 1, ""AF-3"": 1, ""AF-4"": 1}",COMPLETED,0.0044
+all_candidates_failing,2,4,all_fail,8,8,True,7,"{""AF-1"": 2, ""AF-2"": 2, ""AF-3"": 2, ""AF-4"": 2}",COMPLETED,0.0061
+all_candidates_failing,3,4,all_fail,12,12,True,7,"{""AF-1"": 3, ""AF-2"": 3, ""AF-3"": 3, ""AF-4"": 3}",COMPLETED,0.0061
+all_candidates_failing,4,4,all_fail,16,16,True,7,"{""AF-1"": 4, ""AF-2"": 4, ""AF-3"": 4, ""AF-4"": 4}",COMPLETED,0.0065
+all_candidates_failing,5,4,all_fail,20,20,True,7,"{""AF-1"": 5, ""AF-2"": 5, ""AF-3"": 5, ""AF-4"": 5}",COMPLETED,0.0066
+large_set_bounded,1,10,large_set_bounded,10,10,True,18,"{""LB-0"": 1, ""LB-1"": 1, ""LB-2"": 1, ""LB-3"": 1, ""LB-4"": 1, ""LB-7"": 1, ""LB-5"": 1, ""LB-6"": 1, ""LB-8"": 1, ""LB-9"": 1}",COMPLETED,0.0067
+large_set_bounded,2,10,large_set_bounded,19,20,True,18,"{""LB-0"": 2, ""LB-1"": 2, ""LB-2"": 2, ""LB-3"": 2, ""LB-4"": 2, ""LB-7"": 1, ""LB-5"": 2, ""LB-6"": 2, ""LB-8"": 2, ""LB-9"": 2}",COMPLETED,0.0091
+large_set_bounded,3,10,large_set_bounded,28,30,True,18,"{""LB-0"": 3, ""LB-1"": 3, ""LB-2"": 3, ""LB-3"": 3, ""LB-4"": 3, ""LB-7"": 1, ""LB-5"": 3, ""LB-6"": 3, ""LB-8"": 3, ""LB-9"": 3}",COMPLETED,0.0112
+large_set_bounded,4,10,large_set_bounded,37,40,True,18,"{""LB-0"": 4, ""LB-1"": 4, ""LB-2"": 4, ""LB-3"": 4, ""LB-4"": 4, ""LB-7"": 1, ""LB-5"": 4, ""LB-6"": 4, ""LB-8"": 4, ""LB-9"": 4}",COMPLETED,0.0129
+large_set_bounded,5,10,large_set_bounded,46,50,True,18,"{""LB-0"": 5, ""LB-1"": 5, ""LB-2"": 5, ""LB-3"": 5, ""LB-4"": 5, ""LB-7"": 1, ""LB-5"": 5, ""LB-6"": 5, ""LB-8"": 5, ""LB-9"": 5}",COMPLETED,0.0124

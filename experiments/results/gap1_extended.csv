@@ -1,0 +1,11 @@
+scenario_name,candidate_count,scenario_type,baseline_order,treatment_order,ranking_changed,assessment_source,total_attempts,failed_attempts,successful_validations,pivot_count,final_status,execution_time_seconds
+assessment_changes_ranking,3,assessment_changes_ranking,HIGH-PROB-FAIL|MED-PROB-SUCCESS|LOW-PROB-FAIL,HIGH-PROB-FAIL|MED-PROB-SUCCESS|LOW-PROB-FAIL,False,deterministic,5,4,1,4,COMPLETED,0.0065
+assessment_no_change,3,no_change,ALL-SUCCESS-A|ALL-SUCCESS-B|ALL-SUCCESS-C,ALL-SUCCESS-A|ALL-SUCCESS-B|ALL-SUCCESS-C,False,deterministic,3,0,3,2,SUCCESS,0.0043
+high_prob_poor_quality,3,high_prob_poor_quality,HP-POOR|LP-GOOD|LP-MED,HP-POOR|LP-GOOD|LP-MED,False,deterministic,4,2,2,3,SUCCESS,0.0034
+lower_prob_high_quality,4,lower_prob_high_quality,HP-LOW|HP-MED|LP-HIGH-1|LP-HIGH-2,HP-LOW|HP-MED|LP-HIGH-1|LP-HIGH-2,False,deterministic,6,4,2,5,SUCCESS,0.0039
+mixed_population,5,mixed_population,MIX-A|MIX-B|MIX-C|MIX-D|MIX-E,MIX-A|MIX-B|MIX-D|MIX-C|MIX-E,True,deterministic,8,6,2,7,COMPLETED,0.0053
+all_high_quality,4,all_high_quality,HQ-1|HQ-2|HQ-3|HQ-4,HQ-1|HQ-2|HQ-3|HQ-4,False,deterministic,4,0,4,3,SUCCESS,0.0044
+all_low_quality,4,all_low_quality,LQ-1|LQ-2|LQ-3|LQ-4,LQ-1|LQ-2|LQ-3|LQ-4,False,deterministic,8,8,0,7,COMPLETED,0.0044
+large_set_10,10,large_set_10,C00|C01|C02|C03|C04|C05|C06|C07|C08|C09,C00|C03|C01|C02|C06|C04|C05|C07|C09|C08,True,deterministic,16,12,4,15,COMPLETED,0.0074
+large_set_15,15,large_set_15,X00|X01|X02|X03|X04|X05|X06|X07|X08|X09|X10|X11|X12|X13|X14,X00|X04|X01|X02|X03|X08|X05|X06|X07|X09|X12|X10|X11|X13|X14,True,deterministic,26,22,4,25,COMPLETED,0.0115
+large_set_20,20,large_set_20,Z00|Z01|Z02|Z03|Z04|Z05|Z06|Z07|Z08|Z09|Z10|Z11|Z12|Z13|Z14|Z15|Z16|Z17|Z18|Z19,Z00|Z01|Z05|Z02|Z03|Z04|Z10|Z06|Z07|Z08|Z09|Z11|Z15|Z12|Z13|Z14|Z16|Z17|Z18|Z19,True,deterministic,36,32,4,35,COMPLETED,0.0141

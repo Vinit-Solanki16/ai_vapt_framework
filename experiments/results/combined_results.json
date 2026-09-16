@@ -1,0 +1,294 @@
+[
+  {
+    "scenario_name": "combined_mixed",
+    "mode": "baseline",
+    "candidate_count": 4,
+    "assessment_source": "deterministic",
+    "ranking_order": [
+      "CMB-A",
+      "CMB-B",
+      "CMB-D",
+      "CMB-C"
+    ],
+    "total_attempts": 6,
+    "failed_attempts": 4,
+    "successful_validations": 2,
+    "pivot_count": 5,
+    "final_status": "COMPLETED",
+    "assessment_latency_seconds": 0.0,
+    "total_latency_seconds": 0.0044,
+    "execution_sequence": [
+      {
+        "candidate_id": "CMB-A",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CMB-A",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CMB-B",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CMB-D",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CMB-C",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "CMB-C",
+        "outcome": "FAIL_SYNTAX"
+      }
+    ],
+    "timestamp": "2026-09-16T09:38:53.090560+00:00"
+  },
+  {
+    "scenario_name": "combined_mixed",
+    "mode": "treatment",
+    "candidate_count": 4,
+    "assessment_source": "llm",
+    "ranking_order": [
+      "CMB-A",
+      "CMB-B",
+      "CMB-C",
+      "CMB-D"
+    ],
+    "total_attempts": 6,
+    "failed_attempts": 4,
+    "successful_validations": 2,
+    "pivot_count": 5,
+    "final_status": "SUCCESS",
+    "assessment_latency_seconds": 7.2027,
+    "total_latency_seconds": 7.419,
+    "execution_sequence": [
+      {
+        "candidate_id": "CMB-A",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CMB-A",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CMB-B",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CMB-C",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "CMB-C",
+        "outcome": "FAIL_SYNTAX"
+      },
+      {
+        "candidate_id": "CMB-D",
+        "outcome": "SUCCESS"
+      }
+    ],
+    "timestamp": "2026-09-16T09:39:07.712269+00:00"
+  },
+  {
+    "scenario_name": "combined_large",
+    "mode": "baseline",
+    "candidate_count": 10,
+    "assessment_source": "deterministic",
+    "ranking_order": [
+      "CL-0",
+      "CL-3",
+      "CL-1",
+      "CL-2",
+      "CL-7",
+      "CL-4",
+      "CL-5",
+      "CL-6",
+      "CL-8",
+      "CL-9"
+    ],
+    "total_attempts": 18,
+    "failed_attempts": 16,
+    "successful_validations": 2,
+    "pivot_count": 17,
+    "final_status": "COMPLETED",
+    "assessment_latency_seconds": 0.0003,
+    "total_latency_seconds": 0.0079,
+    "execution_sequence": [
+      {
+        "candidate_id": "CL-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-3",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CL-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CL-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "timestamp": "2026-09-16T09:39:07.720507+00:00"
+  },
+  {
+    "scenario_name": "combined_large",
+    "mode": "treatment",
+    "candidate_count": 10,
+    "assessment_source": "llm",
+    "ranking_order": [
+      "CL-0",
+      "CL-1",
+      "CL-2",
+      "CL-3",
+      "CL-4",
+      "CL-5",
+      "CL-6",
+      "CL-7",
+      "CL-8",
+      "CL-9"
+    ],
+    "total_attempts": 18,
+    "failed_attempts": 16,
+    "successful_validations": 2,
+    "pivot_count": 17,
+    "final_status": "COMPLETED",
+    "assessment_latency_seconds": 16.8116,
+    "total_latency_seconds": 17.8814,
+    "execution_sequence": [
+      {
+        "candidate_id": "CL-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-0",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-1",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-2",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-3",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CL-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-4",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-5",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-6",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-7",
+        "outcome": "SUCCESS"
+      },
+      {
+        "candidate_id": "CL-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-8",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-9",
+        "outcome": "FAIL_TIMEOUT"
+      },
+      {
+        "candidate_id": "CL-9",
+        "outcome": "FAIL_TIMEOUT"
+      }
+    ],
+    "timestamp": "2026-09-16T09:39:42.413528+00:00"
+  }
+]
