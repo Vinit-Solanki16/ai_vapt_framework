@@ -2,18 +2,18 @@
   {
     "config_name": "gap2_threshold_3",
     "run_index": 0,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 7,
     "pivot_count": 4,
     "candidates_processed": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "ranking_order": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "execution_sequence": [
       {
@@ -32,23 +32,23 @@
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
         "candidate_id": "TH3-SUCCESS",
         "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
         "detail": "simulated(ground_truth)"
       }
     ],
@@ -58,33 +58,33 @@
       "[Executor] Attempt 2/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Executor] Attempt 3/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Pivot] Threshold reached for TH3-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH3-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
+      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] Redirected to TH3-FAIL-B",
       "[Executor] Attempt 1/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 2/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 3/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Pivot] Threshold reached for TH3-FAIL-B. Abandoning route.",
-      "[Pivot] Redirected to TH3-SUCCESS",
-      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
-      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.578674+00:00"
+    "timestamp": "2026-09-16T08:13:23.195509+00:00"
   },
   {
     "config_name": "gap2_threshold_3",
     "run_index": 1,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 7,
     "pivot_count": 4,
     "candidates_processed": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "ranking_order": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "execution_sequence": [
       {
@@ -103,23 +103,23 @@
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
         "candidate_id": "TH3-SUCCESS",
         "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
         "detail": "simulated(ground_truth)"
       }
     ],
@@ -129,33 +129,33 @@
       "[Executor] Attempt 2/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Executor] Attempt 3/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Pivot] Threshold reached for TH3-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH3-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
+      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] Redirected to TH3-FAIL-B",
       "[Executor] Attempt 1/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 2/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 3/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Pivot] Threshold reached for TH3-FAIL-B. Abandoning route.",
-      "[Pivot] Redirected to TH3-SUCCESS",
-      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
-      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.582660+00:00"
+    "timestamp": "2026-09-16T08:13:23.198956+00:00"
   },
   {
     "config_name": "gap2_threshold_3",
     "run_index": 2,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 7,
     "pivot_count": 4,
     "candidates_processed": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "ranking_order": [
       "TH3-FAIL-A",
-      "TH3-FAIL-B",
-      "TH3-SUCCESS"
+      "TH3-SUCCESS",
+      "TH3-FAIL-B"
     ],
     "execution_sequence": [
       {
@@ -174,23 +174,23 @@
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
-        "candidate_id": "TH3-FAIL-B",
-        "outcome": "FAIL_SYNTAX",
-        "detail": "simulated(ground_truth)"
-      },
-      {
         "candidate_id": "TH3-SUCCESS",
         "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
         "detail": "simulated(ground_truth)"
       }
     ],
@@ -200,16 +200,16 @@
       "[Executor] Attempt 2/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Executor] Attempt 3/3 on TH3-FAIL-A -> FAIL_TIMEOUT",
       "[Pivot] Threshold reached for TH3-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH3-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
+      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] Redirected to TH3-FAIL-B",
       "[Executor] Attempt 1/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 2/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Executor] Attempt 3/3 on TH3-FAIL-B -> FAIL_SYNTAX",
       "[Pivot] Threshold reached for TH3-FAIL-B. Abandoning route.",
-      "[Pivot] Redirected to TH3-SUCCESS",
-      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
-      "[Advance] TH3-SUCCESS validated. Next candidate.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.586261+00:00"
+    "timestamp": "2026-09-16T08:13:23.202605+00:00"
   }
 ]

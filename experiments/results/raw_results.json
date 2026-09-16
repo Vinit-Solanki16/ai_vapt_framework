@@ -1,7 +1,7 @@
 [
   {
     "experiment_name": "gap1_ranking_effect",
-    "timestamp": "2026-09-16T07:43:29.376629+00:00",
+    "timestamp": "2026-09-16T08:16:18.925072+00:00",
     "config": {
       "name": "gap1_ranking_effect",
       "candidates": [
@@ -81,7 +81,7 @@
       "LOW-PROB-FAIL"
     ],
     "final_status": "COMPLETED",
-    "execution_time_seconds": 0.006,
+    "execution_time_seconds": 0.0047,
     "decision_trace": [
       "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on MED-PROB-SUCCESS",
@@ -100,7 +100,7 @@
   },
   {
     "experiment_name": "gap1_inversion",
-    "timestamp": "2026-09-16T07:43:29.380828+00:00",
+    "timestamp": "2026-09-16T08:16:18.927722+00:00",
     "config": {
       "name": "gap1_inversion",
       "candidates": [
@@ -159,7 +159,7 @@
       "CAND-A"
     ],
     "final_status": "COMPLETED",
-    "execution_time_seconds": 0.0042,
+    "execution_time_seconds": 0.0026,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on CAND-B",
@@ -174,7 +174,7 @@
   },
   {
     "experiment_name": "gap1_all_success",
-    "timestamp": "2026-09-16T07:43:29.384256+00:00",
+    "timestamp": "2026-09-16T08:16:18.930200+00:00",
     "config": {
       "name": "gap1_all_success",
       "candidates": [
@@ -227,7 +227,7 @@
       "SUCCESS-B"
     ],
     "final_status": "SUCCESS",
-    "execution_time_seconds": 0.0034,
+    "execution_time_seconds": 0.0025,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on SUCCESS-A",
@@ -241,7 +241,7 @@
   },
   {
     "experiment_name": "gap2_threshold_1",
-    "timestamp": "2026-09-16T07:43:29.386939+00:00",
+    "timestamp": "2026-09-16T08:16:18.932602+00:00",
     "config": {
       "name": "gap2_threshold_1",
       "candidates": [
@@ -294,7 +294,7 @@
       "TH1-SUCCESS"
     ],
     "final_status": "SUCCESS",
-    "execution_time_seconds": 0.0027,
+    "execution_time_seconds": 0.0024,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=1, mode=simulation",
       "[Executor] Attempt 1/1 on TH1-FAIL -> FAIL_TIMEOUT",
@@ -308,7 +308,7 @@
   },
   {
     "experiment_name": "gap2_threshold_2",
-    "timestamp": "2026-09-16T07:43:29.389983+00:00",
+    "timestamp": "2026-09-16T08:16:18.935117+00:00",
     "config": {
       "name": "gap2_threshold_2",
       "candidates": [
@@ -367,7 +367,7 @@
       "TH2-SUCCESS"
     ],
     "final_status": "SUCCESS",
-    "execution_time_seconds": 0.003,
+    "execution_time_seconds": 0.0025,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1/2 on TH2-FAIL -> FAIL_TIMEOUT",
@@ -382,7 +382,7 @@
   },
   {
     "experiment_name": "gap2_threshold_3",
-    "timestamp": "2026-09-16T07:43:29.393824+00:00",
+    "timestamp": "2026-09-16T08:16:18.938133+00:00",
     "config": {
       "name": "gap2_threshold_3",
       "candidates": [
@@ -447,7 +447,7 @@
       "TH3-SUCCESS"
     ],
     "final_status": "SUCCESS",
-    "execution_time_seconds": 0.0038,
+    "execution_time_seconds": 0.003,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=3, mode=simulation",
       "[Executor] Attempt 1/3 on TH3-FAIL -> FAIL_TIMEOUT",
@@ -463,7 +463,7 @@
   },
   {
     "experiment_name": "gap2_all_fail",
-    "timestamp": "2026-09-16T07:43:29.397660+00:00",
+    "timestamp": "2026-09-16T08:16:18.941476+00:00",
     "config": {
       "name": "gap2_all_fail",
       "candidates": [
@@ -549,7 +549,7 @@
       "FAIL-C"
     ],
     "final_status": "COMPLETED",
-    "execution_time_seconds": 0.0038,
+    "execution_time_seconds": 0.0033,
     "decision_trace": [
       "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1/2 on FAIL-A -> FAIL_TIMEOUT",
@@ -569,7 +569,7 @@
   },
   {
     "experiment_name": "gap2_immediate_success",
-    "timestamp": "2026-09-16T07:43:29.400589+00:00",
+    "timestamp": "2026-09-16T08:16:18.944006+00:00",
     "config": {
       "name": "gap2_immediate_success",
       "candidates": [
@@ -622,7 +622,7 @@
       "OK-B"
     ],
     "final_status": "SUCCESS",
-    "execution_time_seconds": 0.0029,
+    "execution_time_seconds": 0.0025,
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on OK-A",
@@ -636,7 +636,7 @@
   },
   {
     "experiment_name": "combined_baseline",
-    "timestamp": "2026-09-16T07:43:29.404262+00:00",
+    "timestamp": "2026-09-16T08:16:18.947425+00:00",
     "config": {
       "name": "combined_baseline",
       "candidates": [
@@ -716,7 +716,7 @@
       "C"
     ],
     "final_status": "COMPLETED",
-    "execution_time_seconds": 0.0036,
+    "execution_time_seconds": 0.0034,
     "decision_trace": [
       "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on B",
@@ -735,7 +735,7 @@
   },
   {
     "experiment_name": "combined_treatment",
-    "timestamp": "2026-09-16T07:43:29.408169+00:00",
+    "timestamp": "2026-09-16T08:16:18.950600+00:00",
     "config": {
       "name": "combined_treatment",
       "candidates": [
@@ -815,7 +815,7 @@
       "C"
     ],
     "final_status": "COMPLETED",
-    "execution_time_seconds": 0.0039,
+    "execution_time_seconds": 0.0032,
     "decision_trace": [
       "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
       "[Executor] Attempt 1 -> SUCCESS on B",

@@ -62,7 +62,7 @@
       "[Pivot] Threshold reached for AF-3. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.589944+00:00"
+    "timestamp": "2026-09-16T08:13:23.206347+00:00"
   },
   {
     "config_name": "gap2_all_fail",
@@ -127,7 +127,7 @@
       "[Pivot] Threshold reached for AF-3. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.593420+00:00"
+    "timestamp": "2026-09-16T08:13:23.209654+00:00"
   },
   {
     "config_name": "gap2_all_fail",
@@ -192,6 +192,6 @@
       "[Pivot] Threshold reached for AF-3. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.596923+00:00"
+    "timestamp": "2026-09-16T08:13:23.213154+00:00"
   }
 ]

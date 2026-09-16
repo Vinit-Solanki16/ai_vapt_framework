@@ -28,7 +28,10 @@ class TestExperimentHarness:
     """
 
     def test_threshold_1_scenario(self):
-        """Threshold=1: each candidate gets exactly 1 attempt."""
+        """Threshold=1: each candidate gets exactly 1 attempt.
+        Engine is exhaustive: processes all candidates.
+        Order: TH1-SUCCESS (HIGH quality) > TH1-FAIL-A (LOW quality).
+        Last result is FAIL from TH1-FAIL-A, so status = COMPLETED."""
         config = ExperimentConfig(
             name="test_t1",
             description="test",
@@ -39,10 +42,10 @@ class TestExperimentHarness:
         results = run_experiment_batch(config)
         assert len(results) == 1
         r = results[0]
-        # TH1-FAIL gets 1 attempt (fail, pivot), TH1-SUCCESS gets 1 attempt (success)
-        assert r.final_status == "SUCCESS"
+        # TH1-SUCCESS gets 1 attempt (success, advance), TH1-FAIL-A gets 1 attempt (fail, abandon)
+        assert r.final_status == "COMPLETED"
         assert r.total_attempts == 2
-        assert r.pivot_count == 2  # Abandon TH1-FAIL + advance to TH1-SUCCESS
+        assert r.pivot_count == 2  # Advance from TH1-SUCCESS + Abandon TH1-FAIL-A
 
     def test_threshold_2_scenario(self):
         """Threshold=2: candidates get up to 2 attempts."""
@@ -62,7 +65,10 @@ class TestExperimentHarness:
         assert r.total_attempts == 5
 
     def test_threshold_3_scenario(self):
-        """Threshold=3: candidates get up to 3 attempts."""
+        """Threshold=3: candidates get up to 3 attempts.
+        Engine is exhaustive: processes all candidates.
+        Order: TH3-FAIL-A (HIGH/0.9) > TH3-FAIL-B (LOW/0.7) > TH3-SUCCESS (HIGH/0.5).
+        All are visited; last result is TH3-FAIL-B failing, so status = COMPLETED."""
         config = ExperimentConfig(
             name="test_t3",
             description="test",
@@ -72,10 +78,10 @@ class TestExperimentHarness:
         )
         results = run_experiment_batch(config)
         r = results[0]
-        assert r.final_status == "SUCCESS"
-        # TH3-FAIL-A: 3 fails, pivot to TH3-FAIL-B
-        # TH3-FAIL-B: 3 fails, pivot to TH3-SUCCESS
-        # TH3-SUCCESS: 1 success
+        assert r.final_status == "COMPLETED"
+        # TH3-FAIL-A: 3 fails, pivot to TH3-SUCCESS
+        # TH3-SUCCESS: 1 success, advance to TH3-FAIL-B
+        # TH3-FAIL-B: 3 fails, complete
         assert r.total_attempts == 7
 
     def test_all_fail(self):

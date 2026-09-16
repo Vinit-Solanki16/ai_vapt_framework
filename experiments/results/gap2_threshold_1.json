@@ -2,112 +2,112 @@
   {
     "config_name": "gap2_threshold_1",
     "run_index": 0,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 2,
     "pivot_count": 2,
     "candidates_processed": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "ranking_order": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "execution_sequence": [
       {
-        "candidate_id": "TH1-FAIL-A",
-        "outcome": "FAIL_TIMEOUT",
+        "candidate_id": "TH1-SUCCESS",
+        "outcome": "SUCCESS",
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH1-SUCCESS",
-        "outcome": "SUCCESS",
+        "candidate_id": "TH1-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
         "detail": "simulated(ground_truth)"
       }
     ],
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=1, mode=simulation",
-      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
-      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
-      "[Pivot] Redirected to TH1-SUCCESS",
       "[Executor] Attempt 1 -> SUCCESS on TH1-SUCCESS",
       "[Advance] TH1-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH1-FAIL-A",
+      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.557614+00:00"
+    "timestamp": "2026-09-16T08:13:23.176742+00:00"
   },
   {
     "config_name": "gap2_threshold_1",
     "run_index": 1,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 2,
     "pivot_count": 2,
     "candidates_processed": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "ranking_order": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "execution_sequence": [
       {
-        "candidate_id": "TH1-FAIL-A",
-        "outcome": "FAIL_TIMEOUT",
+        "candidate_id": "TH1-SUCCESS",
+        "outcome": "SUCCESS",
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH1-SUCCESS",
-        "outcome": "SUCCESS",
+        "candidate_id": "TH1-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
         "detail": "simulated(ground_truth)"
       }
     ],
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=1, mode=simulation",
-      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
-      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
-      "[Pivot] Redirected to TH1-SUCCESS",
       "[Executor] Attempt 1 -> SUCCESS on TH1-SUCCESS",
       "[Advance] TH1-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH1-FAIL-A",
+      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.560186+00:00"
+    "timestamp": "2026-09-16T08:13:23.179243+00:00"
   },
   {
     "config_name": "gap2_threshold_1",
     "run_index": 2,
-    "final_status": "SUCCESS",
+    "final_status": "COMPLETED",
     "total_attempts": 2,
     "pivot_count": 2,
     "candidates_processed": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "ranking_order": [
-      "TH1-FAIL-A",
-      "TH1-SUCCESS"
+      "TH1-SUCCESS",
+      "TH1-FAIL-A"
     ],
     "execution_sequence": [
       {
-        "candidate_id": "TH1-FAIL-A",
-        "outcome": "FAIL_TIMEOUT",
+        "candidate_id": "TH1-SUCCESS",
+        "outcome": "SUCCESS",
         "detail": "simulated(ground_truth)"
       },
       {
-        "candidate_id": "TH1-SUCCESS",
-        "outcome": "SUCCESS",
+        "candidate_id": "TH1-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
         "detail": "simulated(ground_truth)"
       }
     ],
     "decision_trace": [
       "Engine initialized: 2 candidates, pivot_threshold=1, mode=simulation",
-      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
-      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
-      "[Pivot] Redirected to TH1-SUCCESS",
       "[Executor] Attempt 1 -> SUCCESS on TH1-SUCCESS",
       "[Advance] TH1-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH1-FAIL-A",
+      "[Executor] Attempt 1/1 on TH1-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH1-FAIL-A. Abandoning route.",
       "[Pivot] All candidates processed. Workflow complete."
     ],
-    "timestamp": "2026-09-16T07:09:41.563452+00:00"
+    "timestamp": "2026-09-16T08:13:23.181663+00:00"
   }
 ]
