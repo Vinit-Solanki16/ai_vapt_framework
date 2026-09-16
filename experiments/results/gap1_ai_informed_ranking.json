@@ -1,0 +1,179 @@
+[
+  {
+    "config_name": "gap1_ai_informed_ranking",
+    "run_index": 0,
+    "final_status": "SUCCESS",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "ranking_order": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-1. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-FAIL-2",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-2. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on AI-RANK-SUCCESS",
+      "[Advance] AI-RANK-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.607705+00:00"
+  },
+  {
+    "config_name": "gap1_ai_informed_ranking",
+    "run_index": 1,
+    "final_status": "SUCCESS",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "ranking_order": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-1. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-FAIL-2",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-2. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on AI-RANK-SUCCESS",
+      "[Advance] AI-RANK-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.610888+00:00"
+  },
+  {
+    "config_name": "gap1_ai_informed_ranking",
+    "run_index": 2,
+    "final_status": "SUCCESS",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "ranking_order": [
+      "AI-RANK-FAIL-1",
+      "AI-RANK-FAIL-2",
+      "AI-RANK-SUCCESS"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-FAIL-2",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AI-RANK-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-1. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-FAIL-2",
+      "[Executor] Attempt 1/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AI-RANK-FAIL-2 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AI-RANK-FAIL-2. Abandoning route.",
+      "[Pivot] Redirected to AI-RANK-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on AI-RANK-SUCCESS",
+      "[Advance] AI-RANK-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.614099+00:00"
+  }
+]

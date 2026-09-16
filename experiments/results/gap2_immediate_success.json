@@ -1,0 +1,113 @@
+[
+  {
+    "config_name": "gap2_immediate_success",
+    "run_index": 0,
+    "final_status": "SUCCESS",
+    "total_attempts": 2,
+    "pivot_count": 1,
+    "candidates_processed": [
+      "IS-1",
+      "IS-2"
+    ],
+    "ranking_order": [
+      "IS-1",
+      "IS-2"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on IS-1",
+      "[Advance] IS-1 validated. Next candidate.",
+      "[Pivot] Redirected to IS-2",
+      "[Executor] Attempt 1 -> SUCCESS on IS-2",
+      "[Advance] IS-2 validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.599651+00:00"
+  },
+  {
+    "config_name": "gap2_immediate_success",
+    "run_index": 1,
+    "final_status": "SUCCESS",
+    "total_attempts": 2,
+    "pivot_count": 1,
+    "candidates_processed": [
+      "IS-1",
+      "IS-2"
+    ],
+    "ranking_order": [
+      "IS-1",
+      "IS-2"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on IS-1",
+      "[Advance] IS-1 validated. Next candidate.",
+      "[Pivot] Redirected to IS-2",
+      "[Executor] Attempt 1 -> SUCCESS on IS-2",
+      "[Advance] IS-2 validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.601974+00:00"
+  },
+  {
+    "config_name": "gap2_immediate_success",
+    "run_index": 2,
+    "final_status": "SUCCESS",
+    "total_attempts": 2,
+    "pivot_count": 1,
+    "candidates_processed": [
+      "IS-1",
+      "IS-2"
+    ],
+    "ranking_order": [
+      "IS-1",
+      "IS-2"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "IS-1",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "IS-2",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on IS-1",
+      "[Advance] IS-1 validated. Next candidate.",
+      "[Pivot] Redirected to IS-2",
+      "[Executor] Attempt 1 -> SUCCESS on IS-2",
+      "[Advance] IS-2 validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.604346+00:00"
+  }
+]

@@ -1,0 +1,179 @@
+[
+  {
+    "config_name": "gap2_threshold_2",
+    "run_index": 0,
+    "final_status": "COMPLETED",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "ranking_order": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH2-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH2-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH2-SUCCESS",
+      "[Advance] TH2-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH2-FAIL-B",
+      "[Executor] Attempt 1/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for TH2-FAIL-B. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.567906+00:00"
+  },
+  {
+    "config_name": "gap2_threshold_2",
+    "run_index": 1,
+    "final_status": "COMPLETED",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "ranking_order": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH2-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH2-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH2-SUCCESS",
+      "[Advance] TH2-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH2-FAIL-B",
+      "[Executor] Attempt 1/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for TH2-FAIL-B. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.571155+00:00"
+  },
+  {
+    "config_name": "gap2_threshold_2",
+    "run_index": 2,
+    "final_status": "COMPLETED",
+    "total_attempts": 5,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "ranking_order": [
+      "TH2-FAIL-A",
+      "TH2-SUCCESS",
+      "TH2-FAIL-B"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-SUCCESS",
+        "outcome": "SUCCESS",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on TH2-FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH2-FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to TH2-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH2-SUCCESS",
+      "[Advance] TH2-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to TH2-FAIL-B",
+      "[Executor] Attempt 1/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on TH2-FAIL-B -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for TH2-FAIL-B. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.574657+00:00"
+  }
+]

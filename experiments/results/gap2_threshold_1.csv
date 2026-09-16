@@ -1,0 +1,4 @@
+config_name,run_index,final_status,total_attempts,pivot_count,ranking_order,candidates_processed,timestamp
+gap2_threshold_1,0,SUCCESS,2,2,TH1-FAIL-A|TH1-SUCCESS,TH1-FAIL-A|TH1-SUCCESS,2026-09-16T07:09:41.557614+00:00
+gap2_threshold_1,1,SUCCESS,2,2,TH1-FAIL-A|TH1-SUCCESS,TH1-FAIL-A|TH1-SUCCESS,2026-09-16T07:09:41.560186+00:00
+gap2_threshold_1,2,SUCCESS,2,2,TH1-FAIL-A|TH1-SUCCESS,TH1-FAIL-A|TH1-SUCCESS,2026-09-16T07:09:41.563452+00:00

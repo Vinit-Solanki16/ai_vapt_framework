@@ -1,0 +1,197 @@
+[
+  {
+    "config_name": "gap2_all_fail",
+    "run_index": 0,
+    "final_status": "COMPLETED",
+    "total_attempts": 6,
+    "pivot_count": 5,
+    "candidates_processed": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "ranking_order": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-1. Abandoning route.",
+      "[Pivot] Redirected to AF-2",
+      "[Executor] Attempt 1/2 on AF-2 -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on AF-2 -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for AF-2. Abandoning route.",
+      "[Pivot] Redirected to AF-3",
+      "[Executor] Attempt 1/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-3. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.589944+00:00"
+  },
+  {
+    "config_name": "gap2_all_fail",
+    "run_index": 1,
+    "final_status": "COMPLETED",
+    "total_attempts": 6,
+    "pivot_count": 5,
+    "candidates_processed": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "ranking_order": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-1. Abandoning route.",
+      "[Pivot] Redirected to AF-2",
+      "[Executor] Attempt 1/2 on AF-2 -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on AF-2 -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for AF-2. Abandoning route.",
+      "[Pivot] Redirected to AF-3",
+      "[Executor] Attempt 1/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-3. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.593420+00:00"
+  },
+  {
+    "config_name": "gap2_all_fail",
+    "run_index": 2,
+    "final_status": "COMPLETED",
+    "total_attempts": 6,
+    "pivot_count": 5,
+    "candidates_processed": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "ranking_order": [
+      "AF-1",
+      "AF-2",
+      "AF-3"
+    ],
+    "execution_sequence": [
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-1",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-2",
+        "outcome": "FAIL_SYNTAX",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "AF-3",
+        "outcome": "FAIL_TIMEOUT",
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-1 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-1. Abandoning route.",
+      "[Pivot] Redirected to AF-2",
+      "[Executor] Attempt 1/2 on AF-2 -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on AF-2 -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for AF-2. Abandoning route.",
+      "[Pivot] Redirected to AF-3",
+      "[Executor] Attempt 1/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on AF-3 -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for AF-3. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "timestamp": "2026-09-16T07:09:41.596923+00:00"
+  }
+]

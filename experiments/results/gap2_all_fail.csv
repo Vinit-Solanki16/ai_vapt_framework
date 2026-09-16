@@ -1,0 +1,4 @@
+config_name,run_index,final_status,total_attempts,pivot_count,ranking_order,candidates_processed,timestamp
+gap2_all_fail,0,COMPLETED,6,5,AF-1|AF-2|AF-3,AF-1|AF-2|AF-3,2026-09-16T07:09:41.589944+00:00
+gap2_all_fail,1,COMPLETED,6,5,AF-1|AF-2|AF-3,AF-1|AF-2|AF-3,2026-09-16T07:09:41.593420+00:00
+gap2_all_fail,2,COMPLETED,6,5,AF-1|AF-2|AF-3,AF-1|AF-2|AF-3,2026-09-16T07:09:41.596923+00:00
