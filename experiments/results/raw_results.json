@@ -1,0 +1,835 @@
+[
+  {
+    "experiment_name": "gap1_ranking_effect",
+    "timestamp": "2026-09-16T07:43:29.376629+00:00",
+    "config": {
+      "name": "gap1_ranking_effect",
+      "candidates": [
+        {
+          "id": "HIGH-PROB-FAIL",
+          "probability": 0.8,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "MED-PROB-SUCCESS",
+          "probability": 0.55,
+          "ground_truth": "SUCCESS"
+        },
+        {
+          "id": "LOW-PROB-FAIL",
+          "probability": 0.3,
+          "ground_truth": "FAIL_TIMEOUT"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "MED-PROB-SUCCESS",
+      "HIGH-PROB-FAIL",
+      "LOW-PROB-FAIL"
+    ],
+    "scores": {
+      "MED-PROB-SUCCESS": 0.55,
+      "HIGH-PROB-FAIL": 0.52,
+      "LOW-PROB-FAIL": 0.195
+    },
+    "quality_ranks": {
+      "MED-PROB-SUCCESS": "HIGH",
+      "HIGH-PROB-FAIL": "LOW",
+      "LOW-PROB-FAIL": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "MED-PROB-SUCCESS",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HIGH-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "HIGH-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LOW-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "LOW-PROB-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 5,
+    "failed_attempts": 4,
+    "successful_validations": 1,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "MED-PROB-SUCCESS",
+      "HIGH-PROB-FAIL",
+      "LOW-PROB-FAIL"
+    ],
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.006,
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on MED-PROB-SUCCESS",
+      "[Advance] MED-PROB-SUCCESS validated. Next candidate.",
+      "[Pivot] Redirected to HIGH-PROB-FAIL",
+      "[Executor] Attempt 1/2 on HIGH-PROB-FAIL -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on HIGH-PROB-FAIL -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for HIGH-PROB-FAIL. Abandoning route.",
+      "[Pivot] Redirected to LOW-PROB-FAIL",
+      "[Executor] Attempt 1/2 on LOW-PROB-FAIL -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on LOW-PROB-FAIL -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for LOW-PROB-FAIL. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap1_inversion",
+    "timestamp": "2026-09-16T07:43:29.380828+00:00",
+    "config": {
+      "name": "gap1_inversion",
+      "candidates": [
+        {
+          "id": "CAND-A",
+          "probability": 0.75,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "CAND-B",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "CAND-B",
+      "CAND-A"
+    ],
+    "scores": {
+      "CAND-B": 0.5,
+      "CAND-A": 0.4875
+    },
+    "quality_ranks": {
+      "CAND-B": "HIGH",
+      "CAND-A": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "CAND-B",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "CAND-A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "CAND-A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 3,
+    "failed_attempts": 2,
+    "successful_validations": 1,
+    "pivot_count": 2,
+    "candidates_processed": [
+      "CAND-B",
+      "CAND-A"
+    ],
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0042,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on CAND-B",
+      "[Advance] CAND-B validated. Next candidate.",
+      "[Pivot] Redirected to CAND-A",
+      "[Executor] Attempt 1/2 on CAND-A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on CAND-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for CAND-A. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap1_all_success",
+    "timestamp": "2026-09-16T07:43:29.384256+00:00",
+    "config": {
+      "name": "gap1_all_success",
+      "candidates": [
+        {
+          "id": "SUCCESS-A",
+          "probability": 0.6,
+          "ground_truth": "SUCCESS"
+        },
+        {
+          "id": "SUCCESS-B",
+          "probability": 0.4,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "SUCCESS-A",
+      "SUCCESS-B"
+    ],
+    "scores": {
+      "SUCCESS-A": 0.6,
+      "SUCCESS-B": 0.4
+    },
+    "quality_ranks": {
+      "SUCCESS-A": "HIGH",
+      "SUCCESS-B": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "SUCCESS-A",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "SUCCESS-B",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 2,
+    "failed_attempts": 0,
+    "successful_validations": 2,
+    "pivot_count": 1,
+    "candidates_processed": [
+      "SUCCESS-A",
+      "SUCCESS-B"
+    ],
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0034,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on SUCCESS-A",
+      "[Advance] SUCCESS-A validated. Next candidate.",
+      "[Pivot] Redirected to SUCCESS-B",
+      "[Executor] Attempt 1 -> SUCCESS on SUCCESS-B",
+      "[Advance] SUCCESS-B validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap2_threshold_1",
+    "timestamp": "2026-09-16T07:43:29.386939+00:00",
+    "config": {
+      "name": "gap2_threshold_1",
+      "candidates": [
+        {
+          "id": "TH1-FAIL",
+          "probability": 0.8,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "TH1-SUCCESS",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 1,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "TH1-FAIL",
+      "TH1-SUCCESS"
+    ],
+    "scores": {
+      "TH1-FAIL": 0.52,
+      "TH1-SUCCESS": 0.5
+    },
+    "quality_ranks": {
+      "TH1-FAIL": "LOW",
+      "TH1-SUCCESS": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "TH1-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH1-SUCCESS",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 2,
+    "failed_attempts": 1,
+    "successful_validations": 1,
+    "pivot_count": 2,
+    "candidates_processed": [
+      "TH1-FAIL",
+      "TH1-SUCCESS"
+    ],
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0027,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=1, mode=simulation",
+      "[Executor] Attempt 1/1 on TH1-FAIL -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH1-FAIL. Abandoning route.",
+      "[Pivot] Redirected to TH1-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH1-SUCCESS",
+      "[Advance] TH1-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap2_threshold_2",
+    "timestamp": "2026-09-16T07:43:29.389983+00:00",
+    "config": {
+      "name": "gap2_threshold_2",
+      "candidates": [
+        {
+          "id": "TH2-FAIL",
+          "probability": 0.8,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "TH2-SUCCESS",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "TH2-FAIL",
+      "TH2-SUCCESS"
+    ],
+    "scores": {
+      "TH2-FAIL": 0.52,
+      "TH2-SUCCESS": 0.5
+    },
+    "quality_ranks": {
+      "TH2-FAIL": "LOW",
+      "TH2-SUCCESS": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "TH2-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH2-SUCCESS",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 3,
+    "failed_attempts": 2,
+    "successful_validations": 1,
+    "pivot_count": 2,
+    "candidates_processed": [
+      "TH2-FAIL",
+      "TH2-SUCCESS"
+    ],
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.003,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on TH2-FAIL -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on TH2-FAIL -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH2-FAIL. Abandoning route.",
+      "[Pivot] Redirected to TH2-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH2-SUCCESS",
+      "[Advance] TH2-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap2_threshold_3",
+    "timestamp": "2026-09-16T07:43:29.393824+00:00",
+    "config": {
+      "name": "gap2_threshold_3",
+      "candidates": [
+        {
+          "id": "TH3-FAIL",
+          "probability": 0.8,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "TH3-SUCCESS",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 3,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "TH3-FAIL",
+      "TH3-SUCCESS"
+    ],
+    "scores": {
+      "TH3-FAIL": 0.52,
+      "TH3-SUCCESS": 0.5
+    },
+    "quality_ranks": {
+      "TH3-FAIL": "LOW",
+      "TH3-SUCCESS": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "TH3-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-FAIL",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "TH3-SUCCESS",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 4,
+    "failed_attempts": 3,
+    "successful_validations": 1,
+    "pivot_count": 2,
+    "candidates_processed": [
+      "TH3-FAIL",
+      "TH3-SUCCESS"
+    ],
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0038,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=3, mode=simulation",
+      "[Executor] Attempt 1/3 on TH3-FAIL -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/3 on TH3-FAIL -> FAIL_TIMEOUT",
+      "[Executor] Attempt 3/3 on TH3-FAIL -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for TH3-FAIL. Abandoning route.",
+      "[Pivot] Redirected to TH3-SUCCESS",
+      "[Executor] Attempt 1 -> SUCCESS on TH3-SUCCESS",
+      "[Advance] TH3-SUCCESS validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap2_all_fail",
+    "timestamp": "2026-09-16T07:43:29.397660+00:00",
+    "config": {
+      "name": "gap2_all_fail",
+      "candidates": [
+        {
+          "id": "FAIL-A",
+          "probability": 0.8,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "FAIL-B",
+          "probability": 0.6,
+          "ground_truth": "FAIL_SYNTAX"
+        },
+        {
+          "id": "FAIL-C",
+          "probability": 0.4,
+          "ground_truth": "FAIL_DEPENDENCY"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "FAIL-A",
+      "FAIL-B",
+      "FAIL-C"
+    ],
+    "scores": {
+      "FAIL-A": 0.52,
+      "FAIL-B": 0.39,
+      "FAIL-C": 0.26
+    },
+    "quality_ranks": {
+      "FAIL-A": "LOW",
+      "FAIL-B": "LOW",
+      "FAIL-C": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "FAIL-A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "FAIL-B",
+        "outcome": "FAIL_SYNTAX",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "FAIL-C",
+        "outcome": "FAIL_DEPENDENCY",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "FAIL-C",
+        "outcome": "FAIL_DEPENDENCY",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 6,
+    "failed_attempts": 6,
+    "successful_validations": 0,
+    "pivot_count": 5,
+    "candidates_processed": [
+      "FAIL-A",
+      "FAIL-B",
+      "FAIL-C"
+    ],
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0038,
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1/2 on FAIL-A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on FAIL-A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for FAIL-A. Abandoning route.",
+      "[Pivot] Redirected to FAIL-B",
+      "[Executor] Attempt 1/2 on FAIL-B -> FAIL_SYNTAX",
+      "[Executor] Attempt 2/2 on FAIL-B -> FAIL_SYNTAX",
+      "[Pivot] Threshold reached for FAIL-B. Abandoning route.",
+      "[Pivot] Redirected to FAIL-C",
+      "[Executor] Attempt 1/2 on FAIL-C -> FAIL_DEPENDENCY",
+      "[Executor] Attempt 2/2 on FAIL-C -> FAIL_DEPENDENCY",
+      "[Pivot] Threshold reached for FAIL-C. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "gap2_immediate_success",
+    "timestamp": "2026-09-16T07:43:29.400589+00:00",
+    "config": {
+      "name": "gap2_immediate_success",
+      "candidates": [
+        {
+          "id": "OK-A",
+          "probability": 0.9,
+          "ground_truth": "SUCCESS"
+        },
+        {
+          "id": "OK-B",
+          "probability": 0.8,
+          "ground_truth": "SUCCESS"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "OK-A",
+      "OK-B"
+    ],
+    "scores": {
+      "OK-A": 0.9,
+      "OK-B": 0.8
+    },
+    "quality_ranks": {
+      "OK-A": "HIGH",
+      "OK-B": "HIGH"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "OK-A",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "OK-B",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 2,
+    "failed_attempts": 0,
+    "successful_validations": 2,
+    "pivot_count": 1,
+    "candidates_processed": [
+      "OK-A",
+      "OK-B"
+    ],
+    "final_status": "SUCCESS",
+    "execution_time_seconds": 0.0029,
+    "decision_trace": [
+      "Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on OK-A",
+      "[Advance] OK-A validated. Next candidate.",
+      "[Pivot] Redirected to OK-B",
+      "[Executor] Attempt 1 -> SUCCESS on OK-B",
+      "[Advance] OK-B validated. Next candidate.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "combined_baseline",
+    "timestamp": "2026-09-16T07:43:29.404262+00:00",
+    "config": {
+      "name": "combined_baseline",
+      "candidates": [
+        {
+          "id": "A",
+          "probability": 0.75,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "B",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        },
+        {
+          "id": "C",
+          "probability": 0.3,
+          "ground_truth": "FAIL_TIMEOUT"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "B",
+      "A",
+      "C"
+    ],
+    "scores": {
+      "B": 0.5,
+      "A": 0.4875,
+      "C": 0.195
+    },
+    "quality_ranks": {
+      "B": "HIGH",
+      "A": "LOW",
+      "C": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "B",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 5,
+    "failed_attempts": 4,
+    "successful_validations": 1,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "B",
+      "A",
+      "C"
+    ],
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0036,
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on B",
+      "[Advance] B validated. Next candidate.",
+      "[Pivot] Redirected to A",
+      "[Executor] Attempt 1/2 on A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for A. Abandoning route.",
+      "[Pivot] Redirected to C",
+      "[Executor] Attempt 1/2 on C -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on C -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for C. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  },
+  {
+    "experiment_name": "combined_treatment",
+    "timestamp": "2026-09-16T07:43:29.408169+00:00",
+    "config": {
+      "name": "combined_treatment",
+      "candidates": [
+        {
+          "id": "A",
+          "probability": 0.75,
+          "ground_truth": "FAIL_TIMEOUT"
+        },
+        {
+          "id": "B",
+          "probability": 0.5,
+          "ground_truth": "SUCCESS"
+        },
+        {
+          "id": "C",
+          "probability": 0.3,
+          "ground_truth": "FAIL_TIMEOUT"
+        }
+      ],
+      "max_attempts": 2,
+      "mode": "simulation"
+    },
+    "ranking_order": [
+      "B",
+      "A",
+      "C"
+    ],
+    "scores": {
+      "B": 0.5,
+      "A": 0.4875,
+      "C": 0.195
+    },
+    "quality_ranks": {
+      "B": "HIGH",
+      "A": "LOW",
+      "C": "LOW"
+    },
+    "execution_sequence": [
+      {
+        "candidate_id": "B",
+        "outcome": "SUCCESS",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "A",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      },
+      {
+        "candidate_id": "C",
+        "outcome": "FAIL_TIMEOUT",
+        "request_count": 1,
+        "detail": "simulated(ground_truth)"
+      }
+    ],
+    "total_attempts": 5,
+    "failed_attempts": 4,
+    "successful_validations": 1,
+    "pivot_count": 4,
+    "candidates_processed": [
+      "B",
+      "A",
+      "C"
+    ],
+    "final_status": "COMPLETED",
+    "execution_time_seconds": 0.0039,
+    "decision_trace": [
+      "Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation",
+      "[Executor] Attempt 1 -> SUCCESS on B",
+      "[Advance] B validated. Next candidate.",
+      "[Pivot] Redirected to A",
+      "[Executor] Attempt 1/2 on A -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on A -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for A. Abandoning route.",
+      "[Pivot] Redirected to C",
+      "[Executor] Attempt 1/2 on C -> FAIL_TIMEOUT",
+      "[Executor] Attempt 2/2 on C -> FAIL_TIMEOUT",
+      "[Pivot] Threshold reached for C. Abandoning route.",
+      "[Pivot] All candidates processed. Workflow complete."
+    ],
+    "assessment_source": "deterministic"
+  }
+]

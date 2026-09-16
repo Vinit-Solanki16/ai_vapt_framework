@@ -1,0 +1,11 @@
+experiment,ranking_order,total_attempts,failed_attempts,successful_validations,pivot_count,final_status,execution_time,assessment_source
+gap1_ranking_effect,MED-PROB-SUCCESS > HIGH-PROB-FAIL > LOW-PROB-FAIL,5,4,1,4,COMPLETED,0.006,deterministic
+gap1_inversion,CAND-B > CAND-A,3,2,1,2,COMPLETED,0.0042,deterministic
+gap1_all_success,SUCCESS-A > SUCCESS-B,2,0,2,1,SUCCESS,0.0034,deterministic
+gap2_threshold_1,TH1-FAIL > TH1-SUCCESS,2,1,1,2,SUCCESS,0.0027,deterministic
+gap2_threshold_2,TH2-FAIL > TH2-SUCCESS,3,2,1,2,SUCCESS,0.003,deterministic
+gap2_threshold_3,TH3-FAIL > TH3-SUCCESS,4,3,1,2,SUCCESS,0.0038,deterministic
+gap2_all_fail,FAIL-A > FAIL-B > FAIL-C,6,6,0,5,COMPLETED,0.0038,deterministic
+gap2_immediate_success,OK-A > OK-B,2,0,2,1,SUCCESS,0.0029,deterministic
+combined_baseline,B > A > C,5,4,1,4,COMPLETED,0.0036,deterministic
+combined_treatment,B > A > C,5,4,1,4,COMPLETED,0.0039,deterministic

@@ -130,8 +130,13 @@ def build_graph(entry: str = "assess", assess_fn=None, executor=None):
     return g.compile()
 
 
-def initial_state(candidates: List[dict], max_attempts: int = 2, mode: str = "simulation") -> dict:
-    cs = rank_candidates([candidate_from_dict(d) for d in candidates])
+def initial_state(candidates: List[dict], max_attempts: int = 2, mode: str = "simulation", assess_fn=None) -> dict:
+    # FIX: Assess ALL candidates BEFORE ranking so quality_rank affects ordering
+    # (GAP-1 research contribution requires assessment to influence candidate priority)
+    raw_candidates = [candidate_from_dict(d) for d in candidates]
+    if assess_fn:
+        assess_candidates(raw_candidates, assess_fn=assess_fn)
+    cs = rank_candidates(raw_candidates)
     return {
         "candidates": cs,
         "current_index": 0,
@@ -148,7 +153,7 @@ def initial_state(candidates: List[dict], max_attempts: int = 2, mode: str = "si
 
 def run_engine(candidates: List[dict], assess_fn=None, executor=None,
                max_attempts: int = 2, mode: str = "simulation") -> dict:
-    state = initial_state(candidates, max_attempts=max_attempts, mode=mode)
+    state = initial_state(candidates, max_attempts=max_attempts, mode=mode, assess_fn=assess_fn)
     # Guard: empty candidates -> return COMPLETED immediately
     if not state["candidates"]:
         state["status"] = EngineStatus.COMPLETED.value
