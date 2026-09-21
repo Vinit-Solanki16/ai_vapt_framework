@@ -323,9 +323,20 @@ def system_health():
         health_status["ollama"] = "UNAVAILABLE"
         health_status["ollama_error"] = str(e)
 
-    # Docker status
-    health_status["docker"] = "UNAVAILABLE"
-    health_status["docker_note"] = "Docker not available in this environment"
+    # Docker status: probe the lab executor service (localhost:9090).
+    # The executor container exposes /health when the Docker lab is running.
+    try:
+        import urllib.request
+        with urllib.request.urlopen("http://localhost:9090/health", timeout=2) as resp:
+            if resp.status == 200:
+                health_status["docker"] = "AVAILABLE"
+                health_status["docker_note"] = "Docker lab executor healthy (localhost:9090)"
+            else:
+                health_status["docker"] = "UNAVAILABLE"
+                health_status["docker_note"] = f"Executor responded with HTTP {resp.status}"
+    except Exception:
+        health_status["docker"] = "UNAVAILABLE"
+        health_status["docker_note"] = "Docker lab executor not reachable (localhost:9090)"
 
     return health_status
 

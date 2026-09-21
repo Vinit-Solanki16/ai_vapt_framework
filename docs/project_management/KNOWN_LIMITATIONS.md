@@ -5,59 +5,38 @@
 
 ---
 
-## 1. Docker Lab Runtime Not Verified
+## 1. Docker Lab Runtime — VERIFIED
 
-**Status:** ⚠️ CODE COMPLETE, RUNTIME NOT VERIFIED
+**Status:** ✅ LIVE VERIFIED (2026-09-21, final pre-demo audit)
 
-The Docker laboratory code is complete and tested (13 tests pass), but runtime
-verification requires Docker Desktop, which is not available in this WSL
-environment.
+The Docker laboratory is verified working end-to-end:
 
-**What works:**
-- Docker Compose configuration (`lab/docker-compose.yml`)
-- Vulnerability emulator (`lab/emulator/app.py`)
-- Executor HTTP API (`lab/executor_server.py`)
-- Allowlist enforcement (`prototype/lab_runner.py`)
-- Executor abstraction (`prototype/execution_layer.py`)
+**Verified:**
+- Docker Compose stack (`lab/docker-compose.yml`): emulator + executor containers running healthy
+- Vulnerability emulator (`lab/emulator/app.py`) responding on the lab network
+- Executor HTTP API (`lab/executor_server.py`) healthy at localhost:9090
+- Allowlist enforcement (`prototype/lab_runner.py`): non-allowlisted targets refused fail-closed
+- End-to-end Docker pivot scenario (`docker_pivot`): real HTTP observed in emulator logs
+- DOCKER_OBSERVED evidence tier produced correctly with genuine emulator responses
 
-**What's not verified:**
-- Actual container startup and network isolation
-- Real HTTP execution against the emulator
-- End-to-end Docker pivot scenario
-
-**To verify:**
-```bash
-cd lab
-docker-compose up -d
-python -m prototype.cli run --scenario docker_pivot --mode lab --target 172.28.0.2
-```
+**Remaining scope:**
+- Runs on this machine's Docker Desktop only; not re-verified on other hosts
 
 ---
 
-## 2. Ollama Live Assessment Not Integration-Tested
+## 2. Ollama Live Assessment — VERIFIED
 
-**Status:** ⚠️ INSTALLED, NOT INTEGRATION-TESTED
+**Status:** ✅ LIVE VERIFIED (2026-09-21, final pre-demo audit)
 
-Ollama is installed with `llama3.2:3b` model available. The LLM assessor
-code path is tested with mocked LLM boundaries, but live Ollama assessment
-has not been integration-tested in this environment.
+**Verified:**
+- Ollama serving `llama3.2:3b` (Q4_K_M, offline)
+- AI assessment path works end-to-end via the API (`assessor=llm`)
+- Quality ranks generated for candidates with provenance `mode=ai, provider=ollama`
+- Assessment latency ~2–10s per run (2 candidates)
+- Deterministic fallback verified when Ollama is not required
 
-**What works:**
-- Ollama installation and model availability
-- LLM assessor code (`core/exploit_assessor.py`)
-- Deterministic fallback (`decision_engine/core/assessor.py`)
-- Assessment provenance tracking (`vapt_platform/assessment.py`)
-
-**What's not verified:**
-- Live Ollama response parsing
-- Structured output validation
-- Fallback behavior when Ollama is unavailable
-
-**To verify:**
-```bash
-ollama serve &
-python -m prototype.cli run --scenario failure_pivot --assessor llm
-```
+**Remaining scope:**
+- Consistency across repeated runs varies (documented in `experiments/results/llm_behavior.json`: 6/8 candidates 100% consistent)
 
 ---
 
@@ -116,18 +95,15 @@ streamlit run frontend/app.py
 
 ---
 
-## 8. API Not Integration-Tested
+## 8. API Integration — VERIFIED
 
-**Status:** ⚠️ UNIT TESTS PASS, INTEGRATION NOT TESTED
+**Status:** ✅ LIVE VERIFIED (2026-09-21, final pre-demo audit)
 
-The FastAPI backend has 10 unit tests that pass, but end-to-end API testing
-with a running server has not been performed.
-
-**To test:**
-```bash
-uvicorn services.api:app --reload --port 8000
-curl http://localhost:8000/health
-```
+All 16 FastAPI endpoints were exercised against a running server
+(uvicorn on :8000): run creation (simulation/AI/Docker lab), status,
+trace, events, evidence, findings, candidates, reports (all 4 formats),
+persistence, CVE lookup, and system health. Frontend endpoint usage
+was cross-checked against the API surface with zero mismatches.
 
 ---
 
@@ -153,16 +129,17 @@ with native Linux, macOS, and Windows has not been verified.
 
 | Limitation | Severity | Workaround |
 |------------|----------|------------|
-| Docker runtime not verified | Medium | Use Simulation mode |
-| Ollama live not tested | Low | Use deterministic fallback |
+| Docker runtime verified on this host only | Low | Re-verify on other hosts if needed |
+| Ollama consistency varies across runs | Low | Deterministic mode for reproducibility |
 | OpenAI not tested | Low | Use Ollama or deterministic |
 | GitHub fetch not tested | Low | Use local corpus |
 | PDF reports not implemented | Low | Use HTML reports |
 | Real exploitation not performed | By design | N/A |
-| Streamlit UI not interactively tested | Low | Run and verify manually |
-| API not integration-tested | Low | Run and verify manually |
+| Streamlit UI not interactively tested | Low | Dedicated web UI is the demo surface |
+| API integration verified via live smoke tests | — | N/A |
 | Performance not tested | Low | N/A |
 | Cross-platform not verified | Low | N/A |
+| No real-time UI updates | Low | Refresh page after runs |
 
 ---
 

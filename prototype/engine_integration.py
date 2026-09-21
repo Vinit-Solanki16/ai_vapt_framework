@@ -153,10 +153,14 @@ def run_decision_scenario(
         mode=mode,
     )
 
-    # Store assessment provenance in state
+    # Store assessment provenance in state.
+    # Metadata semantics (reporting only — does NOT alter GAP-1 logic):
+    #   deterministic mode -> provider "deterministic" (no LLM involved)
+    #   ai mode            -> provider as configured (e.g. "ollama")
+    effective_provider = assessment_provider if assessment_mode == "ai" else "deterministic"
     final_state["_assessment"] = {
         "mode": assessment_mode,
-        "provider": assessment_provider,
+        "provider": effective_provider,
     }
 
     # 6-7. Presentation-level metadata (computed OUTSIDE the engine)

@@ -69,16 +69,27 @@ class JobManager:
         if not job:
             return None
         state = job.get("state", {}) or {}
-        presentation = state.get("_presentation", {}) if isinstance(state, dict) else {}
+        if isinstance(state, dict):
+            presentation = state.get("_presentation", {}) or {}
+        else:
+            presentation = {}
+        # api.py stores run metadata flat in the state dict; the engine also
+        # provides a nested "_presentation" dict in some code paths. Support
+        # both shapes so counts are correct regardless of producer.
+        total_attempts = state.get("total_attempts", presentation.get("total_attempts", 0))
+        pivot_count = state.get("pivot_count", presentation.get("pivot_count", 0))
+        candidates_processed = state.get(
+            "candidates_processed", presentation.get("candidates_processed", [])
+        )
         return RunStatus(
             run_id=run_id,
             status=job["status"],
             scenario=job.get("scenario"),
             mode=job.get("mode", "simulation"),
             final_status=state.get("status") if isinstance(state, dict) else None,
-            total_attempts=presentation.get("total_attempts", 0),
-            pivot_count=presentation.get("pivot_count", 0),
-            candidates_processed=presentation.get("candidates_processed", []),
+            total_attempts=total_attempts,
+            pivot_count=pivot_count,
+            candidates_processed=candidates_processed,
         )
 
     def list_jobs(self) -> list:
