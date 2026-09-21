@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-21
 **Branch:** `prototype-development`
+**Status:** READY FOR DEMONSTRATION
 
 ---
 
@@ -23,6 +24,15 @@ uvicorn services.api:app --reload --port 8000
 ```
 
 Open: http://localhost:8000
+
+### Optional: Start Ollama for AI Assessment
+
+```bash
+ollama serve &
+ollama pull llama3.2:3b
+```
+
+Without Ollama, the system uses deterministic fallback automatically.
 
 ---
 
@@ -109,6 +119,8 @@ If Ollama is unavailable:
 ### Prerequisites
 
 ```bash
+# Start Docker Desktop
+# Then:
 cd lab
 docker-compose up -d
 cd ..

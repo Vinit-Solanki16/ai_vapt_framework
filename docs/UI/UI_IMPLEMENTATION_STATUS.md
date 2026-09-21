@@ -69,6 +69,7 @@ single-page application (SPA) matching the UI reference design.
 | `GET /health` | ✅ Working | System status |
 | `GET /system/health` | ✅ Working | Detailed health |
 | `GET /scenarios` | ✅ Working | Scenario list |
+| `GET /intelligence/lookup` | ✅ Working | CVE lookup |
 | `POST /runs` | ✅ Working | Start assessment |
 | `GET /runs` | ✅ Working | Run history |
 | `GET /runs/{id}/persisted` | ✅ Working | Run details |
@@ -136,7 +137,7 @@ single-page application (SPA) matching the UI reference design.
 | `prototype/tests/` | 36 | ✅ Passing |
 | `services/tests/` | 17 | ✅ Passing |
 | `frontend/tests/` | 7 | ✅ Passing |
-| **Total** | **545** | **✅ Passing** |
+| **Total** | **547** | **✅ Passing** |
 
 ---
 
@@ -144,10 +145,13 @@ single-page application (SPA) matching the UI reference design.
 
 1. **Docker runtime not verified** — Code complete, 13 tests pass, but Docker
    not available in this environment
-2. **Ollama live not tested** — Installed but not integration-tested
+2. **Ollama live not tested in browser** — Installed and API-tested, but
+   browser interaction not verified
 3. **Streamlit app deprecated** — Replaced by dedicated frontend
-4. **CVE lookup endpoint** — Not implemented (shows placeholder)
+4. **CVE lookup** — Uses local datasets only (no live API)
 5. **Real-time updates** — No WebSocket/polling (page refresh required)
+6. **CVSS and CWE data** — Not available in local datasets (returns None/[])
+7. **Browser testing** — Not performed (no browser binary available)
 
 ---
 
@@ -170,7 +174,7 @@ http://localhost:8000
 frontend/web/index.html       (new)
 frontend/web/css/styles.css   (new)
 frontend/web/js/app.js        (new)
-services/api.py               (modified: static file serving, CORS)
+services/api.py               (modified: static file serving, CORS, /intelligence/lookup)
 ```
 
 ---
