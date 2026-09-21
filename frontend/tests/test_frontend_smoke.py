@@ -22,10 +22,51 @@ class TestFrontendImport:
         from frontend import app
         source = inspect.getsource(app)
         # Target must use selectbox, not text_input
-        # The GUI should not allow arbitrary target input
         lines = source.split('\n')
         for line in lines:
             if 'st.text_input' in line and 'target' in line.lower():
                 pytest.fail(f"Found free-text target input: {line}")
-        # If we get here, no text_input for target was found
         assert True
+
+    def test_frontend_has_professional_pages(self):
+        """Verify frontend has all required professional pages."""
+        import inspect
+        from frontend import app
+        source = inspect.getsource(app)
+
+        required_pages = [
+            "show_dashboard",
+            "show_new_assessment",
+            "show_run_history",
+            "show_findings",
+            "show_intelligence",
+            "show_attack_paths",
+            "show_reports",
+            "show_system",
+        ]
+
+        for page in required_pages:
+            assert page in source, f"Missing page function: {page}"
+
+    def test_frontend_has_research_core_protection(self):
+        """Verify frontend references research core protection."""
+        import inspect
+        from frontend import app
+        source = inspect.getsource(app)
+        assert "PROTECTED" in source or "Research Core" in source
+
+    def test_frontend_has_evidence_tier_display(self):
+        """Verify frontend displays evidence tiers."""
+        import inspect
+        from frontend import app
+        source = inspect.getsource(app)
+        assert "DOCKER_OBSERVED" in source
+        assert "SIMULATED" in source
+        assert "OBSERVED_LOCAL" in source
+
+    def test_frontend_has_safety_status(self):
+        """Verify frontend shows safety/authorization status."""
+        import inspect
+        from frontend import app
+        source = inspect.getsource(app)
+        assert "AUTHORIZED" in source or "ALLOWLISTED" in source
