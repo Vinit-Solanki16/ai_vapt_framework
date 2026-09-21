@@ -121,3 +121,15 @@ class TestNewEndpoints:
         assert data["run_id"] == run_id
         assert "assessment" in data
         assert "evidence_tier" in data
+
+    def test_cve_lookup(self, client):
+        resp = client.get("/intelligence/lookup?cve=CVE-2021-44228")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["cve"] == "CVE-2021-44228"
+        assert "epss" in data
+        assert "in_kev" in data
+
+    def test_cve_lookup_404(self, client):
+        resp = client.get("/intelligence/lookup")
+        assert resp.status_code == 422  # Missing required query param

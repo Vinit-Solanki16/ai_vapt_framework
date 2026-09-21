@@ -289,6 +289,21 @@ def list_scenarios():
     }
 
 
+@app.get("/intelligence/lookup")
+def lookup_cve(cve: str):
+    """Look up CVE intelligence (EPSS, CISA KEV)."""
+    from vapt_platform.enrichment import LocalDatasetProvider
+
+    provider = LocalDatasetProvider()
+    return {
+        "cve": cve,
+        "epss": provider.get_epss(cve),
+        "in_kev": provider.is_in_kev(cve),
+        "cvss": provider.get_cvss(cve),
+        "cwe_ids": provider.get_cwe_ids(cve),
+    }
+
+
 @app.get("/system/health")
 def system_health():
     """Get detailed system health."""
