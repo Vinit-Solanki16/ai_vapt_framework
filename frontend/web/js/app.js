@@ -262,7 +262,7 @@ async function renderDashboard(container) {
                     <span class="card-title">Recent Runs</span>
                     <a href="#/runs" class="btn btn-secondary" style="text-decoration:none;">View All</a>
                 </div>
-                ${recentRuns.length === 0 ? showEmpty(null, '📭', 'No runs yet', 'Start an assessment to see results here.') : `
+                ${recentRuns.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">No runs yet</div><div class="empty-state-hint">Start an assessment to see results here.</div></div>' : `
                     <table class="data-table">
                         <thead>
                             <tr>
