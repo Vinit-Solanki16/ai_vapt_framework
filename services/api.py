@@ -8,7 +8,9 @@ import os
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from prototype.lab_runner import LAB_TARGET_ALLOWLIST
 from services.schemas import (
@@ -19,6 +21,21 @@ from services.jobs import job_manager
 from vapt_platform.application import VAPTRequest, get_application
 
 app = FastAPI(title="AI VAPT Decision Engine API", version="0.1.0")
+
+# CORS middleware for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve static frontend files
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "web")
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/css", StaticFiles(directory=os.path.join(FRONTEND_DIR, "css")), name="css")
+    app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
 
 
 def _run_engine(run_id: str, req: RunRequest):
@@ -243,6 +260,15 @@ def get_candidates(run_id: str):
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/")
+def serve_frontend():
+    """Serve the main frontend page."""
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "AI-VAPT API is running. Frontend not found."}
 
 
 @app.get("/scenarios")

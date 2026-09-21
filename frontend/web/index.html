@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-VAPT Operations Console</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="brand">
+                <span class="brand-icon">🛡️</span>
+                <div class="brand-text">
+                    <span class="brand-name">AI-VAPT</span>
+                    <span class="brand-subtitle">Autonomous Vulnerability Assessment Platform</span>
+                </div>
+            </div>
+            <div class="system-status" id="system-status">
+                <span class="status-dot"></span>
+                <span class="status-text">SYSTEM OPERATIONAL</span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- Left Sidebar -->
+            <nav class="sidebar" id="sidebar">
+                <div class="nav-section">
+                    <div class="nav-label">Overview</div>
+                    <a href="#/dashboard" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Assessment</div>
+                    <a href="#/assessment/new" class="nav-item" data-page="assessment-new">
+                        <span class="nav-icon">➕</span>
+                        <span class="nav-text">New Assessment</span>
+                    </a>
+                    <a href="#/assessment/active" class="nav-item" data-page="assessment-active">
+                        <span class="nav-icon">▶️</span>
+                        <span class="nav-text">Active Assessment</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Findings</div>
+                    <a href="#/findings" class="nav-item" data-page="findings">
+                        <span class="nav-icon">🔍</span>
+                        <span class="nav-text">Findings</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Intelligence</div>
+                    <a href="#/intelligence" class="nav-item" data-page="intelligence">
+                        <span class="nav-icon">🧠</span>
+                        <span class="nav-text">Vulnerability Intelligence</span>
+                    </a>
+                    <a href="#/candidates" class="nav-item" data-page="candidates">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Candidate Ranking</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Attack Paths</div>
+                    <a href="#/attack-paths" class="nav-item" data-page="attack-paths">
+                        <span class="nav-icon">🔄</span>
+                        <span class="nav-text">Decision Paths</span>
+                    </a>
+                    <a href="#/pivot-analysis" class="nav-item" data-page="pivot-analysis">
+                        <span class="nav-icon">↩️</span>
+                        <span class="nav-text">Pivot Analysis</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Run History</div>
+                    <a href="#/runs" class="nav-item" data-page="runs">
+                        <span class="nav-icon">📜</span>
+                        <span class="nav-text">Runs</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Reports</div>
+                    <a href="#/reports" class="nav-item" data-page="reports">
+                        <span class="nav-icon">📄</span>
+                        <span class="nav-text">Reports</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">System</div>
+                    <a href="#/system" class="nav-item" data-page="system">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">System Health</span>
+                    </a>
+                    <a href="#/configuration" class="nav-item" data-page="configuration">
+                        <span class="nav-icon">🔧</span>
+                        <span class="nav-text">Configuration</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="content" id="content">
+                <!-- Dynamic content rendered here -->
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>AI-VAPT v0.1.0</span>
+            <span id="footer-status">Research Core: Protected</span>
+            <span id="footer-connection">API: Connecting...</span>
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
