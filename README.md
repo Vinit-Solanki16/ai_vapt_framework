@@ -4,106 +4,158 @@ State-aware Vulnerability Assessment & Penetration Testing with **Exploit Qualit
 Scoring** and **Dynamic Decision-Pivoting** (LangGraph). Built for an M.Tech
 cybersecurity thesis. Runs fully offline via local Ollama (no API cost).
 
-## Literature basis
-- **Paul et al. (2024)** — enrich static scans with live EPSS threat intelligence.
-- **Lu et al. (2024)** — PoC quality / usability gap → structured scoring matrix.
-- **Deng et al. (2025)** — Type-B planning/state-management failures → pivot logic.
+## Research Contributions
+
+### GAP-1: AI-Informed Candidate Ranking
+AI/LLM assessment of exploit quality occurs BEFORE candidate ranking and
+influences attack-path prioritization.
+
+### GAP-2: Bounded Failure-Threshold Pivoting
+The system maintains per-candidate attempt state, detects repeated failures,
+and dynamically pivots after a configurable failure threshold.
 
 ## Architecture
+
 ```
-core/
-  schemas.py        Shared Pydantic models + enums (fixes prototype bugs)
-  scanner.py        Nmap XML/JSON + custom JSON ingestion + EPSS enrichment
-  poc_corpus.py     Local labelled PoC corpus + token-aware GitHub fetch
-  exploit_assessor.py  LLM usability scoring matrix (Ollama / OpenAI)
-  executor.py       REAL execution signal (no hardcoded False) + sim harness
-  agent_graph.py    LangGraph state machine: assess → execute → pivot/advance
-  report.py         JSON + PDF VAPT report generation
-app.py             Streamlit dashboard (live state viz + reports)
-tests/evaluate.py  SMART vs DUMB comparative benchmark → CSV
-data/
-  sample_scan.json  Custom scan schema
-  live_scan.xml     Real Nmap XML sample
-  poc_corpus/       Labelled PoC files + labels.json
-tasks/             task1.md … task5.md (one per phase module)
+┌─────────────────────────────────────────────────────────────────────┐
+│                        INTERFACES                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │  Streamlit   │  │   FastAPI    │  │     CLI      │              │
+│  │  frontend/   │  │  services/   │  │  prototype/  │              │
+│  │  app.py      │  │  api.py      │  │  cli.py      │              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         └─────────────────┼─────────────────┘                       │
+│                           ▼                                         │
+│              ┌─────────────────────────┐                            │
+│              │    VAPTApplication      │                            │
+│              │  vapt_platform/         │                            │
+│              │  application.py         │                            │
+│              └───────────┬─────────────┘                            │
+│                          │                                          │
+│  ┌───────────────────────┼───────────────────────┐                  │
+│  │                       ▼                       │                  │
+│  │  ┌─────────────────────────────────────────┐  │                  │
+│  │  │         DECISION ENGINE (FROZEN)        │  │                  │
+│  │  │  decision_engine/core/                  │  │                  │
+│  │  │  GAP-1: assess → rank → decide         │  │                  │
+│  │  │  GAP-2: attempt → count → pivot        │  │                  │
+│  │  └─────────────────────────────────────────┘  │                  │
+│  │                                               │                  │
+│  │  ┌─────────────────────────────────────────┐  │                  │
+│  │  │      VAPT RESEARCH CORE (FROZEN)        │  │                  │
+│  │  │  core/                                  │  │                  │
+│  │  └─────────────────────────────────────────┘  │                  │
+│  │                                               │                  │
+│  │  ┌─────────────────────────────────────────┐  │                  │
+│  │  │           PLATFORM SERVICES             │  │                  │
+│  │  │  vapt_platform/                         │  │                  │
+│  │  │  enrichment, normalization, scanners    │  │                  │
+│  │  │  authorization, pipeline, persistence  │  │                  │
+│  │  │  events, reporting                      │  │                  │
+│  │  └─────────────────────────────────────────┘  │                  │
+│  │                                               │                  │
+│  │  ┌─────────────────────────────────────────┐  │                  │
+│  │  │         PROTOTYPE LAYER                 │  │                  │
+│  │  │  prototype/                             │  │                  │
+│  │  │  execution_layer, lab_runner, demo_data │  │                  │
+│  │  └─────────────────────────────────────────┘  │                  │
+│  │                                               │                  │
+│  │  ┌─────────────────────────────────────────┐  │                  │
+│  │  │         DOCKER LAB                      │  │                  │
+│  │  │  lab/                                   │  │                  │
+│  │  │  docker-compose.yml, emulator, executor │  │                  │
+│  │  └─────────────────────────────────────────┘  │                  │
+│  └───────────────────────────────────────────────┘                  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Setup
+## Quick Start
+
+### Setup
+
 ```bash
 cd ~/ai_vapt_framework
-python3.10 -m venv venv        # Python 3.10 (pinned in .python-version)
+python3.10 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt   # exact pins for reproducible builds (T-REQPIN)
-# optional, for live GitHub PoC fetch:
-export GITHUB_TOKEN=ghp_xxx
-# ensure Ollama is running locally:
-ollama serve &   # llama3.2:3b already pulled
+pip install -r requirements.txt
+
+# Optional: Start Ollama for AI assessment
+ollama serve &
+ollama pull llama3.2:3b
 ```
 
-## Run
+### Run
+
 ```bash
-# 1) Scan ingestion
-python -m core.scanner data/sample_scan.json
-python -m core.scanner data/live_scan.xml
+# 1) CLI — run a scenario
+python -m prototype.cli run --scenario failure_pivot --mode simulation
 
-# 2) Usability scoring (local Ollama)
-python -m core.exploit_assessor CVE-2021-44228
+# 2) Web dashboard
+streamlit run frontend/app.py
 
-# 3) Full agent run
-python -m core.agent_graph
+# 3) API
+uvicorn services.api:app --reload --port 8000
 
-# 4) Comparative benchmark
-python tests/evaluate.py        # -> data/benchmark_results.csv
-
-# 5) Dashboard
-streamlit run app.py
+# 4) Run tests
+python -m pytest tests/ -q
 ```
 
-## Honest limitations (document these in the thesis)
+## Evidence Tiers
 
-Three evidence tiers — keep them distinct:
-- **SIMULATION** — exploit outcomes resolved from `data/poc_corpus/labels.json` (curated
-  ground truth), not a live weaponized payload. This makes results reproducible and
-  avoids shipping exploits; it is a *behavioural* benchmark of the agent's decision
-  logic (scoring + pivot), which is exactly the contribution.
-- **CONTROLLED VALIDATION** — offline ablations (`tests/gap1_ablation.py`,
-  `tests/ablation.py`, `tests/benchmark_var.py`) measuring the mechanism with frozen
-  inputs and stubbed assessor; no external target.
-- **REAL OBSERVED RESULT** — NOT YET ACHIEVED. Would require an isolated Docker testbed
-  (T-DOCKER) executing sandboxed PoC modules and parsing actual output. Currently blocked.
+| Tier | Description |
+|------|-------------|
+| **SIMULATED** | Outcomes from ground-truth labels (`labels.json`) |
+| **OBSERVED_LOCAL** | Real HTTP to loopback (127.0.0.1) |
+| **DOCKER_OBSERVED** | Real HTTP to isolated Docker emulator |
+| **CONTROLLED_VALIDATION** | Real execution against live targets |
 
-- **Real mode (default `real`, danger_mode=False)** is a genuine but connectivity-ONLY
-  probe: it opens a TCP connection to verify reachability and sends NO exploit payload.
-  It reports `SKIPPED` (no exploit sent), never a simulated success. LOW-usability
-  findings are always skipped. Live exploitation is possible ONLY via the explicit,
-  opt-in `danger_mode=True` in an authorized, isolated lab — never against targets you
-  are not permitted to test.
-- To progress to **true exploitation**, provision an isolated Docker testbed
-  (DVWA / OWASP crAPI / Metasploitable) and register sandboxed modules under
-  `data/poc_corpus/<CVE>.py`; the executor can shell them out in danger_mode
-  (opt-in, requires authorized isolated lab).
+## Research Integrity
 
-## Benchmark result (sample run, SIMULATION)
+### GAP-1: Assessment Before Ranking
 
-> Evidence category: **SIMULATION** (outcomes resolved from `labels.json`, not a live
-> weaponized payload). See "Honest limitations" below for the three-tier distinction.
+```python
+# decision_engine/core/engine.py:initial_state()
+if assess_fn:
+    assess_candidates(raw_candidates, assess_fn=assess_fn)  # Assess FIRST
+cs = rank_candidates(raw_candidates)  # THEN rank
+```
 
-| Agent | Requests | Validated | Completion % | Loop events |
-|-------|----------|-----------|--------------|-------------|
-| SMART (framework) | 5  | 1 | 33.3 | 0 |
-| DUMB (baseline)   | 21 | 1 | 33.3 | 2 |
+### GAP-2: Bounded Pivot
 
-The smart agent reaches the same validated vulnerability using **16 fewer requests**
-(5 vs 21) and **zero loop events** vs the baseline's 2 — the core thesis claim, now
-measured (not asserted). It does NOT run faster: LLM scoring adds latency, so
-wall-clock time is longer for SMART (time_saved is NEGATIVE).
+```python
+# decision_engine/core/engine.py:_evaluate()
+if state["attempt_count"] >= state["max_attempts"]:
+    return "pivot"  # Threshold reached → pivot
+```
 
-Demonstrated, evidence-backed benefits (SIMULATION / CONTROLLED VALIDATION):
-- pre-execution candidate assessment via a structured-LLM usability matrix;
-- EPSS × usability ranking/prioritization of the attack path;
-- measured request-attempt reduction (5 vs 21) and loop-event elimination (0 vs 2);
-- explicit state-driven pivoting after N failed attempts (no infinite loops);
-- reproducible local evaluation (pinned deps, frozen inputs, offline test suite).
+## Project Structure
 
-NOT claimed: faster execution, real exploit success, universal GAP-1 prediction
-accuracy, or universal loop prevention. See `docs/project_management/09_BENCHMARK_EVIDENCE.md`.
+```
+ai_vapt_framework/
+├── core/                    # VAPT research core (FROZEN)
+├── decision_engine/         # Domain-independent engine (FROZEN)
+├── vapt_platform/           # Platform services
+├── prototype/               # Prototype layer (executors, demo data)
+├── frontend/                # Streamlit dashboard
+├── services/                # FastAPI backend
+├── lab/                     # Docker lab
+├── tests/                   # Test suite (545 tests)
+├── data/                    # Datasets and PoC corpus
+├── docs/                    # Documentation
+└── experiments/             # Research experiments
+```
+
+## Honest Limitations
+
+- **SIMULATION mode** uses ground-truth labels, not live exploitation
+- **DOCKER_OBSERVED** requires Docker Desktop (not available in all environments)
+- **AI assessment** requires local Ollama (deterministic fallback available)
+- **No external targets** — only allowlisted lab targets are permitted
+
+## Documentation
+
+- [Current State Audit](docs/project_management/CURRENT_STATE_AUDIT.md)
+- [Research Core Protection](docs/project_management/RESEARCH_CORE_PROTECTION.md)
+- [Mentor Demo](docs/project_management/MENTOR_DEMO.md)
+- [Current Architecture](docs/architecture/CURRENT_ARCHITECTURE.md)
+- [Known Limitations](docs/project_management/KNOWN_LIMITATIONS.md)
