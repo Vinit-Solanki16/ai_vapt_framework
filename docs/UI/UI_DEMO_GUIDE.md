@@ -1,4 +1,4 @@
-# UI Demo Guide
+# Mentor Demo Guide
 
 **Date:** 2026-09-21
 **Branch:** `prototype-development`
@@ -8,8 +8,8 @@
 
 ## Overview
 
-This guide provides a step-by-step demonstration of the AI-VAPT
-Operations Console for mentors and evaluators.
+This guide provides the exact click-by-click sequence for demonstrating
+the AI-VAPT Operations Console to mentors and evaluators.
 
 ---
 
@@ -21,289 +21,177 @@ source venv/bin/activate
 
 # Start the application
 uvicorn services.api:app --reload --port 8000
+
+# Optional: Start Ollama for AI assessment
+ollama serve &
+
+# Optional: Start Docker lab
+cd lab && docker-compose up -d && cd ..
 ```
 
 Open: http://localhost:8000
 
-### Optional: Start Ollama for AI Assessment
-
-```bash
-ollama serve &
-ollama pull llama3.2:3b
-```
-
-Without Ollama, the system uses deterministic fallback automatically.
-
 ---
 
-## Demo 1: Dashboard Overview
+## Exact Click-by-Click Demo Sequence
 
-### Steps
+### Step 1: Dashboard
 
 1. Open http://localhost:8000
-2. The Dashboard loads automatically
-3. Observe:
-   - System status: "SYSTEM OPERATIONAL"
+2. Observe:
+   - Top header: "AI-VAPT" + "SYSTEM OPERATIONAL"
+   - Left sidebar: 12 navigation items
    - Metric cards: Total Runs, Successful, Pivots, CRIT Findings
-   - Recent runs table
-   - System health panel
+   - Recent Runs table
+   - System Health panel
 
-### Expected
+### Step 2: New Assessment
 
-- All metrics come from actual persisted data
-- No hardcoded values
-- Real-time system health status
+1. Click "New Assessment" in sidebar
+2. Observe:
+   - Execution Mode dropdown
+   - Scenario dropdown
+   - Assessor Mode dropdown
+   - Pivot Threshold slider
+   - Safety Status section
 
----
+### Step 3: Configure Simulation
 
-## Demo 2: Run a Simulation Assessment
+1. Select Execution Mode: "Simulation"
+2. Select Scenario: "failure_pivot"
+3. Select Assessor: "deterministic"
+4. Set Pivot Threshold: 2
+5. Verify Safety Status shows "SIMULATION"
 
-### Steps
+### Step 4: Run Assessment
 
-1. Click "New Assessment" in the sidebar
-2. Select Mode: "Simulation"
-3. Select Scenario: "failure_pivot"
-4. Select Assessor: "deterministic"
-5. Set Pivot Threshold: 2
-6. Verify safety status shows "SIMULATION"
-7. Click "Run Assessment"
+1. Click "Run Assessment" button
+2. Observe:
+   - Loading state
+   - Pipeline stepper appears
+   - Candidates table populates
+   - Assessment panel shows "deterministic"
+   - Decision trace shows events
+   - Evidence tier shows "SIMULATED"
 
-### Expected
+### Step 5: View Results
 
-- Pipeline stepper shows progress
-- Candidates table shows quality ranks
-- Assessment panel shows "deterministic" mode
-- Results show actual execution outcomes
+1. Observe pipeline: Ingest → Enrich → Assess → Rank → Decide → Safety → Execute → Verify → Evidence → Report
+2. Observe candidates:
+   - DEMO-WORKER: Quality HIGH, Outcome SUCCESS
+   - DEMO-DEAD-END: Quality LOW, Outcome FAIL_TIMEOUT
+3. Observe decision trace:
+   - Attempt 1 → SUCCESS on DEMO-WORKER
+   - Pivot to DEMO-DEAD-END
+   - Attempt 1/2 → FAIL_TIMEOUT
+   - Attempt 2/2 → FAIL_TIMEOUT
+   - Threshold reached → PIVOT
 
-### Key Observations
+### Step 6: View Findings
 
-- **GAP-1:** Candidates are assessed before ranking
-- **GAP-2:** Failed candidates trigger pivot after threshold
+1. Click "Findings" in sidebar
+2. Observe table with all findings
+3. Columns: Finding, Severity, Quality, Outcome, Evidence, Run
 
----
+### Step 7: View Candidate Ranking (GAP-1)
 
-## Demo 3: Run with AI Assessment
+1. Click "Candidate Ranking" in sidebar
+2. Observe table with candidates
+3. Note: Quality rank affects priority score
+4. Explanation: "Assessment → Candidate scoring → Priority"
 
-### Prerequisites
+### Step 8: View Decision Paths
 
-```bash
-ollama serve &
-```
-
-### Steps
-
-1. Click "New Assessment" in the sidebar
-2. Select Mode: "Simulation"
-3. Select Scenario: "failure_pivot"
-4. Select Assessor: "ai"
-5. Select Provider: "ollama"
-6. Click "Run Assessment"
-
-### Expected
-
-- Assessment panel shows "ai" mode
-- Provider shows "ollama"
-- Quality ranks come from LLM assessment
-
-### Fallback Behavior
-
-If Ollama is unavailable:
-- System uses deterministic fallback
-- Clearly marked as "Fallback active"
-- Never displayed as AI assessment
-
----
-
-## Demo 4: Docker Lab Assessment
-
-### Prerequisites
-
-```bash
-# Start Docker Desktop
-# Then:
-cd lab
-docker-compose up -d
-cd ..
-```
-
-### Steps
-
-1. Click "New Assessment" in the sidebar
-2. Select Mode: "Docker Lab"
-3. Select Target: "172.28.0.2"
-4. Select Scenario: "docker_pivot"
-5. Verify safety status shows "AUTHORIZED / ALLOWLISTED"
-6. Click "Run Assessment"
-
-### Expected
-
-- Evidence tier: DOCKER_OBSERVED
-- Real HTTP responses from emulator
-- Pipeline shows actual execution
-
-### If Docker Unavailable
-
-The UI shows "Docker unavailable in current environment" instead of
-pretending the demo ran.
-
----
-
-## Demo 5: View Findings
-
-### Steps
-
-1. Click "Findings" in the sidebar
-2. View table of all findings
-3. Observe columns: Finding, Severity, Quality, Outcome, Evidence, Run
-
-### Expected
-
-- All findings from all runs
-- Color-coded severity
-- Evidence tier badges
-
----
-
-## Demo 6: View Candidate Ranking (GAP-1)
-
-### Steps
-
-1. Click "Candidate Ranking" in the sidebar
-2. View table of all candidates
-3. Observe how quality rank affects priority
-
-### Expected
-
-- Candidates sorted by priority score
-- Clear explanation of GAP-1
-- Quality rank directly influences ranking
-
----
-
-## Demo 7: View Decision Paths
-
-### Steps
-
-1. Click "Decision Paths" in the sidebar
+1. Click "Decision Paths" in sidebar
 2. Select a completed run
-3. View decision trace and execution flow
+3. Observe decision trace and execution flow
 
-### Expected
+### Step 9: View Pivot Analysis (GAP-2)
 
-- Color-coded trace events
-- Success/fail/pivot indicators
-- Execution results per candidate
+1. Click "Pivot Analysis" in sidebar
+2. Observe pivot events
+3. Note: Attempt counts, thresholds, pivot events
+4. Explanation: "Per-candidate attempt counter → Threshold → Pivot"
 
----
+### Step 10: View Run History
 
-## Demo 8: View Pivot Analysis (GAP-2)
+1. Click "Runs" in sidebar
+2. Observe table of persisted runs
+3. Click any run to view details
+4. Observe: metadata, candidates, events
 
-### Steps
+### Step 11: Generate Reports
 
-1. Click "Pivot Analysis" in the sidebar
-2. View runs with pivot events
-3. Observe attempt counts and thresholds
-
-### Expected
-
-- Visual pipeline per candidate
-- Attempt counts
-- Threshold indicators
-- Clear GAP-2 explanation
-
----
-
-## Demo 9: View Run History
-
-### Steps
-
-1. Click "Runs" in the sidebar
-2. View table of all persisted runs
-3. Click any run to see details
-
-### Expected
-
-- All runs from persistence layer
-- Detail modal with full information
-- Events timeline
-
----
-
-## Demo 10: Generate Reports
-
-### Steps
-
-1. Click "Reports" in the sidebar
+1. Click "Reports" in sidebar
 2. Select a run
-3. Click download button (JSON, HTML, Markdown, TXT)
+3. Click download buttons: JSON, HTML, Markdown, TXT
+4. Verify files download successfully
 
-### Expected
+### Step 12: View Intelligence
 
-- Report downloads successfully
-- Contains all run information
-- Professional formatting
+1. Click "Vulnerability Intelligence" in sidebar
+2. Enter CVE ID: CVE-2021-44228
+3. Click "Lookup"
+4. Observe: EPSS, KEV, CVSS, CWE data
 
----
+### Step 13: View System Health
 
-## Demo 11: System Health
+1. Click "System Health" in sidebar
+2. Observe component statuses
+3. Note: Application, API, Persistence, Research Core, Safety, Ollama, Docker
 
-### Steps
+### Step 14: View Configuration
 
-1. Click "System Health" in the sidebar
-2. View component status grid
-3. View API endpoints table
-
-### Expected
-
-- Real status for all components
-- READY/UNAVAILABLE indicators
-- Complete API endpoint list
+1. Click "Configuration" in sidebar
+2. Observe safety configuration
+3. Note: Target allowlist, authorization status
 
 ---
 
-## Demo 12: Configuration
+## Research Contribution Explanation
 
-### Steps
+### GAP-1: AI Assessment Before Ranking
 
-1. Click "Configuration" in the sidebar
-2. View safety configuration
-3. View AI configuration
-4. View research core protection status
-
-### Expected
-
-- Target allowlist displayed
-- Authorization status
-- Ollama and Docker status
-- Research core: PROTECTED
-
----
-
-## Research Integrity Verification
-
-### GAP-1: Assessment Before Ranking
-
-```python
-# decision_engine/core/engine.py:initial_state()
-if assess_fn:
-    assess_candidates(raw_candidates, assess_fn=assess_fn)  # Assess FIRST
-cs = rank_candidates(raw_candidates)  # THEN rank
 ```
+Candidate → AI Assessment → Quality Rank → Priority Score → Ranking
+```
+
+The UI shows:
+- Assessment panel with quality rank (HIGH/MEDIUM/LOW)
+- Candidate ranking table with priority scores
+- Clear explanation: "Assessment → Candidate scoring → Priority"
 
 ### GAP-2: Bounded Pivot
 
-```python
-# decision_engine/core/engine.py:_evaluate()
-if state["attempt_count"] >= state["max_attempts"]:
-    return "pivot"  # Threshold reached → pivot
+```
+Candidate → Execute → Attempt Count → Threshold Check → Pivot
 ```
 
-### Evidence Provenance
+The UI shows:
+- Pivot Analysis page with attempt counts
+- Threshold indicators
+- Visual pipeline showing failure → threshold → pivot
 
-- SIMULATED: Ground-truth labels
-- OBSERVED_LOCAL: Loopback HTTP
-- DOCKER_OBSERVED: Docker emulator HTTP
-- CONTROLLED_VALIDATION: Live target
+---
+
+## Evidence Tiers
+
+| Tier | Description | UI Display |
+|------|-------------|------------|
+| SIMULATED | Ground-truth labels | Yellow badge |
+| OBSERVED_LOCAL | Loopback HTTP | Blue badge |
+| DOCKER_OBSERVED | Docker emulator | Green badge |
+| CONTROLLED_VALIDATION | Live target | Purple badge |
+
+---
+
+## Safety Model
+
+- **Target Allowlist:** 127.0.0.1, 172.28.0.2 only
+- **AuthorizationTracker:** All targets must be authorized
+- **SafetyGate:** Validates all actions before execution
+- **UI:** No free-text target input (selectbox only)
+- **Status:** "AUTHORIZED / ALLOWLISTED" or "SIMULATION" displayed before execution
 
 ---
 
@@ -320,7 +208,30 @@ if state["attempt_count"] >= state["max_attempts"]:
 | View runs | Sidebar → Run History → Runs |
 | Generate reports | Sidebar → Reports |
 | System health | Sidebar → System → System Health |
+| Reset demo | `./scripts/reset_demo.sh` |
 
 ---
 
-_This demo guide covers all UI features. For detailed documentation, see UI_ARCHITECTURE.md and UI_USER_GUIDE.md._
+## Expected Results
+
+### Simulation (failure_pivot)
+
+- DEMO-WORKER: SUCCESS (attempt 1)
+- DEMO-DEAD-END: FAIL_TIMEOUT (attempts 1-2) → PIVOT
+- Evidence: SIMULATED
+
+### AI Assessment (Ollama)
+
+- Quality ranks from LLM
+- Assessment mode: ai, provider: ollama
+- Evidence: SIMULATED
+
+### Docker Lab (docker_pivot)
+
+- docker-vuln-success: SUCCESS
+- docker-fail-pivot: FAIL_TIMEOUT → PIVOT
+- Evidence: DOCKER_OBSERVED
+
+---
+
+_This guide provides the exact sequence for a successful mentor demonstration._
