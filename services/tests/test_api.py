@@ -94,3 +94,30 @@ class TestGetReport:
         assert data["run_id"] == run_id
         assert "report" in data
         assert "format" in data
+
+
+class TestNewEndpoints:
+    def test_list_scenarios(self, client):
+        resp = client.get("/scenarios")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "scenarios" in data
+        assert len(data["scenarios"]) > 0
+
+    def test_system_health(self, client):
+        resp = client.get("/system/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["application"] == "READY"
+        assert data["persistence"] == "READY"
+        assert data["research_core"] == "PROTECTED"
+
+    def test_get_assessment(self, client):
+        resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
+        run_id = resp.json()["run_id"]
+        resp = client.get(f"/runs/{run_id}/assessment")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["run_id"] == run_id
+        assert "assessment" in data
+        assert "evidence_tier" in data

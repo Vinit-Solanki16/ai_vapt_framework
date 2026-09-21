@@ -40,10 +40,22 @@ class JobManager:
 
     def set_state(self, run_id: str, state: dict):
         job = self._jobs.get(run_id)
-        if job:
-            job["state"] = state
-            job["status"] = "completed"
-            job["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if not job:
+            # Auto-create job entry if it doesn't exist
+            self._jobs[run_id] = {
+                "run_id": run_id,
+                "scenario": state.get("scenario"),
+                "mode": state.get("mode", "simulation"),
+                "status": "pending",
+                "state": None,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "error": None,
+            }
+            job = self._jobs[run_id]
+        job["state"] = state
+        job["status"] = "completed"
+        job["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     def set_failed(self, run_id: str, error: str):
         job = self._jobs.get(run_id)

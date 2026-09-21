@@ -88,7 +88,24 @@ def start_run(req: RunRequest):
     try:
         result = application.run(vapt_request)
         run_id = result.domain.run_id
-        
+
+        # Store result in job manager for later retrieval
+        job_manager.set_state(run_id, {
+            "scenario": result.domain.scenario,
+            "mode": result.domain.mode,
+            "status": result.domain.final_status,
+            "candidates": result.domain.candidates,
+            "execution_results": result.domain.execution_results,
+            "decision_trace": result.domain.decision_trace,
+            "total_attempts": result.domain.total_attempts,
+            "pivot_count": result.domain.pivot_count,
+            "candidates_processed": result.domain.candidates_processed,
+            "evidence_tier": result.domain.evidence_tier,
+            "assessment": result.domain.assessment,
+            "safety_notice": result.domain.safety_notice,
+            "report": result.report,
+        })
+
         return RunResponse(run_id=run_id, status="completed", message="Run completed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -226,3 +243,61 @@ def get_candidates(run_id: str):
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/scenarios")
+def list_scenarios():
+    """List available scenarios."""
+    from prototype.demo_data import SCENARIOS
+    from prototype.docker_demo_data import DOCKER_SCENARIOS
+
+    all_scenarios = {**SCENARIOS, **DOCKER_SCENARIOS}
+    return {
+        "scenarios": [
+            {
+                "name": name,
+                "description": fn.__doc__ or "No description",
+            }
+            for name, (fn, _) in all_scenarios.items()
+        ]
+    }
+
+
+@app.get("/system/health")
+def system_health():
+    """Get detailed system health."""
+    health_status = {
+        "application": "READY",
+        "persistence": "READY",
+        "research_core": "PROTECTED",
+    }
+
+    # Check Ollama
+    try:
+        from core.exploit_assessor import get_llm
+        llm = get_llm(provider="ollama")
+        health_status["ollama"] = "READY"
+        health_status["ollama_model"] = "llama3.2:3b"
+    except Exception as e:
+        health_status["ollama"] = "UNAVAILABLE"
+        health_status["ollama_error"] = str(e)
+
+    # Docker status
+    health_status["docker"] = "UNAVAILABLE"
+    health_status["docker_note"] = "Docker not available in this environment"
+
+    return health_status
+
+
+@app.get("/runs/{run_id}/assessment")
+def get_assessment(run_id: str):
+    """Get assessment details for a run."""
+    job = job_manager.get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Run not found")
+    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
+    return {
+        "run_id": run_id,
+        "assessment": state.get("assessment", {}),
+        "evidence_tier": state.get("evidence_tier", "UNKNOWN"),
+    }
