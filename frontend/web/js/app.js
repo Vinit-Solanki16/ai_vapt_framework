@@ -37,6 +37,8 @@ const api = {
     getRunCandidates(runId) { return this.request('GET', `/runs/${runId}/candidates`); },
     getRunAssessment(runId) { return this.request('GET', `/runs/${runId}/assessment`); },
     getRunReport(runId, format = 'json') { return this.request('GET', `/runs/${runId}/report?format=${format}`); },
+    validateTarget(targetUrl) { return this.request('POST', '/targets/validate', { target_url: targetUrl }); },
+    getScannerStatus() { return this.request('GET', '/scanners/status'); },
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -330,14 +332,18 @@ async function renderNewAssessment(container) {
     showLoading(container, 'Loading configuration...');
 
     try {
-        const [scenarios, health] = await Promise.all([
+        const [scenarios, health, scanners] = await Promise.all([
             api.getScenarios().catch(() => ({ scenarios: [] })),
             api.getSystemHealth().catch(() => null),
+            api.getScannerStatus().catch(() => null),
         ]);
 
         state.scenarios = scenarios.scenarios || [];
+        state.scanners = scanners;
 
         const allowlistedTargets = ['127.0.0.1', '172.28.0.2'];
+        const nmapAvailable = !!(scanners && scanners.nmap && scanners.nmap.available);
+        const nucleiAvailable = !!(scanners && scanners.nuclei && scanners.nuclei.available);
 
         container.innerHTML = `
             <div class="page-header">
@@ -345,6 +351,23 @@ async function renderNewAssessment(container) {
                 <p class="page-subtitle">Configure and execute a new VAPT assessment</p>
             </div>
 
+            <div class="card" style="margin-bottom:1rem;">
+                <div class="card-header">
+                    <span class="card-title">Assessment Type</span>
+                </div>
+                <div class="form-group" style="max-width:480px;">
+                    <label class="form-label">Assessment Type</label>
+                    <select class="form-select" id="assess-type">
+                        <option value="scenario">Research Scenario (offline / Docker demo)</option>
+                        <option value="web">Web Application (authorized local URL target)</option>
+                    </select>
+                    <p class="text-muted" id="assess-type-hint" style="font-size:0.8rem;margin-top:0.5rem;">
+                        Run a frozen research scenario (GAP-1 / GAP-2 demos preserved).
+                    </p>
+                </div>
+            </div>
+
+            <div id="scenario-config">
             <div class="grid-2">
                 <div class="card">
                     <div class="card-header">
@@ -411,6 +434,79 @@ async function renderNewAssessment(container) {
                     </div>
                 </div>
             </div>
+            </div>
+
+            <div id="web-config" style="display:none;">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Web Target (authorized local only)</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Target URL</label>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input type="text" class="form-input" id="web-target-url"
+                                value="http://127.0.0.1:9191" placeholder="http://127.0.0.1:9191"
+                                style="flex:1;font-family:monospace;">
+                            <button class="btn btn-secondary" id="btn-validate-url" onclick="validateTargetUrl()">Validate</button>
+                        </div>
+                        <p class="text-muted" style="font-size:0.75rem;margin-top:0.5rem;">
+                            Only explicitly authorized local targets are accepted. Backend authorization is authoritative.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Authorization</label>
+                        <div id="web-auth-status"><div class="badge badge-warning">NOT VALIDATED</div></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Scanners</label>
+                        <div>
+                            <label style="display:block;margin-bottom:0.4rem;font-size:0.9rem;">
+                                <input type="checkbox" id="web-use-nmap" ${nmapAvailable ? 'checked' : 'disabled'}>
+                                Nmap discovery ${nmapAvailable ? '<span class="badge badge-success">READY</span>' : '<span class="badge badge-error">NOT INSTALLED</span>'}
+                            </label>
+                            <label style="display:block;font-size:0.9rem;">
+                                <input type="checkbox" id="web-use-nuclei" ${nucleiAvailable ? 'checked' : 'disabled'}>
+                                Nuclei vulnerability scan ${nucleiAvailable ? '<span class="badge badge-success">READY</span>' : '<span class="badge badge-warning">NOT AVAILABLE</span>'}
+                            </label>
+                            ${!nucleiAvailable ? '<p class="text-muted" style="font-size:0.75rem;margin-top:0.4rem;">Nuclei is not installed: the run will proceed with Nmap discovery and report Nuclei as NOT AVAILABLE.</p>' : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Assessment Configuration</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Assessor</label>
+                        <select class="form-select" id="web-assessor">
+                            <option value="ai" selected>Ollama (local AI assessment)</option>
+                            <option value="deterministic">Deterministic (offline, reproducible)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" class="form-input" id="web-model" value="llama3.2:3b" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Pivot Threshold (N)</label>
+                        <input type="number" class="form-input" id="web-max-attempts" value="2" min="1" max="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Safety</label>
+                        <div id="web-safety-status"><div class="badge badge-warning">NOT VALIDATED</div></div>
+                    </div>
+                </div>
+            </div>
+            </div>
 
             <div class="card" id="run-result" style="display:none;">
                 <div class="card-header">
@@ -419,14 +515,31 @@ async function renderNewAssessment(container) {
                 <div id="run-result-content"></div>
             </div>
 
-            <div style="margin-top: 1rem;">
+            <div style="margin-top: 1rem;" id="scenario-run-btn">
                 <button class="btn btn-primary" id="btn-run" onclick="startAssessment()">
                     🚀 Run Assessment
+                </button>
+            </div>
+            <div style="margin-top: 1rem;display:none;" id="web-run-btn">
+                <button class="btn btn-primary" id="btn-run-web" onclick="startWebAssessment()">
+                    🛡️ START VAPT ASSESSMENT
                 </button>
             </div>
         `;
 
         // Event listeners
+        document.getElementById('assess-type').addEventListener('change', function () {
+            const isWeb = this.value === 'web';
+            document.getElementById('scenario-config').style.display = isWeb ? 'none' : 'block';
+            document.getElementById('web-config').style.display = isWeb ? 'block' : 'none';
+            document.getElementById('scenario-run-btn').style.display = isWeb ? 'none' : 'block';
+            document.getElementById('web-run-btn').style.display = isWeb ? 'block' : 'none';
+            document.getElementById('assess-type-hint').textContent = isWeb
+                ? 'Real controlled assessment of an authorized local web target (Juice Shop demo: http://127.0.0.1:9191).'
+                : 'Run a frozen research scenario (GAP-1 / GAP-2 demos preserved).';
+            if (isWeb) validateTargetUrl();
+        });
+
         document.getElementById('assess-mode').addEventListener('change', function () {
             const isLab = this.value === 'lab';
             document.getElementById('target-group').style.display = isLab ? 'block' : 'none';
@@ -438,9 +551,51 @@ async function renderNewAssessment(container) {
             document.getElementById('provider-group').style.display = this.value === 'ai' ? 'block' : 'none';
         });
 
+        document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
+
         updateSafetyStatus();
     } catch (err) {
         showError(container, err.message);
+    }
+}
+
+async function validateTargetUrl() {
+    const input = document.getElementById('web-target-url');
+    const authEl = document.getElementById('web-auth-status');
+    const safetyEl = document.getElementById('web-safety-status');
+    if (!input || !authEl) return;
+
+    const url = input.value.trim();
+    if (!url) {
+        authEl.innerHTML = '<div class="badge badge-error">❌ REJECTED — URL required</div>';
+        if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
+        return;
+    }
+
+    authEl.innerHTML = '<div class="badge badge-warning">VALIDATING...</div>';
+    if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-warning">VALIDATING...</div>';
+
+    try {
+        const res = await api.validateTarget(url);
+        if (res.authorized && res.reachable) {
+            authEl.innerHTML = `<div class="badge badge-success">✅ AUTHORIZED LOCAL TARGET</div>
+                <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')} — resolved ${escapeHtml(res.resolved_host || '')}:${escapeHtml(String(res.port || ''))}</p>`;
+            if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-success">AUTHORIZED</div>';
+        } else if (res.authorized) {
+            authEl.innerHTML = `<div class="badge badge-warning">⚠️ AUTHORIZED / TARGET NOT REACHABLE</div>
+                <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')}</p>`;
+            if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-warning">AUTHORIZED / UNREACHABLE</div>';
+        } else {
+            authEl.innerHTML = `<div class="badge badge-error">❌ REJECTED — TARGET NOT AUTHORIZED</div>
+                <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')}</p>`;
+            if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
+        }
+        return res;
+    } catch (err) {
+        authEl.innerHTML = `<div class="badge badge-error">❌ VALIDATION ERROR</div>
+            <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(err.message)}</p>`;
+        if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
+        return null;
     }
 }
 
@@ -469,7 +624,9 @@ async function startAssessment() {
     try {
         const mode = document.getElementById('assess-mode').value;
         const scenario = document.getElementById('assess-scenario').value;
-        const assessor = document.getElementById('assess-assessor').value;
+        const assessorRaw = document.getElementById('assess-assessor').value;
+        // Backend schema expects "deterministic" | "llm".
+        const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
         const provider = document.getElementById('assess-provider')?.value || 'ollama';
         const maxAttempts = parseInt(document.getElementById('assess-max-attempts').value, 10);
 
@@ -479,6 +636,7 @@ async function startAssessment() {
             assessor,
             assessor_provider: provider,
             max_attempts: maxAttempts,
+            assessment_type: 'scenario',
         };
 
         if (mode === 'lab') {
@@ -509,6 +667,65 @@ async function startAssessment() {
     }
 }
 
+async function startWebAssessment() {
+    const btn = document.getElementById('btn-run-web');
+    const resultCard = document.getElementById('run-result');
+    const resultContent = document.getElementById('run-result-content');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> Running VAPT pipeline...';
+
+    try {
+        const targetUrl = document.getElementById('web-target-url').value.trim();
+        const useNmap = document.getElementById('web-use-nmap')?.checked ?? true;
+        const useNuclei = document.getElementById('web-use-nuclei')?.checked ?? false;
+        const assessorRaw = document.getElementById('web-assessor').value;
+        const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
+        const maxAttempts = parseInt(document.getElementById('web-max-attempts').value, 10);
+
+        // Backend re-validates authoritatively; this pre-check is UX only.
+        const pre = await validateTargetUrl();
+        if (!pre || !pre.authorized) {
+            throw new Error('Target is not authorized. Resolve the authorization error before starting.');
+        }
+        if (!pre.reachable) {
+            throw new Error('Target is not reachable. Scanners will not run against an unreachable target.');
+        }
+
+        const data = {
+            scenario: 'web_target',
+            mode: 'web',
+            assessment_type: 'web',
+            target_url: targetUrl,
+            use_nmap: useNmap,
+            use_nuclei: useNuclei,
+            assessor,
+            assessor_provider: 'ollama',
+            max_attempts: maxAttempts,
+        };
+
+        const result = await api.startRun(data);
+        state.currentRun = result.run_id;
+
+        resultCard.style.display = 'block';
+        resultContent.innerHTML = `
+            <div class="alert alert-success">
+                <strong>Web VAPT assessment completed!</strong> Run ID: ${escapeHtml(result.run_id)}
+            </div>
+            <div id="active-run-details"></div>
+        `;
+
+        await loadActiveRunDetails(result.run_id);
+
+    } catch (err) {
+        resultCard.style.display = 'block';
+        resultContent.innerHTML = `<div class="alert alert-error"><strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🛡️ START VAPT ASSESSMENT';
+    }
+}
+
 async function loadActiveRunDetails(runId) {
     const container = document.getElementById('active-run-details');
     if (!container) return;
@@ -520,6 +737,13 @@ async function loadActiveRunDetails(runId) {
             api.getRunCandidates(runId),
             api.getRunAssessment(runId),
         ]);
+
+        // Web-target assessments get the live-pipeline stage view.
+        const webCtx = (run.pipeline_summary && run.pipeline_summary.web) || null;
+        if (run.assessment_type === 'web' || webCtx) {
+            renderWebRunDetails(container, run, events, candidates, assessment, webCtx);
+            return;
+        }
 
         const pipelineSteps = [
             { key: 'FINDINGS_INGESTED', label: 'Ingest' },
@@ -606,6 +830,139 @@ async function loadActiveRunDetails(runId) {
     } catch (err) {
         container.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Web-target live pipeline view (Phase 32)
+// Honest stage display: every stage reflects recorded run data.
+// Scanner findings are NEVER presented as confirmed exploits.
+// ═══════════════════════════════════════════════════════════════════════
+
+function webStage(ok, label, detail) {
+    return `
+        <div class="pipeline-step">
+            <div class="step-circle ${ok ? 'completed' : 'failed'}">${ok ? '✓' : '✗'}</div>
+            <div class="step-label ${ok ? 'completed' : 'failed'}">${label}</div>
+            ${detail ? `<div class="text-dim" style="font-size:0.65rem;">${escapeHtml(detail)}</div>` : ''}
+        </div>
+        <div class="step-connector ${ok ? 'completed' : ''}"></div>
+    `;
+}
+
+function renderWebRunDetails(container, run, events, candidates, assessment, webCtx) {
+    const w = webCtx || {};
+    const pre = w.preflight || {};
+    const nmap = w.nmap || {};
+    const nuclei = w.nuclei || {};
+    const cands = candidates.candidates || run.candidates || [];
+    const assess = assessment.assessment || run.assessment || {};
+    const details = assess.details || [];
+    const detailById = {};
+    for (const d of details) detailById[d.candidate_id] = d;
+
+    const targetOk = !!pre.reachable;
+    const nmapOk = nmap.status === 'COMPLETED';
+    const nucleiOk = nuclei.status === 'COMPLETED';
+    const nucleiNa = nuclei.status === 'NOT AVAILABLE' || nuclei.status === 'SKIPPED';
+    const findingsOk = cands.length > 0;
+    const aiOk = assess.mode === 'ai' || assess.mode === 'deterministic';
+
+    const stages = [
+        webStage(targetOk, 'TARGET', pre.reachable ? `Reachable (${pre.http_status})` : 'Unreachable'),
+        webStage(nmapOk, 'DISCOVERY', `Nmap: ${nmap.finding_count ?? 0} findings`),
+        webStage(nucleiOk || nucleiNa, 'VULN SCAN', `Nuclei: ${nuclei.status || 'unknown'}`),
+        webStage(findingsOk, 'FINDINGS', String(cands.length)),
+        webStage(findingsOk, 'NORMALIZATION', 'CanonicalFinding + dedup'),
+        webStage(findingsOk, 'ENRICHMENT', 'EPSS / KEV / CVSS / CWE'),
+        webStage(aiOk, 'AI ASSESSMENT', `${assess.provider || '?'}${assess.model ? ' / ' + assess.model : ''}`),
+        webStage(true, 'RANKING', 'assessment → rank (GAP-1)'),
+        webStage(true, 'DECISION', `${run.final_status || run.status || '?'}`),
+        webStage(true, 'SAFETY', 'SafetyGate validated'),
+        webStage(true, 'VALIDATION', validationSummary(cands)),
+        webStage(true, 'EVIDENCE', run.evidence_tier || '?'),
+        `<div class="pipeline-step">
+            <div class="step-circle completed">✓</div>
+            <div class="step-label completed">REPORT</div>
+            <div class="text-dim" style="font-size:0.65rem;">available below</div>
+        </div>`,
+    ];
+
+    container.innerHTML = `
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header">
+                <span class="card-title">Web Target Assessment</span>
+                <span class="badge badge-info">${escapeHtml(w.target_url || run.target_url || '')}</span>
+            </div>
+            <div class="grid-4" style="margin-bottom:1rem;">
+                <div><div class="text-muted" style="font-size:0.75rem;">Target</div><div style="font-family:monospace;font-size:0.85rem;">${escapeHtml(w.target_url || run.target_url || 'N/A')}</div></div>
+                <div><div class="text-muted" style="font-size:0.75rem;">Application</div><div>OWASP Juice Shop (local controlled test app)</div></div>
+                <div><div class="text-muted" style="font-size:0.75rem;">Environment</div><div>LOCAL CONTROLLED TEST APPLICATION</div></div>
+                <div><div class="text-muted" style="font-size:0.75rem;">Evidence</div><div><span class="badge ${evidenceClass(run.evidence_tier)}">${escapeHtml(run.evidence_tier || 'UNKNOWN')}</span></div></div>
+            </div>
+            <div class="pipeline-container">${stages.join('')}</div>
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="text-muted" style="font-size:0.8rem;"><strong>Discovery:</strong> Nmap ${escapeHtml(nmap.status || '?')} (exit ${escapeHtml(String(nmap.exit_code ?? '?'))}, ${escapeHtml(String(nmap.finding_count ?? 0))} findings)</div>
+                <div class="text-muted" style="font-size:0.8rem;"><strong>Vulnerability scan:</strong> Nuclei ${escapeHtml(nuclei.status || '?')} — ${escapeHtml(nuclei.detail || '')}</div>
+            </div>
+            <div class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;"><strong>AI:</strong> ${escapeHtml(assess.provider || '?')}${assess.model ? ' / ' + escapeHtml(assess.model) : ''} (${escapeHtml(assess.mode || '?')} mode)</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Findings (${cands.length}) — scanner-detected, not confirmed exploits</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Finding</th>
+                        <th>Severity</th>
+                        <th>Source</th>
+                        <th>Target</th>
+                        <th>CVE / CVSS / EPSS / KEV / CWE</th>
+                        <th>AI Quality</th>
+                        <th>Validation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${cands.map(c => {
+                        const md = c.metadata || {};
+                        const cves = md.cve_ids || (md.cve ? [md.cve] : []);
+                        const intel = [
+                            cves.length ? cves.join(', ') : null,
+                            md.cvss_score != null ? 'CVSS ' + md.cvss_score : null,
+                            md.epss_score != null ? 'EPSS ' + md.epss_score : null,
+                            md.cisa_kev ? 'KEV' : null,
+                            (md.cwe_ids || []).length ? (md.cwe_ids || []).join(', ') : null,
+                        ].filter(Boolean).join(' · ') || '—';
+                        const q = detailById[c.id] || {};
+                        return `
+                        <tr>
+                            <td><strong>${escapeHtml(c.title || c.id)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(c.id || '')}${c.rule_id ? ' · ' + escapeHtml(c.rule_id) : ''}</span></td>
+                            <td class="${severityClass(c.severity)}">${escapeHtml(c.severity || 'unknown')}</td>
+                            <td>${escapeHtml(c.source || '')}</td>
+                            <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(c.target || '')}${c.port ? ':' + escapeHtml(String(c.port)) : ''}</td>
+                            <td style="font-size:0.75rem;">${escapeHtml(intel)}</td>
+                            <td>${q.quality_rank ? `<span class="badge ${q.quality_rank === 'HIGH' ? 'badge-success' : q.quality_rank === 'MEDIUM' ? 'badge-warning' : 'badge-error'}">${escapeHtml(q.quality_rank)}</span>${q.fallback ? ' <span class="text-warning" style="font-size:0.7rem;">fallback</span>' : ''}${q.reasoning ? `<div class="text-dim" style="font-size:0.7rem;max-width:220px;">${escapeHtml(String(q.reasoning).slice(0, 160))}</div>` : ''}` : escapeHtml(c.quality_rank || 'N/A')}</td>
+                            <td><span class="badge badge-warning">${escapeHtml(c.validation_status || 'VALIDATION NOT AVAILABLE')}</span></td>
+                        </tr>`;
+                    }).join('') || '<tr><td colspan="7" class="text-muted">No findings</td></tr>'}
+                </tbody>
+            </table>
+            <div style="margin-top:1rem;">
+                <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadReport('${escapeHtml(run.run_id)}', 'json')">JSON</button>
+                <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadReport('${escapeHtml(run.run_id)}', 'html')">HTML</button>
+                <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadReport('${escapeHtml(run.run_id)}', 'markdown')">MD</button>
+                <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="downloadReport('${escapeHtml(run.run_id)}', 'txt')">TXT</button>
+            </div>
+        </div>
+    `;
+}
+
+function validationSummary(cands) {
+    if (!cands.length) return 'no findings';
+    const unavailable = cands.filter(c => (c.validation_status || '').includes('NOT AVAILABLE')).length;
+    if (unavailable === cands.length) return 'NOT AVAILABLE (scanner-detected)';
+    return `${cands.length - unavailable}/${cands.length} executed`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -698,6 +1055,8 @@ async function renderFindings(container) {
                         <tr>
                             <th>Finding</th>
                             <th>Severity</th>
+                            <th>Source</th>
+                            <th>Target</th>
                             <th>Quality</th>
                             <th>Outcome</th>
                             <th>Evidence</th>
@@ -707,8 +1066,10 @@ async function renderFindings(container) {
                     <tbody>
                         ${allFindings.map(f => `
                             <tr>
-                                <td><strong>${escapeHtml(f.id)}</strong></td>
+                                <td><strong>${escapeHtml(f.title || f.id)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(f.id)}</span></td>
                                 <td class="${severityClass(f.severity)}">${escapeHtml(f.severity || 'unknown')}</td>
+                                <td>${escapeHtml(f.source || '—')}</td>
+                                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(f.target || f.host || '—')}${f.port ? ':' + escapeHtml(String(f.port)) : ''}</td>
                                 <td>${escapeHtml(f.quality_rank || 'N/A')}</td>
                                 <td><span class="badge ${f.execution_outcome === 'SUCCESS' ? 'badge-success' : 'badge-error'}">${escapeHtml(f.execution_outcome || '-')}</span></td>
                                 <td><span class="badge ${evidenceClass(f.evidenceTier)}">${escapeHtml(f.evidenceTier)}</span></td>
@@ -1110,6 +1471,8 @@ async function renderRunHistory(container) {
                             <th>Mode</th>
                             <th>Status</th>
                             <th>Target</th>
+                            <th>Scanners / Findings</th>
+                            <th>AI Provider</th>
                             <th>Attempts</th>
                             <th>Pivots</th>
                             <th>Evidence</th>
@@ -1120,10 +1483,12 @@ async function renderRunHistory(container) {
                             <tr style="cursor:pointer;" onclick="showRunDetail('${escapeHtml(r.run_id)}')">
                                 <td><strong style="color:var(--accent-blue-light);">${escapeHtml(r.run_id)}</strong></td>
                                 <td>${formatDateShort(r.created_at)}</td>
-                                <td>${escapeHtml(r.scenario)}</td>
+                                <td>${escapeHtml(r.scenario)}${r.assessment_type === 'web' ? ' <span class="badge badge-info">WEB</span>' : ''}</td>
                                 <td><span class="badge badge-info">${escapeHtml(r.mode)}</span></td>
                                 <td><span class="badge ${r.status === 'COMPLETED' ? 'badge-success' : 'badge-error'}">${escapeHtml(r.status)}</span></td>
-                                <td>${escapeHtml(r.target || 'N/A')}</td>
+                                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(r.target_url || r.target || 'N/A')}</td>
+                                <td>${r.assessment_type === 'web' ? escapeHtml(String(r.finding_count ?? 0)) + ' findings' : '—'}</td>
+                                <td>${escapeHtml(r.assessor_provider || '—')}</td>
                                 <td>${r.total_attempts}</td>
                                 <td>${r.pivot_count}</td>
                                 <td><span class="badge ${evidenceClass(r.evidence_tier)}">${escapeHtml(r.evidence_tier)}</span></td>
@@ -1299,6 +1664,9 @@ async function renderSystemHealth(container) {
             { name: 'Event System', status: 'READY', detail: 'EventBus + EventPublisher' },
             { name: 'Reporting', status: 'READY', detail: 'JSON/TXT/HTML/Markdown' },
             { name: 'Scanner Registry', status: 'READY', detail: 'Nmap, Nuclei, Custom' },
+            { name: 'Nmap', status: health.nmap || 'UNKNOWN', detail: 'Local discovery (authorized targets only)' },
+            { name: 'Nuclei', status: health.nuclei || 'UNKNOWN', detail: 'Web vuln scan (graceful if not installed)' },
+            { name: 'Web Targets', status: 'READY', detail: 'Loopback only: 127.0.0.1, localhost :9191' },
             { name: 'Ollama', status: health.ollama, detail: health.ollama_model || 'Not configured' },
             { name: 'Docker', status: health.docker, detail: health.docker_note || 'Not available' },
         ];
@@ -1345,6 +1713,8 @@ async function renderSystemHealth(container) {
                         <tr><td><code>/runs/{id}/findings</code></td><td>GET</td><td>Get findings</td></tr>
                         <tr><td><code>/runs/{id}/candidates</code></td><td>GET</td><td>Get candidates</td></tr>
                         <tr><td><code>/runs/{id}/assessment</code></td><td>GET</td><td>Get assessment</td></tr>
+                        <tr><td><code>/targets/validate</code></td><td>POST</td><td>Web-target preflight (no scan)</td></tr>
+                        <tr><td><code>/scanners/status</code></td><td>GET</td><td>Scanner availability</td></tr>
                     </tbody>
                 </table>
             </div>

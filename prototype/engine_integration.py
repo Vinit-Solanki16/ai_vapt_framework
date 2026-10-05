@@ -139,9 +139,29 @@ def run_decision_scenario(
         api_key=assessment_api_key,
     )
 
-    # Wrap the pluggable assessor to work with the engine's assess_fn interface
+    # Wrap the pluggable assessor to work with the engine's assess_fn interface.
+    # Pure observation: records per-candidate provenance (reasoning, latency,
+    # fallback) WITHOUT altering the quality rank the engine consumes.
+    # GAP-1 (assessment BEFORE ranking) is unchanged.
+    import time as _time
+
+    _assessment_details: list[dict] = []
+
     def _assess_fn(candidate: ActionCandidate) -> QualityRank:
+        _t0 = _time.perf_counter()
         result: AssessmentResult = assessor_fn(candidate)
+        _latency = _time.perf_counter() - _t0
+        _assessment_details.append({
+            "candidate_id": candidate.id,
+            "quality_rank": result.quality_rank.value,
+            "source": result.source,
+            "provider": result.provider,
+            "model": result.model,
+            "fallback": result.fallback,
+            "reasoning": result.reasoning,
+            "error": result.error,
+            "latency_s": round(_latency, 4),
+        })
         return result.quality_rank
 
     # 5. Call the real run_engine()
@@ -158,10 +178,18 @@ def run_decision_scenario(
     #   deterministic mode -> provider "deterministic" (no LLM involved)
     #   ai mode            -> provider as configured (e.g. "ollama")
     effective_provider = assessment_provider if assessment_mode == "ai" else "deterministic"
+    _model = None
+    if assessment_mode == "ai":
+        _model = {"ollama": "llama3.2:3b", "openai": "gpt-4o-mini"}.get(
+            assessment_provider, assessment_provider
+        )
     final_state["_assessment"] = {
         "mode": assessment_mode,
         "provider": effective_provider,
+        "model": _model,
     }
+    # Per-candidate provenance captured by the wrapper above (observation only).
+    final_state["_assessment_details"] = list(_assessment_details)
 
     # 6-7. Presentation-level metadata (computed OUTSIDE the engine)
     final_state["_presentation"] = _compute_presentation(final_state, scenario, max_attempts, mode)

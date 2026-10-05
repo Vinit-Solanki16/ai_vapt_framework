@@ -49,6 +49,10 @@ class PersistentRun:
     max_attempts: int = 2
     assessor_mode: str = "deterministic"
     assessor_provider: str = "ollama"
+
+    # Web-target assessment context (Phase 32; absent for older runs)
+    target_url: Optional[str] = None
+    assessment_type: str = "scenario"
     
     # Pipeline summary
     pipeline_summary: dict[str, Any] = field(default_factory=dict)
@@ -79,6 +83,8 @@ class PersistentRun:
             "max_attempts": self.max_attempts,
             "assessor_mode": self.assessor_mode,
             "assessor_provider": self.assessor_provider,
+            "target_url": self.target_url,
+            "assessment_type": self.assessment_type,
             "pipeline_summary": self.pipeline_summary,
             "scored_candidates": self.scored_candidates,
         }
@@ -109,6 +115,8 @@ class PersistentRun:
             max_attempts=data.get("max_attempts", 2),
             assessor_mode=data.get("assessor_mode", "deterministic"),
             assessor_provider=data.get("assessor_provider", "ollama"),
+            target_url=data.get("target_url"),
+            assessment_type=data.get("assessment_type", "scenario"),
             pipeline_summary=data.get("pipeline_summary", {}),
             scored_candidates=data.get("scored_candidates", []),
         )

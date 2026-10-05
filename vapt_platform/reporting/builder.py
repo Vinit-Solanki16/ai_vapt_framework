@@ -25,6 +25,7 @@ def _get_evidence_tier(mode: str) -> str:
         "lab_loopback": EvidenceTier.OBSERVED_LOCAL.value,
         "lab_docker": EvidenceTier.DOCKER_OBSERVED.value,
         "lab": EvidenceTier.DOCKER_OBSERVED.value,
+        "web": EvidenceTier.OBSERVED_LOCAL.value,
         "real": EvidenceTier.CONTROLLED_VALIDATION.value,
     }
     return mode_map.get(mode.lower(), EvidenceTier.UNKNOWN.value)
@@ -287,6 +288,7 @@ class ReportBuilder:
             limitations.append("Results demonstrate workflow behavior, not real-world effectiveness.")
         elif evidence_tier == EvidenceTier.OBSERVED_LOCAL.value:
             limitations.append("This run used loopback (127.0.0.1) targets only.")
+            limitations.append("Scanner findings are discovery output, not confirmed vulnerabilities.")
             limitations.append("No external systems were targeted.")
         elif evidence_tier == EvidenceTier.DOCKER_OBSERVED.value:
             limitations.append("This run used Docker-isolated emulator targets.")

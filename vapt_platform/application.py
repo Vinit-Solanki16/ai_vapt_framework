@@ -41,7 +41,7 @@ class VAPTRequest:
 
     Fields:
         scenario: Scenario name (e.g., "failure_pivot", "docker_pivot")
-        mode: Execution mode ("simulation" or "lab")
+        mode: Execution mode ("simulation", "lab", or "web")
         target: Lab target IP (required for lab mode)
         port: Lab target port (default: 8080)
         path: Default lab target path (default: "/vuln")
@@ -50,6 +50,11 @@ class VAPTRequest:
         assessor_api_key: OpenAI API key (optional)
         max_attempts: Pivot threshold (default: 2)
         scan_file: Path to scan file (optional, overrides scenario)
+        assessment_type: "scenario" (default) or "web" (authorized URL target)
+        target_url: Authorized web application URL (required for web assessments,
+            e.g., "http://127.0.0.1:9191"). Backend-validated, fail closed.
+        use_nmap: Run Nmap discovery for web assessments (default: True)
+        use_nuclei: Run Nuclei scan for web assessments (default: True)
     """
     scenario: str = "failure_pivot"
     mode: str = "simulation"
@@ -61,6 +66,10 @@ class VAPTRequest:
     assessor_api_key: Optional[str] = None
     max_attempts: int = 2
     scan_file: Optional[str] = None
+    assessment_type: str = "scenario"
+    target_url: Optional[str] = None
+    use_nmap: bool = True
+    use_nuclei: bool = True
 
 
 @dataclass
@@ -179,6 +188,11 @@ class VAPTApplication:
             pipeline_result = self._run_validation_pipeline(scored_candidates, executor, request)
             publisher.emit(EventType.DECISION_MADE, {"pipeline": pipeline_result.get("status", "unknown")})
 
+            # Attach web-target provenance (if any) so it is persisted/reported.
+            web_context = getattr(request, "_web_context", None)
+            if web_context:
+                pipeline_result["web"] = web_context
+
             # Step 7: Run decision engine
             publisher.transition_to(RunState.EXECUTING)
             publisher.emit(EventType.EXECUTION_STARTED, {"candidate_count": len(candidates)})
@@ -267,6 +281,8 @@ class VAPTApplication:
             max_attempts=request.max_attempts,
             assessor_mode=request.assessor_mode,
             assessor_provider=request.assessor_provider,
+            target_url=request.target_url,
+            assessment_type=request.assessment_type,
             pipeline_summary=pipeline_summary,
         )
 
@@ -418,7 +434,7 @@ class VAPTApplication:
         return scored
 
     def _load_candidates(self, request: VAPTRequest) -> list[dict]:
-        """Load candidates from scenario or scan file."""
+        """Load candidates from scenario, scan file, or authorized web target."""
         from prototype.demo_data import SCENARIOS
         from prototype.docker_demo_data import DOCKER_SCENARIOS
         from prototype.engine_integration import load_vapt_corpus_scenario
@@ -426,6 +442,9 @@ class VAPTApplication:
         from vapt_platform import enrichment
 
         all_scenarios = {**SCENARIOS, **DOCKER_SCENARIOS}
+
+        if request.assessment_type == "web" or request.target_url:
+            return self._load_web_candidates(request)
 
         if request.scan_file:
             # Use new scanner adapter system
@@ -459,6 +478,130 @@ class VAPTApplication:
             return load_vapt_corpus_scenario()
         else:
             raise ValueError(f"Unknown scenario: {request.scenario}")
+
+    def _load_web_candidates(self, request: VAPTRequest) -> list[dict]:
+        """Run the authorized web-target discovery pipeline.
+
+        Flow (all through the existing canonical pipeline, no alternate
+        finding representation):
+            preflight (authorize + scope + connectivity)
+                → Nmap discovery → Nuclei scan
+                → CanonicalFinding → dedup → enrichment
+                → candidate dicts
+
+        Raises WebTargetAuthorizationError / ValueError on any failure
+        (fail closed — run() converts these into a FAILED run and scanners
+        are never invoked after an authorization rejection).
+        """
+        import time as _time
+
+        from vapt_platform import enrichment
+        from vapt_platform import scanner_service
+        from vapt_platform.normalization import deduplicate
+        from vapt_platform.web_target import (
+            WebTargetAuthorizationError,
+            parse_web_target,
+            preflight_web_target,
+        )
+
+        if not request.target_url:
+            raise WebTargetAuthorizationError(
+                "Web assessment requires target_url."
+            )
+
+        pipeline_start = _time.perf_counter()
+
+        # --- Phase: authorization + scope (fail closed) ---
+        target = parse_web_target(request.target_url)
+
+        # Seed request context so reports/history show the real target.
+        request.target = target.host
+        request.port = target.port
+        if request.scenario in ("failure_pivot",):
+            request.scenario = "web_target"
+
+        # --- Phase: preflight (no scanners until this passes) ---
+        preflight = preflight_web_target(request.target_url)
+        if not preflight["reachable"]:
+            raise ValueError(
+                f"Web target preflight failed: {preflight['detail']}. "
+                "Scanners were not invoked."
+            )
+
+        # --- Phase: controlled scanner discovery ---
+        nmap_result = None
+        nuclei_result = None
+        if request.use_nmap:
+            nmap_result = scanner_service.run_nmap_discovery(request.target_url)
+        if request.use_nuclei:
+            nuclei_result = scanner_service.run_nuclei_scan(request.target_url)
+
+        findings: list = []
+        if nmap_result is not None:
+            findings.extend(nmap_result.findings)
+        if nuclei_result is not None:
+            findings.extend(nuclei_result.findings)
+
+        # --- Phase: normalization → dedup → enrichment (canonical path) ---
+        findings = deduplicate(findings)
+        enriched = enrichment.enrich_findings(findings)
+
+        if not enriched:
+            raise ValueError(
+                "Web assessment produced no findings: target is reachable but "
+                "scanners reported no open services/vulnerabilities. "
+                "Nothing entered the decision pipeline."
+            )
+
+        # Stash provenance for result building / persistence / reporting.
+        request._web_context = {  # type: ignore[attr-defined]
+            "target": target.to_dict(),
+            "target_url": target.normalized_url,
+            "preflight": preflight,
+            "nmap": nmap_result.to_dict() if nmap_result else {
+                "scanner": "nmap", "status": "SKIPPED",
+                "detail": "Nmap discovery disabled for this run.",
+            },
+            "nuclei": nuclei_result.to_dict() if nuclei_result else {
+                "scanner": "nuclei", "status": "SKIPPED",
+                "detail": "Nuclei scan disabled for this run.",
+            },
+            "finding_count": len(enriched),
+            "pipeline_s": round(_time.perf_counter() - pipeline_start, 3),
+        }
+
+        # --- Phase: candidate generation (same dict shape as scan_file path,
+        # plus probability prior from EPSS and scanner-detection marker) ---
+        candidates = []
+        for f in enriched:
+            epss = 0.0
+            try:
+                epss = float((f.metadata or {}).get("epss_score", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                epss = 0.0
+            probability = min(max(epss, 0.0), 1.0)
+            candidates.append(
+                {
+                    "id": f.finding_id or f.rule_id,
+                    "probability": probability,
+                    "source": f.source,
+                    "target": f.target,
+                    "host": f.host,
+                    "port": f.port,
+                    "protocol": f.protocol,
+                    "title": f.title,
+                    "severity": f.severity,
+                    "rule_id": f.rule_id,
+                    "description": f.description,
+                    "evidence": f.evidence,
+                    "tags": f.tags,
+                    "metadata": f.metadata,
+                    "validation_status": "SCANNER-DETECTED",
+                }
+            )
+        # Snapshot for post-engine metadata merge (result building) and audit.
+        request._web_context["finding_snapshots"] = [dict(c) for c in candidates]  # type: ignore[attr-defined]
+        return candidates
 
     def _build_executor(self, request: VAPTRequest, candidates: list[dict]):
         """Build the appropriate executor for the request."""
@@ -515,6 +658,7 @@ class VAPTApplication:
         # Extract presentation metadata
         presentation = final_state.get("_presentation", {})
         assessment = final_state.get("_assessment", {})
+        assessment_details = final_state.get("_assessment_details", [])
 
         # Build result
         domain.final_status = final_state.get("status", "UNKNOWN")
@@ -523,6 +667,10 @@ class VAPTApplication:
         domain.candidates_processed = presentation.get("candidates_processed", [])
         domain.decision_trace = final_state.get("logs", [])
         domain.assessment = assessment
+        # Per-candidate AI provenance (reasoning/latency/fallback) — observed
+        # from the engine's own assessment step, NOT a second assessment.
+        if assessment_details:
+            domain.assessment = {**assessment, "details": assessment_details}
 
         # Extract candidates
         for c in final_state.get("candidates", []):
@@ -549,12 +697,82 @@ class VAPTApplication:
                 "LAB MODE (DOCKER OBSERVED): Outcomes are from the Docker-isolated emulator. "
                 "Target is allowlisted. No external systems were targeted."
             )
+        elif getattr(request, "_web_context", None):
+            web_ctx = request._web_context
+            domain.evidence_tier = "OBSERVED_LOCAL"
+            domain.safety_notice = (
+                "WEB TARGET MODE (OBSERVED LOCAL): Findings are real scanner output "
+                f"from the authorized local target {web_ctx.get('target_url', '')} "
+                "(Nmap discovery"
+                f"{' + Nuclei scan' if (web_ctx.get('nuclei') or {}).get('status') == 'COMPLETED' else ''}). "
+                "Scanner findings are NOT automatically confirmed vulnerabilities: "
+                "validation status is VALIDATION NOT AVAILABLE unless a controlled "
+                "validation action was executed and verified. "
+                "No external systems were targeted."
+            )
+            self._merge_web_finding_metadata(domain, final_state, request)
         else:
             domain.evidence_tier = "SIMULATED"
             domain.safety_notice = (
                 "SIMULATION MODE: Outcomes are resolved from supplied demo ground truth. "
                 "No real vulnerabilities were validated."
             )
+
+    def _merge_web_finding_metadata(
+        self, domain: DomainResult, final_state: dict, request: VAPTRequest
+    ) -> None:
+        """Merge scanner finding metadata back into engine candidates.
+
+        The research engine intentionally carries only (id, probability,
+        quality_rank, outcome). For web assessments the UI/report must also
+        show severity, source, CVE/CVSS/EPSS/KEV/CWE and validation status,
+        so the pre-engine enriched candidate dicts are merged back by id.
+        Engine ranking/decision fields are never overwritten.
+        """
+        # Reconstruct the enriched pre-engine candidate dicts keyed by id.
+        # They were produced by _load_web_candidates; rebuild the lookup from
+        # the persisted web context findings when available.
+        web_ctx = getattr(request, "_web_context", None) or {}
+        pre: dict[str, dict] = {}
+        # The candidates passed to the engine are not retained on the request,
+        # so merge from execution metadata: engine candidates carry the id;
+        # scanner metadata is recovered from the stored finding snapshot.
+        for snapshot in (web_ctx.get("finding_snapshots") or []):
+            if isinstance(snapshot, dict) and snapshot.get("id"):
+                pre[snapshot["id"]] = snapshot
+
+        executed = {}
+        for r in final_state.get("results", []):
+            cid = r.get("candidate_id", "?") if isinstance(r, dict) else "?"
+            executed[cid] = r.get("outcome", "?") if isinstance(r, dict) else "?"
+
+        merged = []
+        for c in domain.candidates:
+            if not isinstance(c, dict):
+                merged.append(c)
+                continue
+            cid = c.get("id", "?")
+            snap = pre.get(cid, {})
+            if snap:
+                for key in (
+                    "source", "target", "host", "port", "protocol", "title",
+                    "severity", "rule_id", "description", "evidence", "tags",
+                    "metadata",
+                ):
+                    if key in snap:
+                        c[key] = snap[key]
+            # Honest validation labelling: scanner-detected unless the
+            # controlled pipeline executed AND verified this candidate.
+            outcome = executed.get(cid)
+            if outcome in ("SUCCESS", "FAIL_TIMEOUT", "FAIL_SYNTAX", "FAIL_DEPENDENCY"):
+                c["validation_status"] = (
+                    "SIMULATED-OUTCOME (validation not available for "
+                    "scanner findings in this mode)"
+                )
+            else:
+                c["validation_status"] = "VALIDATION NOT AVAILABLE"
+            merged.append(c)
+        domain.candidates = merged
 
     def _generate_report(self, domain: DomainResult, final_state: dict, request: VAPTRequest) -> dict[str, Any]:
         """Generate the final report."""

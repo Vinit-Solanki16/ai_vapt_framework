@@ -15,7 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from prototype.lab_runner import LAB_TARGET_ALLOWLIST
 from services.schemas import (
     RunRequest, RunResponse, RunStatus, RunTrace, ReportResponse,
-    CheckpointResponse, ErrorResponse, TraceEvent
+    CheckpointResponse, ErrorResponse, TraceEvent,
+    TargetValidateRequest, TargetValidateResponse,
 )
 from services.jobs import job_manager
 from vapt_platform.application import VAPTRequest, get_application
@@ -52,6 +53,10 @@ def _run_engine(run_id: str, req: RunRequest):
         assessor_api_key=req.assessor_api_key,
         max_attempts=req.max_attempts,
         scan_file=req.scan_file,
+        assessment_type=req.assessment_type,
+        target_url=req.target_url,
+        use_nmap=req.use_nmap,
+        use_nuclei=req.use_nuclei,
     )
 
     job_manager.update(run_id, status="running")
@@ -86,6 +91,14 @@ def start_run(req: RunRequest):
     if req.mode == "lab" and req.target not in LAB_TARGET_ALLOWLIST:
         raise HTTPException(status_code=400, detail="Target not in allowlist")
 
+    # Web assessments: backend authorization enforcement (fail closed).
+    # Frontend validation is UX only — this check is authoritative.
+    if req.assessment_type == "web" or req.target_url:
+        from vapt_platform.web_target import validate_web_target
+        validation = validate_web_target(req.target_url or "")
+        if not validation.authorized:
+            raise HTTPException(status_code=400, detail=f"Target not authorized: {validation.reason}")
+
     # Convert API request to unified request
     vapt_request = VAPTRequest(
         scenario=req.scenario,
@@ -98,6 +111,10 @@ def start_run(req: RunRequest):
         assessor_api_key=req.assessor_api_key,
         max_attempts=req.max_attempts,
         scan_file=req.scan_file,
+        assessment_type=req.assessment_type,
+        target_url=req.target_url,
+        use_nmap=req.use_nmap,
+        use_nuclei=req.use_nuclei,
     )
 
     # Run the canonical workflow
@@ -121,6 +138,8 @@ def start_run(req: RunRequest):
             "assessment": result.domain.assessment,
             "safety_notice": result.domain.safety_notice,
             "report": result.report,
+            "target_url": vapt_request.target_url,
+            "assessment_type": vapt_request.assessment_type,
         })
 
         return RunResponse(run_id=run_id, status="completed", message="Run completed")
@@ -146,9 +165,62 @@ def list_runs(limit: int = 100):
                 "total_attempts": run.total_attempts,
                 "pivot_count": run.pivot_count,
                 "created_at": run.created_at,
+                "target": run.target,
+                "port": run.port,
+                "target_url": run.target_url,
+                "assessment_type": run.assessment_type,
+                "finding_count": len(run.candidates or []),
+                "assessor_provider": run.assessor_provider,
             }
             for run in runs
         ]
+    }
+
+
+@app.post("/targets/validate", response_model=TargetValidateResponse)
+def validate_target(req: TargetValidateRequest):
+    """Preflight an authorized web target (authorization + reachability).
+
+    Performs NO scanning — only URL validation and a single safe
+    connectivity probe. Used by the GUI authorization indicator.
+    """
+    from vapt_platform.web_target import preflight_web_target, validate_web_target
+
+    validation = validate_web_target(req.target_url or "")
+    if not validation.authorized or validation.target is None:
+        return TargetValidateResponse(
+            authorized=False,
+            authorization_status="REJECTED",
+            preflight_status="TARGET NOT AUTHORIZED",
+            reachable=False,
+            target_url=(req.target_url or "").strip(),
+            detail=validation.reason,
+        )
+
+    preflight = preflight_web_target(req.target_url)
+    return TargetValidateResponse(
+        authorized=True,
+        authorization_status=preflight["authorization_status"],
+        preflight_status=preflight["preflight_status"],
+        reachable=preflight["reachable"],
+        target_url=preflight["target_url"],
+        resolved_host=preflight["resolved_host"],
+        port=preflight["port"],
+        http_status=preflight["http_status"],
+        detail=preflight["detail"],
+    )
+
+
+@app.get("/scanners/status")
+def get_scanner_status():
+    """Report scanner executable availability (Nmap/Nuclei)."""
+    from vapt_platform import scanner_service
+    from vapt_platform.web_target import AUTHORIZED_WEB_HOSTS, AUTHORIZED_WEB_PORTS
+
+    return {
+        **scanner_service.scanner_status(),
+        "authorized_hosts": sorted(AUTHORIZED_WEB_HOSTS),
+        "authorized_ports": sorted(AUTHORIZED_WEB_PORTS),
     }
 
 
@@ -337,6 +409,16 @@ def system_health():
     except Exception:
         health_status["docker"] = "UNAVAILABLE"
         health_status["docker_note"] = "Docker lab executor not reachable (localhost:9090)"
+
+    # Scanner availability for authorized web-target assessments.
+    try:
+        from vapt_platform import scanner_service
+        scanners = scanner_service.scanner_status()
+        health_status["nmap"] = "READY" if scanners["nmap"]["available"] else "UNAVAILABLE"
+        health_status["nuclei"] = "READY" if scanners["nuclei"]["available"] else "NOT INSTALLED"
+    except Exception:
+        health_status["nmap"] = "UNKNOWN"
+        health_status["nuclei"] = "UNKNOWN"
 
     return health_status
 

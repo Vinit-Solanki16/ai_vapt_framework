@@ -9,7 +9,7 @@ class RunRequest(BaseModel):
     """Request to start a new decision engine run."""
     scenario: str = Field("failure_pivot", description="Scenario name")
     max_attempts: int = Field(2, ge=1, le=10, description="Max attempts per candidate before pivot")
-    mode: Literal["simulation", "lab"] = Field("simulation", description="Execution mode")
+    mode: Literal["simulation", "lab", "web"] = Field("simulation", description="Execution mode")
     target: Optional[str] = Field(None, description="Lab target IP (required for lab mode)")
     port: int = Field(8080, ge=1, le=65535, description="Lab target port")
     path: str = Field("/vuln", description="Lab target path")
@@ -17,6 +17,28 @@ class RunRequest(BaseModel):
     assessor_provider: Literal["ollama", "openai"] = Field("ollama", description="AI provider")
     assessor_api_key: Optional[str] = Field(None, description="OpenAI API key")
     scan_file: Optional[str] = Field(None, description="Path to scan file (overrides scenario)")
+    assessment_type: Literal["scenario", "web"] = Field("scenario", description="Assessment type")
+    target_url: Optional[str] = Field(None, description="Authorized web target URL (required for web assessments)")
+    use_nmap: bool = Field(True, description="Run Nmap discovery for web assessments")
+    use_nuclei: bool = Field(True, description="Run Nuclei scan for web assessments")
+
+
+class TargetValidateRequest(BaseModel):
+    """Request to preflight an authorized web target (no scanning)."""
+    target_url: str = Field(..., description="Web application URL to validate")
+
+
+class TargetValidateResponse(BaseModel):
+    """Preflight result for a web target."""
+    authorized: bool
+    authorization_status: str
+    preflight_status: str
+    reachable: bool
+    target_url: Optional[str] = None
+    resolved_host: Optional[str] = None
+    port: Optional[int] = None
+    http_status: Optional[int] = None
+    detail: str = ""
 
 
 class RunResponse(BaseModel):
