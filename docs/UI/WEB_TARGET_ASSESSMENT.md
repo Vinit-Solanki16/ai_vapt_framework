@@ -71,11 +71,23 @@ only. `POST /runs` re-validates and returns HTTP 400 on rejection.
 
 ## Nuclei
 
-- Availability checked; NOT INSTALLED here → status `NOT AVAILABLE`,
-  zero findings, run proceeds with Nmap discovery (reported honestly).
-- When installed, fixed profile:
-  `nuclei -target <url> -jsonl -o <out> -silent -timeout 5 -rate-limit 10 -retries 1`
-  parsed by the EXISTING `NucleiAdapter`. No user templates/flags.
+- Availability checked via `shutil.which("nuclei")`; when absent the run
+  degrades gracefully with status `NOT AVAILABLE` (covered by tests).
+- Installed here: **v3.11.1** (`~/.local/bin`, official ProjectDiscovery
+  release binary) + official templates (`nuclei -update-templates`).
+- When installed, fixed profile (no user templates/flags):
+  `nuclei -target <url> -t <technologies,misconfiguration,exposures,exposed-panels>`
+  `-jsonl -o <out> -silent -timeout 5 -rate-limit 150 -c 50 -retries 1`.
+  The template scope is a bounded subset appropriate for a local training
+  app; throughput flags are loopback-only safe (target locality is proven
+  before execution). The full default corpus timed out (>600 s at low rate),
+  hence the bounded profile. Missing templates → explicit FAILED, never a
+  silent scope change. Parsed by the EXISTING `NucleiAdapter`.
+- Live result vs Juice Shop: exit 0 in ~47 s, 13 raw records → 6 canonical
+  findings after dedup (`swagger-api`, `http-missing-security-headers`,
+  `owasp-juice-shop-detect`, `prometheus-metrics` (medium, CVSS 5.3),
+  `fingerprinthub-web-fingerprints`, `tech-detect`). Artifact:
+  `data/scans/nuclei_127.0.0.1_9191.jsonl`.
 
 ## Normalization → AI assessment → ranking → decision
 
@@ -118,9 +130,10 @@ survive restarts (`~/.ai_vapt_framework/runs`).
 
 ## Remaining limitations
 
-- Nuclei not installed → no template-based vuln findings in this environment.
 - Nmap service fingerprint for Juice Shop reports `sun-as-jpda` (banner-based
   misclassification); the HTTP 200 response identifies the real service.
+- Nuclei template findings carry no CVE/EPSS/KEV (correctly reported empty);
+  only `prometheus-metrics` carries a CVSS (5.3).
 - Per-candidate LLM reasoning captured, but ranking still uses engine ranks
   (by design — GAP-1).
 - No real exploitation/validation of Juice Shop findings in this phase

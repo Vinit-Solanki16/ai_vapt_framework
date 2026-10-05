@@ -16,12 +16,30 @@ start/end time, output path, exit code, finding count.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _clean_version(raw: str) -> str:
+    """Strip ANSI color codes and extract a compact version line."""
+    text = _ANSI_RE.sub("", raw or "").strip()
+    if not text:
+        return "unknown"
+    # Prefer the line naming the engine version (nuclei prints INF log lines).
+    for line in text.splitlines():
+        if "Engine Version" in line:
+            return line.split("Engine Version:")[-1].strip()[:40]
+        if line.lower().startswith("nmap version"):
+            return line.strip()[:80]
+    return text.splitlines()[0].strip()[:80]
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +56,7 @@ def _which_or_version(binary: str, version_args: list[str]) -> dict[str, Any]:
             capture_output=True, text=True, timeout=15,
         )
         out = (proc.stdout or "") + (proc.stderr or "")
-        version = out.strip().splitlines()[0] if out.strip() else "unknown"
+        version = _clean_version(out)
     except Exception:
         version = "unknown"
     return {"available": True, "path": path, "version": version[:120]}
@@ -199,7 +217,31 @@ def run_nmap_discovery(
 
 #: Fixed safe Nuclei profile for the local training application.
 #: No user-supplied templates or flags are accepted.
-NUCLEI_FIXED_FLAGS = ["-silent", "-timeout", "5", "-rate-limit", "10", "-retries", "1"]
+#: Scope: technology fingerprinting + misconfiguration + exposure templates
+#: (bounded subset appropriate for a training app — NOT the full corpus).
+#: Throughput (-rate-limit/-c) is set for loopback-only targets, which is
+#: safe because parse_web_target() guarantees locality before execution.
+NUCLEI_TEMPLATE_SUBDIRS = (
+    "http/technologies",
+    "http/misconfiguration",
+    "http/exposures",
+    "http/exposed-panels",
+)
+NUCLEI_FIXED_FLAGS = ["-silent", "-timeout", "5", "-rate-limit", "150",
+                      "-c", "50", "-retries", "1"]
+
+
+def nuclei_template_dirs() -> list[str]:
+    """Resolve the bounded template directories for the fixed profile.
+
+    Returns absolute paths under ~/nuclei-templates (nuclei's default
+    location, populated via `nuclei -update-templates`). Empty list when
+    templates are not installed — the caller reports FAILED explicitly
+    instead of silently scanning with a different scope.
+    """
+    root = os.path.join(os.path.expanduser("~"), "nuclei-templates")
+    dirs = [os.path.join(root, sub) for sub in NUCLEI_TEMPLATE_SUBDIRS]
+    return [d for d in dirs if os.path.isdir(d)]
 
 
 def run_nuclei_scan(
@@ -227,8 +269,19 @@ def run_nuclei_scan(
 
     out_dir = _ensure_output_dir(output_dir)
     out_path = os.path.join(out_dir, f"nuclei_{target.host}_{target.port}.jsonl")
+
+    template_dirs = nuclei_template_dirs()
+    if not template_dirs:
+        return ScanResult(
+            scanner="nuclei", target=target.normalized_url, status="FAILED",
+            detail="Nuclei template set not found (~/nuclei-templates). "
+                   "Run `nuclei -update-templates` first; refusing to scan "
+                   "with an unintended template scope.",
+        )
+
     argv = [
         status["path"], "-target", target.normalized_url,
+        "-t", ",".join(template_dirs),
         "-jsonl", "-o", out_path, *NUCLEI_FIXED_FLAGS,
     ]
 

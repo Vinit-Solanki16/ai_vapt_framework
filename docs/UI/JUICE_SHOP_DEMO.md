@@ -16,10 +16,12 @@ ollama list | grep llama3.2:3b
 
 # 4. Backend running (this repo's FastAPI; example port 8000)
 python3 -m uvicorn services.api:app --host 127.0.0.1 --port 8000
-```
 
-Nuclei is intentionally NOT required: the UI reports it as NOT AVAILABLE
-and the run proceeds with Nmap discovery.
+# 5. Nuclei installed (expect v3.11.1 + templates present)
+export PATH="$HOME/.local/bin:$PATH"
+nuclei -version 2>&1 | grep -i "engine version"
+ls ~/nuclei-templates/http >/dev/null && echo "templates present"
+```
 
 ## Click sequence
 
@@ -33,21 +35,25 @@ and the run proceeds with Nmap discovery.
 6. Authorization becomes: **✅ AUTHORIZED LOCAL TARGET**
    (detail: `HTTP 200 from http://127.0.0.1:9191 — resolved 127.0.0.1:9191`).
    Safety shows **AUTHORIZED**.
-7. Scanners: ☑ Nmap (READY). Nuclei shows NOT AVAILABLE (expected here).
+7. Scanners: ☑ Nmap (READY) + ☑ Nuclei (READY, v3.11.1).
 8. Assessor: **Ollama**, Model: **llama3.2:3b**, Pivot Threshold: **2**.
-9. Click **🛡️ START VAPT ASSESSMENT** (Nmap discovery takes ~10–15 s).
+9. Click **🛡️ START VAPT ASSESSMENT** (Nmap ~11 s + Nuclei ~47 s).
 10. Result card shows the live pipeline stages:
-    TARGET ✓ → DISCOVERY ✓ (Nmap) → VULN SCAN (Nuclei: NOT AVAILABLE) →
-    FINDINGS (1) → NORMALIZATION ✓ → ENRICHMENT ✓ →
-    AI ASSESSMENT ✓ (ollama / llama3.2:3b) → RANKING ✓ → DECISION ✓ →
-    SAFETY ✓ → VALIDATION (NOT AVAILABLE — scanner-detected) →
+    TARGET ✓ → DISCOVERY ✓ (Nmap, 1 finding) → VULN SCAN ✓ (Nuclei, 13 raw) →
+    FINDINGS (7 = 1 Nmap + 6 Nuclei after dedup) → NORMALIZATION ✓ →
+    ENRICHMENT ✓ → AI ASSESSMENT ✓ (ollama / llama3.2:3b, per-candidate
+    quality + reasoning + latency) → RANKING ✓ (server-side final scores;
+    `prometheus-metrics` ranks top at 0.2525 via severity factor) →
+    DECISION ✓ → SAFETY ✓ → VALIDATION (NOT AVAILABLE — scanner-detected) →
     EVIDENCE ✓ (OBSERVED_LOCAL) → REPORT ✓.
-11. Findings table: 1 row — `sun-as-jpda` open port 9191, source `nmap-xml`,
-    AI quality rank + reasoning, validation status
-    `VALIDATION NOT AVAILABLE`. (Note: `sun-as-jpda` is Nmap's banner-based
-    fingerprint label; the HTTP 200 body is Juice Shop.)
-12. EPSS/KEV/CVSS/CWE columns: `—` for a port-discovery finding with no CVE
-    (honest: no intelligence where none exists).
+11. Findings table (11 columns: finding, severity, template/rule, endpoint,
+    source, CVE/CVSS/EPSS/KEV/CWE, AI quality + reasoning, server score,
+    engine priority, validation status, evidence tier). Nmap row:
+    `sun-as-jpda` open port 9191 (Nmap's banner-based label; the HTTP 200
+    body is Juice Shop). Nuclei rows include `owasp-juice-shop-detect` and
+    `prometheus-metrics` (medium, CVSS 5.3).
+12. EPSS/KEV columns: empty where no CVE exists (honest: no intelligence
+    where none exists).
 13. Download the report (JSON/MD) — it records target, scanners, AI model,
     evidence tier, and the scanner≠exploit limitation.
 14. Open **Run History**: the web run shows target URL, `WEB` badge,

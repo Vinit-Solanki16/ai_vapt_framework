@@ -160,6 +160,8 @@ def test_nuclei_scan_controlled_profile(monkeypatch, tmp_path, offline_guard):
     monkeypatch.setattr(svc, "nuclei_status",
                         lambda: {"scanner": "nuclei", "available": True,
                                  "path": "/usr/bin/nuclei", "version": "v3"})
+    # Pin the template scope (independent of this machine's ~/nuclei-templates).
+    monkeypatch.setattr(svc, "nuclei_template_dirs", lambda: [str(tmp_path)])
     result = svc.run_nuclei_scan("http://127.0.0.1:9191", output_dir=str(tmp_path))
     assert result.status == "COMPLETED"
     assert result.finding_count == 1
@@ -167,12 +169,24 @@ def test_nuclei_scan_controlled_profile(monkeypatch, tmp_path, offline_guard):
     assert "-target" in result.command
     assert result.command[result.command.index("-target") + 1] == "http://127.0.0.1:9191"
     assert "-silent" in result.command
+    assert "-t" in result.command
 
 
-def test_nuclei_not_installed_is_not_available():
-    # Nuclei is not installed in this environment — must degrade gracefully.
-    if svc.nuclei_status()["available"]:
-        pytest.skip("nuclei is installed here; graceful path covered elsewhere")
+def test_nuclei_missing_templates_fails_closed(monkeypatch, tmp_path, offline_guard):
+    monkeypatch.setattr(svc, "nuclei_status",
+                        lambda: {"scanner": "nuclei", "available": True,
+                                 "path": "/usr/bin/nuclei", "version": "v3"})
+    monkeypatch.setattr(svc, "nuclei_template_dirs", lambda: [])
+    result = svc.run_nuclei_scan("http://127.0.0.1:9191", output_dir=str(tmp_path))
+    assert result.status == "FAILED"
+    assert "update-templates" in result.detail
+    assert offline_guard.call_count == 0
+
+
+def test_nuclei_not_installed_is_not_available(monkeypatch):
+    # Force the "not installed" path regardless of this machine's PATH.
+    monkeypatch.setattr(svc.shutil, "which", lambda *_a, **_k: None)
+    assert svc.nuclei_status()["available"] is False
     result = svc.run_nuclei_scan("http://127.0.0.1:9191")
     assert result.status == "NOT AVAILABLE"
     assert result.findings == []
@@ -183,3 +197,59 @@ def test_nuclei_never_invoked_after_authorization_rejection(offline_guard):
     with pytest.raises(WebTargetAuthorizationError):
         svc.run_nuclei_scan("https://example.com")
     assert offline_guard.call_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Real-artifact ingestion: Juice Shop JSONL → CanonicalFinding → enrich
+# ---------------------------------------------------------------------------
+
+JUICE_NUCLEI_JSONL = DATA_DIR / "scans" / "nuclei_127.0.0.1_9191.jsonl"
+
+
+def test_real_juice_shop_jsonl_becomes_canonical_findings():
+    """Real scanner output must flow through the EXISTING adapter only."""
+    if not JUICE_NUCLEI_JSONL.exists():
+        pytest.skip("live Nuclei artifact not present; run the controlled scan first")
+    from vapt_platform import enrichment
+    from vapt_platform.normalization import deduplicate
+    from vapt_platform.scanners import NucleiAdapter
+
+    findings = NucleiAdapter().parse(str(JUICE_NUCLEI_JSONL))
+    assert len(findings) >= 1
+    assert all(f.source == "nuclei" for f in findings)
+    assert all(f.port == 9191 for f in findings)
+
+    deduped = deduplicate(findings)
+    assert 1 <= len(deduped) <= len(findings)
+
+    enriched = enrichment.enrich_findings(deduped)
+    assert len(enriched) == len(deduped)
+    for f in enriched:
+        assert "epss_score" in f.metadata
+        assert "cisa_kev" in f.metadata
+        assert "cwe_ids" in f.metadata
+
+
+def test_nuclei_duplicate_templates_deduplicated():
+    """Identical template hits on the same target collapse to one finding."""
+    from vapt_platform.normalization import deduplicate, from_nuclei_finding
+    from vapt_platform.parsers.nuclei_parser import NucleiParser
+
+    line = json.dumps({**NUCLEI_RECORD, "matcher-name": "m1"})
+    records = NucleiParser().parse(line + "\n" + line)
+    assert len(records) == 2
+    canonical = [from_nuclei_finding(r) for r in records]
+    assert len(deduplicate(canonical)) == 1
+
+
+def test_nuclei_minimal_record_missing_everything_optional():
+    """A record with only template-id must still canonicalize safely."""
+    from vapt_platform.normalization import from_nuclei_finding
+    from vapt_platform.parsers.nuclei_parser import NucleiParser
+
+    records = NucleiParser().parse(json.dumps({"template-id": "bare-template"}))
+    assert len(records) == 1
+    canonical = from_nuclei_finding(records[0])
+    assert canonical.rule_id == "bare-template"
+    assert canonical.severity == "unknown"
+    assert canonical.port == 0

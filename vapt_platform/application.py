@@ -179,6 +179,9 @@ class VAPTApplication:
             publisher.transition_to(RunState.ASSESSING)
             scored_candidates = self._score_candidates(candidates, graph)
             publisher.emit(EventType.ASSESSMENT_COMPLETED, {"count": len(scored_candidates)})
+            # Stash server-side scores for result merging/persistence (GAP-1
+            # display uses these — the frontend never computes scores).
+            request._scored_candidates = scored_candidates  # type: ignore[attr-defined]
 
             # Step 5: Build executor
             publisher.transition_to(RunState.PLANNING)
@@ -228,7 +231,10 @@ class VAPTApplication:
                 pipeline=pipeline_result,
             )
 
-            # Persist the run
+            # Persist the run (including server-side scores for ranking display)
+            pipeline_result["scored_candidates"] = getattr(
+                request, "_scored_candidates", []
+            )
             self._persist_run(domain, request, pipeline_result)
             publisher.emit(EventType.EVIDENCE_CAPTURED, {"evidence_tier": domain.evidence_tier})
 
@@ -284,6 +290,7 @@ class VAPTApplication:
             target_url=request.target_url,
             assessment_type=request.assessment_type,
             pipeline_summary=pipeline_summary,
+            scored_candidates=pipeline_summary.get("scored_candidates", []),
         )
 
         try:
@@ -568,6 +575,10 @@ class VAPTApplication:
             },
             "finding_count": len(enriched),
             "pipeline_s": round(_time.perf_counter() - pipeline_start, 3),
+            "scanner_versions": {
+                "nmap": scanner_service.nmap_status().get("version"),
+                "nuclei": scanner_service.nuclei_status().get("version"),
+            },
         }
 
         # --- Phase: candidate generation (same dict shape as scan_file path,
@@ -746,6 +757,16 @@ class VAPTApplication:
             cid = r.get("candidate_id", "?") if isinstance(r, dict) else "?"
             executed[cid] = r.get("outcome", "?") if isinstance(r, dict) else "?"
 
+        # Server-side decision-intelligence scores (GAP-1 display data).
+        score_map = {}
+        for s in (getattr(request, "_scored_candidates", None) or []):
+            if isinstance(s, dict) and s.get("id"):
+                score_map[s["id"]] = s.get("_score", {})
+
+        # Priority = engine's actual execution order (candidates_processed).
+        order = list(domain.candidates_processed or [])
+        priority_of = {cid: i + 1 for i, cid in enumerate(order)}
+
         merged = []
         for c in domain.candidates:
             if not isinstance(c, dict):
@@ -761,6 +782,11 @@ class VAPTApplication:
                 ):
                     if key in snap:
                         c[key] = snap[key]
+            # Server-side score + engine execution priority (display only).
+            if cid in score_map:
+                c["_score"] = score_map[cid]
+            if cid in priority_of:
+                c["priority"] = priority_of[cid]
             # Honest validation labelling: scanner-detected unless the
             # controlled pipeline executed AND verified this candidate.
             outcome = executed.get(cid)

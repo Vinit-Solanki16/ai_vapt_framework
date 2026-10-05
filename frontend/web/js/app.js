@@ -901,8 +901,8 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
             </div>
             <div class="pipeline-container">${stages.join('')}</div>
             <div class="grid-2" style="margin-top:1rem;">
-                <div class="text-muted" style="font-size:0.8rem;"><strong>Discovery:</strong> Nmap ${escapeHtml(nmap.status || '?')} (exit ${escapeHtml(String(nmap.exit_code ?? '?'))}, ${escapeHtml(String(nmap.finding_count ?? 0))} findings)</div>
-                <div class="text-muted" style="font-size:0.8rem;"><strong>Vulnerability scan:</strong> Nuclei ${escapeHtml(nuclei.status || '?')} — ${escapeHtml(nuclei.detail || '')}</div>
+                <div class="text-muted" style="font-size:0.8rem;"><strong>Discovery:</strong> Nmap ${escapeHtml((w.scanner_versions || {}).nmap || '')} — ${escapeHtml(nmap.status || '?')} (exit ${escapeHtml(String(nmap.exit_code ?? '?'))}, ${escapeHtml(String(nmap.finding_count ?? 0))} findings)</div>
+                <div class="text-muted" style="font-size:0.8rem;"><strong>Vulnerability scan:</strong> Nuclei ${escapeHtml((w.scanner_versions || {}).nuclei || '')} — ${escapeHtml(nuclei.status || '?')} — ${escapeHtml(nuclei.detail || '')}</div>
             </div>
             <div class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;"><strong>AI:</strong> ${escapeHtml(assess.provider || '?')}${assess.model ? ' / ' + escapeHtml(assess.model) : ''} (${escapeHtml(assess.mode || '?')} mode)</div>
         </div>
@@ -916,11 +916,15 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
                     <tr>
                         <th>Finding</th>
                         <th>Severity</th>
+                        <th>Template / Rule</th>
+                        <th>Endpoint</th>
                         <th>Source</th>
-                        <th>Target</th>
                         <th>CVE / CVSS / EPSS / KEV / CWE</th>
                         <th>AI Quality</th>
+                        <th>Score</th>
+                        <th>Priority</th>
                         <th>Validation</th>
+                        <th>Evidence</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -935,17 +939,22 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
                             (md.cwe_ids || []).length ? (md.cwe_ids || []).join(', ') : null,
                         ].filter(Boolean).join(' · ') || '—';
                         const q = detailById[c.id] || {};
+                        const score = (c._score && c._score.final_score != null) ? Number(c._score.final_score).toFixed(4) : '—';
                         return `
                         <tr>
-                            <td><strong>${escapeHtml(c.title || c.id)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(c.id || '')}${c.rule_id ? ' · ' + escapeHtml(c.rule_id) : ''}</span></td>
+                            <td><strong>${escapeHtml(c.title || c.id)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(c.id || '')}</span></td>
                             <td class="${severityClass(c.severity)}">${escapeHtml(c.severity || 'unknown')}</td>
-                            <td>${escapeHtml(c.source || '')}</td>
+                            <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(c.rule_id || '—')}</td>
                             <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(c.target || '')}${c.port ? ':' + escapeHtml(String(c.port)) : ''}</td>
+                            <td>${escapeHtml(c.source || '')}<br><span class="text-dim" style="font-size:0.7rem;">discovered by scanner</span></td>
                             <td style="font-size:0.75rem;">${escapeHtml(intel)}</td>
                             <td>${q.quality_rank ? `<span class="badge ${q.quality_rank === 'HIGH' ? 'badge-success' : q.quality_rank === 'MEDIUM' ? 'badge-warning' : 'badge-error'}">${escapeHtml(q.quality_rank)}</span>${q.fallback ? ' <span class="text-warning" style="font-size:0.7rem;">fallback</span>' : ''}${q.reasoning ? `<div class="text-dim" style="font-size:0.7rem;max-width:220px;">${escapeHtml(String(q.reasoning).slice(0, 160))}</div>` : ''}` : escapeHtml(c.quality_rank || 'N/A')}</td>
-                            <td><span class="badge badge-warning">${escapeHtml(c.validation_status || 'VALIDATION NOT AVAILABLE')}</span></td>
+                            <td>${escapeHtml(score)}</td>
+                            <td>${c.priority != null ? '#' + escapeHtml(String(c.priority)) : '—'}</td>
+                            <td><span class="badge badge-warning">${escapeHtml(c.validation_status || 'VALIDATION NOT AVAILABLE')}</span><br><span class="text-dim" style="font-size:0.7rem;">not validated by execution</span></td>
+                            <td><span class="badge ${evidenceClass(run.evidence_tier)}">${escapeHtml(run.evidence_tier || 'UNKNOWN')}</span></td>
                         </tr>`;
-                    }).join('') || '<tr><td colspan="7" class="text-muted">No findings</td></tr>'}
+                    }).join('') || '<tr><td colspan="11" class="text-muted">No findings</td></tr>'}
                 </tbody>
             </table>
             <div style="margin-top:1rem;">
