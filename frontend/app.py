@@ -484,10 +484,12 @@ def render_sidebar_nav() -> str:
         # Check Ollama
         try:
             from core.exploit_assessor import get_llm
-            llm = get_llm(provider="ollama")
+            from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+
+            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
             st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
                        '<span class="status-ready">● Ollama: READY</span>'
-                       '<br/><small style="color:#6a8aaa;">llama3.2:3b</small></div>',
+                       f'<br/><small style="color:#6a8aaa;">{DEFAULT_OLLAMA_MODEL}</small></div>',
                        unsafe_allow_html=True)
         except Exception:
             st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
@@ -741,7 +743,9 @@ def show_dashboard():
         # Check Ollama
         try:
             from core.exploit_assessor import get_llm
-            llm = get_llm(provider="ollama")
+            from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+
+            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
             st.markdown('<div class="metric-card">'
                        '<div class="label">Ollama</div>'
                        '<div class="value status-ready">READY</div></div>',
@@ -820,6 +824,20 @@ def show_new_assessment():
             help="deterministic = offline | AI = requires Ollama",
         )
 
+        # Phase 33A: model selection is explicit and opt-in. The baseline
+        # (llama3.2:3b) is the default; qwen2.5:3b is experimental only.
+        assessor_model = None
+        if assessor_mode == "ai":
+            from vapt_platform.model_config import OLLAMA_MODELS
+
+            assessor_model = st.selectbox(
+                "Model",
+                list(OLLAMA_MODELS),
+                index=0,
+                help="llama3.2:3b is the thesis baseline; qwen2.5:3b is an "
+                     "experimental comparison arm (Phase 33A).",
+            )
+
         max_attempts = st.slider("Pivot Threshold (N)", 1, 5, 2)
 
         st.markdown("---")
@@ -858,6 +876,7 @@ def show_new_assessment():
             assessor_mode=assessor_mode,
             max_attempts=max_attempts,
             scan_file_obj=scan_file_obj,
+            assessor_model=assessor_model,
         )
     else:
         # Welcome / info screen
@@ -888,6 +907,7 @@ def execute_assessment(
     assessor_mode: str,
     max_attempts: int,
     scan_file_obj,
+    assessor_model: Optional[str] = None,
 ):
     """Execute the assessment and display results."""
     # Map mode string to internal mode
@@ -914,6 +934,7 @@ def execute_assessment(
         port=port,
         path=path,
         assessor_mode=assessor_mode,
+        assessor_model=assessor_model,
         max_attempts=max_attempts,
         scan_file=scan_file_path,
     )
@@ -1449,11 +1470,13 @@ def show_system():
         # Check Ollama
         try:
             from core.exploit_assessor import get_llm
-            llm = get_llm(provider="ollama")
+            from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+
+            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
             st.markdown('<div class="metric-card">'
                        '<div class="label">Ollama</div>'
                        '<div class="value status-ready">READY</div>'
-                       '<small>llama3.2:3b</small></div>',
+                       f'<small>{DEFAULT_OLLAMA_MODEL}</small></div>',
                        unsafe_allow_html=True)
         except Exception:
             st.markdown('<div class="metric-card">'

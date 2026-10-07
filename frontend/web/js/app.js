@@ -573,6 +573,14 @@ async function renderNewAssessment(container) {
                         </select>
                     </div>
 
+                    <div class="form-group" id="assess-model-group" style="display:none;">
+                        <label class="form-label">Model</label>
+                        <select class="form-select" id="assess-model">
+                            <option value="llama3.2:3b" selected>llama3.2:3b (baseline)</option>
+                            <option value="qwen2.5:3b">qwen2.5:3b (experimental)</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Pivot Threshold (N)</label>
                         <input type="number" class="form-input" id="assess-max-attempts" value="2" min="1" max="10">
@@ -642,7 +650,10 @@ async function renderNewAssessment(container) {
 
                     <div class="form-group">
                         <label class="form-label">Model</label>
-                        <input type="text" class="form-input" id="web-model" value="llama3.2:3b" disabled>
+                        <select class="form-select" id="web-model">
+                            <option value="llama3.2:3b" selected>llama3.2:3b (baseline)</option>
+                            <option value="qwen2.5:3b">qwen2.5:3b (experimental)</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -716,6 +727,7 @@ async function renderNewAssessment(container) {
 
         document.getElementById('assess-assessor').addEventListener('change', function () {
             document.getElementById('provider-group').style.display = this.value === 'ai' ? 'block' : 'none';
+            document.getElementById('assess-model-group').style.display = this.value === 'ai' ? 'block' : 'none';
         });
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
@@ -822,6 +834,7 @@ async function startAssessment() {
         // Backend schema expects "deterministic" | "llm".
         const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
         const provider = document.getElementById('assess-provider')?.value || 'ollama';
+        const assessorModel = document.getElementById('assess-model')?.value || 'llama3.2:3b';
         const maxAttempts = parseInt(document.getElementById('assess-max-attempts').value, 10);
 
         const data = {
@@ -829,6 +842,7 @@ async function startAssessment() {
             mode,
             assessor,
             assessor_provider: provider,
+            assessor_model: assessorModel,
             max_attempts: maxAttempts,
             assessment_type: 'scenario',
         };
@@ -904,6 +918,7 @@ async function startWebAssessment() {
         const useNuclei = document.getElementById('web-use-nuclei')?.checked ?? false;
         const assessorRaw = document.getElementById('web-assessor').value;
         const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
+        const assessorModel = document.getElementById('web-model')?.value || 'llama3.2:3b';
         const maxAttempts = parseInt(document.getElementById('web-max-attempts').value, 10);
 
         // Backend re-validates authoritatively; this pre-check is UX only.
@@ -926,6 +941,7 @@ async function startWebAssessment() {
             use_nuclei: useNuclei,
             assessor,
             assessor_provider: 'ollama',
+            assessor_model: assessorModel,
             max_attempts: maxAttempts,
         };
 

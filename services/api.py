@@ -110,6 +110,7 @@ def start_run(req: RunRequest):
         assessor_mode="ai" if req.assessor == "llm" else "deterministic",
         assessor_provider=req.assessor_provider,
         assessor_api_key=req.assessor_api_key,
+        assessor_model=req.assessor_model,
         max_attempts=req.max_attempts,
         scan_file=req.scan_file,
         assessment_type=req.assessment_type,
@@ -414,7 +415,7 @@ def lookup_cve(cve: str):
 @app.get("/system/health")
 def system_health():
     """Get detailed system health."""
-    health_status = {
+    health_status: dict = {
         "application": "READY",
         "persistence": "READY",
         "research_core": "PROTECTED",
@@ -423,9 +424,16 @@ def system_health():
     # Check Ollama
     try:
         from core.exploit_assessor import get_llm
-        llm = get_llm(provider="ollama")
+        from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+
+        llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
         health_status["ollama"] = "READY"
-        health_status["ollama_model"] = "llama3.2:3b"
+        health_status["ollama_model"] = DEFAULT_OLLAMA_MODEL
+        # Phase 33A: expose the experimental arm separately so the UI can
+        # offer it without ever making it the implicit default.
+        from vapt_platform.model_config import EXPERIMENTAL_MODELS
+
+        health_status["ollama_experimental_models"] = list(EXPERIMENTAL_MODELS)
     except Exception as e:
         health_status["ollama"] = "UNAVAILABLE"
         health_status["ollama_error"] = str(e)

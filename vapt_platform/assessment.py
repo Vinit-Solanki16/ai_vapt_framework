@@ -23,6 +23,7 @@ from typing import Any, Optional
 
 from decision_engine.core.assessor import deterministic_assessor
 from decision_engine.core.schemas import ActionCandidate, QualityRank
+from vapt_platform.model_config import resolve_model
 
 log = logging.getLogger(__name__)
 
@@ -68,24 +69,27 @@ class AssessmentResult:
 # LLM Assessor
 # ---------------------------------------------------------------------------
 
-def _try_ollama_assess(candidate: ActionCandidate) -> Optional[AssessmentResult]:
+def _try_ollama_assess(
+    candidate: ActionCandidate, model_name: Optional[str] = None,
+) -> Optional[AssessmentResult]:
     """Attempt to assess a candidate using Ollama."""
+    model = resolve_model("ollama", model_name)
     try:
         from core.exploit_assessor import assess_exploit_quality, get_llm
 
         # Check if Ollama is reachable first
         try:
-            llm = get_llm(provider="ollama")
+            llm = get_llm(provider="ollama", model_name=model)
         except Exception as e:
             log.warning(f"Ollama not available: {e}")
             return None
 
-        a = assess_exploit_quality(candidate.id, provider="ollama")
+        a = assess_exploit_quality(candidate.id, provider="ollama", model_name=model)
         return AssessmentResult(
             quality_rank=QualityRank(a.usability_rank.value),
             source="llm",
             provider="ollama",
-            model="llama3.2:3b",
+            model=model,
             fallback=False,
             reasoning=a.reasoning,
         )
@@ -94,23 +98,29 @@ def _try_ollama_assess(candidate: ActionCandidate) -> Optional[AssessmentResult]
         return None
 
 
-def _try_openai_assess(candidate: ActionCandidate, api_key: Optional[str] = None) -> Optional[AssessmentResult]:
+def _try_openai_assess(
+    candidate: ActionCandidate, api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+) -> Optional[AssessmentResult]:
     """Attempt to assess a candidate using OpenAI."""
+    model = resolve_model("openai", model_name)
     try:
         from core.exploit_assessor import assess_exploit_quality, get_llm
 
         try:
-            llm = get_llm(provider="openai", api_key=api_key)
+            llm = get_llm(provider="openai", model_name=model, api_key=api_key)
         except Exception as e:
             log.warning(f"OpenAI not available: {e}")
             return None
 
-        a = assess_exploit_quality(candidate.id, provider="openai", api_key=api_key)
+        a = assess_exploit_quality(
+            candidate.id, provider="openai", model_name=model, api_key=api_key,
+        )
         return AssessmentResult(
             quality_rank=QualityRank(a.usability_rank.value),
             source="llm",
             provider="openai",
-            model="gpt-4o-mini",
+            model=model,
             fallback=False,
             reasoning=a.reasoning,
         )
@@ -127,6 +137,7 @@ def create_assessor(
     mode: str = "deterministic",
     provider: str = "ollama",
     api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
 ):
     """Create a pluggable assessor function.
 
@@ -134,6 +145,9 @@ def create_assessor(
         mode: "deterministic" or "ai"
         provider: "ollama" or "openai" (used when mode="ai")
         api_key: OpenAI API key (optional)
+        model_name: Explicit model override. When None, the authoritative
+            provider default from ``vapt_platform.model_config`` is used
+            (llama3.2:3b for ollama — the official thesis baseline).
 
     Returns:
         A callable with signature:
@@ -149,12 +163,16 @@ def create_assessor(
         return _deterministic
 
     # mode == "ai"
+    resolved_model = resolve_model(provider, model_name)
+
     def _ai_assess(candidate: ActionCandidate) -> AssessmentResult:
         # Try the configured provider
         if provider == "openai":
-            result = _try_openai_assess(candidate, api_key=api_key)
+            result = _try_openai_assess(
+                candidate, api_key=api_key, model_name=resolved_model,
+            )
         else:
-            result = _try_ollama_assess(candidate)
+            result = _try_ollama_assess(candidate, model_name=resolved_model)
 
         if result is not None:
             return result
@@ -169,6 +187,7 @@ def create_assessor(
             quality_rank=rank,
             source="deterministic",
             provider=provider,
+            model=resolved_model,
             fallback=True,
             error=f"{provider} unavailable; deterministic fallback used",
         )
@@ -185,10 +204,13 @@ def assess_candidates_with_provenance(
     mode: str = "deterministic",
     provider: str = "ollama",
     api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
 ) -> list[AssessmentResult]:
     """Assess a list of candidates using the configured mode.
 
     Returns a list of AssessmentResult objects, one per candidate.
     """
-    assessor = create_assessor(mode=mode, provider=provider, api_key=api_key)
+    assessor = create_assessor(
+        mode=mode, provider=provider, api_key=api_key, model_name=model_name,
+    )
     return [assessor(c) for c in candidates]

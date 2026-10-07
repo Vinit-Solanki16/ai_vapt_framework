@@ -16,6 +16,12 @@ class RunRequest(BaseModel):
     assessor: Literal["deterministic", "llm"] = Field("deterministic", description="Assessor type")
     assessor_provider: Literal["ollama", "openai"] = Field("ollama", description="AI provider")
     assessor_api_key: Optional[str] = Field(None, description="OpenAI API key")
+    assessor_model: Optional[str] = Field(
+        None,
+        description="Explicit assessor model name (optional). None -> provider "
+        "default (llama3.2:3b for ollama, the official thesis baseline). "
+        "qwen2.5:3b is the Phase 33A experimental comparison arm.",
+    )
     scan_file: Optional[str] = Field(None, description="Path to scan file (overrides scenario)")
     assessment_type: Literal["scenario", "web"] = Field("scenario", description="Assessment type")
     target_url: Optional[str] = Field(None, description="Authorized web target URL (required for web assessments)")

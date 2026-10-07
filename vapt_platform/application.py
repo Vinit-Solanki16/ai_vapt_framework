@@ -68,6 +68,9 @@ class VAPTRequest:
         assessor_mode: Assessment mode ("deterministic" or "ai")
         assessor_provider: AI provider ("ollama" or "openai")
         assessor_api_key: OpenAI API key (optional)
+        assessor_model: Explicit model name (optional). None -> the
+            authoritative provider default from vapt_platform.model_config
+            (llama3.2:3b for ollama, the official thesis baseline).
         max_attempts: Pivot threshold (default: 2)
         scan_file: Path to scan file (optional, overrides scenario)
         assessment_type: "scenario" (default) or "web" (authorized URL target)
@@ -84,6 +87,7 @@ class VAPTRequest:
     assessor_mode: str = "deterministic"
     assessor_provider: str = "ollama"
     assessor_api_key: Optional[str] = None
+    assessor_model: Optional[str] = None
     max_attempts: int = 2
     scan_file: Optional[str] = None
     assessment_type: str = "scenario"
@@ -857,6 +861,7 @@ class VAPTApplication:
             assessment_mode=request.assessor_mode,
             assessment_provider=request.assessor_provider,
             assessment_api_key=request.assessor_api_key,
+            assessment_model=request.assessor_model,
         )
 
     def _run_assessment_only(self, request: VAPTRequest, candidates: list[dict]) -> dict:
@@ -888,6 +893,7 @@ class VAPTApplication:
             mode=request.assessor_mode,
             provider=request.assessor_provider,
             api_key=request.assessor_api_key,
+            model_name=request.assessor_model,
         )
         assessment_details: list[dict] = []
 
@@ -918,10 +924,9 @@ class VAPTApplication:
         )
         model = None
         if request.assessor_mode == "ai":
-            model = {
-                "ollama": "llama3.2:3b",
-                "openai": "gpt-4o-mini",
-            }.get(request.assessor_provider, request.assessor_provider)
+            from vapt_platform.model_config import resolve_model
+
+            model = resolve_model(request.assessor_provider, request.assessor_model)
         return {
             "candidates": ranked,
             "results": [],

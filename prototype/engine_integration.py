@@ -90,6 +90,7 @@ def run_decision_scenario(
     assessment_mode: str = "deterministic",
     assessment_provider: str = "ollama",
     assessment_api_key: Optional[str] = None,
+    assessment_model: Optional[str] = None,
 ) -> dict:
     """Run a scenario through the real decision engine.
 
@@ -108,6 +109,9 @@ def run_decision_scenario(
         mode: "simulation" (default), "real", or "lab"
         executor: pre-built Executor (optional; overrides mode-based construction)
         assessor: "deterministic" (default) or "llm" (requires Ollama)
+        assessment_model: Explicit model name override (optional). None ->
+            the authoritative provider default from
+            ``vapt_platform.model_config`` (llama3.2:3b for ollama).
 
     Returns:
         Final engine state dict with presentation metadata appended
@@ -137,6 +141,7 @@ def run_decision_scenario(
         mode=assessment_mode,
         provider=assessment_provider,
         api_key=assessment_api_key,
+        model_name=assessment_model,
     )
 
     # Wrap the pluggable assessor to work with the engine's assess_fn interface.
@@ -180,9 +185,9 @@ def run_decision_scenario(
     effective_provider = assessment_provider if assessment_mode == "ai" else "deterministic"
     _model = None
     if assessment_mode == "ai":
-        _model = {"ollama": "llama3.2:3b", "openai": "gpt-4o-mini"}.get(
-            assessment_provider, assessment_provider
-        )
+        from vapt_platform.model_config import resolve_model
+
+        _model = resolve_model(assessment_provider, assessment_model)
     final_state["_assessment"] = {
         "mode": assessment_mode,
         "provider": effective_provider,
