@@ -139,11 +139,17 @@ class TestCustomJsonParsing:
 class TestCandidatesFromScan:
 
     def test_candidates_from_nmap_xml(self, nmap_xml_file, epss_mock):
+        # FIX 1: pure Nmap XML is service discovery, not exploit candidates.
         candidates = candidates_from_scan(nmap_xml_file)
-        assert len(candidates) > 0
-        assert all(isinstance(c, ActionCandidate) for c in candidates)
+        assert candidates == []
+        # The discovery data stays available separately.
+        from decision_engine.adapters.scan_adapter import discovery_from_scan
+        discovery = discovery_from_scan(nmap_xml_file)
+        assert len(discovery) > 0
+        assert all(d.get("finding_kind") == "SERVICE_DISCOVERY" for d in discovery)
 
     def test_candidates_from_nmap_json(self, nmap_json_file, epss_mock):
+        # CVE-bearing Nmap JSON still yields actionable candidates.
         candidates = candidates_from_scan(nmap_json_file)
         assert len(candidates) > 0
         assert all(isinstance(c, ActionCandidate) for c in candidates)
@@ -153,13 +159,15 @@ class TestCandidatesFromScan:
         assert len(candidates) > 0
         assert all(isinstance(c, ActionCandidate) for c in candidates)
 
-    def test_candidates_have_valid_probability(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_candidates_have_valid_probability(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
+        assert candidates
         for c in candidates:
             assert 0.0 <= c.probability <= 1.0
 
-    def test_candidates_have_ids(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_candidates_have_ids(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
+        assert candidates
         for c in candidates:
             assert c.id
             assert isinstance(c.id, str)
@@ -173,8 +181,10 @@ class TestCandidatesFromScan:
 
 class TestScanEngineIntegration:
 
-    def test_scan_candidates_run_through_engine(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_scan_candidates_run_through_engine(self, nmap_json_file, epss_mock):
+        # FIX 1: use CVE-bearing Nmap JSON (genuine vulnerability findings).
+        candidates = candidates_from_scan(nmap_json_file)
+        assert candidates
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         assert state["status"] in (
@@ -182,8 +192,9 @@ class TestScanEngineIntegration:
             EngineStatus.COMPLETED.value,
         )
 
-    def test_scan_candidates_produce_results(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_scan_candidates_produce_results(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
+        assert candidates
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         assert "results" in state
@@ -292,8 +303,11 @@ class TestScanEdgeCases:
 
 class TestScanReportGeneration:
 
-    def test_json_report_generated(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    # FIX 1: reports are generated from CVE-bearing findings; pure Nmap
+    # discovery no longer feeds the candidate pipeline.
+
+    def test_json_report_generated(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         report = generate_json_report("scan_test", state, max_attempts=2, mode="simulation")
@@ -301,31 +315,31 @@ class TestScanReportGeneration:
         assert data["scenario"] == "scan_test"
         assert data["final_status"] == state["status"]
 
-    def test_text_report_generated(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_text_report_generated(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         report = generate_text_report("scan_test", state, max_attempts=2, mode="simulation")
         assert "AI VAPT DECISION ENGINE" in report
 
-    def test_report_contains_candidates(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_report_contains_candidates(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         report = generate_json_report("scan_test", state, max_attempts=2, mode="simulation")
         data = json.loads(report)
         assert len(data["candidates"]) > 0
 
-    def test_report_evidence_tier_simulation(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_report_evidence_tier_simulation(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         report = generate_json_report("scan_test", state, max_attempts=2, mode="simulation")
         data = json.loads(report)
         assert data["evidence_tier"] == "SIMULATED"
 
-    def test_report_safety_notice(self, nmap_xml_file, epss_mock):
-        candidates = candidates_from_scan(nmap_xml_file)
+    def test_report_safety_notice(self, nmap_json_file, epss_mock):
+        candidates = candidates_from_scan(nmap_json_file)
         scenario = candidates_to_scenario(candidates)
         state = run_decision_scenario(scenario, max_attempts=2, mode="simulation")
         report = generate_json_report("scan_test", state, max_attempts=2, mode="simulation")

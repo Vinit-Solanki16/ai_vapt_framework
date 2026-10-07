@@ -15,7 +15,68 @@ from .models import (
     ExecutionReport,
     PivotEvent,
     EvidenceTier,
+    ServiceDiscoveryReport,
 )
+
+
+def _build_service_discovery_reports(raw: Any) -> list[ServiceDiscoveryReport]:
+    """Normalize preserved non-actionable inventory for reporting (FIX 1 + FIX 2).
+
+    Covers Nmap service discovery AND Nuclei informational / fingerprint /
+    discovery observations. Each record carries candidate eligibility
+    "INFORMATIONAL / DISCOVERY" and is never ranked.
+    """
+    out: list[ServiceDiscoveryReport] = []
+    for s in raw or []:
+        if not isinstance(s, dict):
+            continue
+        record_type = str(s.get("record_type", "") or "")
+        label = str(s.get("label", "") or "")
+        if not record_type:
+            record_type = "INFORMATIONAL" if str(s.get("finding_kind", "")) == "INFORMATIONAL_FINDING" else "SERVICE_DISCOVERY"
+        if not label:
+            label = "Informational / Discovery" if record_type == "INFORMATIONAL" else "Service Discovery / Asset Information"
+        out.append(ServiceDiscoveryReport(
+            finding_id=str(s.get("finding_id", s.get("id", "")) or ""),
+            source=str(s.get("source", "") or ""),
+            target=str(s.get("target", s.get("host", "")) or ""),
+            host=str(s.get("host", "") or ""),
+            port=int(s.get("port", 0) or 0),
+            protocol=str(s.get("protocol", "tcp") or "tcp"),
+            service=str(s.get("service", s.get("title", "")) or ""),
+            title=str(s.get("title", "") or ""),
+            severity=str(s.get("severity", "") or ""),
+            rule_id=str(s.get("rule_id", s.get("template_id", "")) or ""),
+            product=str(s.get("product", (s.get("metadata", {}) or {}).get("product", "")) or ""),
+            version=str(s.get("version", (s.get("metadata", {}) or {}).get("version", "")) or ""),
+            description=str(s.get("description", "") or ""),
+            evidence=list(s.get("evidence", []) or []),
+            record_type=record_type,
+            label=label,
+            candidate_eligibility=str(s.get("candidate_eligibility", "INFORMATIONAL / DISCOVERY") or "INFORMATIONAL / DISCOVERY"),
+        ))
+    return out
+
+
+def _fallback_validation_status(candidate: dict[str, Any], evidence_tier: str) -> str:
+    """Honest validation fallback for older runs lacking the backend field.
+
+    FIX 3: derives display text from already-recorded evidence tier /
+    scanner source — never invents VALIDATED. New runs carry an explicit
+    backend ``validation_status`` so this fallback only affects legacy
+    persisted runs.
+    """
+    try:
+        src = str((candidate or {}).get("source", "") or "").strip().lower()
+    except Exception:
+        src = ""
+    if src in {"nmap", "nmap-xml", "nmap-json", "nuclei", "custom"}:
+        return "VALIDATION NOT AVAILABLE"
+    if evidence_tier == EvidenceTier.DOCKER_OBSERVED.value:
+        return "DOCKER_OBSERVED"
+    if evidence_tier == EvidenceTier.OBSERVED_LOCAL.value:
+        return "VALIDATION NOT AVAILABLE"
+    return "SIMULATED"
 
 
 def _get_evidence_tier(mode: str) -> str:
@@ -90,6 +151,54 @@ def _count_attempts_per_candidate(results: list[dict]) -> dict[str, int]:
     return counts
 
 
+def _build_web_provenance(
+    pipeline_summary: dict[str, Any] | None,
+    assessment: dict[str, Any] | None,
+    execution_results: list,
+) -> dict[str, Any]:
+    """Build web-assessment provenance from recorded backend state.
+
+    Phase 32B FIX 5: web-only runs state explicitly what ran and what
+    did not — target URL, per-scanner status/findings/duration/version,
+    AI provider, validation availability and whether execution was
+    performed. Empty dict for non-web runs (section hidden). Never
+    invents values: every field comes from the persisted web context,
+    assessment provenance, or the recorded execution list.
+    """
+    web = ((pipeline_summary or {}).get("web", {}) or {})
+    if not web:
+        return {}
+    assessment = assessment or {}
+
+    def _scanner(name: str, raw: Any) -> dict[str, Any]:
+        raw = raw or {}
+        versions = web.get("scanner_versions", {}) or {}
+        return {
+            "name": name,
+            "status": raw.get("status", "unknown"),
+            "findings": raw.get("finding_count", 0),
+            "duration_s": raw.get("duration_s"),
+            "version": versions.get(name.lower()),
+            "detail": raw.get("detail", ""),
+        }
+
+    executed = len(execution_results or [])
+    return {
+        "target_url": web.get("target_url", ""),
+        "scanners": [
+            _scanner("Nmap", web.get("nmap")),
+            _scanner("Nuclei", web.get("nuclei")),
+        ],
+        "ai": {
+            "mode": assessment.get("mode", ""),
+            "provider": assessment.get("provider", ""),
+            "model": assessment.get("model"),
+        },
+        "validation": "NOT AVAILABLE",
+        "execution": "NOT PERFORMED" if not executed else f"{executed} recorded",
+    }
+
+
 class ReportBuilder:
     """Builds ReportModel from domain state or persisted runs."""
 
@@ -111,7 +220,12 @@ class ReportBuilder:
         """
         evidence_tier = _get_evidence_tier(domain.mode)
         
-        # Build candidates
+        # Build candidates (ACTIONABLE only; every ranked candidate carries
+        # explicit eligibility + backend validation_status for FIX 3).
+        # FIX 3: preserve the backend source of truth; when an older run
+        # lacks validation_status, fall back honestly from evidence tier
+        # (SIMULATED / DOCKER_OBSERVED / VALIDATION NOT AVAILABLE) —
+        # never inventing VALIDATED.
         candidates = []
         for c in domain.candidates:
             candidates.append(CandidateReport(
@@ -123,6 +237,11 @@ class ReportBuilder:
                 execution_outcome=c.get("execution_outcome", "") or "",
                 ground_truth=c.get("ground_truth", "") or "",
                 score=c.get("_score", {}),
+                candidate_eligibility=c.get("candidate_eligibility", "ACTIONABLE") or "ACTIONABLE",
+                validation_status=(
+                    c.get("validation_status", "")
+                    or _fallback_validation_status(c, evidence_tier)
+                ),
             ))
         
         # Build execution results
@@ -148,11 +267,16 @@ class ReportBuilder:
             candidates_processed=domain.candidates_processed,
         )
         
-        # Build report
+        # Build report (FIX 1: discovery preserved separately, labelled).
+        # Phase 32B FIX 5: web provenance states what ran and what did not.
         report = ReportModel(
             metadata=metadata,
             executive_summary=self._build_executive_summary(domain, evidence_tier),
             candidates=candidates,
+            service_discovery=_build_service_discovery_reports(
+                getattr(domain, "service_discovery", [])
+                or ((pipeline_summary or {}).get("web", {}) or {}).get("service_discovery", [])
+            ),
             execution_results=execution_results,
             decision_trace=domain.decision_trace,
             pivot_events=_extract_pivot_events(domain.decision_trace),
@@ -165,6 +289,9 @@ class ReportBuilder:
             target=request.target if request else None,
             port=request.port if request else 8080,
             path=request.path if request else "/vuln",
+            web_provenance=_build_web_provenance(
+                pipeline_summary, domain.assessment, domain.execution_results
+            ),
             limitations=self._build_limitations(evidence_tier),
         )
         
@@ -181,7 +308,8 @@ class ReportBuilder:
         """
         evidence_tier = _get_evidence_tier(run.mode)
         
-        # Build candidates
+        # Build candidates (ACTIONABLE only, with explicit eligibility +
+        # backend validation_status for FIX 3; honest fallback, never VALIDATED).
         candidates = []
         for c in run.candidates:
             candidates.append(CandidateReport(
@@ -193,6 +321,11 @@ class ReportBuilder:
                 execution_outcome=c.get("execution_outcome", "") or "",
                 ground_truth=c.get("ground_truth", "") or "",
                 score=c.get("_score", {}),
+                candidate_eligibility=c.get("candidate_eligibility", "ACTIONABLE") or "ACTIONABLE",
+                validation_status=(
+                    c.get("validation_status", "")
+                    or _fallback_validation_status(c, evidence_tier)
+                ),
             ))
         
         # Build execution results
@@ -220,11 +353,20 @@ class ReportBuilder:
             run_updated_at=run.updated_at,
         )
         
-        # Build report
+        # Build report (FIX 1 + FIX 2: non-actionable inventory preserved
+        # with eligibility INFORMATIONAL / DISCOVERY, never ranked).
+        raw_discovery = getattr(run, "service_discovery", []) or []
+        if not raw_discovery:
+            try:
+                web = (run.pipeline_summary or {}).get("web", {}) or {}
+                raw_discovery = web.get("service_discovery", []) or web.get("discovery_snapshots", []) or []
+            except Exception:
+                raw_discovery = []
         report = ReportModel(
             metadata=metadata,
             executive_summary=self._build_executive_summary_from_run(run, evidence_tier),
             candidates=candidates,
+            service_discovery=_build_service_discovery_reports(raw_discovery),
             execution_results=execution_results,
             decision_trace=run.decision_trace,
             pivot_events=_extract_pivot_events(run.decision_trace),
@@ -237,6 +379,9 @@ class ReportBuilder:
             target=run.target,
             port=run.port,
             path=run.path,
+            web_provenance=_build_web_provenance(
+                run.pipeline_summary, run.assessment, run.execution_results
+            ),
             limitations=self._build_limitations(evidence_tier),
         )
         

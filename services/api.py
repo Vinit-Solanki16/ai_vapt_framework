@@ -65,12 +65,13 @@ def _run_engine(run_id: str, req: RunRequest):
     application = get_application()
     result = application.run(vapt_request)
 
-    # Store result in job manager
+    # Store result in job manager (FIX 1: discovery kept separate).
     job_manager.set_state(run_id, {
         "scenario": result.domain.scenario,
         "mode": result.domain.mode,
         "status": result.domain.final_status,
         "candidates": result.domain.candidates,
+        "service_discovery": result.domain.service_discovery,
         "execution_results": result.domain.execution_results,
         "decision_trace": result.domain.decision_trace,
         "total_attempts": result.domain.total_attempts,
@@ -123,12 +124,13 @@ def start_run(req: RunRequest):
         result = application.run(vapt_request)
         run_id = result.domain.run_id
 
-        # Store result in job manager for later retrieval
+        # Store result in job manager for later retrieval (FIX 1: separate).
         job_manager.set_state(run_id, {
             "scenario": result.domain.scenario,
             "mode": result.domain.mode,
             "status": result.domain.final_status,
             "candidates": result.domain.candidates,
+            "service_discovery": result.domain.service_discovery,
             "execution_results": result.domain.execution_results,
             "decision_trace": result.domain.decision_trace,
             "total_attempts": result.domain.total_attempts,
@@ -170,6 +172,7 @@ def list_runs(limit: int = 100):
                 "target_url": run.target_url,
                 "assessment_type": run.assessment_type,
                 "finding_count": len(run.candidates or []),
+                "service_discovery_count": len(getattr(run, "service_discovery", None) or []),
                 "assessor_provider": run.assessor_provider,
             }
             for run in runs
@@ -304,20 +307,52 @@ def get_evidence(run_id: str):
 
 @app.get("/runs/{run_id}/findings")
 def get_findings(run_id: str):
-    """Get processed candidates/findings."""
+    """Get the complete findings inventory (FIX 1 + FIX 2).
+
+    ``candidates`` holds ONLY ACTIONABLE vulnerability findings
+    (candidate_eligibility == "ACTIONABLE").
+    ``service_discovery`` holds the preserved non-actionable inventory:
+    Nmap service discovery AND Nuclei informational / fingerprint /
+    discovery observations (candidate_eligibility ==
+    "INFORMATIONAL / DISCOVERY"). Nothing is hidden: the Findings page
+    shows both buckets with explicit eligibility.
+    Falls back to the persisted run so inventory survives restarts.
+    """
     job = job_manager.get(run_id)
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")
     state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
+    service_discovery = state.get("service_discovery", [])
+    if not service_discovery:
+        try:
+            from vapt_platform.persistence import get_repository
+            persisted = get_repository().get(run_id)
+            if persisted is not None:
+                service_discovery = list(getattr(persisted, "service_discovery", None) or [])
+                if not service_discovery:
+                    web = (persisted.pipeline_summary or {}).get("web", {}) or {}
+                    service_discovery = list(
+                        web.get("service_discovery", []) or web.get("discovery_snapshots", []) or []
+                    )
+        except Exception:
+            service_discovery = []
     return {
         "run_id": run_id,
         "candidates": state.get("candidates", []),
+        "service_discovery": service_discovery,
     }
 
 
 @app.get("/runs/{run_id}/candidates")
 def get_candidates(run_id: str):
-    """Get candidate ranking."""
+    """Get candidate ranking (ACTIONABLE findings only, FIX 1 + FIX 2).
+
+    Only findings with candidate_eligibility == "ACTIONABLE" appear here.
+    Service-discovery records and informational / fingerprint / discovery
+    observations are never included; they are available via ``/findings``
+    → ``service_discovery`` and the Findings page inventory section with
+    eligibility "INFORMATIONAL / DISCOVERY".
+    """
     job = job_manager.get(run_id)
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")

@@ -96,17 +96,17 @@ def test_web_assessment_end_to_end(monkeypatch, tmp_path):
 
     domain = result.domain
     assert domain.final_status in ("SUCCESS", "COMPLETED", "FAILED")
-    # At least the Nmap finding entered the pipeline.
-    assert len(domain.candidates) >= 1
-    cand = domain.candidates[0]
-    assert cand["port"] == 9191
-    assert cand["source"] == "nmap-xml"
-    assert "validation_status" in cand
+    # FIX 1: pure Nmap service discovery must NOT become exploit candidates.
+    assert domain.candidates == []
+    # ...but the discovery record stays available as asset/service context.
+    assert len(domain.service_discovery) >= 1
+    disc = domain.service_discovery[0]
+    assert disc["port"] == 9191
+    assert str(disc.get("source", "")).startswith("nmap")
+    assert disc.get("finding_kind") == "SERVICE_DISCOVERY"
     assert domain.evidence_tier == "OBSERVED_LOCAL"
     assert "VALIDATION NOT AVAILABLE" in domain.safety_notice
     assert domain.assessment.get("provider") == "deterministic"
-    # GAP-1: engine assessed before ranking — quality ranks present.
-    assert any(c.get("quality_rank") for c in domain.candidates)
 
 
 def test_web_assessment_persists_and_reports(monkeypatch, tmp_path):

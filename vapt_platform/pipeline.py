@@ -205,6 +205,24 @@ class Planner:
 # Safety gate
 # ---------------------------------------------------------------------------
 
+def _allowlist_key(target: str) -> str:
+    """Normalize an action target for allowlist comparison.
+
+    URL targets (``scheme://...``) are parsed with the strict web-target
+    validator, which enforces http/https-only schemes, rejects embedded
+    credentials and malformed input, rejects non-allowlisted/public
+    hosts and out-of-scope ports, and guards DNS rebinding. The
+    normalized host is returned, so a resource path (e.g. ``/metrics``)
+    never affects authorization. Raises ``ValueError`` fail-closed on
+    any violation. Plain host/IP targets are returned unchanged.
+    """
+    if isinstance(target, str) and "://" in target:
+        from vapt_platform.web_target import parse_web_target
+
+        return parse_web_target(target).host
+    return target
+
+
 class SafetyGate:
     """Validates actions before execution.
 
@@ -241,24 +259,44 @@ class SafetyGate:
     def validate(self, action: PlannedAction) -> ValidationResult:
         """Validate a planned action.
 
+        Phase 32B FIX 2: URL targets are authorized on normalized
+        components (scheme/host/port via ``parse_web_target``), not by
+        string equality against a host-only allowlist — so a path such as
+        ``/metrics`` never causes a false rejection. Malformed URLs,
+        credentials, non-http(s) schemes, public hosts and out-of-scope
+        ports are rejected fail-closed by the parser. Plain host/IP
+        targets keep the legacy membership check. No network connections
+        are made before authorization succeeds.
+
         Args:
             action: The planned action to validate
 
         Returns:
             ValidationResult
         """
+        try:
+            check_target = _allowlist_key(action.target)
+        except ValueError as e:
+            return ValidationResult(
+                action_id=action.action_id,
+                is_valid=False,
+                reason=f"Action rejected: target not authorized ({e})",
+                scope_check=False,
+                authorization_check=False,
+                risk_check=True,
+            )
         # Scope check: target must be in allowlist
-        scope_check = action.target in self._allowlist or not self._allowlist
+        scope_check = check_target in self._allowlist or not self._allowlist
         if self._enforcer is not None:
             try:
-                self._enforcer.validate_target(action.target)
-                self._enforcer.validate_scope(action.target, ports=[action.port] if action.port else None)
+                self._enforcer.validate_target(check_target)
+                self._enforcer.validate_scope(check_target, ports=[action.port] if action.port else None)
                 authorization_check = True
             except ValueError:
                 authorization_check = False
         else:
             # Authorization check: must have explicit authorization
-            authorization_check = action.target in self._allowlist
+            authorization_check = check_target in self._allowlist
 
         # Risk check: risk score must be acceptable
         risk_check = action.risk_score <= 1.0  # Always true for normalized scores

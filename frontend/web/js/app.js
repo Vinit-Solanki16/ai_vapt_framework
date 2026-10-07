@@ -47,11 +47,155 @@ const api = {
 
 const state = {
     currentRun: null,
+    // FIX 5: run_id whose result is currently displayed inline on the
+    // New Assessment page (#run-result). Tracked separately from
+    // currentRun (last completed run, consumed by Active Assessment) so
+    // editing the form or re-entering the page can clear stale output
+    // without losing history or breaking the Active Assessment view.
+    displayedRun: null,
     runs: [],
     systemHealth: null,
     scenarios: [],
     loading: false,
 };
+
+// FIX 5: hide a stale inline result on the New Assessment page when the
+// user edits the configuration after a run completed. The displayed
+// output belongs to state.displayedRun, not to the edited form, so it
+// must not stay on screen mixed with new input. History is untouched;
+// the previous run stays reachable via the "View Previous Run" link.
+function clearStaleNewAssessmentResult(container) {
+    const resultCard = (container || document).querySelector
+        ? (container || document).querySelector('#run-result')
+        : document.getElementById('run-result');
+    if (!resultCard) return;
+    if (resultCard.style.display !== 'none') {
+        resultCard.style.display = 'none';
+        const content = (container || document).querySelector
+            ? (container || document).querySelector('#run-result-content')
+            : document.getElementById('run-result-content');
+        if (content) content.innerHTML = '';
+    }
+    state.displayedRun = null;
+    const prev = (container || document).querySelector
+        ? (container || document).querySelector('#previous-run-link')
+        : document.getElementById('previous-run-link');
+    if (prev && state.currentRun) prev.style.display = 'block';
+    // FIX 6: a stale post-run action bar must never linger next to a fresh
+    // form either — restore the idle START state alongside clearing output.
+    resetNewAssessmentActions(container);
+}
+
+// FIX 6: explicit lifecycle for the New Assessment run controls.
+//
+//   IDLE:       [START VAPT ASSESSMENT] enabled, no post-run bar.
+//   VALIDATING: button disabled, "VALIDATING..." (real preflight call).
+//   RUNNING:    button disabled, "ASSESSMENT IN PROGRESS..." (real run).
+//   COMPLETED:  ✓ + [VIEW RUN] [NEW ASSESSMENT] [RUN AGAIN] (START hidden).
+//   FAILED:     ✗ + [VIEW ERROR] [RETRY] [NEW ASSESSMENT] (START hidden).
+//
+// No fake progress, no WebSockets: transitions fire only on actual
+// backend responses (api.startRun resolve/reject, validateTargetUrl).
+function runActionIds(isWeb) {
+    return isWeb
+        ? { runBtn: 'web-run-btn', btn: 'btn-run-web', post: 'web-post-actions' }
+        : { runBtn: 'scenario-run-btn', btn: 'btn-run', post: 'scenario-post-actions' };
+}
+
+function setRunButtonsEnabled(enabled) {
+    for (const isWeb of [false, true]) {
+        const ids = runActionIds(isWeb);
+        const btn = document.getElementById(ids.btn);
+        if (btn) btn.disabled = !enabled;
+    }
+}
+
+function hidePostRunActions() {
+    for (const isWeb of [false, true]) {
+        const el = document.getElementById(runActionIds(isWeb).post);
+        if (el) {
+            el.style.display = 'none';
+            el.innerHTML = '';
+        }
+    }
+}
+
+function resetNewAssessmentActions(container) {
+    const scope = container || document;
+    const q = (sel) => scope.querySelector ? scope.querySelector(sel) : document.querySelector(sel);
+    hidePostRunActions();
+    const sWrap = q('#scenario-run-btn');
+    const wWrap = q('#web-run-btn');
+    const isWeb = document.getElementById('assess-type')
+        ? document.getElementById('assess-type').value === 'web'
+        : false;
+    if (sWrap) sWrap.style.display = isWeb ? 'none' : 'block';
+    if (wWrap) wWrap.style.display = isWeb ? 'block' : 'none';
+    setRunButtonsEnabled(true);
+}
+
+function showPostRunActions({ status, runId, isWeb, error }) {
+    const ids = runActionIds(!!isWeb);
+    const wrap = document.getElementById(ids.runBtn);
+    const post = document.getElementById(ids.post);
+    if (!post) return;
+    if (wrap) wrap.style.display = 'none';
+    const safeId = escapeHtml(runId || '');
+    if (status === 'completed') {
+        post.innerHTML = `
+            <div class="alert alert-success" style="margin-bottom:0.75rem;">
+                <strong>✓ Assessment Completed</strong> — Run ID: <span style="font-family:monospace;">${safeId}</span>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="viewRunFromPostActions()">👁️ VIEW RUN</button>
+                <button class="btn btn-secondary" onclick="goNewAssessment()">📝 NEW ASSESSMENT</button>
+                <button class="btn btn-secondary" onclick="runAgainFromPostActions(${isWeb ? 'true' : 'false'})">🔁 RUN AGAIN</button>
+            </div>`;
+    } else {
+        post.innerHTML = `
+            <div class="alert alert-error" style="margin-bottom:0.75rem;">
+                <strong>✗ Assessment Failed</strong>${error ? ` — ${escapeHtml(error)}` : ''}
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="scrollToNewAssessmentResult()">🔍 VIEW ERROR</button>
+                <button class="btn btn-secondary" onclick="runAgainFromPostActions(${isWeb ? 'true' : 'false'})">🔁 RETRY</button>
+                <button class="btn btn-secondary" onclick="goNewAssessment()">📝 NEW ASSESSMENT</button>
+            </div>`;
+    }
+    post.style.display = 'block';
+}
+
+function viewRunFromPostActions() {
+    // Actual backend state: Active Assessment renders state.currentRun
+    // from the API (api.getRun), never from stale inline DOM.
+    window.location.hash = '#/assessment/active';
+    if (getRoute() === '/assessment/active') router();
+}
+
+function goNewAssessment() {
+    // Fresh configuration via the single canonical router. Same-hash
+    // clicks are forced (hashchange would not fire otherwise).
+    state.displayedRun = null;
+    if (getRoute() !== '/assessment/new') {
+        window.location.hash = '#/assessment/new';
+    } else {
+        router();
+    }
+}
+
+function runAgainFromPostActions(isWeb) {
+    hidePostRunActions();
+    if (isWeb) startWebAssessment();
+    else startAssessment();
+}
+
+function scrollToNewAssessmentResult() {
+    const card = document.getElementById('run-result');
+    if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.style.display = 'block';
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // Utility Functions
@@ -331,6 +475,12 @@ function healthComponent(name, status, detail) {
 async function renderNewAssessment(container) {
     showLoading(container, 'Loading configuration...');
 
+    // FIX 5: entering New Assessment always starts from a fresh
+    // configuration — never re-display a previous run's result inline.
+    // The previous run (if any) stays in Run History and is reachable
+    // via an explicit link; persisted data is not deleted.
+    state.displayedRun = null;
+
     try {
         const [scenarios, health, scanners] = await Promise.all([
             api.getScenarios().catch(() => ({ scenarios: [] })),
@@ -515,6 +665,17 @@ async function renderNewAssessment(container) {
                 <div id="run-result-content"></div>
             </div>
 
+            <div class="card" id="previous-run-card" style="display:none;margin-top:1rem;">
+                <div class="card-header">
+                    <span class="card-title">Previous Run</span>
+                </div>
+                <p class="text-muted" style="font-size:0.85rem;">
+                    A previous assessment was completed in this session.
+                    <a href="#/runs" id="previous-run-link" style="color:var(--accent-blue-light);">View Previous Run</a>
+                    <span id="previous-run-id" class="text-dim" style="font-family:monospace;font-size:0.75rem;"></span>
+                </p>
+            </div>
+
             <div style="margin-top: 1rem;" id="scenario-run-btn">
                 <button class="btn btn-primary" id="btn-run" onclick="startAssessment()">
                     🚀 Run Assessment
@@ -525,6 +686,8 @@ async function renderNewAssessment(container) {
                     🛡️ START VAPT ASSESSMENT
                 </button>
             </div>
+            <div style="margin-top: 1rem;display:none;" id="scenario-post-actions"></div>
+            <div style="margin-top: 1rem;display:none;" id="web-post-actions"></div>
         `;
 
         // Event listeners
@@ -534,6 +697,10 @@ async function renderNewAssessment(container) {
             document.getElementById('web-config').style.display = isWeb ? 'block' : 'none';
             document.getElementById('scenario-run-btn').style.display = isWeb ? 'none' : 'block';
             document.getElementById('web-run-btn').style.display = isWeb ? 'block' : 'none';
+            // FIX 6: switching forms restores the idle action state so no
+            // completed/failed bar lingers under the other form.
+            hidePostRunActions();
+            setRunButtonsEnabled(true);
             document.getElementById('assess-type-hint').textContent = isWeb
                 ? 'Real controlled assessment of an authorized local web target (Juice Shop demo: http://127.0.0.1:9191).'
                 : 'Run a frozen research scenario (GAP-1 / GAP-2 demos preserved).';
@@ -552,6 +719,25 @@ async function renderNewAssessment(container) {
         });
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
+
+        // FIX 5: fresh page shows no previous result; surface an explicit
+        // link when a previous run exists in this session.
+        const prevCard = document.getElementById('previous-run-card');
+        const prevId = document.getElementById('previous-run-id');
+        if (prevCard && state.currentRun) {
+            if (prevId) prevId.textContent = `(${state.currentRun})`;
+            prevCard.style.display = 'block';
+        }
+
+        // FIX 5: any configuration edit after a completed run clears the
+        // stale inline result so old output is never mixed with new input.
+        // The completed run itself stays in history (see link above).
+        container.addEventListener('input', () => {
+            if (state.displayedRun) clearStaleNewAssessmentResult(container);
+        });
+        container.addEventListener('change', () => {
+            if (state.displayedRun) clearStaleNewAssessmentResult(container);
+        });
 
         updateSafetyStatus();
     } catch (err) {
@@ -618,8 +804,16 @@ async function startAssessment() {
     const resultCard = document.getElementById('run-result');
     const resultContent = document.getElementById('run-result-content');
 
+    // FIX 6: RUNNING — hide any post-run bar, show the START control in its
+    // explicit in-progress state; clear the previous inline output so the
+    // in-flight run is never mixed with stale content.
+    hidePostRunActions();
+    document.getElementById('scenario-run-btn').style.display = 'block';
+    state.displayedRun = null;
+    resultCard.style.display = 'none';
+    resultContent.innerHTML = '';
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> Running...';
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> ASSESSMENT IN PROGRESS...';
 
     try {
         const mode = document.getElementById('assess-mode').value;
@@ -646,6 +840,8 @@ async function startAssessment() {
 
         const result = await api.startRun(data);
         state.currentRun = result.run_id;
+        // FIX 5: only the new result is displayed, bound to its run_id.
+        state.displayedRun = result.run_id;
 
         resultCard.style.display = 'block';
         resultContent.innerHTML = `
@@ -654,16 +850,23 @@ async function startAssessment() {
             </div>
             <div id="active-run-details"></div>
         `;
+        const prevCardOk = document.getElementById('previous-run-card');
+        if (prevCardOk) prevCardOk.style.display = 'none';
 
         // Load full run details
         await loadActiveRunDetails(result.run_id);
 
+        // FIX 6: COMPLETED — explicit post-run bar bound to the new run_id;
+        // the START control stays hidden underneath (RUN AGAIN is separate).
+        showPostRunActions({ status: 'completed', runId: result.run_id, isWeb: false });
+
     } catch (err) {
+        // FIX 5: a fresh error is the new result — no stale run output.
+        state.displayedRun = null;
         resultCard.style.display = 'block';
         resultContent.innerHTML = `<div class="alert alert-error"><strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '🚀 Run Assessment';
+        // FIX 6: FAILED — explicit recovery bar (VIEW ERROR / RETRY / NEW).
+        showPostRunActions({ status: 'failed', isWeb: false, error: err.message });
     }
 }
 
@@ -672,8 +875,28 @@ async function startWebAssessment() {
     const resultCard = document.getElementById('run-result');
     const resultContent = document.getElementById('run-result-content');
 
+    // FIX 6: hide any post-run bar and stale output; the in-flight run owns
+    // the action area until the backend responds.
+    hidePostRunActions();
+    document.getElementById('web-run-btn').style.display = 'block';
+    state.displayedRun = null;
+    resultCard.style.display = 'none';
+    resultContent.innerHTML = '';
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> Running VAPT pipeline...';
+    // FIX 6: VALIDATING — real preflight call below; button says so.
+    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> VALIDATING...';
+
+    // FIX 7: honest in-flight indicator. The workflow is synchronous, so
+    // no per-stage progress exists to report (no percentages, no stage
+    // claims). The only truthful live facts are: the request is in
+    // flight, its target, and wall-clock elapsed. Timer cleared on settle.
+    let vaptTimer = null;
+    const stopVaptTimer = () => {
+        if (vaptTimer) {
+            clearInterval(vaptTimer);
+            vaptTimer = null;
+        }
+    };
 
     try {
         const targetUrl = document.getElementById('web-target-url').value.trim();
@@ -684,6 +907,8 @@ async function startWebAssessment() {
         const maxAttempts = parseInt(document.getElementById('web-max-attempts').value, 10);
 
         // Backend re-validates authoritatively; this pre-check is UX only.
+        // FIX 6: preflight done — now the real run is in progress.
+        btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> ASSESSMENT IN PROGRESS...';
         const pre = await validateTargetUrl();
         if (!pre || !pre.authorized) {
             throw new Error('Target is not authorized. Resolve the authorization error before starting.');
@@ -704,8 +929,35 @@ async function startWebAssessment() {
             max_attempts: maxAttempts,
         };
 
+        // FIX 7: honest in-flight status. Only live facts are shown: the
+        // request is in flight, its target, and measured wall-clock
+        // elapsed. No per-stage RUNNING claims (the synchronous workflow
+        // exposes no live stage feed), no percentages, no WebSockets.
+        // Nuclei scans can take several minutes — this tells the user the
+        // assessment is not stuck without fabricating progress.
+        const vaptStart = Date.now();
+        resultCard.style.display = 'block';
+        resultContent.innerHTML = `
+            <div class="card">
+                <div class="card-header"><span class="card-title">VAPT In Progress</span></div>
+                <p class="text-muted" style="font-size:0.85rem;">
+                    Target: <span style="font-family:monospace;">${escapeHtml(targetUrl)}</span><br>
+                    Elapsed: <span id="vapt-elapsed" style="font-family:monospace;">0.0s</span><br>
+                    Scanner stages (Nmap, Nuclei) run on the backend; their
+                    recorded status, findings and durations appear below
+                    when the backend responds. Long Nuclei scans are normal.
+                </p>
+            </div>`;
+        vaptTimer = setInterval(() => {
+            const el = document.getElementById('vapt-elapsed');
+            if (el) el.textContent = `${((Date.now() - vaptStart) / 1000).toFixed(1)}s`;
+        }, 500);
+
         const result = await api.startRun(data);
+        stopVaptTimer();
         state.currentRun = result.run_id;
+        // FIX 5: only the new result is displayed, bound to its run_id.
+        state.displayedRun = result.run_id;
 
         resultCard.style.display = 'block';
         resultContent.innerHTML = `
@@ -714,15 +966,22 @@ async function startWebAssessment() {
             </div>
             <div id="active-run-details"></div>
         `;
+        const prevCardWeb = document.getElementById('previous-run-card');
+        if (prevCardWeb) prevCardWeb.style.display = 'none';
 
         await loadActiveRunDetails(result.run_id);
 
+        // FIX 6: COMPLETED — explicit post-run bar bound to the new run_id.
+        showPostRunActions({ status: 'completed', runId: result.run_id, isWeb: true });
+
     } catch (err) {
+        // FIX 5: a fresh error is the new result — no stale run output.
+        stopVaptTimer();
+        state.displayedRun = null;
         resultCard.style.display = 'block';
         resultContent.innerHTML = `<div class="alert alert-error"><strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '🛡️ START VAPT ASSESSMENT';
+        // FIX 6: FAILED — explicit recovery bar (VIEW ERROR / RETRY / NEW).
+        showPostRunActions({ status: 'failed', isWeb: true, error: err.message });
     }
 }
 
@@ -804,6 +1063,11 @@ async function loadActiveRunDetails(runId) {
                 }).join('')}
             </div>
 
+            <div class="grid-2" style="margin-bottom:1rem;">
+                ${renderGap1Panel(candidates.candidates || [], assessment.assessment || run.assessment || {})}
+                ${renderGap2Panel(run)}
+            </div>
+
             <div class="grid-2">
                 <div>
                     <h4 style="margin-bottom:0.5rem;">Candidates</h4>
@@ -812,7 +1076,9 @@ async function loadActiveRunDetails(runId) {
                             <div style="font-weight:600;">${escapeHtml(c.id)}</div>
                             <div class="text-muted" style="font-size:0.75rem;">
                                 Quality: ${escapeHtml(c.quality_rank || 'N/A')} |
-                                Outcome: <span class="${c.execution_outcome === 'SUCCESS' ? 'text-success' : 'text-error'}">${escapeHtml(c.execution_outcome || '-')}</span>
+                                Outcome: <span class="${c.execution_outcome === 'SUCCESS' ? 'text-success' : 'text-error'}">${escapeHtml(c.execution_outcome || '-')}</span><br>
+                                Validation: <span class="badge ${validationBadgeClass(c.validation_status || (run.evidence_tier === 'DOCKER_OBSERVED' ? 'DOCKER_OBSERVED' : run.evidence_tier === 'SIMULATED' ? 'SIMULATED' : 'VALIDATION NOT AVAILABLE'))}">${escapeHtml(c.validation_status || (run.evidence_tier === 'DOCKER_OBSERVED' ? 'DOCKER_OBSERVED' : run.evidence_tier === 'SIMULATED' ? 'SIMULATED' : 'VALIDATION NOT AVAILABLE'))}</span>
+                                <span class="text-dim" style="font-size:0.7rem;">outcome ≠ exploit proof; see validation status</span>
                             </div>
                         </div>
                     `).join('') || '<div class="text-muted">No candidates</div>'}
@@ -849,6 +1115,252 @@ function webStage(ok, label, detail) {
     `;
 }
 
+// FIX 3: neutral pipeline stage for states that are neither success nor
+// failure (e.g. VALIDATION NOT AVAILABLE). Renders a dash with no green
+// success indicator so scanner detection is never read as validated.
+function webStageNeutral(label, detail) {
+    return `
+        <div class="pipeline-step">
+            <div class="step-circle" style="border-color:var(--text-dim);color:var(--text-dim);">—</div>
+            <div class="step-label">${label}</div>
+            ${detail ? `<div class="text-dim" style="font-size:0.65rem;">${escapeHtml(detail)}</div>` : ''}
+        </div>
+        <div class="step-connector"></div>
+    `;
+}
+
+// FIX 3: single frontend mirror of the backend validation source of truth.
+// Backend per-finding validation_status values: SCANNER-DETECTED,
+// VALIDATION NOT AVAILABLE, SIMULATED-OUTCOME (validation not available),
+// SIMULATED, DOCKER_OBSERVED, VALIDATED. Only an explicit VALIDATED
+// counts as validated; everything else is NOT AVAILABLE / non-validated.
+function isValidatedStatus(status) {
+    return String(status || '').trim().toUpperCase() === 'VALIDATED';
+}
+
+function isNotAvailableStatus(status) {
+    const s = String(status || '').toUpperCase();
+    return s.includes('NOT AVAILABLE') || s === 'SCANNER-DETECTED' || s === '';
+}
+
+function validationBadgeClass(status) {
+    if (isValidatedStatus(status)) return 'badge-success';
+    const s = String(status || '').toUpperCase();
+    if (s === 'SIMULATED' || s.includes('SIMULATED')) return 'badge-info';
+    if (s === 'DOCKER_OBSERVED' || s.includes('DOCKER')) return 'badge-info';
+    if (s === 'SCANNER-DETECTED') return 'badge-info';
+    return 'badge-warning';
+}
+
+// FIX 4: explicit unavailable semantics for vulnerability intelligence.
+// Backend preserves missing as null/None (never fabricated zero); only
+// genuine numeric values (including true 0.0, via != null checks) render
+// as numbers. Missing renders as N/A per existing 'N/A' UI convention.
+// KEV: true → yes, false with a CVE → no (known negative), else N/A.
+function intelDisplay(md) {
+    const m = md || {};
+    const cves = m.cve_ids || (m.cve ? [m.cve] : []);
+    const hasCve = Array.isArray(cves) ? cves.length > 0 : !!cves;
+    const cvss = m.cvss_score != null ? 'CVSS ' + m.cvss_score : 'CVSS N/A';
+    const epss = m.epss_score != null ? 'EPSS ' + m.epss_score : 'EPSS N/A';
+    let kev;
+    if (m.cisa_kev === true) kev = 'KEV yes';
+    else if (m.cisa_kev === false && hasCve) kev = 'KEV no';
+    else kev = 'KEV N/A';
+    const cweList = m.cwe_ids || [];
+    const cwe = (Array.isArray(cweList) && cweList.length) ? cweList.join(', ') : 'CWE N/A';
+    const parts = [cvss, epss, kev, cwe];
+    if (hasCve) parts.unshift(Array.isArray(cves) ? cves.join(', ') : String(cves));
+    return parts.join(' · ');
+}
+
+// FIX 7: honest scan-status helpers. Status source is the persisted
+// backend web context (preflight + nmap/nuclei ScanResult.to_dict():
+// status, exit_code, finding_count, duration_s, detail, command).
+// No percentages exist anywhere (no progress measurement exists), no
+// WebSockets are used, and a stage is never marked COMPLETED unless its
+// recorded status is exactly 'COMPLETED'.
+function formatDurationSec(v) {
+    if (v === null || v === undefined || v === '') return 'N/A';
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 'N/A';
+    return `${n.toFixed(1)}s`;
+}
+
+function scannerStatusBadge(status) {
+    const s = String(status || 'unknown');
+    if (s === 'COMPLETED') return '<span class="badge badge-success">✓ COMPLETED</span>';
+    if (s === 'FAILED') return '<span class="badge badge-error">✗ FAILED</span>';
+    if (s === 'NOT AVAILABLE' || s === 'SKIPPED') return `<span class="badge badge-warning">${escapeHtml(s)}</span>`;
+    return `<span class="badge badge-info">${escapeHtml(s)}</span>`;
+}
+
+// FIX 7: scan-status panel rendered from recorded backend data only.
+// Covers: scanner unavailable / failure / timeout (FAILED + detail) /
+// successful completion (COMPLETED + findings + duration). Legacy runs
+// without a web context report "not recorded" instead of invented data.
+function renderScanStatusPanel(w, run) {
+    if (!w || (!w.preflight && !w.nmap && !w.nuclei)) {
+        return `
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><span class="card-title">Scan Status</span></div>
+            <div class="text-muted">Scan status not recorded for this run.</div>
+        </div>`;
+    }
+    const pre = w.preflight || {};
+    const nmap = w.nmap || {};
+    const nuclei = w.nuclei || {};
+    const target = w.target_url || run.target_url || '';
+    const scanRow = (name, scan) => {
+        const status = scan.status || 'unknown';
+        const findings = scan.finding_count ?? 'N/A';
+        const duration = formatDurationSec(scan.duration_s);
+        const exit = scan.exit_code ?? 'N/A';
+        const detail = (status === 'FAILED' || status === 'NOT AVAILABLE') && scan.detail
+            ? `<br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(scan.detail)}</span>` : '';
+        return `
+            <tr>
+                <td><strong>${escapeHtml(name)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(target || '—')}</span></td>
+                <td>${scannerStatusBadge(status)}${detail}</td>
+                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(String(findings))}</td>
+                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(duration)}</td>
+                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(String(exit))}</td>
+            </tr>`;
+    };
+    const authStatus = pre.authorization_status || (pre.reachable ? 'AUTHORIZED' : 'unknown');
+    const authOk = authStatus === 'AUTHORIZED';
+    const reachDetail = pre.reachable
+        ? `Reachable${pre.http_status != null ? ` (${escapeHtml(String(pre.http_status))})` : ''}${pre.detail ? ` — ${escapeHtml(pre.detail)}` : ''}`
+        : (pre.detail ? escapeHtml(pre.detail) : 'Unreachable');
+    const total = w.total_findings ?? ((w.finding_count ?? 0) + (w.service_discovery_count ?? 0));
+    const pipelineElapsed = formatDurationSec(w.pipeline_s);
+    return `
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><span class="card-title">Scan Status</span></div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Stage</th><th>Status</th><th>Findings</th><th>Elapsed</th><th>Exit</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Target Authorized</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(target || '—')}</span></td>
+                        <td>${authOk ? '<span class="badge badge-success">✓ AUTHORIZED</span>' : `<span class="badge badge-warning">${escapeHtml(authStatus)}</span>`}</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Target Reachable</strong></td>
+                        <td>${pre.reachable ? '<span class="badge badge-success">✓ REACHABLE</span>' : '<span class="badge badge-error">✗ UNREACHABLE</span>'}</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                    </tr>
+                    ${scanRow('Nmap discovery', nmap)}
+                    ${scanRow('Nuclei scan', nuclei)}
+                    <tr>
+                        <td><strong>Pipeline total</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(String(total ?? '—'))} findings</span></td>
+                        <td><span class="badge badge-info">RECORDED</span><br><span class="text-dim" style="font-size:0.7rem;">${reachDetail}</span></td>
+                        <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(String(total ?? 'N/A'))}</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(pipelineElapsed)}</td>
+                        <td style="font-family:monospace;font-size:0.75rem;">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>`;
+}
+
+// FIX 8: compact research-contribution panels. Both read ONLY recorded
+// backend data (assessment provenance + execution results); they render
+// "Not applicable" / "No pivot required" when the run lacks the behavior
+// and never invent quality scores, priorities, or pivot events.
+function gap1PanelData(cands, assess) {
+    const a = assess || {};
+    const details = Array.isArray(a.details) ? a.details : [];
+    const list = Array.isArray(cands) ? cands : [];
+    const qualities = details.length
+        ? details.map(d => d.quality_rank)
+        : list.map(c => c.quality_rank);
+    const assessed = details.length || qualities.filter(Boolean).length;
+    if (!a.mode && !details.length && !assessed) return { applicable: false };
+    const llmReal = details.some(d => d.source === 'llm' && !d.fallback);
+    const fallback = details.length > 0 && details.every(d => d.fallback);
+    let modeLabel = 'Deterministic';
+    if (a.mode === 'ai' && llmReal) modeLabel = 'AI';
+    else if (a.mode === 'ai') modeLabel = 'AI requested — deterministic fallback';
+    return {
+        applicable: true,
+        modeLabel,
+        provider: a.provider || '—',
+        model: a.model || '—',
+        assessed,
+        highs: qualities.filter(q => q === 'HIGH').length,
+        mediums: qualities.filter(q => q === 'MEDIUM').length,
+        lows: qualities.filter(q => q === 'LOW').length,
+    };
+}
+
+function renderGap1Panel(cands, assess) {
+    const d = gap1PanelData(cands, assess);
+    const body = !d.applicable
+        ? '<div class="text-muted">Not applicable — no assessment recorded for this run.</div>'
+        : `
+            <div class="text-muted" style="font-size:0.75rem;margin-bottom:0.5rem;">Candidate → AI Assessment → Quality → Ranking → Decision</div>
+            <div class="grid-2" style="font-size:0.8rem;">
+                <div><div class="text-muted" style="font-size:0.7rem;">Assessment Mode</div><div>${escapeHtml(d.modeLabel)}</div></div>
+                <div><div class="text-muted" style="font-size:0.7rem;">Provider / Model</div><div>${escapeHtml(d.provider)}${d.model && d.model !== '—' ? ' / ' + escapeHtml(d.model) : ''}</div></div>
+                <div><div class="text-muted" style="font-size:0.7rem;">Assessed</div><div>${d.assessed} candidate${d.assessed === 1 ? '' : 's'}</div></div>
+                <div><div class="text-muted" style="font-size:0.7rem;">Quality</div><div>HIGH ${d.highs} · MEDIUM ${d.mediums} · LOW ${d.lows}</div></div>
+            </div>
+            <div class="text-dim" style="font-size:0.7rem;margin-top:0.5rem;">Per-candidate quality, final score and priority are backend-recorded in the tables below.</div>`;
+    return `
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">GAP-1 · Pre-execution AI Prioritization</span>
+            </div>
+            ${body}
+        </div>`;
+}
+
+function renderGap2Panel(run) {
+    const r = run || {};
+    const results = Array.isArray(r.execution_results) ? r.execution_results : [];
+    const hasData = results.length > 0 || r.pivot_count != null || r.max_attempts != null;
+    let body;
+    if (!hasData) {
+        body = '<div class="text-muted">Not applicable — no execution recorded for this run.</div>';
+    } else {
+        const pivots = r.pivot_count || 0;
+        const threshold = r.max_attempts ?? '—';
+        const order = Array.isArray(r.candidates_processed) && r.candidates_processed.length
+            ? r.candidates_processed.join(' → ')
+            : '—';
+        const byCandidate = {};
+        for (const res of results) {
+            const cid = res.candidate_id || '?';
+            (byCandidate[cid] = byCandidate[cid] || []).push(res.outcome || '?');
+        }
+        const chains = Object.entries(byCandidate).map(([cid, outcomes]) =>
+            `<div style="font-size:0.75rem;margin-top:0.25rem;"><strong>${escapeHtml(cid)}</strong>: ${
+                outcomes.map((o, i) => `Attempt ${i + 1} ${escapeHtml(o)}`).join(' → ')
+            }${outcomes.length >= (Number(threshold) || Infinity) ? ' → Threshold reached → PIVOT' : ''}</div>`
+        ).join('') || '<div class="text-muted" style="font-size:0.75rem;">No attempts recorded.</div>';
+        body = `
+            <div class="text-muted" style="font-size:0.75rem;margin-bottom:0.5rem;">Attempt → FAIL → Threshold → PIVOT → Next candidate</div>
+            <div style="font-size:0.8rem;">
+                <div><span class="text-muted" style="font-size:0.7rem;">Pivot Status: </span>${pivots > 0 ? `Threshold reached → pivot occurred (${pivots})` : 'No pivot required'}</div>
+                <div class="text-muted" style="font-size:0.75rem;">Attempts: ${results.length} · Threshold: ${escapeHtml(String(threshold))}/candidate · Pivots: ${pivots} · Order: ${escapeHtml(order)}</div>
+                ${chains}`;
+    }
+    return `
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">GAP-2 · Failure-Aware Decision Pivot</span>
+            </div>
+            ${body}
+        </div>`;
+}
+
 function renderWebRunDetails(container, run, events, candidates, assessment, webCtx) {
     const w = webCtx || {};
     const pre = w.preflight || {};
@@ -861,24 +1373,52 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
     for (const d of details) detailById[d.candidate_id] = d;
 
     const targetOk = !!pre.reachable;
-    const nmapOk = nmap.status === 'COMPLETED';
-    const nucleiOk = nuclei.status === 'COMPLETED';
-    const nucleiNa = nuclei.status === 'NOT AVAILABLE' || nuclei.status === 'SKIPPED';
     const findingsOk = cands.length > 0;
     const aiOk = assess.mode === 'ai' || assess.mode === 'deterministic';
 
+    // FIX 3: VALIDATION reflects the backend per-finding validation_status.
+    // Web-mode scanner findings are SCANNER-DETECTED → VALIDATION NOT
+    // AVAILABLE (no controlled validation executed). Only an explicit
+    // VALIDATED backend state renders green; otherwise neutral dash.
+    const validation = validationStage(cands);
+
+    // Phase 32B FIX 6: scanner + execution stages from recorded backend
+    // status. COMPLETED alone earns green; NOT AVAILABLE/SKIPPED render
+    // neutral (never failed, never complete); anything else is failure
+    // with its recorded detail. EXECUTION is green only for genuine
+    // VALIDATED findings — otherwise neutral NOT PERFORMED/recorded.
+    const scannerStage = (label, scan, findingsText) => {
+        const status = (scan && scan.status) || 'unknown';
+        if (status === 'COMPLETED') return webStage(true, label, findingsText);
+        if (status === 'NOT AVAILABLE' || status === 'SKIPPED') {
+            return webStageNeutral(label, `${scanName(scan)}: ${status}`);
+        }
+        const detail = scan && scan.detail ? ` — ${scan.detail}` : '';
+        return webStage(false, label, `${scanName(scan)}: ${status}${detail}`);
+    };
+    const scanName = (scan) => (scan && scan.scanner) ? scan.scanner : 'scanner';
+    const validatedExec = cands.filter(c => isValidatedStatus(c.validation_status)).length;
+    const execTotal = (run.execution_results || []).length;
+    const execStage = validatedExec > 0
+        ? webStage(true, 'EXECUTION', `VALIDATED (${validatedExec}/${cands.length})`)
+        : webStageNeutral('EXECUTION', execTotal > 0 ? `${execTotal} recorded — not validated` : 'NOT PERFORMED');
+
+    const nmapFindingsText = `Nmap: ${nmap.finding_count ?? 0} findings`;
+    const nucleiFindingsText = `Nuclei: ${nuclei.finding_count ?? 0} findings`;
+
     const stages = [
         webStage(targetOk, 'TARGET', pre.reachable ? `Reachable (${pre.http_status})` : 'Unreachable'),
-        webStage(nmapOk, 'DISCOVERY', `Nmap: ${nmap.finding_count ?? 0} findings`),
-        webStage(nucleiOk || nucleiNa, 'VULN SCAN', `Nuclei: ${nuclei.status || 'unknown'}`),
+        scannerStage('DISCOVERY', nmap, nmapFindingsText),
+        scannerStage('VULN SCAN', nuclei, nucleiFindingsText),
         webStage(findingsOk, 'FINDINGS', String(cands.length)),
         webStage(findingsOk, 'NORMALIZATION', 'CanonicalFinding + dedup'),
         webStage(findingsOk, 'ENRICHMENT', 'EPSS / KEV / CVSS / CWE'),
         webStage(aiOk, 'AI ASSESSMENT', `${assess.provider || '?'}${assess.model ? ' / ' + assess.model : ''}`),
         webStage(true, 'RANKING', 'assessment → rank (GAP-1)'),
         webStage(true, 'DECISION', `${run.final_status || run.status || '?'}`),
-        webStage(true, 'SAFETY', 'SafetyGate validated'),
-        webStage(true, 'VALIDATION', validationSummary(cands)),
+        webStage(true, 'SAFETY', 'SafetyGate authorized (scope check)'),
+        validation.stage,
+        execStage,
         webStage(true, 'EVIDENCE', run.evidence_tier || '?'),
         `<div class="pipeline-step">
             <div class="step-circle completed">✓</div>
@@ -886,6 +1426,25 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
             <div class="text-dim" style="font-size:0.65rem;">available below</div>
         </div>`,
     ];
+
+    // FIX 1 + FIX 2: non-actionable inventory (Nmap asset context +
+    // Nuclei informational / fingerprint / discovery), never ranked.
+    const discovery = run.service_discovery
+        || w.service_discovery
+        || w.discovery_snapshots
+        || [];
+    const discoveryRows = discovery.map(s => {
+        const detail = [s.product, s.version].filter(Boolean).join(' ').trim()
+            || s.description || s.service || s.title || '—';
+        const rectype = s.record_type || s.finding_kind || 'DISCOVERY';
+        return `
+            <tr>
+                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(s.host || s.target || '—')}:${escapeHtml(String(s.port ?? '—'))}/${escapeHtml(s.protocol || 'tcp')}</td>
+                <td><strong>${escapeHtml(s.service || s.title || '—')}</strong></td>
+                <td style="font-size:0.75rem;">${escapeHtml(String(detail).slice(0, 160))}</td>
+                <td>${escapeHtml(s.source || 'nmap')}<br><span class="badge badge-info">${escapeHtml(rectype)}</span><br><span class="badge badge-info">INFORMATIONAL / DISCOVERY</span></td>
+            </tr>`;
+    }).join('');
 
     container.innerHTML = `
         <div class="card" style="margin-bottom:1rem;">
@@ -907,9 +1466,29 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
             <div class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;"><strong>AI:</strong> ${escapeHtml(assess.provider || '?')}${assess.model ? ' / ' + escapeHtml(assess.model) : ''} (${escapeHtml(assess.mode || '?')} mode)</div>
         </div>
 
+        ${renderScanStatusPanel(w, run)}
+
+        <div class="grid-2" style="margin-bottom:1rem;">
+            ${renderGap1Panel(cands, assess)}
+            ${renderGap2Panel(run)}
+        </div>
+
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header">
+                <span class="card-title">Findings Inventory — Informational / Discovery (${discovery.length}) — not ranked; candidate eligibility: INFORMATIONAL / DISCOVERY</span>
+            </div>
+            ${discovery.length ? `
+            <table class="data-table">
+                <thead>
+                    <tr><th>Endpoint</th><th>Service</th><th>Product / Banner</th><th>Source / Eligibility</th></tr>
+                </thead>
+                <tbody>${discoveryRows}</tbody>
+            </table>` : '<div class="text-muted">No informational / discovery records</div>'}
+        </div>
+
         <div class="card">
             <div class="card-header">
-                <span class="card-title">Findings (${cands.length}) — scanner-detected, not confirmed exploits</span>
+                <span class="card-title">Findings (${cands.length}) — ACTIONABLE candidates (eligibility: ACTIONABLE), scanner-detected, not confirmed exploits</span>
             </div>
             <table class="data-table">
                 <thead>
@@ -923,23 +1502,19 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
                         <th>AI Quality</th>
                         <th>Score</th>
                         <th>Priority</th>
-                        <th>Validation</th>
+                        <th>Candidate Eligibility</th>
+                        <th>Validation Status</th>
                         <th>Evidence</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${cands.map(c => {
                         const md = c.metadata || {};
-                        const cves = md.cve_ids || (md.cve ? [md.cve] : []);
-                        const intel = [
-                            cves.length ? cves.join(', ') : null,
-                            md.cvss_score != null ? 'CVSS ' + md.cvss_score : null,
-                            md.epss_score != null ? 'EPSS ' + md.epss_score : null,
-                            md.cisa_kev ? 'KEV' : null,
-                            (md.cwe_ids || []).length ? (md.cwe_ids || []).join(', ') : null,
-                        ].filter(Boolean).join(' · ') || '—';
+                        const intel = intelDisplay(md);
                         const q = detailById[c.id] || {};
                         const score = (c._score && c._score.final_score != null) ? Number(c._score.final_score).toFixed(4) : '—';
+                        const vStatus = c.validation_status || 'VALIDATION NOT AVAILABLE';
+                        const vNote = isValidatedStatus(vStatus) ? 'validated by controlled execution' : 'not validated by execution — scanner-detected only';
                         return `
                         <tr>
                             <td><strong>${escapeHtml(c.title || c.id)}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(c.id || '')}</span></td>
@@ -951,10 +1526,11 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
                             <td>${q.quality_rank ? `<span class="badge ${q.quality_rank === 'HIGH' ? 'badge-success' : q.quality_rank === 'MEDIUM' ? 'badge-warning' : 'badge-error'}">${escapeHtml(q.quality_rank)}</span>${q.fallback ? ' <span class="text-warning" style="font-size:0.7rem;">fallback</span>' : ''}${q.reasoning ? `<div class="text-dim" style="font-size:0.7rem;max-width:220px;">${escapeHtml(String(q.reasoning).slice(0, 160))}</div>` : ''}` : escapeHtml(c.quality_rank || 'N/A')}</td>
                             <td>${escapeHtml(score)}</td>
                             <td>${c.priority != null ? '#' + escapeHtml(String(c.priority)) : '—'}</td>
-                            <td><span class="badge badge-warning">${escapeHtml(c.validation_status || 'VALIDATION NOT AVAILABLE')}</span><br><span class="text-dim" style="font-size:0.7rem;">not validated by execution</span></td>
+                            <td><span class="badge badge-success">ACTIONABLE</span></td>
+                            <td><span class="badge ${validationBadgeClass(vStatus)}">${escapeHtml(vStatus)}</span><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(vNote)}</span></td>
                             <td><span class="badge ${evidenceClass(run.evidence_tier)}">${escapeHtml(run.evidence_tier || 'UNKNOWN')}</span></td>
                         </tr>`;
-                    }).join('') || '<tr><td colspan="11" class="text-muted">No findings</td></tr>'}
+                    }).join('') || '<tr><td colspan="12" class="text-muted">No findings</td></tr>'}
                 </tbody>
             </table>
             <div style="margin-top:1rem;">
@@ -968,10 +1544,26 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
 }
 
 function validationSummary(cands) {
+    // FIX 3: honest summary matching backend validation_status.
+    // Case-insensitive; SCANNER-DETECTED counts as not available.
+    // Never reports "executed"/success unless backend says VALIDATED.
     if (!cands.length) return 'no findings';
-    const unavailable = cands.filter(c => (c.validation_status || '').includes('NOT AVAILABLE')).length;
-    if (unavailable === cands.length) return 'NOT AVAILABLE (scanner-detected)';
-    return `${cands.length - unavailable}/${cands.length} executed`;
+    const validated = cands.filter(c => isValidatedStatus(c.validation_status)).length;
+    if (validated > 0) return `VALIDATED (${validated}/${cands.length})`;
+    return 'NOT AVAILABLE (scanner-detected)';
+}
+
+// FIX 3: pipeline VALIDATION stage element. Green only for genuine
+// VALIDATED findings; otherwise neutral dash with NOT AVAILABLE.
+function validationStage(cands) {
+    if (!cands.length) {
+        return { ok: false, validated: 0, stage: webStageNeutral('VALIDATION', 'NOT AVAILABLE — no findings') };
+    }
+    const validated = cands.filter(c => isValidatedStatus(c.validation_status)).length;
+    if (validated > 0) {
+        return { ok: true, validated, stage: webStage(true, 'VALIDATION', `VALIDATED (${validated}/${cands.length})`) };
+    }
+    return { ok: false, validated: 0, stage: webStageNeutral('VALIDATION', 'NOT AVAILABLE (scanner-detected)') };
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1033,21 +1625,37 @@ async function renderFindings(container) {
     try {
         const runs = await api.listRuns(1000);
         const allFindings = [];
+        const allDiscovery = [];
 
         for (const run of (runs.runs || [])) {
             const details = await api.getRun(run.run_id).catch(() => null);
             if (details && details.candidates) {
                 for (const c of details.candidates) {
+                    // FIX 1 + FIX 2: Candidate Ranking never includes
+                    // service discovery or informational observations, but
+                    // defensively skip any labelled non-actionable record.
+                    const kind = c.finding_kind || c.record_type || '';
+                    if (kind === 'SERVICE_DISCOVERY' || kind === 'INFORMATIONAL_FINDING' || kind === 'INFORMATIONAL') continue;
+                    if ((c.candidate_eligibility || 'ACTIONABLE') !== 'ACTIONABLE') continue;
                     allFindings.push({
                         runId: run.run_id,
                         ...c,
+                        candidate_eligibility: c.candidate_eligibility || 'ACTIONABLE',
                         evidenceTier: run.evidence_tier,
                     });
                 }
             }
+            // FIX 1 + FIX 2: non-actionable inventory (Nmap asset/service
+            // context + Nuclei informational / fingerprint / discovery),
+            // shown separately with eligibility INFORMATIONAL / DISCOVERY,
+            // never ranked.
+            const discovery = (details && (details.service_discovery || details.serviceDiscovery)) || [];
+            for (const s of discovery) {
+                allDiscovery.push({ runId: run.run_id, ...s, candidate_eligibility: s.candidate_eligibility || 'INFORMATIONAL / DISCOVERY', evidenceTier: run.evidence_tier });
+            }
         }
 
-        if (allFindings.length === 0) {
+        if (allFindings.length === 0 && allDiscovery.length === 0) {
             showEmpty(container, '🔍', 'No findings recorded', 'Run an assessment to see findings here.');
             return;
         }
@@ -1055,10 +1663,12 @@ async function renderFindings(container) {
         container.innerHTML = `
             <div class="page-header">
                 <h1 class="page-title">Findings</h1>
-                <p class="page-subtitle">${allFindings.length} findings across all runs</p>
+                <p class="page-subtitle">${allFindings.length} actionable findings (ACTIONABLE) · ${allDiscovery.length} informational / discovery records (INFORMATIONAL / DISCOVERY) across all runs — complete inventory, nothing hidden</p>
             </div>
 
             <div class="card">
+                <div class="card-header"><span class="card-title">Findings Inventory — Actionable (${allFindings.length}) — candidate eligibility: ACTIONABLE</span></div>
+                <p class="text-muted" style="margin-bottom:0.75rem;font-size:0.8rem;">Scanner-detected actionable findings. Outcome is engine execution state, not exploit proof — see Validation Status per finding.</p>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -1068,6 +1678,8 @@ async function renderFindings(container) {
                             <th>Target</th>
                             <th>Quality</th>
                             <th>Outcome</th>
+                            <th>Candidate Eligibility</th>
+                            <th>Validation Status</th>
                             <th>Evidence</th>
                             <th>Run</th>
                         </tr>
@@ -1081,10 +1693,44 @@ async function renderFindings(container) {
                                 <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(f.target || f.host || '—')}${f.port ? ':' + escapeHtml(String(f.port)) : ''}</td>
                                 <td>${escapeHtml(f.quality_rank || 'N/A')}</td>
                                 <td><span class="badge ${f.execution_outcome === 'SUCCESS' ? 'badge-success' : 'badge-error'}">${escapeHtml(f.execution_outcome || '-')}</span></td>
+                                <td><span class="badge badge-success">ACTIONABLE</span></td>
+                                <td><span class="badge ${validationBadgeClass(f.validation_status || (f.evidenceTier === 'DOCKER_OBSERVED' ? 'DOCKER_OBSERVED' : f.evidenceTier === 'SIMULATED' ? 'SIMULATED' : 'VALIDATION NOT AVAILABLE'))}">${escapeHtml(f.validation_status || (f.evidenceTier === 'DOCKER_OBSERVED' ? 'DOCKER_OBSERVED' : f.evidenceTier === 'SIMULATED' ? 'SIMULATED' : 'VALIDATION NOT AVAILABLE'))}</span></td>
                                 <td><span class="badge ${evidenceClass(f.evidenceTier)}">${escapeHtml(f.evidenceTier)}</span></td>
                                 <td><a href="#/runs" style="color:var(--accent-blue-light);text-decoration:none;font-size:0.8rem;">${escapeHtml(f.runId)}</a></td>
                             </tr>
-                        `).join('')}
+                        `).join('') || '<tr><td colspan="10" class="text-muted">No actionable findings — only informational / discovery was observed.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><span class="card-title">Informational / Discovery (${allDiscovery.length}) — not ranked; candidate eligibility: INFORMATIONAL / DISCOVERY</span></div>
+                <p class="text-muted" style="margin-bottom:0.75rem;font-size:0.8rem;">Complete inventory: Nmap asset/service context + Nuclei informational / fingerprint / discovery observations (technology detection, header observations, exposed-service info). Preserved for reporting; never enters AI assessment → ranking → decision.</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Finding</th>
+                            <th>Detail</th>
+                            <th>Source</th>
+                            <th>Candidate Eligibility</th>
+                            <th>Run</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allDiscovery.map(s => {
+                            const detail = [s.product, s.version].filter(Boolean).join(' ').trim() || s.description || s.service || s.title || '—';
+                            const rectype = s.record_type || s.finding_kind || 'DISCOVERY';
+                            return `
+                            <tr>
+                                <td style="font-family:monospace;font-size:0.75rem;">${escapeHtml(s.host || s.target || '—')}:${escapeHtml(String(s.port ?? '—'))}/${escapeHtml(s.protocol || 'tcp')}</td>
+                                <td><strong>${escapeHtml(s.service || s.title || '—')}</strong><br><span class="text-dim" style="font-size:0.7rem;">${escapeHtml(s.finding_id || s.id || '')}</span></td>
+                                <td style="font-size:0.75rem;">${escapeHtml(String(detail).slice(0, 160))}</td>
+                                <td>${escapeHtml(s.source || '—')}<br><span class="badge badge-info">${escapeHtml(rectype)}</span></td>
+                                <td><span class="badge badge-info">INFORMATIONAL / DISCOVERY</span></td>
+                                <td><a href="#/runs" style="color:var(--accent-blue-light);text-decoration:none;font-size:0.8rem;">${escapeHtml(s.runId)}</a></td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="6" class="text-muted">No informational / discovery records</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -1159,11 +1805,15 @@ async function lookupCVE() {
                 <div class="grid-2">
                     <div class="metric-card">
                         <div class="metric-label">EPSS Score</div>
-                        <div class="metric-value">${data.epss || 'N/A'}</div>
+                        <div class="metric-value">${data.epss != null ? data.epss : 'N/A'}</div>
                     </div>
                     <div class="metric-card">
                         <div class="metric-label">CISA KEV</div>
                         <div class="metric-value ${data.in_kev ? 'text-error' : 'text-success'}">${data.in_kev ? 'YES' : 'NO'}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">CVSS Score</div>
+                        <div class="metric-value">${data.cvss != null ? data.cvss : 'N/A'}</div>
                     </div>
                 </div>
             `;
@@ -1190,7 +1840,14 @@ async function renderCandidates(container) {
             const details = await api.getRun(run.run_id).catch(() => null);
             if (details && details.candidates) {
                 for (const c of details.candidates) {
-                    allCandidates.push({ ...c, runId: run.run_id, scenario: run.scenario });
+                    // FIX 1 + FIX 2: only ACTIONABLE findings are ranked.
+                    // Service discovery and informational / fingerprint /
+                    // discovery observations never appear here (backend
+                    // guarantees this; filter defensively for display).
+                    const kind = c.finding_kind || c.record_type || '';
+                    if (kind === 'SERVICE_DISCOVERY' || kind === 'INFORMATIONAL_FINDING' || kind === 'INFORMATIONAL') continue;
+                    if ((c.candidate_eligibility || 'ACTIONABLE') !== 'ACTIONABLE') continue;
+                    allCandidates.push({ ...c, candidate_eligibility: c.candidate_eligibility || 'ACTIONABLE', runId: run.run_id, scenario: run.scenario });
                 }
             }
         }
@@ -1203,17 +1860,20 @@ async function renderCandidates(container) {
         container.innerHTML = `
             <div class="page-header">
                 <h1 class="page-title">Candidate Ranking</h1>
-                <p class="page-subtitle">How AI assessment affects candidate prioritization (GAP-1)</p>
+                <p class="page-subtitle">ACTIONABLE candidates only (candidate eligibility: ACTIONABLE) — how AI assessment affects prioritization (GAP-1). Informational / discovery records are shown on the Findings page, never ranked.</p>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">Assessment → Scoring → Priority</span>
+                    <span class="card-title">Assessment → Scoring → Priority (ACTIONABLE only)</span>
+                    <span class="badge badge-info">GAP-1</span>
                 </div>
                 <p class="text-muted" style="margin-bottom:1rem;font-size:0.85rem;">
-                    Each candidate is assessed for quality (HIGH/MEDIUM/LOW) before ranking.
+                    GAP-1 · Pre-execution AI prioritization: each ACTIONABLE candidate is assessed for quality (HIGH/MEDIUM/LOW) before ranking.
                     The priority score = probability × (0.5 + 0.5 × quality_weight).
-                    This ensures AI assessment directly influences execution order.
+                    Quality, fallback marking, score and priority below are backend-recorded per candidate — assessment never invents them here.
+                    Informational / discovery observations (INFORMATIONAL / DISCOVERY) never enter this ranking.
+                    Outcome is engine execution state, not exploit proof — see Validation Status.
                 </p>
                 <table class="data-table">
                     <thead>
@@ -1224,6 +1884,8 @@ async function renderCandidates(container) {
                             <th>Score</th>
                             <th>Priority</th>
                             <th>Outcome</th>
+                            <th>Candidate Eligibility</th>
+                            <th>Validation Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1231,6 +1893,7 @@ async function renderCandidates(container) {
                             const quality = c.quality_rank || 'N/A';
                             const prob = c.probability || 0;
                             const score = prob * (0.5 + 0.5 * { HIGH: 1.0, MEDIUM: 0.6, LOW: 0.3 }[quality] || 0);
+                            const vStatus = c.validation_status || 'VALIDATION NOT AVAILABLE';
                             return `
                                 <tr>
                                     <td><strong>${escapeHtml(c.id)}</strong></td>
@@ -1239,6 +1902,8 @@ async function renderCandidates(container) {
                                     <td>${score.toFixed(4)}</td>
                                     <td>#${i + 1}</td>
                                     <td><span class="badge ${c.execution_outcome === 'SUCCESS' ? 'badge-success' : 'badge-error'}">${escapeHtml(c.execution_outcome || '-')}</span></td>
+                                    <td><span class="badge badge-success">ACTIONABLE</span></td>
+                                    <td><span class="badge ${validationBadgeClass(vStatus)}">${escapeHtml(vStatus)}</span></td>
                                 </tr>
                             `;
                         }).join('')}
@@ -1393,10 +2058,11 @@ async function renderPivotAnalysis(container) {
             <div class="card">
                 <div class="card-header">
                     <span class="card-title">Pivot Events</span>
+                    <span class="badge badge-info">GAP-2</span>
                 </div>
                 <p class="text-muted" style="margin-bottom:1rem;font-size:0.85rem;">
-                    Each candidate has a per-candidate attempt counter. When the counter reaches the threshold,
-                    the engine pivots to the next candidate. This ensures bounded termination.
+                    GAP-2 · Failure-aware decision pivot: each candidate has a per-candidate attempt counter. When the counter reaches the threshold,
+                    the engine pivots to the next candidate. Attempt counts, thresholds and pivots below are backend-recorded per run. This ensures bounded termination.
                 </p>
                 <div id="pivot-runs"></div>
             </div>
@@ -1550,7 +2216,8 @@ async function showRunDetail(runId) {
                                 <div style="font-weight:600;">${escapeHtml(c.id)}</div>
                                 <div class="text-muted" style="font-size:0.75rem;">
                                     Quality: ${escapeHtml(c.quality_rank || 'N/A')} |
-                                    Outcome: <span class="${c.execution_outcome === 'SUCCESS' ? 'text-success' : 'text-error'}">${escapeHtml(c.execution_outcome || '-')}</span>
+                                    Outcome: <span class="${c.execution_outcome === 'SUCCESS' ? 'text-success' : 'text-error'}">${escapeHtml(c.execution_outcome || '-')}</span><br>
+                                    Validation: ${escapeHtml(c.validation_status || '—')} (outcome ≠ exploit proof)
                                 </div>
                             </div>
                         `).join('') || '<div class="text-muted">No candidates</div>'}
@@ -1827,4 +2494,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial route
     router();
+
+    // FIX 5: clicking the active nav entry does not change the hash, so
+    // no hashchange fires and the router would never re-run — leaving a
+    // previous run's result on screen. Re-render explicitly so New
+    // Assessment (and any other page) always returns to a fresh state.
+    document.addEventListener('click', (event) => {
+        const anchor = event.target && event.target.closest
+            ? event.target.closest('a[href^="#/"]')
+            : null;
+        if (!anchor) return;
+        const target = anchor.getAttribute('href');
+        if (target && window.location.hash === target) {
+            event.preventDefault();
+            router();
+        }
+    });
 });

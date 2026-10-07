@@ -39,7 +39,13 @@ class ReportMetadata:
 
 @dataclass
 class CandidateReport:
-    """Report-level candidate information."""
+    """Report-level candidate information (ACTIONABLE only, FIX 1 + FIX 2).
+
+    FIX 3: ``validation_status`` preserves the backend source of truth
+    per finding (SCANNER-DETECTED / VALIDATION NOT AVAILABLE /
+    SIMULATED / DOCKER_OBSERVED / VALIDATED). Scanner detection is
+    never reported as exploit success.
+    """
     candidate_id: str
     probability: float = 0.0
     quality_rank: str = "PENDING"
@@ -48,6 +54,8 @@ class CandidateReport:
     execution_outcome: str = ""
     ground_truth: str = ""
     score: dict[str, Any] = field(default_factory=dict)
+    candidate_eligibility: str = "ACTIONABLE"
+    validation_status: str = ""
 
 
 @dataclass
@@ -67,19 +75,56 @@ class PivotEvent:
 
 
 @dataclass
+class ServiceDiscoveryReport:
+    """Report-level non-actionable inventory record (FIX 1 + FIX 2).
+
+    Covers Nmap service discovery AND Nuclei informational / fingerprint /
+    discovery observations. Both map to candidate eligibility
+    "INFORMATIONAL / DISCOVERY" and are never ranked as exploits.
+    """
+    finding_id: str = ""
+    source: str = ""
+    target: str = ""
+    host: str = ""
+    port: int = 0
+    protocol: str = "tcp"
+    service: str = ""
+    title: str = ""
+    severity: str = ""
+    rule_id: str = ""
+    product: str = ""
+    version: str = ""
+    description: str = ""
+    evidence: list[str] = field(default_factory=list)
+    record_type: str = "SERVICE_DISCOVERY"
+    label: str = "Service Discovery / Asset Information"
+    candidate_eligibility: str = "INFORMATIONAL / DISCOVERY"
+
+
+@dataclass
 class ReportModel:
     """Canonical report model.
     
     Contains all information needed to generate reports in any format.
     Built by ReportBuilder from domain state or persisted runs.
+
+    FIX 1 + FIX 2: ``candidates`` holds ONLY ACTIONABLE findings eligible
+    for ranking (eligibility "ACTIONABLE"). The complete findings
+    inventory is preserved: non-actionable records (Nmap service
+    discovery + Nuclei informational / fingerprint / discovery) are
+    reported separately in ``service_discovery`` with eligibility
+    "INFORMATIONAL / DISCOVERY".
     """
     metadata: ReportMetadata = field(default_factory=ReportMetadata)
     
     # Executive summary
     executive_summary: str = ""
     
-    # Findings and candidates
+    # Findings and candidates (actionable only)
     candidates: list[CandidateReport] = field(default_factory=list)
+
+    # Service discovery / asset information (never ranked as exploits)
+    service_discovery: list[ServiceDiscoveryReport] = field(default_factory=list)
     
     # Execution results
     execution_results: list[ExecutionReport] = field(default_factory=list)
@@ -108,6 +153,11 @@ class ReportModel:
     target: Optional[str] = None
     port: int = 8080
     path: str = "/vuln"
+
+    # Phase 32B: web-assessment provenance (target URL, scanner states,
+    # AI provider, validation/execution availability). Empty for
+    # non-web runs; renderers show the section only when present.
+    web_provenance: dict[str, Any] = field(default_factory=dict)
     
     # Limitations
     limitations: list[str] = field(default_factory=list)
@@ -140,6 +190,8 @@ class ReportModel:
                     "execution_outcome": c.execution_outcome,
                     "ground_truth": c.ground_truth,
                     "score": c.score,
+                    "candidate_eligibility": c.candidate_eligibility,
+                    "validation_status": c.validation_status,
                 }
                 for c in self.candidates
             ],
@@ -158,6 +210,28 @@ class ReportModel:
                 for p in self.pivot_events
             ],
             "attempts_per_candidate": self.attempts_per_candidate,
+            "service_discovery": [
+                {
+                    "finding_id": s.finding_id,
+                    "source": s.source,
+                    "target": s.target,
+                    "host": s.host,
+                    "port": s.port,
+                    "protocol": s.protocol,
+                    "service": s.service,
+                    "title": s.title,
+                    "severity": s.severity,
+                    "rule_id": s.rule_id,
+                    "product": s.product,
+                    "version": s.version,
+                    "description": s.description,
+                    "evidence": list(s.evidence or []),
+                    "record_type": s.record_type,
+                    "label": s.label,
+                    "candidate_eligibility": s.candidate_eligibility,
+                }
+                for s in self.service_discovery
+            ],
             "evidence_tier": self.evidence_tier,
             "evidence_description": self.evidence_description,
             "safety_notice": self.safety_notice,
@@ -166,5 +240,6 @@ class ReportModel:
             "target": self.target,
             "port": self.port,
             "path": self.path,
+            "web_provenance": self.web_provenance,
             "limitations": self.limitations,
         }

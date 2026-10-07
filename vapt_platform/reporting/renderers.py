@@ -28,6 +28,117 @@ class ReportRenderer(ABC):
         ...
 
 
+def _web_provenance_or_none(report: ReportModel) -> dict:
+    """Return the web provenance dict, or {} when this is not a web run."""
+    prov = getattr(report, "web_provenance", None) or {}
+    return prov if isinstance(prov, dict) else {}
+
+
+def _fmt_duration(value: Any) -> str:
+    """Format a recorded duration in seconds, or 'N/A' when absent."""
+    if value is None or value == "":
+        return "N/A"
+    try:
+        return f"{float(value):.1f}s"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _render_web_provenance_html(prov: dict) -> str:
+    """Render the web-assessment provenance section (HTML) or ''."""
+    if not prov:
+        return ""
+    rows = ""
+    for scan in prov.get("scanners", []):
+        status = scan.get("status", "unknown")
+        badge = (
+            "badge-tier" if status == "COMPLETED"
+            else "badge-pivot" if status == "FAILED"
+            else ""
+        )
+        detail = f" — {scan.get('detail')}" if status in ("FAILED", "NOT AVAILABLE") and scan.get("detail") else ""
+        rows += f"""
+                    <div class="meta-item">
+                        <div class="label">{scan.get('name', '?')} ({scan.get('version') or 'version unknown'})</div>
+                        <div class="value"><span class="badge {badge}">{status}</span></div>
+                        <div class="text-muted" style="font-size:0.8rem;">{scan.get('findings', 0)} findings · {_fmt_duration(scan.get('duration_s'))}{detail}</div>
+                    </div>"""
+    ai = prov.get("ai", {}) or {}
+    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    return f"""
+            <!-- Web Assessment Provenance (Phase 32B: recorded data only) -->
+            <div class="section">
+                <h2>Web Assessment Provenance</h2>
+                <div class="meta-grid">
+                    <div class="meta-item">
+                        <div class="label">Target</div>
+                        <div class="value">{prov.get('target_url', 'N/A')}</div>
+                    </div>
+                    {rows}
+                    <div class="meta-item">
+                        <div class="label">AI</div>
+                        <div class="value">{ai_text or 'N/A'}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Validation</div>
+                        <div class="value">{prov.get('validation', 'NOT AVAILABLE')}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Execution</div>
+                        <div class="value">{prov.get('execution', 'NOT PERFORMED')}</div>
+                    </div>
+                </div>
+            </div>"""
+
+
+def _render_web_provenance_markdown(prov: dict) -> list[str]:
+    """Render the web-assessment provenance section (Markdown) or []."""
+    if not prov:
+        return []
+    lines = ["## Web Assessment Provenance", ""]
+    lines.append(f"| Field | Value |")
+    lines.append(f"|-------|-------|")
+    lines.append(f"| Target | {prov.get('target_url', 'N/A')} |")
+    for scan in prov.get("scanners", []):
+        detail = f" — {scan.get('detail')}" if scan.get("status") in ("FAILED", "NOT AVAILABLE") and scan.get("detail") else ""
+        lines.append(
+            f"| {scan.get('name', '?')} | {scan.get('status', 'unknown')} "
+            f"({scan.get('findings', 0)} findings, {_fmt_duration(scan.get('duration_s'))}){detail} |"
+        )
+    ai = prov.get("ai", {}) or {}
+    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    lines.append(f"| AI | {ai_text or 'N/A'} |")
+    lines.append(f"| Validation | {prov.get('validation', 'NOT AVAILABLE')} |")
+    lines.append(f"| Execution | {prov.get('execution', 'NOT PERFORMED')} |")
+    lines.append("")
+    return lines
+
+
+def _render_web_provenance_txt(prov: dict) -> list[str]:
+    """Render the web-assessment provenance section (plain text) or []."""
+    if not prov:
+        return []
+    lines = [
+        "-" * 70,
+        "WEB ASSESSMENT PROVENANCE",
+        "-" * 70,
+        f"Target:          {prov.get('target_url', 'N/A')}",
+    ]
+    for scan in prov.get("scanners", []):
+        detail = f" — {scan.get('detail')}" if scan.get("status") in ("FAILED", "NOT AVAILABLE") and scan.get("detail") else ""
+        lines.append(
+            f"{scan.get('name', '?'):<15} {scan.get('status', 'unknown')} "
+            f"({scan.get('findings', 0)} findings, {_fmt_duration(scan.get('duration_s'))}){detail}"
+        )
+    ai = prov.get("ai", {}) or {}
+    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    lines.append(f"AI:              {ai_text or 'N/A'}")
+    lines.append(f"Validation:      {prov.get('validation', 'NOT AVAILABLE')}")
+    lines.append(f"Execution:       {prov.get('execution', 'NOT PERFORMED')}")
+    lines.append("")
+    return lines
+
+
 class JSONRenderer(ReportRenderer):
     """Renders reports as JSON."""
 
@@ -45,7 +156,9 @@ class HTMLRenderer(ReportRenderer):
         evidence_color = self._get_evidence_color(evidence_tier)
         evidence_emoji = self._get_evidence_emoji(evidence_tier)
         
-        # Build candidates table rows
+        # Build candidates table rows (ACTIONABLE only, FIX 1 + FIX 2).
+        # FIX 3: include backend validation_status per finding so scanner
+        # detection is never presented as exploit success.
         candidates_rows = ""
         for c in report.candidates:
             candidates_rows += f"""
@@ -57,11 +170,34 @@ class HTMLRenderer(ReportRenderer):
                 <td>{"Yes" if c.attempted else "No"}</td>
                 <td>{c.execution_outcome or "-"}</td>
                 <td>{c.ground_truth or "-"}</td>
+                <td>{c.candidate_eligibility or "ACTIONABLE"}</td>
+                <td>{c.validation_status or "-"}</td>
             </tr>"""
         
         if not report.candidates:
-            candidates_rows = '<tr><td colspan="7">No candidates</td></tr>'
-        
+            candidates_rows = '<tr><td colspan="9">No candidates</td></tr>'
+
+        # FIX 1 + FIX 2: non-actionable inventory (service discovery +
+        # informational / fingerprint / discovery; never ranked).
+        discovery_rows = ""
+        for s in (report.service_discovery or []):
+            detail = " ".join(
+                part for part in [s.product, s.version] if part
+            ).strip() or s.description or s.service
+            eligibility = s.candidate_eligibility or "INFORMATIONAL / DISCOVERY"
+            discovery_rows += f"""
+            <tr>
+                <td>{s.host}:{s.port}/{s.protocol}</td>
+                <td>{s.service}</td>
+                <td>{detail or "-"}</td>
+                <td>{s.source}</td>
+                <td>{s.record_type}</td>
+                <td>{eligibility}</td>
+            </tr>"""
+
+        if not (report.service_discovery or []):
+            discovery_rows = '<tr><td colspan="6">No service-discovery records</td></tr>'
+
         # Build execution results rows
         exec_rows = ""
         for e in report.execution_results:
@@ -108,6 +244,11 @@ class HTMLRenderer(ReportRenderer):
         # Build limitations
         limitations = "\n".join(
             f"        <li>{limitation}</li>" for limitation in report.limitations
+        )
+
+        # Phase 32B FIX 5: web-assessment provenance (recorded data only).
+        web_provenance_html = _render_web_provenance_html(
+            _web_provenance_or_none(report)
         )
         
         html = f"""<!DOCTYPE html>
@@ -307,6 +448,7 @@ class HTMLRenderer(ReportRenderer):
                     </div>
                 </div>
             </div>
+{web_provenance_html}
 
             <!-- Per-Candidate Attempts Section -->
             <div class="section">
@@ -334,15 +476,29 @@ class HTMLRenderer(ReportRenderer):
                 </table>
             </div>
 
-            <!-- Candidate Ranking Section -->
+            <!-- Candidate Ranking Section (ACTIONABLE only, FIX 1 + FIX 2) -->
             <div class="section">
-                <h2>Candidate Ranking</h2>
+                <h2>Candidate Ranking (ACTIONABLE findings only — candidate eligibility: ACTIONABLE)</h2>
+                <p style="font-size:0.85rem;color:#555;">Validation status is shown per finding from the backend source of truth. Scanner detection (SCANNER-DETECTED) is not exploit success; web-mode findings report VALIDATION NOT AVAILABLE unless a controlled validation was executed and verified.</p>
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>Probability</th><th>Quality Rank</th><th>Assessed</th><th>Attempted</th><th>Outcome</th><th>Ground Truth</th></tr>
+                        <tr><th>ID</th><th>Probability</th><th>Quality Rank</th><th>Assessed</th><th>Attempted</th><th>Outcome</th><th>Ground Truth</th><th>Candidate Eligibility</th><th>Validation Status</th></tr>
                     </thead>
                     <tbody>
 {candidates_rows}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Findings inventory: discovery + informational (FIX 1 + FIX 2) -->
+            <div class="section">
+                <h2>Service Discovery / Asset Information + Informational / Discovery (not ranked; candidate eligibility: INFORMATIONAL / DISCOVERY)</h2>
+                <table>
+                    <thead>
+                        <tr><th>Endpoint</th><th>Service</th><th>Product / Banner</th><th>Source</th><th>Record Type</th><th>Candidate Eligibility</th></tr>
+                    </thead>
+                    <tbody>
+{discovery_rows}
                     </tbody>
                 </table>
             </div>
@@ -489,6 +645,9 @@ class MarkdownRenderer(ReportRenderer):
         lines.append(f"| Port | {report.port} |")
         lines.append(f"| Path | {report.path} |")
         lines.append("")
+        # Phase 32B FIX 5: web provenance (recorded data only, else hidden).
+        lines.extend(_render_web_provenance_markdown(
+            _web_provenance_or_none(report)))
         
         # Per-Candidate Attempts
         lines.append("## Per-Candidate Attempts")
@@ -514,22 +673,39 @@ class MarkdownRenderer(ReportRenderer):
             lines.append("_No pivot events recorded._")
         lines.append("")
         
-        # Candidate Ranking
-        lines.append("## Candidate Ranking")
+        # Candidate Ranking (ACTIONABLE only, FIX 1 + FIX 2, validation FIX 3)
+        lines.append("## Candidate Ranking (ACTIONABLE findings only — candidate eligibility: ACTIONABLE)")
+        lines.append("")
+        lines.append("Validation status is per-finding backend state. Scanner detection is not exploit success.")
         lines.append("")
         if report.candidates:
-            lines.append("| ID | Probability | Quality Rank | Assessed | Attempted | Outcome | Ground Truth |")
-            lines.append("|----|-------------|--------------|----------|-----------|---------|--------------|")
+            lines.append("| ID | Probability | Quality Rank | Assessed | Attempted | Outcome | Ground Truth | Candidate Eligibility | Validation Status |")
+            lines.append("|----|-------------|--------------|----------|-----------|---------|--------------|-----------------------|-------------------|")
             for c in report.candidates:
                 lines.append(
                     f"| {c.candidate_id} | {c.probability:.4f} | {c.quality_rank} | "
                     f"{'Yes' if c.assessed else 'No'} | {'Yes' if c.attempted else 'No'} | "
-                    f"{c.execution_outcome or '-'} | {c.ground_truth or '-'} |"
+                    f"{c.execution_outcome or '-'} | {c.ground_truth or '-'} | {c.candidate_eligibility or 'ACTIONABLE'} | {c.validation_status or '-'} |"
                 )
         else:
             lines.append("_No candidates._")
         lines.append("")
-        
+
+        # Findings inventory: discovery + informational (FIX 1 + FIX 2)
+        lines.append("## Service Discovery / Asset Information + Informational / Discovery (not ranked; candidate eligibility: INFORMATIONAL / DISCOVERY)")
+        lines.append("")
+        if report.service_discovery:
+            lines.append("| Endpoint | Service | Product / Banner | Source | Record Type | Candidate Eligibility |")
+            lines.append("|----------|---------|------------------|--------|-------------|-----------------------|")
+            for s in report.service_discovery:
+                detail = " ".join(p for p in [s.product, s.version] if p).strip() or s.description or s.service or "-"
+                lines.append(
+                    f"| {s.host}:{s.port}/{s.protocol} | {s.service} | {detail} | {s.source} | {s.record_type} | {s.candidate_eligibility or 'INFORMATIONAL / DISCOVERY'} |"
+                )
+        else:
+            lines.append("_No service-discovery records._")
+        lines.append("")
+
         # Engine Execution
         lines.append("## Engine Execution")
         lines.append("")
@@ -638,6 +814,9 @@ class TXTRenderer(ReportRenderer):
         lines.append(f"Port:            {report.port}")
         lines.append(f"Path:            {report.path}")
         lines.append("")
+        # Phase 32B FIX 5: web provenance (recorded data only, else hidden).
+        lines.extend(_render_web_provenance_txt(
+            _web_provenance_or_none(report)))
         
         # Per-Candidate Attempts
         lines.append("-" * 70)
@@ -661,21 +840,36 @@ class TXTRenderer(ReportRenderer):
             lines.append("  (no pivot events recorded)")
         lines.append("")
         
-        # Candidate Ranking
+        # Candidate Ranking (ACTIONABLE only, FIX 1 + FIX 2, validation FIX 3)
         lines.append("-" * 70)
-        lines.append("CANDIDATE RANKING")
+        lines.append("CANDIDATE RANKING (ACTIONABLE only; candidate eligibility: ACTIONABLE)")
         lines.append("-" * 70)
+        lines.append("Validation status is per-finding backend state; scanner detection is not exploit success.")
         if report.candidates:
             for c in report.candidates:
                 lines.append(f"  {c.candidate_id}")
                 lines.append(f"    Probability: {c.probability:.4f}")
                 lines.append(f"    Quality:     {c.quality_rank}")
                 lines.append(f"    Outcome:     {c.execution_outcome or '-'}")
+                lines.append(f"    Candidate Eligibility: {c.candidate_eligibility or 'ACTIONABLE'}")
+                lines.append(f"    Validation Status: {c.validation_status or '-'}")
                 lines.append("")
         else:
             lines.append("  (no candidates)")
         lines.append("")
-        
+
+        # Findings inventory: discovery + informational (FIX 1 + FIX 2)
+        lines.append("-" * 70)
+        lines.append("SERVICE DISCOVERY / ASSET INFORMATION + INFORMATIONAL / DISCOVERY (not ranked; candidate eligibility: INFORMATIONAL / DISCOVERY)")
+        lines.append("-" * 70)
+        if report.service_discovery:
+            for s in report.service_discovery:
+                detail = " ".join(p for p in [s.product, s.version] if p).strip() or s.description or s.service or "-"
+                lines.append(f"  {s.host}:{s.port}/{s.protocol}  {s.service}  {detail}  [{s.source}/{s.record_type}/{(s.candidate_eligibility or 'INFORMATIONAL / DISCOVERY')}]")
+        else:
+            lines.append("  (no service-discovery records)")
+        lines.append("")
+
         # Engine Execution
         lines.append("-" * 70)
         lines.append("ENGINE EXECUTION")

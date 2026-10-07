@@ -57,6 +57,9 @@ class PersistentRun:
     # Pipeline summary
     pipeline_summary: dict[str, Any] = field(default_factory=dict)
     scored_candidates: list[dict] = field(default_factory=list)
+
+    # FIX 1: preserved Nmap service-discovery / asset context (never ranked).
+    service_discovery: list[dict] = field(default_factory=list)
     
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
@@ -87,11 +90,25 @@ class PersistentRun:
             "assessment_type": self.assessment_type,
             "pipeline_summary": self.pipeline_summary,
             "scored_candidates": self.scored_candidates,
+            "service_discovery": self.service_discovery,
         }
     
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PersistentRun":
         """Deserialize from dictionary."""
+        # FIX 1: older runs lack service_discovery; default to [] and also
+        # recover discovery stashed in pipeline_summary.web when present.
+        service_discovery = data.get("service_discovery", [])
+        if not service_discovery:
+            try:
+                web = (data.get("pipeline_summary", {}) or {}).get("web", {}) or {}
+                service_discovery = (
+                    web.get("service_discovery", [])
+                    or web.get("discovery_snapshots", [])
+                    or []
+                )
+            except Exception:
+                service_discovery = []
         return cls(
             run_id=data.get("run_id", ""),
             scenario=data.get("scenario", ""),
@@ -119,4 +136,5 @@ class PersistentRun:
             assessment_type=data.get("assessment_type", "scenario"),
             pipeline_summary=data.get("pipeline_summary", {}),
             scored_candidates=data.get("scored_candidates", []),
+            service_discovery=list(service_discovery or []),
         )

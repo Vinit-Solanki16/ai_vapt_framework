@@ -235,11 +235,20 @@ def enrich_finding(
     """Enrich a single finding with threat intelligence.
 
     Adds to metadata:
-        - cisa_kev: bool (whether any associated CVE is in KEV)
-        - epss_score: float (highest EPSS score among associated CVEs)
-        - cvss_score: float | None (from finding if available)
+        - cisa_kev: bool | None (True/False when a CVE is present;
+          None when no CVE exists → KEV unavailable, not "not in KEV")
+        - epss_score: float | None (highest EPSS among associated CVEs;
+          None when no CVE exists → EPSS unavailable, not numeric zero;
+          0.0 is preserved when a real source explicitly returns zero,
+          including the documented provider default for unknown CVEs)
+        - cvss_score: float | None (from finding if available; None when missing)
         - severity: string (determined severity level)
-        - cwe_ids: list[str] (extracted CWE IDs)
+        - cwe_ids: list[str] (extracted CWE IDs; [] when unavailable)
+
+    FIX 4: missing CVE no longer fabricates numeric 0.0/False.
+    Scoring call sites already coalesce None → 0.0 via
+    ``float(... or 0.0)`` / falsy checks, so ranking semantics are
+    unchanged; only display distinguishes N/A from 0.
 
     Returns the finding (same object, mutated in place).
     """
@@ -250,8 +259,12 @@ def enrich_finding(
     cwe_ids = _extract_cwe_ids(finding)
 
     if not cve_ids:
-        finding.metadata["cisa_kev"] = False
-        finding.metadata["epss_score"] = 0.0
+        # No CVE → no intelligence record exists. Preserve unavailable
+        # as unavailable (None), never as artificial zero/False.
+        # cvss/cwe from the scanner itself (e.g. Nuclei CVSS 5.3,
+        # CWE-693) are still preserved as observed.
+        finding.metadata["cisa_kev"] = None
+        finding.metadata["epss_score"] = None
         finding.metadata["cvss_score"] = finding.metadata.get("cvss_score")
         finding.metadata["severity"] = "none"
         finding.metadata["cwe_ids"] = cwe_ids

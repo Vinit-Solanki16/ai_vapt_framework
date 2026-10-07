@@ -31,6 +31,26 @@ from typing import Any, Optional
 from decision_engine.core.schemas import ActionCandidate, Outcome
 
 
+#: Phase 32B: explicit validation-availability marker for web-target runs.
+#: No web validation executor is implemented: web runs are
+#: scanner-driven and assessment-only (assess → rank → plan, then stop
+#: before execution). This status is recorded in the web context and
+#: pipeline summary so UI/reports never imply validation occurred.
+WEB_VALIDATION_UNAVAILABLE = "WEB_VALIDATION_UNAVAILABLE"
+
+
+def _most_common_path(paths: list[str]) -> str:
+    """Return the most common path; ties resolve to first occurrence."""
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for path in paths:
+        if path not in counts:
+            counts[path] = 0
+            order.append(path)
+        counts[path] += 1
+    return max(order, key=lambda p: counts[p]) if order else "/vuln"
+
+
 # ---------------------------------------------------------------------------
 # Request / Result Models
 # ---------------------------------------------------------------------------
@@ -78,6 +98,11 @@ class DomainResult:
 
     This is the canonical output of the VAPT workflow.
     CLI, API, and GUI create their own presentation from this.
+
+    FIX 1: ``candidates`` holds ONLY actionable vulnerability findings
+    (VULNERABILITY_FINDING). Pure Nmap service-discovery records are
+    preserved separately in ``service_discovery`` as asset/service
+    context and never enter AI assessment → ranking → decision.
     """
     run_id: str = ""
     scenario: str = ""
@@ -92,6 +117,8 @@ class DomainResult:
     evidence_tier: str = "SIMULATED"
     assessment: dict[str, Any] = field(default_factory=dict)
     safety_notice: str = ""
+    # FIX 1: preserved Nmap asset/service context (never ranked as exploits).
+    service_discovery: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -161,9 +188,12 @@ class VAPTApplication:
         publisher.transition_to(RunState.CREATED)
 
         try:
-            # Step 1: Load candidates
+            # Step 1: Load candidates (FIX 1: actionable vuln findings only;
+            # pure Nmap service discovery is stashed on the request as
+            # asset/service context and never enters the candidate pipeline).
             publisher.transition_to(RunState.INGESTING)
             candidates = self._load_candidates(request)
+            service_discovery = list(getattr(request, "_service_discovery", None) or [])
             publisher.emit(EventType.FINDINGS_INGESTED, {"count": len(candidates)})
 
             # Step 2: Enrich candidates with vulnerability intelligence
@@ -171,8 +201,10 @@ class VAPTApplication:
             candidates = self._enrich_candidates(candidates)
             publisher.emit(EventType.FINDINGS_NORMALIZED, {"count": len(candidates)})
 
-            # Step 3: Build asset/vulnerability graph
-            graph = self._build_graph(candidates)
+            # Step 3: Build asset/vulnerability graph (FIX 1: include
+            # service-discovery records so hosts/services remain visible
+            # as asset context even though they are not candidates).
+            graph = self._build_graph(candidates + service_discovery)
             publisher.emit(EventType.CANDIDATES_GENERATED, {"count": len(candidates)})
 
             # Step 4: Decision intelligence scoring
@@ -247,6 +279,13 @@ class VAPTApplication:
         except Exception as e:
             domain.final_status = "FAILED"
             domain.safety_notice = f"Error: {str(e)}"
+            # FIX 1: preserve any already-discovered asset context on failure.
+            try:
+                preserved = list(getattr(request, "_service_discovery", None) or [])
+                if preserved and not getattr(domain, "service_discovery", None):
+                    domain.service_discovery = [dict(s) for s in preserved if isinstance(s, dict)]
+            except Exception:
+                pass
             # Persist failed run too
             self._persist_run(domain, request, {})
             publisher.transition_to(RunState.FAILED)
@@ -265,7 +304,7 @@ class VAPTApplication:
         builder = ReportBuilder()
         report = builder.from_domain_result(domain, request, pipeline_summary)
 
-        # Build persistent run
+        # Build persistent run (FIX 1: persist service discovery separately).
         persistent = PersistentRun(
             run_id=domain.run_id,
             scenario=domain.scenario,
@@ -291,6 +330,7 @@ class VAPTApplication:
             assessment_type=request.assessment_type,
             pipeline_summary=pipeline_summary,
             scored_candidates=pipeline_summary.get("scored_candidates", []),
+            service_discovery=list(getattr(domain, "service_discovery", []) or []),
         )
 
         try:
@@ -400,23 +440,29 @@ class VAPTApplication:
         return result
 
     def _build_graph(self, candidates: list[dict]) -> Any:
-        """Build asset/vulnerability graph from candidates."""
+        """Build asset/vulnerability graph from candidates + discovery.
+
+        FIX 1: Accepts both actionable candidate dicts (``id``) and
+        preserved service-discovery dicts (``finding_id``) so hosts and
+        services remain visible as asset context.
+        """
         from vapt_platform.graph_builder import VAPTGraph
         from vapt_platform.normalization import CanonicalFinding
 
         findings = []
         for c in candidates:
             if isinstance(c, dict):
+                cid = c.get("id", "") or c.get("finding_id", "")
                 finding = CanonicalFinding(
-                    finding_id=c.get("id", ""),
+                    finding_id=c.get("finding_id", cid),
                     source=c.get("source", "unknown"),
                     target=c.get("target", c.get("host", "")),
                     host=c.get("host", ""),
                     port=c.get("port", 0),
                     protocol=c.get("protocol", "tcp"),
-                    title=c.get("title", c.get("id", "")),
+                    title=c.get("title", cid),
                     severity=c.get("severity", "unknown"),
-                    rule_id=c.get("rule_id", c.get("id", "")),
+                    rule_id=c.get("rule_id", cid),
                     description=c.get("description", ""),
                     evidence=c.get("evidence", []),
                     tags=c.get("tags", []),
@@ -454,12 +500,26 @@ class VAPTApplication:
             return self._load_web_candidates(request)
 
         if request.scan_file:
-            # Use new scanner adapter system
+            # Use new scanner adapter system (FIX 1: split discovery vs vuln).
+            # FIX 2: split also separates informational / fingerprint /
+            # discovery observations (still visible, never ranked).
+            from vapt_platform.normalization import (
+                CANDIDATE_ELIGIBILITY_ACTIONABLE,
+                FINDING_KIND_VULNERABILITY,
+                finding_to_service_info,
+                split_findings,
+            )
+
             registry = get_scanner_registry()
             findings = registry.parse(request.scan_file)
             # Enrich findings
             enriched = enrichment.enrich_findings(findings)
-            # Convert to candidate dicts
+            actionable, discovery = split_findings(enriched)
+            # Preserve asset/service context + informational observations
+            # for Findings-page + reports (eligibility INFORMATIONAL).
+            request._service_discovery = [finding_to_service_info(f) for f in discovery]  # type: ignore[attr-defined]
+            # Convert actionable findings to candidate dicts only.
+            # Every candidate carries explicit eligibility ACTIONABLE.
             return [
                 {
                     "id": f.finding_id or f.rule_id,
@@ -475,13 +535,17 @@ class VAPTApplication:
                     "evidence": f.evidence,
                     "tags": f.tags,
                     "metadata": f.metadata,
+                    "finding_kind": FINDING_KIND_VULNERABILITY,
+                    "candidate_eligibility": CANDIDATE_ELIGIBILITY_ACTIONABLE,
                 }
-                for f in enriched
+                for f in actionable
             ]
         elif request.scenario in all_scenarios:
+            request._service_discovery = []  # type: ignore[attr-defined]
             fn, kwargs = all_scenarios[request.scenario]
             return fn(**kwargs)
         elif request.scenario == "corpus":
+            request._service_discovery = []  # type: ignore[attr-defined]
             return load_vapt_corpus_scenario()
         else:
             raise ValueError(f"Unknown scenario: {request.scenario}")
@@ -489,12 +553,23 @@ class VAPTApplication:
     def _load_web_candidates(self, request: VAPTRequest) -> list[dict]:
         """Run the authorized web-target discovery pipeline.
 
-        Flow (all through the existing canonical pipeline, no alternate
-        finding representation):
+        FIX 1 + FIX 2 flow (single canonical pipeline, no second workflow):
             preflight (authorize + scope + connectivity)
                 → Nmap discovery → Nuclei scan
                 → CanonicalFinding → dedup → enrichment
-                → candidate dicts
+                → SPLIT (actionable vs discovery/informational)
+                → actionable candidate dicts (vuln only, eligibility
+                  ACTIONABLE) + preserved discovery/informational
+                  inventory (eligibility INFORMATIONAL / DISCOVERY)
+
+        Nmap service discovery (e.g. port 9191 ``sun-as-jpda?`` with an
+        HTTP banner) remains visible as Service Discovery / Asset
+        Information but never becomes an AI/ranking/exploit candidate.
+        Nuclei informational / fingerprint / discovery observations
+        (technology detection, Juice Shop detection, header observations,
+        exposed-service info with severity info and no CVE/CVSS/KEV)
+        remain visible in the findings inventory with eligibility
+        INFORMATIONAL / DISCOVERY but never enter ranking.
 
         Raises WebTargetAuthorizationError / ValueError on any failure
         (fail closed — run() converts these into a FAILED run and scanners
@@ -504,7 +579,13 @@ class VAPTApplication:
 
         from vapt_platform import enrichment
         from vapt_platform import scanner_service
-        from vapt_platform.normalization import deduplicate
+        from vapt_platform.normalization import (
+            CANDIDATE_ELIGIBILITY_ACTIONABLE,
+            FINDING_KIND_VULNERABILITY,
+            deduplicate,
+            finding_to_service_info,
+            split_findings,
+        )
         from vapt_platform.web_target import (
             WebTargetAuthorizationError,
             parse_web_target,
@@ -560,6 +641,14 @@ class VAPTApplication:
                 "Nothing entered the decision pipeline."
             )
 
+        # FIX 1 + FIX 2: split actionable vulnerability findings from
+        # non-actionable inventory (Nmap asset context + Nuclei
+        # informational / fingerprint / discovery observations).
+        # Only actionable findings become candidates. No severity invented;
+        # UNKNOWN severity stays ACTIONABLE (fail open).
+        actionable, discovery = split_findings(enriched)
+        service_discovery = [finding_to_service_info(f) for f in discovery]
+
         # Stash provenance for result building / persistence / reporting.
         request._web_context = {  # type: ignore[attr-defined]
             "target": target.to_dict(),
@@ -573,18 +662,38 @@ class VAPTApplication:
                 "scanner": "nuclei", "status": "SKIPPED",
                 "detail": "Nuclei scan disabled for this run.",
             },
-            "finding_count": len(enriched),
+            "finding_count": len(actionable),
+            "service_discovery_count": len(service_discovery),
+            "total_findings": len(enriched),
             "pipeline_s": round(_time.perf_counter() - pipeline_start, 3),
             "scanner_versions": {
                 "nmap": scanner_service.nmap_status().get("version"),
                 "nuclei": scanner_service.nuclei_status().get("version"),
             },
+            "service_discovery": service_discovery,
         }
+        # Uniform stash consumed by run() for graph + DomainResult.
+        request._service_discovery = list(service_discovery)  # type: ignore[attr-defined]
 
         # --- Phase: candidate generation (same dict shape as scan_file path,
         # plus probability prior from EPSS and scanner-detection marker) ---
+        # FIX 1 + FIX 2: only actionable (vulnerability) findings become
+        # candidates, each labelled ACTIONABLE. Informational / discovery
+        # records stay in service_discovery with eligibility
+        # INFORMATIONAL / DISCOVERY.
+        # Phase 32B FIX 3: each candidate preserves its own resource path
+        # derived from its target URL (never the /vuln scenario default).
+        from urllib.parse import urlsplit
+
+        def _resource_path(target_url: str) -> str:
+            try:
+                path = urlsplit(str(target_url or "")).path or "/"
+            except Exception:
+                return "/"
+            return path or "/"
+
         candidates = []
-        for f in enriched:
+        for f in actionable:
             epss = 0.0
             try:
                 epss = float((f.metadata or {}).get("epss_score", 0.0) or 0.0)
@@ -608,14 +717,48 @@ class VAPTApplication:
                     "tags": f.tags,
                     "metadata": f.metadata,
                     "validation_status": "SCANNER-DETECTED",
+                    "finding_kind": FINDING_KIND_VULNERABILITY,
+                    "candidate_eligibility": CANDIDATE_ELIGIBILITY_ACTIONABLE,
+                    "path": _resource_path(f.target),
                 }
             )
+        # Phase 32B FIX 3: the run-level path is the most common candidate
+        # resource path — never the /vuln simulation default. Per-candidate
+        # paths above remain authoritative when candidates differ.
+        if candidates:
+            request.path = _most_common_path([_c["path"] for _c in candidates])
+        # Phase 32B FIX 1: explicit validation-availability marker. No web
+        # validator is implemented, so every web run stops before execution.
+        request._web_context["validation"] = {  # type: ignore[attr-defined]
+            "status": WEB_VALIDATION_UNAVAILABLE,
+            "detail": (
+                "No web validation executor is implemented for scanner "
+                "findings: assessed and ranked only; validation unavailable."
+            ),
+        }
         # Snapshot for post-engine metadata merge (result building) and audit.
+        # Includes discovery snapshots so reports/UI can show asset context.
         request._web_context["finding_snapshots"] = [dict(c) for c in candidates]  # type: ignore[attr-defined]
+        request._web_context["discovery_snapshots"] = [dict(s) for s in service_discovery]  # type: ignore[attr-defined]
+        # Discovery-only runs are valid: no actionable candidates, but asset
+        # context is preserved. The engine step handles the empty list.
         return candidates
 
     def _build_executor(self, request: VAPTRequest, candidates: list[dict]):
-        """Build the appropriate executor for the request."""
+        """Build the appropriate executor for the request.
+
+        Phase 32B FIX 1: WEB mode is assessment-only — no web validation
+        executor is implemented, so this returns None instead of falling
+        through to the simulation executor (which fabricated FAIL_TIMEOUT
+        from missing ground_truth). ``run()`` takes the explicit
+        assessment-only path (assess → rank → plan, then STOP before
+        execution) when the executor is None for a web run.
+
+        Modes:
+          simulation → simulation executor (ground-truth labels)
+          lab        → Docker/lab executor (observed emulator responses)
+          web        → None (WEB_VALIDATION_UNAVAILABLE)
+        """
         from prototype.execution_layer import create_lab_executor, create_simulation_executor
         from prototype.lab_runner import _validate_target
 
@@ -634,12 +777,77 @@ class VAPTApplication:
                 request.target, request.port, request.path,
                 path_map=path_map if path_map else None
             )
-        else:
-            return create_simulation_executor()
+        if (
+            request.mode == "web"
+            or getattr(request, "assessment_type", "") == "web"
+            or getattr(request, "target_url", None)
+        ):
+            # Assessment-only: no validator exists for web scanner findings.
+            return None
+        return create_simulation_executor()
 
     def _run_engine(self, request: VAPTRequest, candidates: list[dict], executor) -> dict:
-        """Run the decision engine with the configured assessor."""
+        """Run the decision engine with the configured assessor.
+
+        FIX 1: Discovery-only runs (no actionable vulnerability findings)
+        bypass the engine — there is nothing to assess/rank/decide — and
+        return a COMPLETED state preserving discovery context. Research
+        (GAP-1/GAP-2) logic is untouched; this is a pre-engine guard.
+        """
+        if not candidates:
+            discovery = list(getattr(request, "_service_discovery", None) or [])
+            detail = (
+                "No actionable vulnerability findings: "
+                f"{len(discovery)} service-discovery record(s) preserved as "
+                "asset context; nothing entered AI assessment/ranking/decision."
+            )
+            return {
+                "candidates": [],
+                "results": [],
+                "logs": [
+                    "Engine initialized: 0 actionable candidates "
+                    f"(service discovery preserved: {len(discovery)}), "
+                    f"pivot_threshold={request.max_attempts}, mode={request.mode}",
+                    f"[Engine] {detail}",
+                    "[Pivot] All candidates processed. Workflow complete.",
+                ],
+                "status": "COMPLETED",
+                "current_index": 0,
+                "current_id": "NONE",
+                "quality_rank": "NONE",
+                "attempt_count": 0,
+                "max_attempts": request.max_attempts,
+                "mode": request.mode,
+                "_assessment": {
+                    "mode": request.assessor_mode,
+                    "provider": (
+                        request.assessor_provider
+                        if request.assessor_mode == "ai"
+                        else "deterministic"
+                    ),
+                    "model": None,
+                },
+                "_assessment_details": [],
+                "_presentation": {
+                    "scenario_candidates": 0,
+                    "total_attempts": 0,
+                    "pivot_count": 0,
+                    "candidates_processed": [],
+                    "max_attempts": request.max_attempts,
+                    "mode": request.mode,
+                },
+            }
+
         from prototype.engine_integration import run_decision_scenario
+
+        # Phase 32B FIX 1: assessment-only web path. The executor is None
+        # because no web validator exists — assess + rank the actionable
+        # candidates, record that validation is unavailable, and STOP
+        # before execution. This produces NO execution results, NO pivot
+        # events, NO attempts, and NO fabricated outcomes (GAP-2 untouched:
+        # pivots are only ever produced by real executor operations).
+        if executor is None:
+            return self._run_assessment_only(request, candidates)
 
         return run_decision_scenario(
             candidates,
@@ -650,6 +858,105 @@ class VAPTApplication:
             assessment_provider=request.assessor_provider,
             assessment_api_key=request.assessor_api_key,
         )
+
+    def _run_assessment_only(self, request: VAPTRequest, candidates: list[dict]) -> dict:
+        """Assess + rank candidates without executing (web assessment-only).
+
+        Mirrors the GAP-1 assess-before-rank ordering of the research
+        engine (assess every candidate, then rank by priority_score) but
+        performs zero executions: no ``results``, no attempt counters, no
+        pivot logic. Per-candidate AI provenance is recorded exactly as
+        the engine integration records it (observation only).
+        """
+        import time as _time
+
+        from decision_engine.core.assessor import assess_candidates
+        from decision_engine.core.engine import rank_candidates
+        from decision_engine.core.schemas import QualityRank, candidate_from_dict
+        from vapt_platform.assessment import create_assessor
+
+        # Normalize exactly as the engine integration does.
+        normalized = []
+        for d in candidates:
+            nd = dict(d)
+            if nd.get("ground_truth") is not None:
+                nd["ground_truth"] = str(nd["ground_truth"]).upper()
+            normalized.append(nd)
+        raw_candidates = [candidate_from_dict(d) for d in normalized]
+
+        assessor_fn = create_assessor(
+            mode=request.assessor_mode,
+            provider=request.assessor_provider,
+            api_key=request.assessor_api_key,
+        )
+        assessment_details: list[dict] = []
+
+        def _assess_fn(candidate) -> QualityRank:
+            _t0 = _time.perf_counter()
+            assessed_result = assessor_fn(candidate)
+            _latency = _time.perf_counter() - _t0
+            assessment_details.append({
+                "candidate_id": candidate.id,
+                "quality_rank": assessed_result.quality_rank.value,
+                "source": assessed_result.source,
+                "provider": assessed_result.provider,
+                "model": assessed_result.model,
+                "fallback": assessed_result.fallback,
+                "reasoning": assessed_result.reasoning,
+                "error": assessed_result.error,
+                "latency_s": round(_latency, 4),
+            })
+            return assessed_result.quality_rank
+
+        assess_candidates(raw_candidates, assess_fn=_assess_fn)
+        ranked = rank_candidates(raw_candidates)
+
+        effective_provider = (
+            request.assessor_provider
+            if request.assessor_mode == "ai"
+            else "deterministic"
+        )
+        model = None
+        if request.assessor_mode == "ai":
+            model = {
+                "ollama": "llama3.2:3b",
+                "openai": "gpt-4o-mini",
+            }.get(request.assessor_provider, request.assessor_provider)
+        return {
+            "candidates": ranked,
+            "results": [],
+            "logs": [
+                f"Engine initialized: {len(ranked)} actionable candidates "
+                f"(assessment-only, {WEB_VALIDATION_UNAVAILABLE}), "
+                f"pivot_threshold={request.max_attempts}, mode={request.mode}",
+                "[Assessment] AI assessment + ranking completed for "
+                f"{len(ranked)} actionable candidate(s).",
+                f"[Validation] {WEB_VALIDATION_UNAVAILABLE}: no web validator "
+                "is implemented for scanner findings — stopping before "
+                "execution. No attempts, no pivots, no outcomes fabricated.",
+            ],
+            "status": "COMPLETED",
+            "current_index": 0,
+            "current_id": ranked[0].id if ranked else "NONE",
+            "quality_rank": "NONE",
+            "attempt_count": 0,
+            "max_attempts": request.max_attempts,
+            "mode": request.mode,
+            "_assessment": {
+                "mode": request.assessor_mode,
+                "provider": effective_provider,
+                "model": model,
+            },
+            "_assessment_details": list(assessment_details),
+            "_presentation": {
+                "scenario_candidates": len(candidates),
+                "total_attempts": 0,
+                "pivot_count": 0,
+                "candidates_processed": [],
+                "max_attempts": request.max_attempts,
+                "mode": request.mode,
+            },
+        }
 
     def _run_validation_pipeline(self, candidates: list[dict], executor, request: VAPTRequest) -> dict:
         """Run the controlled validation pipeline."""
@@ -683,7 +990,34 @@ class VAPTApplication:
         if assessment_details:
             domain.assessment = {**assessment, "details": assessment_details}
 
-        # Extract candidates
+        # FIX 1 + FIX 2: preserve non-actionable inventory (service
+        # discovery asset context + informational / fingerprint /
+        # discovery observations) with eligibility INFORMATIONAL.
+        # Stashed by _load_candidates/_load_web_candidates; also mirrored in
+        # the web context for persistence/reporting round-trips.
+        preserved = list(getattr(request, "_service_discovery", None) or [])
+        web_ctx_early = getattr(request, "_web_context", None) or {}
+        if not preserved and isinstance(web_ctx_early, dict):
+            preserved = list(
+                web_ctx_early.get("service_discovery", [])
+                or web_ctx_early.get("discovery_snapshots", [])
+                or []
+            )
+        domain.service_discovery = [dict(s) for s in preserved if isinstance(s, dict)]
+
+        # Extract candidates (FIX 1 + FIX 2: only ACTIONABLE findings;
+        # discovery/informational never appear here). Engine candidates
+        # carry only (id, probability, quality_rank, outcome), so stamp
+        # explicit eligibility ACTIONABLE for UI/report display.
+        # FIX 3: stamp honest per-candidate validation status derived from
+        # the run mode/evidence (never fabricating validation success).
+        # Web candidates are re-labelled by _merge_web_finding_metadata
+        # below (SCANNER-DETECTED → VALIDATION NOT AVAILABLE); scenario
+        # and lab candidates get SIMULATED / DOCKER_OBSERVED here so the
+        # API, persistence and reports share one backend source of truth.
+        from vapt_platform.normalization import CANDIDATE_ELIGIBILITY_ACTIONABLE as _ELIGIBLE
+        from vapt_platform.normalization import FINDING_KIND_VULNERABILITY as _VULN_KIND
+
         for c in final_state.get("candidates", []):
             if hasattr(c, 'model_dump'):
                 domain.candidates.append(c.model_dump(mode="json"))
@@ -691,6 +1025,29 @@ class VAPTApplication:
                 domain.candidates.append(c.__dict__)
             else:
                 domain.candidates.append(c)
+        _is_web_run = bool(getattr(request, "_web_context", None))
+        _mode_validation = (
+            "DOCKER_OBSERVED" if getattr(request, "mode", "") == "lab"
+            else "SIMULATED"
+        )
+        _scanner_sources = {
+            "nmap", "nmap-xml", "nmap-json", "nuclei", "custom",
+        }
+        for c in domain.candidates:
+            if isinstance(c, dict):
+                c.setdefault("candidate_eligibility", _ELIGIBLE)
+                c.setdefault("finding_kind", _VULN_KIND)
+                if not _is_web_run:
+                    # Do not overwrite an explicit validation_status if a
+                    # future controlled-validation path sets VALIDATED.
+                    # Scanner-file findings are SCANNER-DETECTED inventory
+                    # with no controlled validation → NOT AVAILABLE;
+                    # pure demo scenarios → SIMULATED / DOCKER_OBSERVED.
+                    _src = str(c.get("source", "") or "").strip().lower()
+                    if _src in _scanner_sources:
+                        c.setdefault("validation_status", "VALIDATION NOT AVAILABLE")
+                    else:
+                        c.setdefault("validation_status", _mode_validation)
 
         # Extract execution results
         for r in final_state.get("results", []):
@@ -752,11 +1109,6 @@ class VAPTApplication:
             if isinstance(snapshot, dict) and snapshot.get("id"):
                 pre[snapshot["id"]] = snapshot
 
-        executed = {}
-        for r in final_state.get("results", []):
-            cid = r.get("candidate_id", "?") if isinstance(r, dict) else "?"
-            executed[cid] = r.get("outcome", "?") if isinstance(r, dict) else "?"
-
         # Server-side decision-intelligence scores (GAP-1 display data).
         score_map = {}
         for s in (getattr(request, "_scored_candidates", None) or []):
@@ -778,25 +1130,29 @@ class VAPTApplication:
                 for key in (
                     "source", "target", "host", "port", "protocol", "title",
                     "severity", "rule_id", "description", "evidence", "tags",
-                    "metadata",
+                    "metadata", "finding_kind", "candidate_eligibility",
+                    "path",
                 ):
                     if key in snap:
                         c[key] = snap[key]
+            # Every ranked candidate is ACTIONABLE by construction (only
+            # actionable findings enter the engine). Stamp explicitly so
+            # the Candidate Ranking page/report can display eligibility.
+            from vapt_platform.normalization import CANDIDATE_ELIGIBILITY_ACTIONABLE as _ACT
+            from vapt_platform.normalization import FINDING_KIND_VULNERABILITY as _VK
+
+            c.setdefault("finding_kind", _VK)
+            c.setdefault("candidate_eligibility", _ACT)
             # Server-side score + engine execution priority (display only).
             if cid in score_map:
                 c["_score"] = score_map[cid]
             if cid in priority_of:
                 c["priority"] = priority_of[cid]
-            # Honest validation labelling: scanner-detected unless the
-            # controlled pipeline executed AND verified this candidate.
-            outcome = executed.get(cid)
-            if outcome in ("SUCCESS", "FAIL_TIMEOUT", "FAIL_SYNTAX", "FAIL_DEPENDENCY"):
-                c["validation_status"] = (
-                    "SIMULATED-OUTCOME (validation not available for "
-                    "scanner findings in this mode)"
-                )
-            else:
-                c["validation_status"] = "VALIDATION NOT AVAILABLE"
+            # Honest validation labelling. Phase 32B: web runs are
+            # assessment-only — no validator executed, so every web finding
+            # is VALIDATION NOT AVAILABLE. SIMULATED-OUTCOME is never set
+            # here (no simulation-mode execution happens for web targets).
+            c["validation_status"] = "VALIDATION NOT AVAILABLE"
             merged.append(c)
         domain.candidates = merged
 
