@@ -16,6 +16,9 @@ requests==2.34.2
 # --- Dashboard ---
 streamlit==1.62.0
 pandas==2.3.3
+# --- API ---
+fastapi==0.141.1
+httpx==0.28.1
 # --- Reporting ---
 reportlab==5.0.1
 
