@@ -1,0 +1,2298 @@
+{
+  "experiment": "gap1_operational_effectiveness",
+  "phase": "33C",
+  "started_at": "2026-10-07T07:35:12.719033+00:00",
+  "finished_at": "2026-10-07T07:57:03.637312+00:00",
+  "research_integrity_note": "Controlled synthetic corpus (SYN-OE-*). NOT real-world exploit evidence. Nothing executed: outcomes resolved from STATIC ground truth (defined before assessment) via the existing simulation Executor. Ground truth was never derived from, copied from, or conditioned on any assessor output. Ranking algorithm, GAP-1, prompts, schema, temperature unchanged; decision_engine/core and decision_engine/benchmarks unmodified. Statistics are descriptive only (n=5 reps/arm); no significance claimed.",
+  "independence_statement": {
+    "ground_truth_defined": "statically in CORPUS before assessment",
+    "useful_ids": [
+      "SYN-OE-HIGH-01",
+      "SYN-OE-HIGH-02"
+    ],
+    "non_useful_ids": [
+      "SYN-OE-LOW-01",
+      "SYN-OE-LOW-02",
+      "SYN-OE-MED-01",
+      "SYN-OE-MED-02"
+    ],
+    "assessor_inputs": "code text + candidate id only",
+    "outcome_resolution": "Executor(mode=simulation) from static ground truth; assessor output never flows into outcome"
+  },
+  "protocol": {
+    "corpus": [
+      {
+        "id": "SYN-OE-HIGH-01",
+        "probability": 0.55,
+        "ground_truth": "SUCCESS",
+        "useful": true,
+        "intended_tier": "HIGH"
+      },
+      {
+        "id": "SYN-OE-HIGH-02",
+        "probability": 0.62,
+        "ground_truth": "SUCCESS",
+        "useful": true,
+        "intended_tier": "HIGH"
+      },
+      {
+        "id": "SYN-OE-MED-01",
+        "probability": 0.68,
+        "ground_truth": "FAIL_TIMEOUT",
+        "useful": false,
+        "intended_tier": "MEDIUM"
+      },
+      {
+        "id": "SYN-OE-MED-02",
+        "probability": 0.74,
+        "ground_truth": "FAIL_TIMEOUT",
+        "useful": false,
+        "intended_tier": "MEDIUM"
+      },
+      {
+        "id": "SYN-OE-LOW-01",
+        "probability": 0.8,
+        "ground_truth": "FAIL_SYNTAX",
+        "useful": false,
+        "intended_tier": "LOW"
+      },
+      {
+        "id": "SYN-OE-LOW-02",
+        "probability": 0.88,
+        "ground_truth": "FAIL_DEPENDENCY",
+        "useful": false,
+        "intended_tier": "LOW"
+      }
+    ],
+    "candidate_order": [
+      "SYN-OE-HIGH-01",
+      "SYN-OE-HIGH-02",
+      "SYN-OE-MED-01",
+      "SYN-OE-MED-02",
+      "SYN-OE-LOW-01",
+      "SYN-OE-LOW-02"
+    ],
+    "repetitions": 5,
+    "attempt_budget": 3,
+    "stopping_rule": "stop at first USEFUL success or budget exhaustion; max one attempt per candidate",
+    "provider": "ollama",
+    "models": {
+      "llama": "llama3.2:3b",
+      "qwen": "qwen2.5:3b"
+    },
+    "temperature": 0.1,
+    "prompt": "core/exploit_assessor.py SYSTEM_PROMPT + human template (unchanged)",
+    "schema": "core/schemas.py ExploitAssessment (unchanged)",
+    "ranking_formula": "probability * (0.5 + 0.5 * quality); HIGH=1.0, MEDIUM=0.6, LOW=0.3 (decision_engine/core/schemas.py, read-only)",
+    "use_online": false
+  },
+  "baseline_order": [
+    "SYN-OE-LOW-02",
+    "SYN-OE-LOW-01",
+    "SYN-OE-MED-02",
+    "SYN-OE-MED-01",
+    "SYN-OE-HIGH-02",
+    "SYN-OE-HIGH-01"
+  ],
+  "summaries": {
+    "baseline_no_assessment": {
+      "arm": "baseline_no_assessment",
+      "reps": 5,
+      "attempt_budget": 3,
+      "top1_useful_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "success_within_budget_rate": 0.0,
+      "attempts_until_useful_success": {
+        "per_rep": [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "n_successful_reps": 5,
+        "mean": 5,
+        "median": 5,
+        "min": 5,
+        "max": 5
+      },
+      "total_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3,
+        "median": 3,
+        "min": 3,
+        "max": 3
+      },
+      "failed_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "wasted_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "ranking_change_rate": 0.0,
+      "top1_change_rate": 0.0,
+      "mean_rank_displacement": {
+        "per_rep": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean": 0.0,
+        "median": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "quality_distribution": {
+        "NONE(unassessed)": 30
+      },
+      "consistency": {
+        "per_candidate": {
+          "SYN-OE-LOW-02": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-01": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-02": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-01": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-HIGH-02": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-HIGH-01": {
+            "ranks": [
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)",
+              "NONE(unassessed)"
+            ],
+            "mode": "NONE(unassessed)",
+            "agreement": 1.0,
+            "fully_consistent": true
+          }
+        },
+        "overall_agreement": 1.0
+      },
+      "mode_ranks": {
+        "SYN-OE-LOW-02": "NONE(unassessed)",
+        "SYN-OE-LOW-01": "NONE(unassessed)",
+        "SYN-OE-MED-02": "NONE(unassessed)",
+        "SYN-OE-MED-01": "NONE(unassessed)",
+        "SYN-OE-HIGH-02": "NONE(unassessed)",
+        "SYN-OE-HIGH-01": "NONE(unassessed)"
+      }
+    },
+    "deterministic": {
+      "arm": "deterministic",
+      "reps": 5,
+      "attempt_budget": 3,
+      "top1_useful_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "success_within_budget_rate": 1.0,
+      "attempts_until_useful_success": {
+        "per_rep": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "n_successful_reps": 5,
+        "mean": 1,
+        "median": 1,
+        "min": 1,
+        "max": 1
+      },
+      "total_attempts": {
+        "per_rep": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "mean": 1,
+        "median": 1,
+        "min": 1,
+        "max": 1
+      },
+      "failed_attempts": {
+        "per_rep": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "wasted_attempts": {
+        "per_rep": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "ranking_change_rate": 1.0,
+      "top1_change_rate": 1.0,
+      "mean_rank_displacement": {
+        "per_rep": [
+          2.3333,
+          2.3333,
+          2.3333,
+          2.3333,
+          2.3333
+        ],
+        "mean": 2.3333,
+        "median": 2.3333,
+        "stdev": 0.0,
+        "min": 2.3333,
+        "max": 2.3333
+      },
+      "quality_distribution": {
+        "HIGH": 10,
+        "LOW": 20
+      },
+      "latency": {
+        "n": 30,
+        "mean": 0.0,
+        "median": 0.0,
+        "stdev": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "valid_output_rate": 1.0,
+      "fallback_rate": 0.0,
+      "valid_outputs": 30,
+      "fallbacks": 0,
+      "consistency": {
+        "per_candidate": {
+          "SYN-OE-HIGH-01": {
+            "ranks": [
+              "HIGH",
+              "HIGH",
+              "HIGH",
+              "HIGH",
+              "HIGH"
+            ],
+            "mode": "HIGH",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-HIGH-02": {
+            "ranks": [
+              "HIGH",
+              "HIGH",
+              "HIGH",
+              "HIGH",
+              "HIGH"
+            ],
+            "mode": "HIGH",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          }
+        },
+        "overall_agreement": 1.0
+      },
+      "mode_ranks": {
+        "SYN-OE-HIGH-01": "HIGH",
+        "SYN-OE-HIGH-02": "HIGH",
+        "SYN-OE-MED-01": "LOW",
+        "SYN-OE-MED-02": "LOW",
+        "SYN-OE-LOW-01": "LOW",
+        "SYN-OE-LOW-02": "LOW"
+      }
+    },
+    "llama3.2:3b": {
+      "arm": "llama3.2:3b",
+      "reps": 5,
+      "attempt_budget": 3,
+      "top1_useful_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "success_within_budget_rate": 0.0,
+      "attempts_until_useful_success": {
+        "per_rep": [
+          4,
+          5,
+          5,
+          5,
+          5
+        ],
+        "n_successful_reps": 5,
+        "mean": 4.8,
+        "median": 5,
+        "min": 4,
+        "max": 5
+      },
+      "total_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3,
+        "median": 3,
+        "min": 3,
+        "max": 3
+      },
+      "failed_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "wasted_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "ranking_change_rate": 1.0,
+      "top1_change_rate": 1.0,
+      "mean_rank_displacement": {
+        "per_rep": [
+          1,
+          1,
+          1,
+          0.6667,
+          1
+        ],
+        "mean": 0.9333,
+        "median": 1,
+        "stdev": 0.1333,
+        "min": 0.6667,
+        "max": 1
+      },
+      "quality_distribution": {
+        "MEDIUM": 15,
+        "LOW": 15
+      },
+      "latency": {
+        "n": 30,
+        "mean": 41.1281,
+        "median": 2.2953,
+        "stdev": 116.1035,
+        "min": 1.7818,
+        "max": 393.7442
+      },
+      "valid_output_rate": 1.0,
+      "fallback_rate": 0.0,
+      "valid_outputs": 30,
+      "fallbacks": 0,
+      "consistency": {
+        "per_candidate": {
+          "SYN-OE-HIGH-01": {
+            "ranks": [
+              "MEDIUM",
+              "MEDIUM",
+              "MEDIUM",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "MEDIUM",
+            "agreement": 0.6,
+            "fully_consistent": false
+          },
+          "SYN-OE-HIGH-02": {
+            "ranks": [
+              "MEDIUM",
+              "MEDIUM",
+              "MEDIUM",
+              "LOW",
+              "MEDIUM"
+            ],
+            "mode": "MEDIUM",
+            "agreement": 0.8,
+            "fully_consistent": false
+          },
+          "SYN-OE-MED-01": {
+            "ranks": [
+              "LOW",
+              "MEDIUM",
+              "MEDIUM",
+              "LOW",
+              "MEDIUM"
+            ],
+            "mode": "MEDIUM",
+            "agreement": 0.6,
+            "fully_consistent": false
+          },
+          "SYN-OE-MED-02": {
+            "ranks": [
+              "MEDIUM",
+              "MEDIUM",
+              "MEDIUM",
+              "MEDIUM",
+              "MEDIUM"
+            ],
+            "mode": "MEDIUM",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          }
+        },
+        "overall_agreement": 0.8333
+      },
+      "mode_ranks": {
+        "SYN-OE-HIGH-01": "MEDIUM",
+        "SYN-OE-HIGH-02": "MEDIUM",
+        "SYN-OE-MED-01": "MEDIUM",
+        "SYN-OE-MED-02": "MEDIUM",
+        "SYN-OE-LOW-01": "LOW",
+        "SYN-OE-LOW-02": "LOW"
+      }
+    },
+    "qwen2.5:3b": {
+      "arm": "qwen2.5:3b",
+      "reps": 5,
+      "attempt_budget": 3,
+      "top1_useful_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "success_within_budget_rate": 0.0,
+      "attempts_until_useful_success": {
+        "per_rep": [
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "n_successful_reps": 5,
+        "mean": 5,
+        "median": 5,
+        "min": 5,
+        "max": 5
+      },
+      "total_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3,
+        "median": 3,
+        "min": 3,
+        "max": 3
+      },
+      "failed_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "wasted_attempts": {
+        "per_rep": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "mean": 3
+      },
+      "ranking_change_rate": 0.0,
+      "top1_change_rate": 0.0,
+      "mean_rank_displacement": {
+        "per_rep": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0,
+        "median": 0,
+        "stdev": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "quality_distribution": {
+        "LOW": 30
+      },
+      "latency": {
+        "n": 30,
+        "mean": 2.328,
+        "median": 2.2485,
+        "stdev": 0.5228,
+        "min": 1.5835,
+        "max": 4.4615
+      },
+      "valid_output_rate": 1.0,
+      "fallback_rate": 0.0,
+      "valid_outputs": 30,
+      "fallbacks": 0,
+      "consistency": {
+        "per_candidate": {
+          "SYN-OE-HIGH-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-HIGH-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-MED-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-01": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          },
+          "SYN-OE-LOW-02": {
+            "ranks": [
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW",
+              "LOW"
+            ],
+            "mode": "LOW",
+            "agreement": 1.0,
+            "fully_consistent": true
+          }
+        },
+        "overall_agreement": 1.0
+      },
+      "mode_ranks": {
+        "SYN-OE-HIGH-01": "LOW",
+        "SYN-OE-HIGH-02": "LOW",
+        "SYN-OE-MED-01": "LOW",
+        "SYN-OE-MED-02": "LOW",
+        "SYN-OE-LOW-01": "LOW",
+        "SYN-OE-LOW-02": "LOW"
+      }
+    }
+  },
+  "arms": {
+    "baseline_no_assessment": {
+      "reps": [
+        {
+          "arm": "baseline_no_assessment",
+          "rep": 0,
+          "ranks": {
+            "SYN-OE-LOW-02": "NONE(unassessed)",
+            "SYN-OE-LOW-01": "NONE(unassessed)",
+            "SYN-OE-MED-02": "NONE(unassessed)",
+            "SYN-OE-MED-01": "NONE(unassessed)",
+            "SYN-OE-HIGH-02": "NONE(unassessed)",
+            "SYN-OE-HIGH-01": "NONE(unassessed)"
+          },
+          "scores": {},
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.0
+        },
+        {
+          "arm": "baseline_no_assessment",
+          "rep": 1,
+          "ranks": {
+            "SYN-OE-LOW-02": "NONE(unassessed)",
+            "SYN-OE-LOW-01": "NONE(unassessed)",
+            "SYN-OE-MED-02": "NONE(unassessed)",
+            "SYN-OE-MED-01": "NONE(unassessed)",
+            "SYN-OE-HIGH-02": "NONE(unassessed)",
+            "SYN-OE-HIGH-01": "NONE(unassessed)"
+          },
+          "scores": {},
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.0
+        },
+        {
+          "arm": "baseline_no_assessment",
+          "rep": 2,
+          "ranks": {
+            "SYN-OE-LOW-02": "NONE(unassessed)",
+            "SYN-OE-LOW-01": "NONE(unassessed)",
+            "SYN-OE-MED-02": "NONE(unassessed)",
+            "SYN-OE-MED-01": "NONE(unassessed)",
+            "SYN-OE-HIGH-02": "NONE(unassessed)",
+            "SYN-OE-HIGH-01": "NONE(unassessed)"
+          },
+          "scores": {},
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.0
+        },
+        {
+          "arm": "baseline_no_assessment",
+          "rep": 3,
+          "ranks": {
+            "SYN-OE-LOW-02": "NONE(unassessed)",
+            "SYN-OE-LOW-01": "NONE(unassessed)",
+            "SYN-OE-MED-02": "NONE(unassessed)",
+            "SYN-OE-MED-01": "NONE(unassessed)",
+            "SYN-OE-HIGH-02": "NONE(unassessed)",
+            "SYN-OE-HIGH-01": "NONE(unassessed)"
+          },
+          "scores": {},
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.0
+        },
+        {
+          "arm": "baseline_no_assessment",
+          "rep": 4,
+          "ranks": {
+            "SYN-OE-LOW-02": "NONE(unassessed)",
+            "SYN-OE-LOW-01": "NONE(unassessed)",
+            "SYN-OE-MED-02": "NONE(unassessed)",
+            "SYN-OE-MED-01": "NONE(unassessed)",
+            "SYN-OE-HIGH-02": "NONE(unassessed)",
+            "SYN-OE-HIGH-01": "NONE(unassessed)"
+          },
+          "scores": {},
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.0
+        }
+      ]
+    },
+    "deterministic": {
+      "reps": [
+        {
+          "arm": "deterministic",
+          "rep": 0,
+          "ranks": {
+            "SYN-OE-HIGH-01": "HIGH",
+            "SYN-OE-HIGH-02": "HIGH",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-HIGH-02": 0.62,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-HIGH-01": 0.55,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442
+          },
+          "order": [
+            "SYN-OE-HIGH-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-HIGH-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-HIGH-02"
+            ],
+            "attempt_outcomes": [
+              "SUCCESS"
+            ],
+            "top1_useful": true,
+            "top1_id": "SYN-OE-HIGH-02",
+            "first_attempt_success": true,
+            "attempts_until_useful_success": 1,
+            "total_attempts": 1,
+            "failed_attempts": 0,
+            "wasted_attempts": 0,
+            "success_within_budget": true
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 2,
+            "SYN-OE-HIGH-02": 4,
+            "SYN-OE-HIGH-01": 3
+          },
+          "mean_displacement": 2.3333,
+          "latencies": {
+            "SYN-OE-HIGH-01": 2e-06,
+            "SYN-OE-HIGH-02": 2e-06,
+            "SYN-OE-MED-01": 2e-06,
+            "SYN-OE-MED-02": 2e-06,
+            "SYN-OE-LOW-01": 2e-06,
+            "SYN-OE-LOW-02": 2e-06
+          }
+        },
+        {
+          "arm": "deterministic",
+          "rep": 1,
+          "ranks": {
+            "SYN-OE-HIGH-01": "HIGH",
+            "SYN-OE-HIGH-02": "HIGH",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-HIGH-02": 0.62,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-HIGH-01": 0.55,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442
+          },
+          "order": [
+            "SYN-OE-HIGH-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-HIGH-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-HIGH-02"
+            ],
+            "attempt_outcomes": [
+              "SUCCESS"
+            ],
+            "top1_useful": true,
+            "top1_id": "SYN-OE-HIGH-02",
+            "first_attempt_success": true,
+            "attempts_until_useful_success": 1,
+            "total_attempts": 1,
+            "failed_attempts": 0,
+            "wasted_attempts": 0,
+            "success_within_budget": true
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 2,
+            "SYN-OE-HIGH-02": 4,
+            "SYN-OE-HIGH-01": 3
+          },
+          "mean_displacement": 2.3333,
+          "latencies": {
+            "SYN-OE-HIGH-01": 2e-06,
+            "SYN-OE-HIGH-02": 2e-06,
+            "SYN-OE-MED-01": 2e-06,
+            "SYN-OE-MED-02": 2e-06,
+            "SYN-OE-LOW-01": 2e-06,
+            "SYN-OE-LOW-02": 2e-06
+          }
+        },
+        {
+          "arm": "deterministic",
+          "rep": 2,
+          "ranks": {
+            "SYN-OE-HIGH-01": "HIGH",
+            "SYN-OE-HIGH-02": "HIGH",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-HIGH-02": 0.62,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-HIGH-01": 0.55,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442
+          },
+          "order": [
+            "SYN-OE-HIGH-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-HIGH-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-HIGH-02"
+            ],
+            "attempt_outcomes": [
+              "SUCCESS"
+            ],
+            "top1_useful": true,
+            "top1_id": "SYN-OE-HIGH-02",
+            "first_attempt_success": true,
+            "attempts_until_useful_success": 1,
+            "total_attempts": 1,
+            "failed_attempts": 0,
+            "wasted_attempts": 0,
+            "success_within_budget": true
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 2,
+            "SYN-OE-HIGH-02": 4,
+            "SYN-OE-HIGH-01": 3
+          },
+          "mean_displacement": 2.3333,
+          "latencies": {
+            "SYN-OE-HIGH-01": 2e-06,
+            "SYN-OE-HIGH-02": 2e-06,
+            "SYN-OE-MED-01": 2e-06,
+            "SYN-OE-MED-02": 2e-06,
+            "SYN-OE-LOW-01": 2e-06,
+            "SYN-OE-LOW-02": 2e-06
+          }
+        },
+        {
+          "arm": "deterministic",
+          "rep": 3,
+          "ranks": {
+            "SYN-OE-HIGH-01": "HIGH",
+            "SYN-OE-HIGH-02": "HIGH",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-HIGH-02": 0.62,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-HIGH-01": 0.55,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442
+          },
+          "order": [
+            "SYN-OE-HIGH-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-HIGH-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-HIGH-02"
+            ],
+            "attempt_outcomes": [
+              "SUCCESS"
+            ],
+            "top1_useful": true,
+            "top1_id": "SYN-OE-HIGH-02",
+            "first_attempt_success": true,
+            "attempts_until_useful_success": 1,
+            "total_attempts": 1,
+            "failed_attempts": 0,
+            "wasted_attempts": 0,
+            "success_within_budget": true
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 2,
+            "SYN-OE-HIGH-02": 4,
+            "SYN-OE-HIGH-01": 3
+          },
+          "mean_displacement": 2.3333,
+          "latencies": {
+            "SYN-OE-HIGH-01": 2e-06,
+            "SYN-OE-HIGH-02": 2e-06,
+            "SYN-OE-MED-01": 2e-06,
+            "SYN-OE-MED-02": 2e-06,
+            "SYN-OE-LOW-01": 2e-06,
+            "SYN-OE-LOW-02": 2e-06
+          }
+        },
+        {
+          "arm": "deterministic",
+          "rep": 4,
+          "ranks": {
+            "SYN-OE-HIGH-01": "HIGH",
+            "SYN-OE-HIGH-02": "HIGH",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-HIGH-02": 0.62,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-HIGH-01": 0.55,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442
+          },
+          "order": [
+            "SYN-OE-HIGH-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-HIGH-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-HIGH-02"
+            ],
+            "attempt_outcomes": [
+              "SUCCESS"
+            ],
+            "top1_useful": true,
+            "top1_id": "SYN-OE-HIGH-02",
+            "first_attempt_success": true,
+            "attempts_until_useful_success": 1,
+            "total_attempts": 1,
+            "failed_attempts": 0,
+            "wasted_attempts": 0,
+            "success_within_budget": true
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 2,
+            "SYN-OE-HIGH-02": 4,
+            "SYN-OE-HIGH-01": 3
+          },
+          "mean_displacement": 2.3333,
+          "latencies": {
+            "SYN-OE-HIGH-01": 2e-06,
+            "SYN-OE-HIGH-02": 2e-06,
+            "SYN-OE-MED-01": 2e-06,
+            "SYN-OE-MED-02": 2e-06,
+            "SYN-OE-LOW-01": 2e-06,
+            "SYN-OE-LOW-02": 2e-06
+          }
+        }
+      ]
+    },
+    "llama3.2:3b": {
+      "reps": [
+        {
+          "arm": "llama3.2:3b",
+          "rep": 0,
+          "ranks": {
+            "SYN-OE-HIGH-01": "MEDIUM",
+            "SYN-OE-HIGH-02": "MEDIUM",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "MEDIUM",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-MED-02": 0.592,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-HIGH-02": 0.496,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-01": 0.44
+          },
+          "order": [
+            "SYN-OE-MED-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-MED-02",
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01"
+            ],
+            "attempt_outcomes": [
+              "FAIL_TIMEOUT",
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-MED-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 4,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 1,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 1,
+            "SYN-OE-HIGH-02": 1,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 1,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 3.1862,
+            "SYN-OE-HIGH-02": 386.656,
+            "SYN-OE-MED-01": 2.3099,
+            "SYN-OE-MED-02": 2.0132,
+            "SYN-OE-LOW-01": 1.9311,
+            "SYN-OE-LOW-02": 2.2203
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "llama3.2:3b",
+          "rep": 1,
+          "ranks": {
+            "SYN-OE-HIGH-01": "MEDIUM",
+            "SYN-OE-HIGH-02": "MEDIUM",
+            "SYN-OE-MED-01": "MEDIUM",
+            "SYN-OE-MED-02": "MEDIUM",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-MED-02": 0.592,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-MED-01": 0.544,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-HIGH-02": 0.496,
+            "SYN-OE-HIGH-01": 0.44
+          },
+          "order": [
+            "SYN-OE-MED-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-MED-02",
+              "SYN-OE-LOW-02",
+              "SYN-OE-MED-01"
+            ],
+            "attempt_outcomes": [
+              "FAIL_TIMEOUT",
+              "FAIL_DEPENDENCY",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-MED-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 1,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 1,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 3.1083,
+            "SYN-OE-HIGH-02": 387.8688,
+            "SYN-OE-MED-01": 2.857,
+            "SYN-OE-MED-02": 2.1649,
+            "SYN-OE-LOW-01": 1.9031,
+            "SYN-OE-LOW-02": 2.3859
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "llama3.2:3b",
+          "rep": 2,
+          "ranks": {
+            "SYN-OE-HIGH-01": "MEDIUM",
+            "SYN-OE-HIGH-02": "MEDIUM",
+            "SYN-OE-MED-01": "MEDIUM",
+            "SYN-OE-MED-02": "MEDIUM",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-MED-02": 0.592,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-MED-01": 0.544,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-HIGH-02": 0.496,
+            "SYN-OE-HIGH-01": 0.44
+          },
+          "order": [
+            "SYN-OE-MED-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-MED-02",
+              "SYN-OE-LOW-02",
+              "SYN-OE-MED-01"
+            ],
+            "attempt_outcomes": [
+              "FAIL_TIMEOUT",
+              "FAIL_DEPENDENCY",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-MED-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 1,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 1,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.8082,
+            "SYN-OE-HIGH-02": 1.7818,
+            "SYN-OE-MED-01": 2.2807,
+            "SYN-OE-MED-02": 2.0593,
+            "SYN-OE-LOW-01": 2.4461,
+            "SYN-OE-LOW-02": 2.1842
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "llama3.2:3b",
+          "rep": 3,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "MEDIUM",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-MED-02": 0.592,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-MED-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-MED-02",
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01"
+            ],
+            "attempt_outcomes": [
+              "FAIL_TIMEOUT",
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-MED-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 1,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0.6667,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.8026,
+            "SYN-OE-HIGH-02": 4.2563,
+            "SYN-OE-MED-01": 2.9673,
+            "SYN-OE-MED-02": 2.1402,
+            "SYN-OE-LOW-01": 2.1832,
+            "SYN-OE-LOW-02": 2.2521
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "llama3.2:3b",
+          "rep": 4,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "MEDIUM",
+            "SYN-OE-MED-01": "MEDIUM",
+            "SYN-OE-MED-02": "MEDIUM",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-MED-02": 0.592,
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-MED-01": 0.544,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-HIGH-02": 0.496,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-MED-02",
+            "SYN-OE-LOW-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-LOW-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-MED-02",
+              "SYN-OE-LOW-02",
+              "SYN-OE-MED-01"
+            ],
+            "attempt_outcomes": [
+              "FAIL_TIMEOUT",
+              "FAIL_DEPENDENCY",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-MED-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": true,
+          "top1_changed": true,
+          "displacements": {
+            "SYN-OE-LOW-02": 1,
+            "SYN-OE-LOW-01": 2,
+            "SYN-OE-MED-02": 2,
+            "SYN-OE-MED-01": 1,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 1,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.3153,
+            "SYN-OE-HIGH-02": 393.7442,
+            "SYN-OE-MED-01": 2.7898,
+            "SYN-OE-MED-02": 2.1976,
+            "SYN-OE-LOW-01": 1.9263,
+            "SYN-OE-LOW-02": 2.1043
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        }
+      ]
+    },
+    "qwen2.5:3b": {
+      "reps": [
+        {
+          "arm": "qwen2.5:3b",
+          "rep": 0,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 4.4615,
+            "SYN-OE-HIGH-02": 2.7264,
+            "SYN-OE-MED-01": 3.3404,
+            "SYN-OE-MED-02": 2.2574,
+            "SYN-OE-LOW-01": 2.2334,
+            "SYN-OE-LOW-02": 1.8029
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "qwen2.5:3b",
+          "rep": 1,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.3114,
+            "SYN-OE-HIGH-02": 2.2797,
+            "SYN-OE-MED-01": 2.0213,
+            "SYN-OE-MED-02": 1.9858,
+            "SYN-OE-LOW-01": 2.1354,
+            "SYN-OE-LOW-02": 2.0615
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "qwen2.5:3b",
+          "rep": 2,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.8988,
+            "SYN-OE-HIGH-02": 2.5879,
+            "SYN-OE-MED-01": 2.1642,
+            "SYN-OE-MED-02": 2.2711,
+            "SYN-OE-LOW-01": 2.2397,
+            "SYN-OE-LOW-02": 2.1966
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "qwen2.5:3b",
+          "rep": 3,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.1971,
+            "SYN-OE-HIGH-02": 2.4871,
+            "SYN-OE-MED-01": 2.4695,
+            "SYN-OE-MED-02": 2.2215,
+            "SYN-OE-LOW-01": 2.2826,
+            "SYN-OE-LOW-02": 1.7989
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        },
+        {
+          "arm": "qwen2.5:3b",
+          "rep": 4,
+          "ranks": {
+            "SYN-OE-HIGH-01": "LOW",
+            "SYN-OE-HIGH-02": "LOW",
+            "SYN-OE-MED-01": "LOW",
+            "SYN-OE-MED-02": "LOW",
+            "SYN-OE-LOW-01": "LOW",
+            "SYN-OE-LOW-02": "LOW"
+          },
+          "scores": {
+            "SYN-OE-LOW-02": 0.572,
+            "SYN-OE-LOW-01": 0.52,
+            "SYN-OE-MED-02": 0.481,
+            "SYN-OE-MED-01": 0.442,
+            "SYN-OE-HIGH-02": 0.403,
+            "SYN-OE-HIGH-01": 0.3575
+          },
+          "order": [
+            "SYN-OE-LOW-02",
+            "SYN-OE-LOW-01",
+            "SYN-OE-MED-02",
+            "SYN-OE-MED-01",
+            "SYN-OE-HIGH-02",
+            "SYN-OE-HIGH-01"
+          ],
+          "walk": {
+            "attempted_order": [
+              "SYN-OE-LOW-02",
+              "SYN-OE-LOW-01",
+              "SYN-OE-MED-02"
+            ],
+            "attempt_outcomes": [
+              "FAIL_DEPENDENCY",
+              "FAIL_SYNTAX",
+              "FAIL_TIMEOUT"
+            ],
+            "top1_useful": false,
+            "top1_id": "SYN-OE-LOW-02",
+            "first_attempt_success": false,
+            "attempts_until_useful_success": 5,
+            "total_attempts": 3,
+            "failed_attempts": 3,
+            "wasted_attempts": 3,
+            "success_within_budget": false
+          },
+          "order_changed": false,
+          "top1_changed": false,
+          "displacements": {
+            "SYN-OE-LOW-02": 0,
+            "SYN-OE-LOW-01": 0,
+            "SYN-OE-MED-02": 0,
+            "SYN-OE-MED-01": 0,
+            "SYN-OE-HIGH-02": 0,
+            "SYN-OE-HIGH-01": 0
+          },
+          "mean_displacement": 0,
+          "sources": {
+            "SYN-OE-HIGH-01": "llm",
+            "SYN-OE-HIGH-02": "llm",
+            "SYN-OE-MED-01": "llm",
+            "SYN-OE-MED-02": "llm",
+            "SYN-OE-LOW-01": "llm",
+            "SYN-OE-LOW-02": "llm"
+          },
+          "latencies": {
+            "SYN-OE-HIGH-01": 2.3446,
+            "SYN-OE-HIGH-02": 1.8869,
+            "SYN-OE-MED-01": 2.3505,
+            "SYN-OE-MED-02": 1.7944,
+            "SYN-OE-LOW-01": 2.4488,
+            "SYN-OE-LOW-02": 1.5835
+          },
+          "valid_outputs": 6,
+          "fallbacks": 0
+        }
+      ]
+    }
+  },
+  "inter_model_agreement_llama_qwen": {
+    "per_candidate": {
+      "SYN-OE-HIGH-01": {
+        "pairs": [
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ]
+        ],
+        "matches": 2,
+        "agreement": 0.4
+      },
+      "SYN-OE-HIGH-02": {
+        "pairs": [
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ]
+        ],
+        "matches": 1,
+        "agreement": 0.2
+      },
+      "SYN-OE-MED-01": {
+        "pairs": [
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ]
+        ],
+        "matches": 2,
+        "agreement": 0.4
+      },
+      "SYN-OE-MED-02": {
+        "pairs": [
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ],
+          [
+            "MEDIUM",
+            "LOW"
+          ]
+        ],
+        "matches": 0,
+        "agreement": 0.0
+      },
+      "SYN-OE-LOW-01": {
+        "pairs": [
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ]
+        ],
+        "matches": 5,
+        "agreement": 1.0
+      },
+      "SYN-OE-LOW-02": {
+        "pairs": [
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ],
+          [
+            "LOW",
+            "LOW"
+          ]
+        ],
+        "matches": 5,
+        "agreement": 1.0
+      }
+    },
+    "overall_agreement": 0.5,
+    "paired_observations": 30
+  }
+}
