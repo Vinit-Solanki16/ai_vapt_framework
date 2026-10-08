@@ -1,34 +1,67 @@
+# --- Python virtual environments ---
+.venv/
+.venv-linux/
 venv/
+env/
+
+# --- Python bytecode and caches ---
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+**/.cache/
+
+# --- Build/package artifacts ---
+*.egg-info/
+ai_vapt_framework.egg-info/
+build/
+dist/
+
+# --- Secrets and environment ---
+.env
+.env.local
+*.env
+
+# --- Generated data ---
 data/reports/
 data/benchmark_results.csv
-.env
-
-# Student's personal thesis papers (untracked, unrelated to framework)
-docs/MTech_Project/
-
-# T-DOCKER Stage B controlled-validation run artifacts (reproducible via
-# tests/run_tdocker_scenarios.py; keep metadata + runner in git, raw logs out)
 data/experiment_runs/
 
-# Generated demo reports (produced by CLI runs at repo root)
+# --- Generated demo reports (produced by CLI runs at repo root) ---
 demo_report_*.json
 demo_report_*.txt
 report_*.json
 report_*.txt
 
-# Logs
+# --- Logs ---
 *.log
 emulator.log
 streamlit_output.log
 
-# Package artifacts
-*.egg-info/
-ai_vapt_framework.egg-info/
+# --- Node ---
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+.vite/
 
-# Pytest cache
-.pytest_cache/
+# --- Large binaries / model weights ---
+models/
+*.safetensors
+*.bin
+*.gguf
 
-# Streamlit
+# --- Editor / OS metadata ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Streamlit ---
 .streamlit/
+
+# --- Student's personal thesis papers (untracked, unrelated to framework) ---
+docs/MTech_Project/
