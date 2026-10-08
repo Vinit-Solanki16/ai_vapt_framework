@@ -1,10 +1,10 @@
 # Portable Development Restore Guide
 
-**Project:** AI VAPT Framework  
-**Release:** v1.0.1-thesis  
-**Commit:** c33ddc23317c3bcd18cb078edaed7c33f43086f5  
-**Branch:** prototype-development  
-**Date:** 2026-10-08
+**Project:** AI VAPT Framework
+**Development HEAD:** `fd396bb` (branch `prototype-development`)
+**Frozen Thesis Release:** `v1.0.1-thesis` -> commit
+  `c33ddc23317c3bcd18cb078edaed7c33f43086f5`
+**Date:** 2026-10-08  
 
 ---
 
@@ -19,7 +19,20 @@ provided:
 | **Method 1 — GitHub Clone** | Yes | Fastest | Normal development with network access |
 | **Method 2 — Offline Bundle** | No | Moderate | Air-gapped or offline environments |
 
-Both methods produce an identical working tree at commit `c33ddc2`.
+Both methods produce a working tree at commit `c33ddc2`.
+
+> **Two modes — do not confuse them:**
+> - **Continued development** uses the current `prototype-development` HEAD
+>   (`fd396bb`, one commit ahead of the frozen release).
+> - **Exact thesis reproduction** must checkout the frozen release commit
+>   `c33ddc23317c3bcd18cb078edaed7c33f43086f5` or the tag `v1.0.1-thesis`.
+> - The current development tree is NOT the frozen thesis release. The tag
+>   `v1.0.1-thesis` (annotated tag object `a3ad9b3`) points to commit `c33ddc2`
+>   and must remain there.
+
+> **Note:** The current repository HEAD is `fd396bb` (one commit ahead of
+> `c33ddc2`). The tagged release `v1.0.1-thesis` points to `c33ddc2`. To
+> match the exact release state, checkout `c33ddc2` or the tag after cloning.
 
 ---
 
@@ -29,7 +42,7 @@ Both methods produce an identical working tree at commit `c33ddc2`.
 
 | Dependency | Version | Purpose | Installation |
 |------------|---------|---------|--------------|
-| **Python** | 3.10+ | Runtime | `sudo apt install python3.10 python3.10-venv` (Linux) or [python.org](https://www.python.org/downloads/) (Windows) |
+| **Python** | 3.10.x | Runtime | `sudo apt install python3.10 python3.10-venv` (Linux) or [python.org](https://www.python.org/downloads/) (Windows) |
 | **Git** | 2.x+ | Version control | `sudo apt install git` (Linux) or [git-scm.com](https://git-scm.com/) (Windows) |
 | **pip** | Bundled with Python | Package manager | Included with Python 3.10+ |
 | **Docker** | 24.0+ | Lab emulator | [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows) or `sudo apt install docker.io docker-compose` (Linux) |
@@ -46,6 +59,20 @@ Both methods produce an identical working tree at commit `c33ddc2`.
 |------------|---------|
 | **Nuclei** | Nuclei template-based scanning (used by enrichment layer) |
 | **qwen2.5:3b** | Alternative LLM for experiments (default is llama3.2:3b) |
+
+### What Is NOT Included in the Portable Package
+
+The following are **excluded** from the portable ZIP and bundle. They are
+recreated on the destination system:
+
+- `venv/` or `.venv/` (Python virtual environment)
+- Ollama model binaries (`~/.ollama/`)
+- Docker images (pulled via `docker-compose up`)
+- `.env` file (created from `.env.example`)
+- Secrets, API keys, passwords
+- `node_modules/`
+- `__pycache__/`, `*.pyc`, `.pytest_cache/`
+- Generated reports and runtime artifacts
 
 ---
 
@@ -64,10 +91,18 @@ cd ai_vapt_framework
 
 ```bash
 git log --oneline -1
-# Expected: c33ddc2 fix: make clean-clone installation reproducible
+# Expected: fd396bb docs: add portable development restore guide
 
 git describe --tags --always
-# Expected: v1.0.1-thesis
+# Expected: v1.0.1-thesis-1-gfd396bb
+```
+
+To checkout the exact release commit:
+
+```bash
+git checkout c33ddc23317c3bcd18cb078edaed7c33f43086f5
+# or
+git checkout v1.0.1-thesis
 ```
 
 ### Step 3: Create a Virtual Environment
@@ -78,7 +113,7 @@ source venv/bin/activate
 ```
 
 > **Windows (WSL):** Same commands as above.  
-> **Windows (Native):** Use `venv\Scripts\activate` instead.
+> **Windows (Native):** Use `venv\Scripts\Activate` instead.
 
 ### Step 4: Install Dependencies
 
@@ -98,10 +133,17 @@ This installs all pinned dependencies including:
 ### Step 5: Run Tests
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest -q
 ```
 
-**Expected output:** `687 passed`
+**Expected output:** `687 passed, 3 warnings` (verified 2026-10-08 on both the
+project venv and a fresh `pip install -r requirements.txt` environment).
+
+> **Scope note:** `python -m pytest tests/ -q` runs only the root `tests/`
+> directory (`448 passed`). The primary validation command is the full
+> `python -m pytest -q` suite (687 tests total: 448 in `tests/` + 37 in
+> `decision_engine/tests/` + 19 in `services/tests/` + 167 in
+> `prototype/tests/` + 7 in `frontend/tests/` + 9 in `experiments/`).
 
 ### Step 6: Configure Ollama (LLM Assessment)
 
@@ -144,13 +186,22 @@ streamlit run frontend/app.py
 
 Opens at `http://localhost:8501`
 
-#### Option C: FastAPI Backend
+#### Option C: FastAPI Backend (Primary)
 
 ```bash
 uvicorn services.api:app --reload --port 8000
 ```
 
-API docs at `http://localhost:8000/docs`
+API docs at `http://localhost:8000/docs`  
+UI at `http://localhost:8000`
+
+#### Option D: Helper Script
+
+```bash
+./scripts/start_demo.sh
+```
+
+This checks venv, deps, Ollama, and Docker, then starts the app.
 
 ### Step 8: Docker Lab (Optional)
 
@@ -171,6 +222,9 @@ Verify:
 ```bash
 docker ps
 # Should show vuln-emulator and vuln-executor
+
+curl http://localhost:9090/health
+# Expected: {"status":"healthy"}
 ```
 
 ### Step 9: OWASP Juice Shop (Optional)
@@ -201,6 +255,11 @@ AI_VAPT_Framework_Portable_c33ddc2_v1.0.1.zip
 AI_VAPT_Framework_GitHistory_v1.0.1.bundle
 ```
 
+> The files above restore the **frozen thesis release** (`c33ddc2`).
+> Continued-development snapshots use matching `_DEVELOPMENT_<HEAD>` names
+> (e.g. `AI_VAPT_Framework_Portable_DEVELOPMENT_fd396bb.zip`); for those,
+> `prototype-development` HEAD is the development commit, not `c33ddc2`.
+
 ### Step 1: Restore Git Repository from Bundle
 
 ```bash
@@ -219,6 +278,11 @@ git describe --tags --always
 
 git branch -a
 # Should show: prototype-development, master, and all tags
+
+git tag
+# Should show 8 tags: checkpoint-phase-00-baseline, checkpoint-phase-01-lab,
+# checkpoint-phase-05-api, mentor-prototype-v1, mentor-prototype-v2,
+# reference-engine-prequalification-2026-09-01, v1.0.0-thesis, v1.0.1-thesis
 ```
 
 ### Step 3: Checkout Development Branch
@@ -262,10 +326,12 @@ pip install -r requirements.txt
 ### Step 7: Run Tests
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest -q
 ```
 
-**Expected output:** `687 passed`
+**Expected output:** `687 passed, 3 warnings`
+
+> Subset only: `python -m pytest tests/ -q` gives `448 passed` (root suite).
 
 ### Step 8: Configure Ollama (If Available)
 
@@ -312,10 +378,22 @@ decision_engine/benchmarks/
 ```
 
 These contain the validated research engine that implements:
-- **GAP-1:** AI-informed candidate ranking (assess → rank → decide)
-- **GAP-2:** Bounded failure-threshold pivoting (attempt → count → pivot)
+- **GAP-1:** AI-informed candidate ranking (assess -> rank -> decide)
+- **GAP-2:** Bounded failure-threshold pivoting (attempt -> count -> pivot)
 
 Modifying these directories invalidates the thesis research results.
+
+To verify the frozen core is intact:
+
+```bash
+git diff c33ddc23317c3bcd18cb078edaed7c33f43086f5..HEAD -- decision_engine/core/ decision_engine/benchmarks/
+# Expected: NO output (empty diff = untouched)
+```
+
+> `v1.0.1-thesis` is an annotated tag: `git rev-parse v1.0.1-thesis` returns
+> the tag object `a3ad9b3`, while `git rev-parse 'v1.0.1-thesis^{commit}'`
+> returns the frozen commit `c33ddc2`. Both are correct; the tag must not be
+> moved.
 
 ---
 
@@ -342,18 +420,22 @@ ai_vapt_framework/
 │   ├── execution_layer.py   # Execution abstraction
 │   ├── lab_runner.py        # Docker lab runner
 │   └── demo_data/           # Demo scenarios
-├── frontend/                # Streamlit dashboard
-│   └── app.py               # Web UI
+├── frontend/                # Web UI
+│   ├── app.py               # Streamlit dashboard (legacy)
+│   └── web/                 # Dedicated HTML/CSS/JS SPA (primary)
 ├── services/                # FastAPI backend
 │   └── api.py               # REST API
 ├── lab/                     # Docker lab
 │   ├── docker-compose.yml   # Lab orchestration
 │   ├── emulator/            # Vulnerable web app
 │   └── executor.Dockerfile  # Executor container
-├── tests/                   # Test suite (687 tests)
+├── tests/                   # Root test suite (448 tests; full repo suite = 687 tests)
 ├── data/                    # Datasets and PoC corpus
 ├── docs/                    # Documentation
-└── experiments/             # Research experiments
+├── experiments/             # Research experiments
+└── scripts/                 # Helper scripts
+    ├── start_demo.sh        # Startup helper
+    └── reset_demo.sh        # Demo state reset
 ```
 
 ---
@@ -418,6 +500,14 @@ Ensure all dependencies are installed:
 pip install -r requirements.txt
 ```
 
+### ModuleNotFoundError
+
+Run from repo root with PYTHONPATH set:
+
+```bash
+export PYTHONPATH=$(pwd)
+```
+
 ---
 
 ## Quick Reference
@@ -431,20 +521,24 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Test
-python -m pytest tests/ -q
-# Expected: 687 passed
+python -m pytest -q
+# Expected: 687 passed, 3 warnings
+# Subset (root only): python -m pytest tests/ -q  # 448 passed
 
 # Run CLI
 python -m prototype.cli run --scenario failure_pivot --mode simulation
 
-# Run Web Dashboard
+# Run Web Dashboard (Streamlit)
 streamlit run frontend/app.py
 
-# Run API
+# Run API (FastAPI + UI)
 uvicorn services.api:app --reload --port 8000
 
+# Run Helper Script
+./scripts/start_demo.sh
+
 # Docker Lab
-cd lab && docker-compose up -d
+cd lab && docker-compose up -d && cd ..
 
 # OWASP Juice Shop
 docker run --rm --name juice-shop -p 127.0.0.1:9191:3000 bkimminich/juice-shop
@@ -456,20 +550,22 @@ docker run --rm --name juice-shop -p 127.0.0.1:9191:3000 bkimminich/juice-shop
 
 | Item | Value |
 |------|-------|
-| Python Version | 3.10+ |
+| Python Version | 3.10.x |
 | Git Required | Yes |
 | Docker Required | Optional (for DOCKER_OBSERVED tier) |
 | Ollama Required | Optional (for AI assessment; deterministic fallback available) |
 | Nmap Required | Yes (for scanning features) |
 | Nuclei | Optional (for enrichment) |
-| Test Command | `python -m pytest tests/ -q` |
-| Expected Tests | 687 passed |
+| Test Command | `python -m pytest -q` |
+| Expected Tests | 687 passed, 3 warnings (root-only `tests/` subset: 448 passed) |
 | Default LLM | llama3.2:3b |
 | Experimental LLM | qwen2.5:3b |
 | Research Core | `decision_engine/core/` and `decision_engine/benchmarks/` (FROZEN) |
+| Frozen Thesis Tag | v1.0.1-thesis -> c33ddc23317c3bcd18cb078edaed7c33f43086f5 |
+| Development HEAD | fd396bb (`prototype-development`) |
 
 ---
 
 *Generated: 2026-10-08*  
-*Commit: c33ddc23317c3bcd18cb078edaed7c33f43086f5*  
-*Release: v1.0.1-thesis*
+*Development HEAD: fd396bb712f8289d5759eac702e5969302aa905a*  
+*Frozen thesis release: v1.0.1-thesis -> c33ddc23317c3bcd18cb078edaed7c33f43086f5*
