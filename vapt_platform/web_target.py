@@ -128,6 +128,72 @@ def _normalize_host(raw_host: str) -> str:
     return (raw_host or "").strip().lower().rstrip(".")
 
 
+def _normalize_resolved_ip(raw_ip: str) -> str:
+    """Normalize a resolved IP for loopback comparison.
+
+    Handles IPv6-mapped IPv4 (``::ffff:127.0.0.1``) and IPv6 zone ids
+    (``::1%lo``) so allowlist checks are portable across platforms.
+    """
+    text = (raw_ip or "").strip().lower()
+    # Strip IPv6 zone id if present (e.g. "::1%lo0").
+    if "%" in text:
+        text = text.split("%", 1)[0]
+    if text.startswith("::ffff:"):
+        text = text[len("::ffff:"):]
+    return text
+
+
+def _resolve_to_loopback_ip(host: str) -> str:
+    """Resolve *host* to a deterministic loopback IP.
+
+    Portable behavior:
+      - Queries ``socket.getaddrinfo`` (all results, not just the first,
+        because ordering is platform-dependent — e.g. Ubuntu 24.04 /
+        Codespaces returns ``::1`` first for ``localhost`` while other
+        systems return ``127.0.0.1`` first).
+      - Fails closed unless at least one address resolves AND every
+        resolved address is loopback (DNS-rebinding guard over ALL
+        results, strictly stronger than first-result-only checks).
+      - Deterministically prefers IPv4 ``127.0.0.1`` when present so
+        scanner argv / preflight connections are stable across IPv6-first
+        and IPv4-first resolvers. Falls back to ``::1`` only when it is
+        the sole loopback result.
+
+    Raises:
+        WebTargetAuthorizationError: on resolution failure or when any
+            resolved address is not loopback.
+    """
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except Exception as e:
+        raise WebTargetAuthorizationError(
+            f"Could not resolve host {host!r}: {e}"
+        )
+    if not infos:
+        raise WebTargetAuthorizationError(
+            f"Could not resolve host {host!r}: no addresses returned."
+        )
+    raw_ips = [info[4][0] for info in infos if info[4] and info[4][0]]
+    if not raw_ips:
+        raise WebTargetAuthorizationError(
+            f"Could not resolve host {host!r}: no addresses returned."
+        )
+    normalized = [_normalize_resolved_ip(ip) for ip in raw_ips]
+    for original, norm in zip(raw_ips, normalized):
+        if norm not in LOOPBACK_IPS:
+            raise WebTargetAuthorizationError(
+                f"Host {host!r} resolved to {original!r}, which is not loopback. "
+                "Only local targets are authorized."
+            )
+    # Deterministic preference: IPv4 loopback first for scanner portability.
+    if "127.0.0.1" in normalized:
+        return "127.0.0.1"
+    if "::1" in normalized:
+        return "::1"
+    # Unreachable given LOOPBACK_IPS, but fail closed deterministically.
+    return sorted(set(normalized))[0]
+
+
 def parse_web_target(raw_url: str) -> WebTarget:
     """Parse and strictly validate a web-target URL.
 
@@ -170,23 +236,10 @@ def parse_web_target(raw_url: str) -> WebTarget:
             f"Authorized hosts: {sorted(AUTHORIZED_WEB_HOSTS)}."
         )
 
-    # Resolve safely; the resolved IP must be loopback (DNS-rebinding guard).
-    try:
-        resolved = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-        resolved_host = resolved[0][4][0] if resolved else ""
-    except Exception as e:
-        raise WebTargetAuthorizationError(
-            f"Could not resolve host {host!r}: {e}"
-        )
-    # Normalize IPv6-mapped IPv4 (e.g. ::ffff:127.0.0.1).
-    normalized_ip = resolved_host.lower()
-    if normalized_ip.startswith("::ffff:"):
-        normalized_ip = normalized_ip[len("::ffff:"):]
-    if normalized_ip not in LOOPBACK_IPS:
-        raise WebTargetAuthorizationError(
-            f"Host {host!r} resolved to {resolved_host!r}, which is not loopback. "
-            "Only local targets are authorized."
-        )
+    # Resolve safely; every resolved IP must be loopback (DNS-rebinding guard).
+    # Deterministically prefers 127.0.0.1 so localhost behaves identically
+    # on IPv6-first (Codespaces/Ubuntu 24.04) and IPv4-first resolvers.
+    resolved_host = _resolve_to_loopback_ip(host)
 
     # Port: explicit or scheme default; must be in the authorized set.
     try:

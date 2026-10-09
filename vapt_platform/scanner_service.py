@@ -156,11 +156,14 @@ def run_nmap_discovery(
 
     out_dir = _ensure_output_dir(output_dir)
     out_path = os.path.join(out_dir, f"nmap_{target.host}_{target.port}.xml")
+    # Use the deterministically resolved loopback IP (127.0.0.1 for localhost)
+    # to avoid DNS in scans. resolved_host is guaranteed loopback by
+    # parse_web_target, so this never widens the target scope.
     argv = [
         status["path"], "-Pn", "-sV",
         "-p", str(target.port),
         "-oX", out_path,
-        target.resolved_host if target.host == "localhost" else target.host,
+        target.resolved_host,
     ]
 
     start = time.time()
