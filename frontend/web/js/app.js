@@ -59,6 +59,31 @@ const state = {
     loading: false,
 };
 
+// Mirrors vapt_platform/model_config.py. Module scope so both the form
+// renderer and the submit handlers read the SAME single source. Ollama stays
+// the default (llama3.2:3b is the thesis baseline); hosted models are a
+// separate, clearly-labelled run arm and are never merged with the baseline.
+const PROVIDER_MODELS = {
+    ollama: [
+        { value: 'llama3.2:3b', label: 'llama3.2:3b (thesis baseline)' },
+        { value: 'qwen2.5:3b', label: 'qwen2.5:3b (experimental arm)' },
+    ],
+    openrouter: [
+        { value: 'meta-llama/llama-3.3-70b-instruct', label: 'meta-llama/llama-3.3-70b-instruct (default)' },
+        { value: 'openai/gpt-4o-mini', label: 'openai/gpt-4o-mini' },
+        { value: 'anthropic/claude-3.5-haiku', label: 'anthropic/claude-3.5-haiku' },
+    ],
+    openai: [
+        { value: 'gpt-4o-mini', label: 'gpt-4o-mini (default)' },
+    ],
+};
+
+const PROVIDER_NOTES = {
+    ollama: 'Runs fully offline against your local Ollama.',
+    openrouter: 'Hosted API. Requires OPENROUTER_API_KEY on the server (never entered here). Produces a separate run arm — never merged with the historical Ollama baseline.',
+    openai: 'Hosted API. Requires OPENAI_API_KEY on the server (never entered here).',
+};
+
 // FIX 5: hide a stale inline result on the New Assessment page when the
 // user edits the configuration after a run completed. The displayed
 // output belongs to state.displayedRun, not to the edited form, so it
@@ -561,7 +586,7 @@ async function renderNewAssessment(container) {
                         <label class="form-label">Assessor Mode</label>
                         <select class="form-select" id="assess-assessor">
                             <option value="deterministic">Deterministic (offline, reproducible)</option>
-                            <option value="ai">AI / Ollama (requires local Ollama)</option>
+                            <option value="ai">AI (local Ollama or hosted API)</option>
                         </select>
                     </div>
 
@@ -569,16 +594,15 @@ async function renderNewAssessment(container) {
                         <label class="form-label">AI Provider</label>
                         <select class="form-select" id="assess-provider">
                             <option value="ollama">Ollama (local, offline)</option>
+                            <option value="openrouter">OpenRouter (hosted API, requires OPENROUTER_API_KEY)</option>
                             <option value="openai">OpenAI (requires API key)</option>
                         </select>
                     </div>
 
                     <div class="form-group" id="assess-model-group" style="display:none;">
                         <label class="form-label">Model</label>
-                        <select class="form-select" id="assess-model">
-                            <option value="llama3.2:3b" selected>llama3.2:3b (baseline)</option>
-                            <option value="qwen2.5:3b">qwen2.5:3b (experimental)</option>
-                        </select>
+                        <select class="form-select" id="assess-model"></select>
+                        <div class="text-muted" id="assess-model-note" style="font-size:0.75rem;margin-top:0.25rem;"></div>
                     </div>
 
                     <div class="form-group">
@@ -643,17 +667,24 @@ async function renderNewAssessment(container) {
                     <div class="form-group">
                         <label class="form-label">Assessor</label>
                         <select class="form-select" id="web-assessor">
-                            <option value="ai" selected>Ollama (local AI assessment)</option>
+                            <option value="ai" selected>AI assessment (local Ollama or hosted API)</option>
                             <option value="deterministic">Deterministic (offline, reproducible)</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Model</label>
-                        <select class="form-select" id="web-model">
-                            <option value="llama3.2:3b" selected>llama3.2:3b (baseline)</option>
-                            <option value="qwen2.5:3b">qwen2.5:3b (experimental)</option>
+                        <label class="form-label">AI Provider</label>
+                        <select class="form-select" id="web-provider">
+                            <option value="ollama">Ollama (local, offline)</option>
+                            <option value="openrouter">OpenRouter (hosted API, requires OPENROUTER_API_KEY)</option>
+                            <option value="openai">OpenAI (requires API key)</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <select class="form-select" id="web-model"></select>
+                        <div class="text-muted" id="web-model-note" style="font-size:0.75rem;margin-top:0.25rem;"></div>
                     </div>
 
                     <div class="form-group">
@@ -725,9 +756,48 @@ async function renderNewAssessment(container) {
             updateSafetyStatus();
         });
 
+        // Mirrors vapt_platform/model_config.py. Ollama stays the default
+        // (llama3.2:3b is the thesis baseline); hosted models are a separate,
+        // clearly-labelled run arm and are never merged with the baseline.
+        const providerModels = PROVIDER_MODELS;
+
+        function refreshModelOptions() {
+            const providerSel = document.getElementById('assess-provider');
+            const modelSel = document.getElementById('assess-model');
+            const note = document.getElementById('assess-model-note');
+            if (!providerSel || !modelSel) return;
+            const provider = providerSel.value || 'ollama';
+            const models = providerModels[provider] || [];
+            modelSel.innerHTML = models
+                .map(m => `<option value="${m.value}">${m.label}</option>`)
+                .join('');
+            if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+        }
+
+        refreshModelOptions();
+
+        document.getElementById('assess-provider').addEventListener('change', refreshModelOptions);
+
+        function refreshWebModelOptions() {
+            const providerSel = document.getElementById('web-provider');
+            const modelSel = document.getElementById('web-model');
+            const note = document.getElementById('web-model-note');
+            if (!providerSel || !modelSel) return;
+            const provider = providerSel.value || 'ollama';
+            const models = providerModels[provider] || [];
+            modelSel.innerHTML = models
+                .map(m => `<option value="${m.value}">${m.label}</option>`)
+                .join('');
+            if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+        }
+
+        refreshWebModelOptions();
+        document.getElementById('web-provider').addEventListener('change', refreshWebModelOptions);
+
         document.getElementById('assess-assessor').addEventListener('change', function () {
             document.getElementById('provider-group').style.display = this.value === 'ai' ? 'block' : 'none';
             document.getElementById('assess-model-group').style.display = this.value === 'ai' ? 'block' : 'none';
+            if (this.value === 'ai') refreshModelOptions();
         });
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
@@ -834,7 +904,8 @@ async function startAssessment() {
         // Backend schema expects "deterministic" | "llm".
         const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
         const provider = document.getElementById('assess-provider')?.value || 'ollama';
-        const assessorModel = document.getElementById('assess-model')?.value || 'llama3.2:3b';
+        const assessorModel = document.getElementById('assess-model')?.value
+            || (PROVIDER_MODELS[provider]?.[0]?.value ?? null);
         const maxAttempts = parseInt(document.getElementById('assess-max-attempts').value, 10);
 
         const data = {
@@ -918,7 +989,9 @@ async function startWebAssessment() {
         const useNuclei = document.getElementById('web-use-nuclei')?.checked ?? false;
         const assessorRaw = document.getElementById('web-assessor').value;
         const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
-        const assessorModel = document.getElementById('web-model')?.value || 'llama3.2:3b';
+        const webProvider = document.getElementById('web-provider')?.value || 'ollama';
+        const assessorModel = document.getElementById('web-model')?.value
+            || (PROVIDER_MODELS[webProvider]?.[0]?.value ?? null);
         const maxAttempts = parseInt(document.getElementById('web-max-attempts').value, 10);
 
         // Backend re-validates authoritatively; this pre-check is UX only.
@@ -940,7 +1013,7 @@ async function startWebAssessment() {
             use_nmap: useNmap,
             use_nuclei: useNuclei,
             assessor,
-            assessor_provider: 'ollama',
+            assessor_provider: webProvider,
             assessor_model: assessorModel,
             max_attempts: maxAttempts,
         };
@@ -2360,6 +2433,13 @@ async function renderSystemHealth(container) {
             { name: 'Nuclei', status: health.nuclei || 'UNKNOWN', detail: 'Web vuln scan (graceful if not installed)' },
             { name: 'Web Targets', status: 'READY', detail: 'Loopback only: 127.0.0.1, localhost :9191' },
             { name: 'Ollama', status: health.ollama, detail: health.ollama_model || 'Not configured' },
+            {
+                name: 'OpenRouter',
+                status: health.openrouter || 'NOT CONFIGURED',
+                detail: health.openrouter_key_configured
+                    ? `${health.openrouter_model || ''} (key configured)`.trim()
+                    : `${health.openrouter_key_env || 'OPENROUTER_API_KEY'} not set — optional hosted provider`,
+            },
             { name: 'Docker', status: health.docker, detail: health.docker_note || 'Not available' },
         ];
 

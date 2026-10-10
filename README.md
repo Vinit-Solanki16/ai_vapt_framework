@@ -100,6 +100,57 @@ uvicorn services.api:app --reload --port 8000
 python -m pytest tests/ -q
 ```
 
+## Assessment Providers
+
+Provider and model selection is explicit and lives in one place —
+`vapt_platform/model_config.py`. Nothing here is ever chosen implicitly.
+
+| Provider | Type | Default model | Key env var |
+|----------|------|---------------|-------------|
+| `ollama` (default) | local / offline | `llama3.2:3b` (thesis baseline) | none |
+| `openrouter` | hosted API, **opt-in** | `meta-llama/llama-3.3-70b-instruct` | `OPENROUTER_API_KEY` |
+| `openai` | hosted API, **opt-in** | `gpt-4o-mini` | `OPENAI_API_KEY` |
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...          # opt in to the hosted arm
+export OPENROUTER_MODEL=vendor/custom-model  # optional override
+streamlit run frontend/app.py
+```
+
+**Missing-key behaviour differs by provider — this difference is intentional.**
+
+- `openrouter` raises `RuntimeError` at construction time, naming the missing
+  variable and the offline alternative. An explicit opt-in choice must fail
+  loudly rather than silently produce deterministic results.
+- `openai` keeps its **legacy** semantics: a missing key does not raise here.
+  The client build fails, the assessor catches it, and the result is an
+  explicitly tagged deterministic fallback (`fallback=True`, provider
+  `openai`). Changing this would alter pre-existing behaviour.
+- `ollama` is local and needs no key.
+
+**A hosted failure never dispatches to a different provider.** The selected
+provider is always the one named in the result provenance.
+
+**Reports distinguish success from fallback.** Web-assessment provenance
+records an `ai.outcome` of `MODEL ASSESSED`, `DETERMINISTIC FALLBACK`,
+`PARTIAL (n of m fell back)` or `NOT RECORDED`, so an exported report never
+implies the model answered when the deterministic assessor produced the rank.
+
+**Tuning knobs are bounded.** `OPENROUTER_TIMEOUT_S` clamps to `1..600`
+seconds and `OPENROUTER_MAX_RETRIES` to `0..5`, so a typo cannot create an
+unbounded retry loop or a multi-hour hang. Values outside the range fall back
+to the default.
+
+**Model names are validated, not allowlisted.** Any well-formed
+`vendor/model` slug is accepted so `OPENROUTER_MODEL` stays configurable; a
+name containing whitespace or control characters (or longer than 200
+characters) raises `ValueError`. The provider itself is the authority on
+whether a slug exists, and answers with a classified `not_found`.
+
+OpenRouter runs are a separate, clearly-labelled arm. They are never merged
+into, compared against, or substituted for the historical Ollama/`llama3.2:3b`
+baseline experiments.
+
 ## Evidence Tiers
 
 | Tier | Description |

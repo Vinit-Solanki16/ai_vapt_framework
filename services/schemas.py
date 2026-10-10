@@ -14,12 +14,22 @@ class RunRequest(BaseModel):
     port: int = Field(8080, ge=1, le=65535, description="Lab target port")
     path: str = Field("/vuln", description="Lab target path")
     assessor: Literal["deterministic", "llm"] = Field("deterministic", description="Assessor type")
-    assessor_provider: Literal["ollama", "openai"] = Field("ollama", description="AI provider")
-    assessor_api_key: Optional[str] = Field(None, description="OpenAI API key")
+    assessor_provider: Literal["ollama", "openrouter", "openai"] = Field(
+        "ollama",
+        description="AI provider. 'ollama' is the local/default path; "
+        "'openrouter' and 'openai' are optional hosted providers that "
+        "require their respective API key to be set.",
+    )
+    assessor_api_key: Optional[str] = Field(
+        None,
+        description="Hosted-provider API key (openrouter/openai). Optional "
+        "for ollama. Never persisted or echoed back in responses.",
+    )
     assessor_model: Optional[str] = Field(
         None,
         description="Explicit assessor model name (optional). None -> provider "
-        "default (llama3.2:3b for ollama, the official thesis baseline). "
+        "default (llama3.2:3b for ollama, the official thesis baseline; the "
+        "configured hosted default for openrouter/openai). "
         "qwen2.5:3b is the Phase 33A experimental comparison arm.",
     )
     scan_file: Optional[str] = Field(None, description="Path to scan file (overrides scenario)")

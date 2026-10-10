@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import tempfile
 from datetime import datetime
 from typing import Any, Optional
@@ -821,22 +822,45 @@ def show_new_assessment():
         assessor_mode = st.radio(
             "Assessor",
             ["deterministic", "ai"],
-            help="deterministic = offline | AI = requires Ollama",
+            help="deterministic = offline | AI = local Ollama or an optional "
+                 "hosted provider (OpenRouter / OpenAI)",
         )
 
-        # Phase 33A: model selection is explicit and opt-in. The baseline
-        # (llama3.2:3b) is the default; qwen2.5:3b is experimental only.
+        # Phase 33A / OpenRouter: provider + model selection is explicit and
+        # opt-in. Ollama is the default (llama3.2:3b is the thesis baseline);
+        # hosted providers are never selected implicitly.
+        assessor_provider = "ollama"
         assessor_model = None
         if assessor_mode == "ai":
-            from vapt_platform.model_config import OLLAMA_MODELS
+            from vapt_platform.model_config import (
+                KNOWN_PROVIDERS, PROVIDER_LABELS, models_for_provider,
+            )
 
+            assessor_provider = st.selectbox(
+                "Provider",
+                list(KNOWN_PROVIDERS),
+                index=0,
+                format_func=lambda p: PROVIDER_LABELS.get(p, p),
+                help="Ollama runs fully offline. OpenRouter/OpenAI are hosted "
+                     "APIs and require their API key to be exported on the "
+                     "server (the key is never entered or displayed here).",
+            )
+
+            _models = list(models_for_provider(assessor_provider))
             assessor_model = st.selectbox(
                 "Model",
-                list(OLLAMA_MODELS),
+                _models,
                 index=0,
                 help="llama3.2:3b is the thesis baseline; qwen2.5:3b is an "
-                     "experimental comparison arm (Phase 33A).",
+                     "experimental comparison arm (Phase 33A). Hosted models "
+                     "are a separate, clearly-labelled run arm.",
             )
+            if assessor_provider != "ollama":
+                st.info(
+                    f"Hosted provider **{assessor_provider}** selected. This "
+                    "produces a separate run arm that is never merged into the "
+                    "historical Ollama baseline results."
+                )
 
         max_attempts = st.slider("Pivot Threshold (N)", 1, 5, 2)
 
@@ -874,6 +898,7 @@ def show_new_assessment():
             path=path,
             scenario_name=scenario_name,
             assessor_mode=assessor_mode,
+            assessor_provider=assessor_provider,
             max_attempts=max_attempts,
             scan_file_obj=scan_file_obj,
             assessor_model=assessor_model,
@@ -908,6 +933,7 @@ def execute_assessment(
     max_attempts: int,
     scan_file_obj,
     assessor_model: Optional[str] = None,
+    assessor_provider: str = "ollama",
 ):
     """Execute the assessment and display results."""
     # Map mode string to internal mode
@@ -934,10 +960,27 @@ def execute_assessment(
         port=port,
         path=path,
         assessor_mode=assessor_mode,
+        assessor_provider=assessor_provider,
         assessor_model=assessor_model,
         max_attempts=max_attempts,
         scan_file=scan_file_path,
     )
+
+    # Explicit hosted provider -> require its key up front, with a clear
+    # message. Never silently downgrade to Ollama/deterministic.
+    if request.assessor_mode == "ai":
+        from vapt_platform.model_config import api_key_env_for
+
+        _key_env = api_key_env_for(request.assessor_provider)
+        if _key_env and not os.getenv(_key_env):
+            st.error(
+                f"**{request.assessor_provider}** is selected but "
+                f"`{_key_env}` is not set on the server. Export "
+                f"`{_key_env}` (see `.env.example`) or pick **Ollama** for "
+                "the offline path. The platform will not silently switch "
+                "providers."
+            )
+            st.stop()
 
     # Show pipeline progress during execution
     steps = [

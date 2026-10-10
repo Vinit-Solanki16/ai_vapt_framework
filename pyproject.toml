@@ -22,6 +22,11 @@ dependencies = [
     "langchain-core==1.6.0",
     "langchain-openai==1.6.0",
     "langchain-ollama==1.1.0",
+    # Optional hosted provider (OpenRouter). openrouter is pinned explicitly:
+    # openrouter>=0.10 caps pydantic at <2.13 and would DOWNGRADE the pinned
+    # pydantic==2.13.4. 0.9.2 has no upper bound, so the existing pins hold.
+    "langchain-openrouter==0.2.9",
+    "openrouter==0.9.2",
     "langgraph==1.2.11",
     "pydantic==2.13.4",
     "python-nmap==0.7.1",

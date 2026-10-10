@@ -183,6 +183,32 @@ def _build_web_provenance(
         }
 
     executed = len(execution_results or [])
+    # AI outcome: distinguish a real model assessment from an explicit
+    # deterministic fallback. Reports must never imply the model answered
+    # when the deterministic assessor actually produced the rank.
+    details = assessment.get("details") or []
+    detail_total = len(details)
+    fell_back = sum(1 for d in details if (d or {}).get("fallback"))
+    if detail_total == 0:
+        ai_outcome = "NOT RECORDED"
+        ai_fallback_count = 0
+    elif fell_back == 0:
+        ai_outcome = "MODEL ASSESSED"
+        ai_fallback_count = 0
+    elif fell_back == detail_total:
+        ai_outcome = "DETERMINISTIC FALLBACK"
+        ai_fallback_count = fell_back
+    else:
+        ai_outcome = f"PARTIAL ({fell_back} of {detail_total} fell back)"
+        ai_fallback_count = fell_back
+    first_error = next(
+        (d.get("error") for d in details if (d or {}).get("error")), None
+    )
+    # Reports are exported artifacts, so the fallback reason is redacted
+    # again at this boundary rather than trusting whatever stored it.
+    if first_error:
+        from vapt_platform.provider_errors import redact
+        first_error = redact(first_error)
     return {
         "target_url": web.get("target_url", ""),
         "scanners": [
@@ -193,6 +219,11 @@ def _build_web_provenance(
             "mode": assessment.get("mode", ""),
             "provider": assessment.get("provider", ""),
             "model": assessment.get("model"),
+            "outcome": ai_outcome,
+            "fallback": ai_fallback_count > 0,
+            "fallback_count": ai_fallback_count,
+            "detail_count": detail_total,
+            "fallback_detail": first_error or "",
         },
         "validation": "NOT AVAILABLE",
         "execution": "NOT PERFORMED" if not executed else f"{executed} recorded",

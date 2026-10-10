@@ -44,6 +44,31 @@ def _fmt_duration(value: Any) -> str:
         return "N/A"
 
 
+def _ai_provenance_text(ai: dict) -> str:
+    """Provider / model label for a report line.
+
+    Falls back to the assessment mode when provider and model are absent.
+    """
+    ai = ai or {}
+    return " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) \
+        or ai.get("mode", "")
+
+
+def _ai_outcome_text(ai: dict) -> str:
+    """Human-readable AI outcome: real model assessment vs fallback.
+
+    Reports must never imply the model answered when the deterministic
+    assessor actually produced the rank.
+    """
+    ai = ai or {}
+    outcome = (ai.get("outcome") or "").strip()
+    if not outcome:
+        return ""
+    if ai.get("fallback") and ai.get("fallback_detail"):
+        return f"{outcome} — {ai['fallback_detail']}"
+    return outcome
+
+
 def _render_web_provenance_html(prov: dict) -> str:
     """Render the web-assessment provenance section (HTML) or ''."""
     if not prov:
@@ -64,7 +89,8 @@ def _render_web_provenance_html(prov: dict) -> str:
                         <div class="text-muted" style="font-size:0.8rem;">{scan.get('findings', 0)} findings · {_fmt_duration(scan.get('duration_s'))}{detail}</div>
                     </div>"""
     ai = prov.get("ai", {}) or {}
-    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    ai_text = _ai_provenance_text(ai)
+    ai_outcome = _ai_outcome_text(ai)
     return f"""
             <!-- Web Assessment Provenance (Phase 32B: recorded data only) -->
             <div class="section">
@@ -78,6 +104,10 @@ def _render_web_provenance_html(prov: dict) -> str:
                     <div class="meta-item">
                         <div class="label">AI</div>
                         <div class="value">{ai_text or 'N/A'}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">AI Outcome</div>
+                        <div class="value">{ai_outcome or 'N/A'}</div>
                     </div>
                     <div class="meta-item">
                         <div class="label">Validation</div>
@@ -106,8 +136,9 @@ def _render_web_provenance_markdown(prov: dict) -> list[str]:
             f"({scan.get('findings', 0)} findings, {_fmt_duration(scan.get('duration_s'))}){detail} |"
         )
     ai = prov.get("ai", {}) or {}
-    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    ai_text = _ai_provenance_text(ai)
     lines.append(f"| AI | {ai_text or 'N/A'} |")
+    lines.append(f"| AI Outcome | {_ai_outcome_text(ai) or 'N/A'} |")
     lines.append(f"| Validation | {prov.get('validation', 'NOT AVAILABLE')} |")
     lines.append(f"| Execution | {prov.get('execution', 'NOT PERFORMED')} |")
     lines.append("")
@@ -131,8 +162,9 @@ def _render_web_provenance_txt(prov: dict) -> list[str]:
             f"({scan.get('findings', 0)} findings, {_fmt_duration(scan.get('duration_s'))}){detail}"
         )
     ai = prov.get("ai", {}) or {}
-    ai_text = " / ".join(p for p in [ai.get("provider"), ai.get("model")] if p) or ai.get("mode", "")
+    ai_text = _ai_provenance_text(ai)
     lines.append(f"AI:              {ai_text or 'N/A'}")
+    lines.append(f"AI Outcome:      {_ai_outcome_text(ai) or 'N/A'}")
     lines.append(f"Validation:      {prov.get('validation', 'NOT AVAILABLE')}")
     lines.append(f"Execution:       {prov.get('execution', 'NOT PERFORMED')}")
     lines.append("")
