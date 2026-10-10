@@ -764,8 +764,207 @@ def show_dashboard():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE: NEW ASSESSMENT
+# OPENROUTER RUNTIME SETUP (session memory only — never persisted)
 # ─────────────────────────────────────────────────────────────────────────────
+#
+# SECURITY CONTRACT for this block:
+#   * the key lives in st.session_state, which is per-browser-session,
+#     server-side RAM — it is never written to a file, a database, a run
+#     record, an exported report or os.environ;
+#   * it reaches the assessor only through VAPTRequest(assessor_api_key=…),
+#     an ordinary in-memory dataclass field that is deliberately excluded
+#     from persistence;
+#   * "Forget key" deletes it from session_state outright;
+#   * a Streamlit page reload starts a fresh session, so the key is gone and
+#     the user is asked for it again — by design.
+
+_OR_STATUS_LABELS = {
+    "not_configured": "⚪ NOT CONFIGURED",
+    "validating": "⏳ VALIDATING…",
+    "configured": "✅ CONFIGURED FOR THIS SESSION",
+    "invalid_credentials": "❌ INVALID CREDENTIALS",
+    "model_unavailable": "❌ SELECTED MODEL UNAVAILABLE",
+    "rate_limited": "⚠️ RATE LIMITED",
+    "unreachable": "❌ SERVICE UNREACHABLE",
+}
+
+
+def _or_state() -> dict:
+    """The in-memory OpenRouter session slot (created lazily)."""
+    if "openrouter_setup" not in st.session_state:
+        st.session_state.openrouter_setup = {
+            "key": None,
+            "status": "not_configured",
+            "message": "",
+            "models": [],
+            "catalogue_count": 0,
+            "selected_model": None,
+        }
+    return st.session_state.openrouter_setup
+
+
+def forget_openrouter_key() -> None:
+    """Drop the credential and everything derived from it."""
+    st.session_state.pop("openrouter_key_input", None)
+    st.session_state.pop("openrouter_setup", None)
+
+
+def _or_model_options(or_state: dict) -> list[str]:
+    """Model IDs to offer: live catalogue when validated, else the fallback."""
+    models = or_state.get("models") or []
+    if models:
+        return [m["id"] for m in models]
+    from vapt_platform.model_config import OPENROUTER_MODELS
+    return list(OPENROUTER_MODELS)
+
+
+def _openrouter_setup_panel(selected_model: Optional[str]) -> Optional[str]:
+    """Render the OpenRouter setup controls. Returns the chosen model ID.
+
+    Shows the key field, model picker, Validate, Continue and Forget actions
+    plus an explicit status. Never displays the key back to the user.
+    """
+    from vapt_platform.model_config import api_key_env_for, models_for_provider
+    from vapt_platform.openrouter_setup import validate_runtime_key
+
+    or_state = _or_state()
+    env_key = api_key_env_for("openrouter") or "OPENROUTER_API_KEY"
+    env_configured = bool(os.getenv(env_key))
+
+    st.markdown(
+        '<div class="nav-label">OpenRouter Setup</div>', unsafe_allow_html=True
+    )
+
+    if env_configured:
+        st.success(
+            f"`{env_key}` is set on the server, so a session key is optional. "
+            "GUI sessions can still supply their own key below — it overrides "
+            "the environment for that run only."
+        )
+
+    # --- status ---------------------------------------------------------
+    st.markdown(
+        f'<span class="badge badge-'
+        f'{"success" if or_state["status"] == "configured" else "warning"}">'
+        f'{_OR_STATUS_LABELS.get(or_state["status"], or_state["status"])}</span>',
+        unsafe_allow_html=True,
+    )
+    if or_state.get("message"):
+        st.caption(or_state["message"])
+
+    # --- key input (masked by default) ----------------------------------
+    key_input = st.text_input(
+        "OpenRouter API key",
+        value=or_state.get("key") or "",
+        type="password",
+        key="openrouter_key_input",
+        autocomplete="off",
+        help="Held in this browser session's server-side memory only. "
+             "Never written to .env, run records, reports or the environment. "
+             "A reload asks for it again.",
+        placeholder="sk-or-v1-…",
+    )
+    or_state["key"] = (key_input or "").strip() or None
+    if or_state["key"] and or_state["status"] == "configured":
+        # Editing a validated key invalidates the validation.
+        or_state["status"] = "not_configured"
+        or_state["message"] = ""
+
+    # --- model selection -------------------------------------------------
+    options = _or_model_options(or_state)
+    if selected_model and selected_model not in options:
+        options = [selected_model] + options
+    default_index = options.index(selected_model) if selected_model in options else 0
+    # Prefer a free model when nothing has been chosen yet: a PAID model is
+    # never selected implicitly for the free-model workflow.
+    if not selected_model and or_state.get("models"):
+        free_ids = [m["id"] for m in or_state["models"] if m.get("free")]
+        if "openrouter/free" in free_ids:
+            default_index = options.index("openrouter/free")
+        elif free_ids and free_ids[0] in options:
+            default_index = options.index(free_ids[0])
+
+    chosen = st.selectbox(
+        "Model",
+        options,
+        index=default_index,
+        help="Free models are listed first. Availability and quotas come from "
+             "the live OpenRouter catalogue and can change without notice.",
+    )
+    custom = st.text_input(
+        "Custom model ID (optional)",
+        value="",
+        placeholder="vendor/model — pricing depends on the selected model",
+        help="Any well-formed ID is accepted; OpenRouter is the authority on "
+             "whether it exists. Priced models may incur charges.",
+    ).strip()
+    if custom:
+        chosen = custom
+    or_state["selected_model"] = chosen
+
+    catalogue = {m["id"]: m for m in (or_state.get("models") or [])}
+    entry = catalogue.get(chosen)
+    if entry:
+        if entry.get("free"):
+            st.caption(
+                f"🟢 {chosen} — free ($0/M input, $0/M output) per the live "
+                "catalogue. Free availability and rate limits change without notice."
+            )
+        else:
+            pricing = entry.get("pricing") or {}
+            st.warning(
+                f"💰 {chosen} is a potentially PAID model "
+                f"(${pricing.get('prompt_per_million', '?')}/M input, "
+                f"${pricing.get('completion_per_million', '?')}/M output). "
+                "Pricing depends on the selected model."
+            )
+
+    # --- actions ---------------------------------------------------------
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        validate_clicked = st.button(
+            "🔌 Validate Connection",
+            use_container_width=True,
+            disabled=not or_state.get("key"),
+        )
+    with col_b:
+        use_clicked = st.button(
+            "✅ Use OpenRouter", use_container_width=True,
+            disabled=not or_state.get("key"),
+        )
+    with col_c:
+        if st.button("🗑️ Forget Key", use_container_width=True):
+            forget_openrouter_key()
+            st.rerun()
+
+    if validate_clicked:
+        result = validate_runtime_key(or_state.get("key"), chosen)
+        or_state["status"] = result["status"]
+        or_state["message"] = result.get("message", "")
+        or_state["models"] = result.get("models") or []
+        or_state["catalogue_count"] = result.get("catalogue_count", 0)
+        if result["status"] == "configured" and result.get("model"):
+            or_state["selected_model"] = result["model"]
+        st.rerun()
+
+    if use_clicked and or_state["status"] != "configured":
+        # Deliberate path: force validation rather than starting a run on an
+        # unvalidated credential.
+        result = validate_runtime_key(or_state.get("key"), chosen)
+        or_state["status"] = result["status"]
+        or_state["message"] = result.get("message", "")
+        or_state["models"] = result.get("models") or []
+        or_state["catalogue_count"] = result.get("catalogue_count", 0)
+        st.rerun()
+
+    if env_configured and or_state["status"] != "configured":
+        st.info(
+            "A session key has not been validated, so the run will use the "
+            f"`{env_key}` environment variable instead."
+        )
+
+    return or_state.get("selected_model")
+
 
 def show_new_assessment():
     """Configure and execute a new assessment."""
@@ -841,20 +1040,26 @@ def show_new_assessment():
                 list(KNOWN_PROVIDERS),
                 index=0,
                 format_func=lambda p: PROVIDER_LABELS.get(p, p),
-                help="Ollama runs fully offline. OpenRouter/OpenAI are hosted "
-                     "APIs and require their API key to be exported on the "
-                     "server (the key is never entered or displayed here).",
+                help="Ollama runs fully offline. OpenRouter and OpenAI are "
+                     "hosted APIs. Selecting OpenRouter opens the in-session "
+                     "key setup panel below — no .env or server restart needed.",
             )
 
-            _models = list(models_for_provider(assessor_provider))
-            assessor_model = st.selectbox(
-                "Model",
-                _models,
-                index=0,
-                help="llama3.2:3b is the thesis baseline; qwen2.5:3b is an "
-                     "experimental comparison arm (Phase 33A). Hosted models "
-                     "are a separate, clearly-labelled run arm.",
-            )
+            if assessor_provider == "openrouter":
+                # Runtime credential + live model catalogue. Session memory
+                # only; the panel validates and returns the chosen model.
+                assessor_model = _openrouter_setup_panel(assessor_model)
+            else:
+                _models = list(models_for_provider(assessor_provider))
+                assessor_model = st.selectbox(
+                    "Model",
+                    _models,
+                    index=0,
+                    help="llama3.2:3b is the thesis baseline; qwen2.5:3b is an "
+                         "experimental comparison arm (Phase 33A). Hosted models "
+                         "are a separate, clearly-labelled run arm.",
+                )
+
             if assessor_provider != "ollama":
                 st.info(
                     f"Hosted provider **{assessor_provider}** selected. This "
@@ -952,6 +1157,30 @@ def execute_assessment(
             tmp.write(scan_file_obj.read())
             scan_file_path = tmp.name
 
+    # Runtime credential (in-memory only). OpenRouter prefers the key the
+    # user entered in this session; the process environment remains the
+    # fallback for CLI/manual deployments. Neither path writes to os.environ.
+    runtime_key: Optional[str] = None
+    if assessor_provider == "openrouter":
+        from vapt_platform.model_config import api_key_env_for
+
+        _key_env = api_key_env_for("openrouter") or "OPENROUTER_API_KEY"
+        _or = _or_state()
+        if _or.get("status") == "configured" and _or.get("key"):
+            runtime_key = _or["key"]
+        elif not os.getenv(_key_env):
+            # No session key validated and no environment key: stop with an
+            # actionable message. Never silently downgrade provider/mode.
+            st.error(
+                "**OpenRouter** is selected but no credential is available.\n\n"
+                "- Open the **OpenRouter Setup** panel in the sidebar, paste "
+                "your key and press **Validate Connection**; or\n"
+                f"- export `{_key_env}` on the server for a shared deployment; or\n"
+                "- pick **Ollama** for the offline path.\n\n"
+                "The platform will not silently switch providers."
+            )
+            st.stop()
+
     # Build request
     request = VAPTRequest(
         scenario=scenario_name,
@@ -961,6 +1190,7 @@ def execute_assessment(
         path=path,
         assessor_mode=assessor_mode,
         assessor_provider=assessor_provider,
+        assessor_api_key=runtime_key,
         assessor_model=assessor_model,
         max_attempts=max_attempts,
         scan_file=scan_file_path,
@@ -968,7 +1198,7 @@ def execute_assessment(
 
     # Explicit hosted provider -> require its key up front, with a clear
     # message. Never silently downgrade to Ollama/deterministic.
-    if request.assessor_mode == "ai":
+    if request.assessor_mode == "ai" and request.assessor_provider == "openai":
         from vapt_platform.model_config import api_key_env_for
 
         _key_env = api_key_env_for(request.assessor_provider)

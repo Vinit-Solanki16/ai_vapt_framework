@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,24 +17,39 @@ from services.schemas import (
     RunRequest, RunResponse, RunStatus, RunTrace, ReportResponse,
     CheckpointResponse, ErrorResponse, TraceEvent,
     TargetValidateRequest, TargetValidateResponse,
+    OpenRouterValidateRequest, OpenRouterValidateResponse,
 )
 from services.jobs import job_manager
 from vapt_platform.application import VAPTRequest, get_application
+from vapt_platform.openrouter_setup import RUNTIME_KEY_HEADER
 from vapt_platform.provider_errors import redact
 
 
-def _safe_error_detail(exc: BaseException, req: "RunRequest" = None) -> str:
+def _safe_error_detail(exc: BaseException, req: "RunRequest" = None,
+                       extra_secrets: tuple = ()) -> str:
     """Redacted error detail for an API response.
 
     Provider exceptions can embed the API key (e.g. echoed inside a provider
-    error body). Strip the submitted key plus any key-shaped substrings before
-    the message leaves the process.
+    error body). Strip the submitted key, any per-request runtime key, plus
+    key-shaped substrings before the message leaves the process.
     """
     secrets = [getattr(req, "assessor_api_key", None)] if req is not None else []
+    secrets += list(extra_secrets)
     secrets += [
         os.getenv("OPENROUTER_API_KEY"), os.getenv("OPENAI_API_KEY"),
     ]
     return redact(str(exc), secrets)
+
+
+def _runtime_key(header_value: Optional[str]) -> Optional[str]:
+    """Normalize the per-request runtime credential (header wins over body).
+
+    Returns None when absent so callers can fall back to the process
+    environment for CLI/manual deployments. The value is NEVER written back
+    into ``os.environ`` — the runtime key is scoped to this single request.
+    """
+    key = (header_value or "").strip()
+    return key or None
 
 
 app = FastAPI(title="AI VAPT Decision Engine API", version="0.1.0")
@@ -55,7 +70,7 @@ if os.path.exists(FRONTEND_DIR):
     app.mount("/js", StaticFiles(directory=os.path.join(FRONTEND_DIR, "js")), name="js")
 
 
-def _run_engine(run_id: str, req: RunRequest):
+def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None):
     """Execute the decision engine for a run using the canonical workflow."""
     # Convert API request to unified request
     vapt_request = VAPTRequest(
@@ -66,7 +81,7 @@ def _run_engine(run_id: str, req: RunRequest):
         path=req.path,
         assessor_mode="ai" if req.assessor == "llm" else "deterministic",
         assessor_provider=req.assessor_provider,
-        assessor_api_key=req.assessor_api_key,
+        assessor_api_key=_runtime_key(runtime_key) or req.assessor_api_key,
         assessor_model=req.assessor_model,
         max_attempts=req.max_attempts,
         scan_file=req.scan_file,
@@ -104,8 +119,20 @@ def _run_engine(run_id: str, req: RunRequest):
 
 
 @app.post("/runs", response_model=RunResponse)
-def start_run(req: RunRequest):
-    """Start a new decision engine run."""
+def start_run(
+    req: RunRequest,
+    x_openrouter_api_key: Optional[str] = Header(
+        None, alias=RUNTIME_KEY_HEADER
+    ),
+):
+    """Start a new decision engine run.
+
+    The runtime OpenRouter credential arrives in the
+    ``X-OpenRouter-API-Key`` header (never in the JSON body, so it cannot
+    end up in a logged or persisted request payload). It is threaded into
+    this run's in-memory ``VAPTRequest`` only, and is released when the run
+    returns — it is never assigned to ``os.environ`` and never stored.
+    """
     if req.mode == "lab" and req.target not in LAB_TARGET_ALLOWLIST:
         raise HTTPException(status_code=400, detail="Target not in allowlist")
 
@@ -117,6 +144,8 @@ def start_run(req: RunRequest):
         if not validation.authorized:
             raise HTTPException(status_code=400, detail=f"Target not authorized: {validation.reason}")
 
+    runtime_key = _runtime_key(x_openrouter_api_key)
+
     # Convert API request to unified request
     vapt_request = VAPTRequest(
         scenario=req.scenario,
@@ -126,7 +155,7 @@ def start_run(req: RunRequest):
         path=req.path,
         assessor_mode="ai" if req.assessor == "llm" else "deterministic",
         assessor_provider=req.assessor_provider,
-        assessor_api_key=req.assessor_api_key,
+        assessor_api_key=runtime_key or req.assessor_api_key,
         assessor_model=req.assessor_model,
         max_attempts=req.max_attempts,
         scan_file=req.scan_file,
@@ -164,7 +193,59 @@ def start_run(req: RunRequest):
 
         return RunResponse(run_id=run_id, status="completed", message="Run completed")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=_safe_error_detail(e, req))
+        raise HTTPException(
+            status_code=500,
+            detail=_safe_error_detail(e, req, extra_secrets=(runtime_key,)),
+        )
+
+
+@app.post("/providers/openrouter/validate", response_model=OpenRouterValidateResponse)
+def validate_openrouter_credential(
+    payload: OpenRouterValidateRequest = None,
+    x_openrouter_api_key: Optional[str] = Header(None, alias=RUNTIME_KEY_HEADER),
+):
+    """Validate a runtime OpenRouter key and return the live model catalogue.
+
+    Backs the GUI "Validate Connection" button. Uses an authenticated
+    *model-catalogue* request — never a completion — so checking a credential
+    costs nothing.
+
+    The key travels in the ``X-OpenRouter-API-Key`` header only. It is passed
+    straight to OpenRouter, never persisted, never assigned to the
+    environment, and never echoed back in the response.
+    """
+    from vapt_platform.openrouter_setup import (
+        DEFAULT_TIMEOUT_S, validate_runtime_key,
+    )
+
+    key = _runtime_key(x_openrouter_api_key)
+    result = validate_runtime_key(
+        key, getattr(payload, "model", None), timeout=DEFAULT_TIMEOUT_S,
+    )
+    return OpenRouterValidateResponse(**result)
+
+
+@app.get("/providers/openrouter/status")
+def openrouter_status():
+    """Configuration STATE only: is an env key present, what models are known.
+
+    Deliberately reports nothing about any runtime key a browser session may
+    hold — those live in the browser and are invisible to the server.
+    """
+    from vapt_platform.model_config import (
+        OPENROUTER_MODELS, api_key_env_for, default_model_for,
+    )
+
+    key_env = api_key_env_for("openrouter") or "OPENROUTER_API_KEY"
+    return {
+        "provider": "openrouter",
+        "env_key_env": key_env,
+        "env_key_configured": bool(os.getenv(key_env)),
+        "default_model": default_model_for("openrouter"),
+        "fallback_models": list(OPENROUTER_MODELS),
+        "runtime_key_header": RUNTIME_KEY_HEADER,
+        "runtime_key_supported": True,
+    }
 
 
 @app.get("/runs")

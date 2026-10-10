@@ -10,11 +10,20 @@
 const API_BASE = window.location.origin;
 
 const api = {
-    async request(method, path, body = null) {
+    /**
+     * @param {string} method
+     * @param {string} path
+     * @param {object|null} body  JSON body. MUST NEVER contain the runtime
+     *   OpenRouter key — credentials travel in `extraHeaders` instead so a
+     *   logged, stored or replayed payload never holds a secret.
+     * @param {object} extraHeaders  per-request headers (e.g. the runtime key).
+     */
+    async request(method, path, body = null, extraHeaders = null) {
         const opts = {
             method,
             headers: { 'Content-Type': 'application/json' },
         };
+        if (extraHeaders) Object.assign(opts.headers, extraHeaders);
         if (body) opts.body = JSON.stringify(body);
         const resp = await fetch(`${API_BASE}${path}`, opts);
         if (!resp.ok) {
@@ -27,7 +36,7 @@ const api = {
     getHealth() { return this.request('GET', '/health'); },
     getSystemHealth() { return this.request('GET', '/system/health'); },
     getScenarios() { return this.request('GET', '/scenarios'); },
-    startRun(data) { return this.request('POST', '/runs', data); },
+    startRun(data, headers = null) { return this.request('POST', '/runs', data, headers); },
     listRuns(limit = 100) { return this.request('GET', `/runs?limit=${limit}`); },
     getRun(runId) { return this.request('GET', `/runs/${runId}/persisted`); },
     getRunEvents(runId) { return this.request('GET', `/runs/${runId}/events`); },
@@ -39,6 +48,21 @@ const api = {
     getRunReport(runId, format = 'json') { return this.request('GET', `/runs/${runId}/report?format=${format}`); },
     validateTarget(targetUrl) { return this.request('POST', '/targets/validate', { target_url: targetUrl }); },
     getScannerStatus() { return this.request('GET', '/scanners/status'); },
+    getOpenRouterStatus() { return this.request('GET', '/providers/openrouter/status'); },
+
+    /**
+     * Validate the runtime OpenRouter credential against the live catalogue.
+     * The key goes in the X-OpenRouter-API-Key header — never the body.
+     * Issues a catalogue request only; no completion is ever created.
+     */
+    validateOpenRouter(model) {
+        return this.request(
+            'POST',
+            '/providers/openrouter/validate',
+            model ? { model } : {},
+            openrouterKeyHeaders()
+        );
+    },
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -57,7 +81,85 @@ const state = {
     systemHealth: null,
     scenarios: [],
     loading: false,
+    openrouter: null,   // assigned below from createOpenRouterSession()
 };
+
+// ═══════════════════════════════════════════════════════════════════════
+// OpenRouter runtime credential — IN-MEMORY SESSION ONLY
+// ═══════════════════════════════════════════════════════════════════════
+//
+// SECURITY: this object is plain module scope. It is deliberately NOT
+// mirrored into localStorage, sessionStorage, IndexedDB, cookies or URL
+// parameters, and it is never sent anywhere except as the
+// `X-OpenRouter-API-Key` header on the two requests that need it.
+//
+// Consequences, all intentional:
+//   * reload or closing the tab discards the key -> the user re-enters it;
+//   * two browser sessions can never see each other's key;
+//   * nothing on disk ever holds it (no .env write, no os.environ write).
+//
+// The server keeps NO copy: it reads the header, threads it through the
+// single in-memory VAPTRequest for that run, and drops it when the run ends.
+
+const OPENROUTER_KEY_HEADER = 'X-OpenRouter-API-Key';
+
+const OR_STATUS_LABELS = {
+    not_configured: 'NOT CONFIGURED',
+    validating: 'VALIDATING…',
+    configured: 'CONFIGURED FOR THIS SESSION',
+    invalid_credentials: 'INVALID CREDENTIALS',
+    model_unavailable: 'SELECTED MODEL UNAVAILABLE',
+    rate_limited: 'RATE LIMITED',
+    unreachable: 'SERVICE UNREACHABLE',
+};
+
+const OR_STATUS_BADGE = {
+    not_configured: 'badge-warning',
+    validating: 'badge-warning',
+    configured: 'badge-success',
+    invalid_credentials: 'badge-error',
+    model_unavailable: 'badge-error',
+    rate_limited: 'badge-warning',
+    unreachable: 'badge-error',
+};
+
+function createOpenRouterSession() {
+    return {
+        // The secret itself. Memory only — see the banner above.
+        key: null,
+        status: 'not_configured',
+        message: '',
+        // Live catalogue returned by the last successful validation.
+        models: [],
+        catalogueCount: 0,
+        // Model the user explicitly chose (may be a custom ID).
+        selectedModel: null,
+        // True once the user picks a model themselves. Until then the UI may
+        // prefer a FREE entry after validation; it must never swap in a paid
+        // model on its own initiative.
+        userSelectedModel: null,
+        validatedModel: null,
+        validatedAt: null,
+        busy: false,
+    };
+}
+
+state.openrouter = createOpenRouterSession();
+
+/** Headers carrying the runtime credential, or null when none is held. */
+function openrouterKeyHeaders() {
+    const key = state.openrouter && state.openrouter.key;
+    return key ? { [OPENROUTER_KEY_HEADER]: key } : null;
+}
+
+/** Forget the credential and everything derived from it. */
+function clearOpenRouterKey() {
+    state.openrouter = createOpenRouterSession();
+}
+
+function openRouterIsConfigured() {
+    return state.openrouter.status === 'configured';
+}
 
 // Mirrors vapt_platform/model_config.py. Module scope so both the form
 // renderer and the submit handlers read the SAME single source. Ollama stays
@@ -80,7 +182,7 @@ const PROVIDER_MODELS = {
 
 const PROVIDER_NOTES = {
     ollama: 'Runs fully offline against your local Ollama.',
-    openrouter: 'Hosted API. Requires OPENROUTER_API_KEY on the server (never entered here). Produces a separate run arm — never merged with the historical Ollama baseline.',
+    openrouter: 'Hosted API. Selecting it opens the setup panel below: paste your key, validate the connection, then run. The key lives in this tab\'s memory only and is forgotten on reload. Produces a separate run arm — never merged with the historical Ollama baseline.',
     openai: 'Hosted API. Requires OPENAI_API_KEY on the server (never entered here).',
 };
 
@@ -700,6 +802,60 @@ async function renderNewAssessment(container) {
             </div>
             </div>
 
+            <!-- OpenRouter runtime setup: shown only when OpenRouter is the
+                 selected provider for the ACTIVE form. The credential is
+                 read into module memory on input and never written to any
+                 browser storage. -->
+            <div class="card" id="openrouter-setup" style="display:none;margin-top:1rem;">
+                <div class="card-header">
+                    <span class="card-title">OpenRouter Setup</span>
+                    <span class="badge badge-warning" id="or-status-badge">NOT CONFIGURED</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="or-key">OpenRouter API key</label>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="password" class="form-input" id="or-key"
+                            autocomplete="off" spellcheck="false"
+                            placeholder="sk-or-v1-…" style="flex:1;font-family:monospace;"
+                            aria-describedby="or-help">
+                        <button class="btn btn-secondary" id="or-key-toggle"
+                            type="button" onclick="toggleOpenRouterKeyVisibility()"
+                            aria-pressed="false">Show</button>
+                    </div>
+                    <p class="text-muted" style="font-size:0.75rem;margin-top:0.4rem;">
+                        Held in this tab's memory only. Never saved to localStorage, cookies, files,
+                        run records or reports — a page reload asks for it again.
+                        Get a key at <span style="font-family:monospace;">openrouter.ai/settings/keys</span>.
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="or-model">Model</label>
+                    <select class="form-select" id="or-model"></select>
+                    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;align-items:center;">
+                        <input type="text" class="form-input" id="or-model-custom"
+                            placeholder="or type a custom model ID (e.g. vendor/model)"
+                            style="flex:1;font-family:monospace;" spellcheck="false">
+                        <button class="btn btn-secondary" id="or-model-custom-apply"
+                            type="button" onclick="applyCustomOpenRouterModel()">Use ID</button>
+                    </div>
+                    <div class="text-muted" id="or-model-note" style="font-size:0.75rem;margin-top:0.4rem;"></div>
+                </div>
+
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                    <button class="btn btn-primary" id="or-validate" type="button"
+                        onclick="validateOpenRouterSetup()">🔌 Validate Connection</button>
+                    <button class="btn btn-secondary" id="or-use" type="button"
+                        onclick="useOpenRouter()">✅ Continue / Use OpenRouter</button>
+                    <button class="btn btn-secondary" id="or-clear" type="button"
+                        onclick="forgetOpenRouterKey()">🗑️ Forget / Clear Key</button>
+                </div>
+
+                <div class="alert alert-info" id="or-help"></div>
+                <div class="alert alert-warning" id="or-pricing-warning" style="display:none;"></div>
+            </div>
+
             <div class="card" id="run-result" style="display:none;">
                 <div class="card-header">
                     <span class="card-title">Assessment Result</span>
@@ -759,19 +915,27 @@ async function renderNewAssessment(container) {
         // Mirrors vapt_platform/model_config.py. Ollama stays the default
         // (llama3.2:3b is the thesis baseline); hosted models are a separate,
         // clearly-labelled run arm and are never merged with the baseline.
+        // OpenRouter's list is replaced by the LIVE catalogue once validated.
         const providerModels = PROVIDER_MODELS;
 
         function refreshModelOptions() {
             const providerSel = document.getElementById('assess-provider');
-            const modelSel = document.getElementById('assess-model');
             const note = document.getElementById('assess-model-note');
-            if (!providerSel || !modelSel) return;
+            if (!providerSel) return;
             const provider = providerSel.value || 'ollama';
-            const models = providerModels[provider] || [];
-            modelSel.innerHTML = models
-                .map(m => `<option value="${m.value}">${m.label}</option>`)
-                .join('');
-            if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+            if (provider === 'openrouter') {
+                syncModelSelectors();
+            } else {
+                const models = providerModels[provider] || [];
+                const modelSel = document.getElementById('assess-model');
+                if (modelSel) {
+                    modelSel.innerHTML = models
+                        .map(m => `<option value="${escapeHtml(m.value)}">${escapeHtml(m.label)}</option>`)
+                        .join('');
+                }
+                if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+            }
+            updateOpenRouterSetupVisibility();
         }
 
         refreshModelOptions();
@@ -780,15 +944,22 @@ async function renderNewAssessment(container) {
 
         function refreshWebModelOptions() {
             const providerSel = document.getElementById('web-provider');
-            const modelSel = document.getElementById('web-model');
             const note = document.getElementById('web-model-note');
-            if (!providerSel || !modelSel) return;
+            if (!providerSel) return;
             const provider = providerSel.value || 'ollama';
-            const models = providerModels[provider] || [];
-            modelSel.innerHTML = models
-                .map(m => `<option value="${m.value}">${m.label}</option>`)
-                .join('');
-            if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+            if (provider === 'openrouter') {
+                syncModelSelectors();
+            } else {
+                const models = providerModels[provider] || [];
+                const modelSel = document.getElementById('web-model');
+                if (modelSel) {
+                    modelSel.innerHTML = models
+                        .map(m => `<option value="${escapeHtml(m.value)}">${escapeHtml(m.label)}</option>`)
+                        .join('');
+                }
+                if (note) note.textContent = PROVIDER_NOTES[provider] || '';
+            }
+            updateOpenRouterSetupVisibility();
         }
 
         refreshWebModelOptions();
@@ -798,7 +969,59 @@ async function renderNewAssessment(container) {
             document.getElementById('provider-group').style.display = this.value === 'ai' ? 'block' : 'none';
             document.getElementById('assess-model-group').style.display = this.value === 'ai' ? 'block' : 'none';
             if (this.value === 'ai') refreshModelOptions();
+            updateOpenRouterSetupVisibility();
         });
+
+        // Setup panel bindings. The key is copied into module memory on
+        // every keystroke and is never written to any browser storage.
+        const orKeyInput = document.getElementById('or-key');
+        if (orKeyInput) {
+            orKeyInput.addEventListener('input', function () {
+                state.openrouter.key = this.value || null;
+                if (state.openrouter.status === 'configured' && this.value) {
+                    // Editing a validated key invalidates the validation.
+                    state.openrouter.status = 'not_configured';
+                    state.openrouter.message = '';
+                }
+                renderOpenRouterSetup();
+            });
+            orKeyInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); validateOpenRouterSetup(); }
+            });
+        }
+
+        const orModelSelect = document.getElementById('or-model');
+        if (orModelSelect) {
+            orModelSelect.addEventListener('change', function () {
+                state.openrouter.selectedModel = this.value;
+                state.openrouter.userSelectedModel = this.value;
+                const a = document.getElementById('assess-model');
+                const w = document.getElementById('web-model');
+                if (a && a.value !== this.value) a.value = this.value;
+                if (w && w.value !== this.value) w.value = this.value;
+                updateOpenRouterModelNote();
+            });
+        }
+
+        // Keep the two FORM selectors and the panel selector in lockstep.
+        ['assess-model', 'web-model'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function () {
+                    state.openrouter.selectedModel = this.value;
+                    state.openrouter.userSelectedModel = this.value;
+                    const other = document.getElementById(id === 'assess-model' ? 'web-model' : 'assess-model');
+                    if (other && other.value !== this.value) other.value = this.value;
+                    const panel = document.getElementById('or-model');
+                    if (panel && [...panel.options].some(o => o.value === this.value)) {
+                        panel.value = this.value;
+                    }
+                    updateOpenRouterModelNote();
+                });
+            }
+        });
+
+        updateOpenRouterSetupVisibility();
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
 
@@ -825,6 +1048,325 @@ async function renderNewAssessment(container) {
     } catch (err) {
         showError(container, err.message);
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// OpenRouter setup panel (runtime key, validation, free-model selection)
+// ═══════════════════════════════════════════════════════════════════════
+
+function toggleOpenRouterKeyVisibility() {
+    const input = document.getElementById('or-key');
+    const btn = document.getElementById('or-key-toggle');
+    if (!input || !btn) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? 'Show' : 'Hide';
+    btn.setAttribute('aria-pressed', String(!showing));
+}
+
+/** Which provider the ACTIVE form is using. */
+function activeAssessorProvider() {
+    const isWeb = (document.getElementById('assess-type')?.value) === 'web';
+    const sel = document.getElementById(isWeb ? 'web-provider' : 'assess-provider');
+    return sel ? (sel.value || 'ollama') : 'ollama';
+}
+
+/**
+ * Model choices for the selector.
+ *
+ * With a validated key the LIVE catalogue drives the list (free entries
+ * first, real documented pricing). Without one we fall back to the static
+ * offline list — and say so, because availability cannot be confirmed.
+ */
+function openRouterModelOptions() {
+    const or = state.openrouter;
+    if (or.models && or.models.length) {
+        return or.models.map((m) => {
+            let label;
+            if (m.free) {
+                label = `🟢 FREE · ${m.id}`;
+            } else {
+                const pin = m.pricing && m.pricing.prompt_per_million;
+                const pout = m.pricing && m.pricing.completion_per_million;
+                const price = (pin !== undefined && pin !== null)
+                    ? `$${pin}/M in · $${pout !== null && pout !== undefined ? pout : '?'}/M out`
+                    : 'paid — pricing unknown';
+                label = `💰 PAID · ${m.id} · ${price}`;
+            }
+            return { value: m.id, label };
+        });
+    }
+    return (PROVIDER_MODELS.openrouter || []).map((m) => ({
+        value: m.value,
+        label: `${m.value} (availability unverified — validate to confirm)`,
+    }));
+}
+
+function fillModelSelect(selectEl, options, selectedValue) {
+    if (!selectEl) return;
+    selectEl.innerHTML = options
+        .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`)
+        .join('');
+    if (selectedValue) {
+        const known = options.some((o) => o.value === selectedValue);
+        if (known) {
+            selectEl.value = selectedValue;
+        } else {
+            // Custom / stale ID: keep it selectable so the user's choice is
+            // never silently replaced by a different model.
+            const opt = document.createElement('option');
+            opt.value = selectedValue;
+            opt.textContent = `${selectedValue} (not in catalogue — will be checked)`;
+            opt.selected = true;
+            selectEl.appendChild(opt);
+        }
+    }
+}
+
+/** Rebuild every model selector (both forms + the setup panel) from one source. */
+function syncModelSelectors(preferredValue) {
+    const or = state.openrouter;
+    const provider = activeAssessorProvider();
+    const wanted = preferredValue !== undefined
+        ? preferredValue
+        : (provider === 'openrouter'
+            ? (or.selectedModel || null)
+            : null);
+
+    if (provider === 'openrouter') {
+        const opts = openRouterModelOptions();
+        fillModelSelect(document.getElementById('or-model'), opts, wanted);
+        fillModelSelect(document.getElementById('assess-model'), opts, wanted);
+        fillModelSelect(document.getElementById('web-model'), opts, wanted);
+        const chosen = wanted
+            || document.getElementById('or-model')?.value
+            || pickDefaultOpenRouterModel();
+        if (chosen) or.selectedModel = chosen;
+        const note = PROVIDER_NOTES.openrouter || '';
+        const an = document.getElementById('assess-model-note');
+        const wn = document.getElementById('web-model-note');
+        if (an) an.textContent = note;
+        if (wn) wn.textContent = note;
+        updateOpenRouterModelNote();
+    } else {
+        const opts = PROVIDER_MODELS[provider] || [];
+        fillModelSelect(document.getElementById('assess-model'), opts, null);
+        fillModelSelect(document.getElementById('web-model'), opts, null);
+        const note = PROVIDER_NOTES[provider] || '';
+        const an = document.getElementById('assess-model-note');
+        const wn = document.getElementById('web-model-note');
+        if (an) an.textContent = note;
+        if (wn) wn.textContent = note;
+    }
+}
+
+function pickDefaultOpenRouterModel() {
+    const or = state.openrouter;
+    // A free model is preferred; a PAID model is never chosen implicitly.
+    if (or.models && or.models.length) {
+        const router = or.models.find((m) => m.id === 'openrouter/free');
+        if (router) return router.id;
+        const free = or.models.find((m) => m.free);
+        if (free) return free.id;
+    }
+    return (PROVIDER_MODELS.openrouter && PROVIDER_MODELS.openrouter[0]
+        ? PROVIDER_MODELS.openrouter[0].value
+        : null);
+}
+
+function updateOpenRouterModelNote() {
+    const note = document.getElementById('or-model-note');
+    const warning = document.getElementById('or-pricing-warning');
+    if (!note) return;
+    const or = state.openrouter;
+    const modelId = or.selectedModel;
+    const entry = (or.models || []).find((m) => m.id === modelId);
+
+    if (entry && entry.free) {
+        note.textContent = `${modelId} — free at $0/M input and $0/M output per the live catalogue. Free availability, quotas and rate limits change without notice.`;
+    } else if (entry) {
+        const pin = entry.pricing && entry.pricing.prompt_per_million;
+        const pout = entry.pricing && entry.pricing.completion_per_million;
+        note.textContent = `${modelId} — potentially PAID: $${pin !== null && pin !== undefined ? pin : '?'}/M input, $${pout !== null && pout !== undefined ? pout : '?'}/M output per the live catalogue.`;
+    } else if (modelId) {
+        note.textContent = `${modelId} — not in the fetched catalogue; availability will be checked when you validate.`;
+    } else {
+        note.textContent = '';
+    }
+
+    if (warning) {
+        const isPaid = entry ? !entry.free : true;
+        if (isPaid && modelId) {
+            warning.style.display = 'block';
+            warning.textContent =
+                `⚠️ Pricing depends on the selected model. "${modelId}" may incur charges on your ` +
+                'OpenRouter account. Pick a 🟢 FREE model above if you intend to stay on the free tier.';
+        } else {
+            warning.style.display = 'none';
+        }
+    }
+}
+
+function renderOpenRouterSetup() {
+    const or = state.openrouter;
+    const badge = document.getElementById('or-status-badge');
+    const help = document.getElementById('or-help');
+    if (badge) {
+        badge.className = `badge ${OR_STATUS_BADGE[or.status] || 'badge-warning'}`;
+        badge.textContent = OR_STATUS_LABELS[or.status] || or.status.toUpperCase();
+    }
+    if (help) {
+        const parts = [or.message || OR_HELP_DEFAULTS[or.status] || ''];
+        if (or.catalogueCount) {
+            parts.push(`${or.catalogueCount} models in the live catalogue.`);
+        }
+        help.textContent = parts.filter(Boolean).join(' ');
+    }
+    const keyInput = document.getElementById('or-key');
+    if (keyInput && keyInput.value !== (or.key || '')) keyInput.value = or.key || '';
+    updateOpenRouterModelNote();
+}
+
+const OR_HELP_DEFAULTS = {
+    not_configured: 'No OpenRouter key in this session yet. Paste your key, then press Validate Connection. Nothing is scanned by validating — it only reads the model catalogue.',
+    validating: 'Checking your credential against the OpenRouter model catalogue…',
+    configured: 'Configured for this session. You can start assessments now; the key is requested again only after a page reload.',
+    invalid_credentials: 'OpenRouter rejected the key. Re-copy it from openrouter.ai/settings/keys (check for missing characters or a revoked key), then validate again.',
+    model_unavailable: 'The selected model is not in OpenRouter’s current catalogue — it may have been removed or renamed. Choose another model or enter a custom ID, then validate again.',
+    rate_limited: 'OpenRouter rate-limited the request. Wait a moment and validate again. Free models have their own, much lower daily limits.',
+    unreachable: 'OpenRouter could not be reached (network, timeout or server error). This is not necessarily a bad key — check connectivity and retry.',
+};
+
+/** Show/hide the panel based on the ACTIVE form's provider. */
+function updateOpenRouterSetupVisibility() {
+    const panel = document.getElementById('openrouter-setup');
+    if (!panel) return;
+    const show = activeAssessorProvider() === 'openrouter';
+    panel.style.display = show ? 'block' : 'none';
+    if (show) renderOpenRouterSetup();
+}
+
+async function validateOpenRouterSetup() {
+    const or = state.openrouter;
+    const keyInput = document.getElementById('or-key');
+    if (keyInput) or.key = keyInput.value || null;
+
+    if (!or.key) {
+        or.status = 'not_configured';
+        or.message = 'Paste your OpenRouter API key first.';
+        renderOpenRouterSetup();
+        return;
+    }
+
+    const modelSel = document.getElementById('or-model');
+    const custom = (document.getElementById('or-model-custom')?.value || '').trim();
+    const model = custom || (modelSel ? modelSel.value : null) || or.selectedModel;
+
+    or.status = 'validating';
+    or.message = OR_HELP_DEFAULTS.validating;
+    renderOpenRouterSetup();
+    setValidateButtonBusy(true);
+
+    try {
+        const res = await api.validateOpenRouter(model);
+        or.status = res.status;
+        or.message = res.message || '';
+        or.models = Array.isArray(res.models) ? res.models : [];
+        or.catalogueCount = res.catalogue_count || 0;
+        or.validatedModel = res.model || null;
+        or.validatedAt = Date.now();
+        if (custom && document.getElementById('or-model-custom')) {
+            document.getElementById('or-model-custom').value = '';
+        }
+        // Until the user picks a model explicitly, prefer a FREE one from
+        // the freshly-fetched catalogue. A paid model is never substituted
+        // implicitly — it only appears when the user chooses it.
+        if (!or.userSelectedModel) {
+            or.selectedModel = pickDefaultOpenRouterModel();
+        } else {
+            or.selectedModel = model;
+        }
+        syncModelSelectors();
+    } catch (err) {
+        // Network failure between THIS browser and OUR backend.
+        or.status = 'unreachable';
+        or.message = `Could not reach the application backend to validate: ${err.message}`;
+    } finally {
+        setValidateButtonBusy(false);
+        renderOpenRouterSetup();
+        updateOpenRouterSetupVisibility();
+    }
+}
+
+function setValidateButtonBusy(busy) {
+    const btn = document.getElementById('or-validate');
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.innerHTML = busy
+        ? '<span class="spinner" style="width:14px;height:14px;"></span> VALIDATING…'
+        : '🔌 Validate Connection';
+}
+
+/** Explicit "Continue / Use OpenRouter" — re-checks before allowing a run. */
+function useOpenRouter() {
+    const or = state.openrouter;
+    const keyInput = document.getElementById('or-key');
+    if (keyInput) or.key = keyInput.value || null;
+    if (!or.key) {
+        or.status = 'not_configured';
+        or.message = 'Enter your OpenRouter API key to continue.';
+        renderOpenRouterSetup();
+        return;
+    }
+    if (or.status !== 'configured') {
+        // Do not let a run start on an unvalidated credential — force the
+        // deliberate path: validate first, then continue.
+        validateOpenRouterSetup();
+        return;
+    }
+    renderOpenRouterSetup();
+}
+
+function forgetOpenRouterKey() {
+    clearOpenRouterKey();
+    const keyInput = document.getElementById('or-key');
+    if (keyInput) {
+        keyInput.value = '';
+        keyInput.type = 'password';
+    }
+    const toggle = document.getElementById('or-key-toggle');
+    if (toggle) { toggle.textContent = 'Show'; toggle.setAttribute('aria-pressed', 'false'); }
+    const custom = document.getElementById('or-model-custom');
+    if (custom) custom.value = '';
+    syncModelSelectors();
+    renderOpenRouterSetup();
+}
+
+function applyCustomOpenRouterModel() {
+    const input = document.getElementById('or-model-custom');
+    const value = (input && input.value || '').trim();
+    if (!value) return;
+    state.openrouter.selectedModel = value;
+    state.openrouter.userSelectedModel = value;
+    syncModelSelectors(value);
+    renderOpenRouterSetup();
+}
+
+/**
+ * Returns an error string when an OpenRouter run must NOT start, else null.
+ * Enforces the "validate before you run" rule for every form.
+ */
+function openRouterGateError() {
+    const or = state.openrouter;
+    if (!or.key) {
+        return 'OpenRouter is selected but no API key is set in this session. '
+            + 'Open the OpenRouter Setup panel, paste your key and press Validate Connection.';
+    }
+    if (or.status !== 'configured') {
+        const label = OR_STATUS_LABELS[or.status] || or.status;
+        return `OpenRouter is not ready (${label}). ${or.message || OR_HELP_DEFAULTS[or.status] || ''}`;
+    }
+    return null;
 }
 
 async function validateTargetUrl() {
@@ -886,6 +1428,31 @@ async function startAssessment() {
     const resultCard = document.getElementById('run-result');
     const resultContent = document.getElementById('run-result-content');
 
+    const mode = document.getElementById('assess-mode').value;
+    const scenario = document.getElementById('assess-scenario').value;
+    const assessorRaw = document.getElementById('assess-assessor').value;
+    // Backend schema expects "deterministic" | "llm".
+    const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
+    const provider = document.getElementById('assess-provider')?.value || 'ollama';
+    const maxAttempts = parseInt(document.getElementById('assess-max-attempts').value, 10);
+
+    // OpenRouter gate: never start on an unvalidated credential. Reveals the
+    // setup panel instead of firing a request that would fail at the client.
+    if (assessor === 'llm' && provider === 'openrouter') {
+        const gate = openRouterGateError();
+        if (gate) {
+            updateOpenRouterSetupVisibility();
+            renderOpenRouterSetup();
+            state.displayedRun = null;
+            resultCard.style.display = 'block';
+            resultContent.innerHTML =
+                `<div class="alert alert-warning"><strong>OpenRouter setup required.</strong> ${escapeHtml(gate)}</div>`;
+            document.getElementById('openrouter-setup')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('or-key')?.focus();
+            return;
+        }
+    }
+
     // FIX 6: RUNNING — hide any post-run bar, show the START control in its
     // explicit in-progress state; clear the previous inline output so the
     // in-flight run is never mixed with stale content.
@@ -898,15 +1465,8 @@ async function startAssessment() {
     btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> ASSESSMENT IN PROGRESS...';
 
     try {
-        const mode = document.getElementById('assess-mode').value;
-        const scenario = document.getElementById('assess-scenario').value;
-        const assessorRaw = document.getElementById('assess-assessor').value;
-        // Backend schema expects "deterministic" | "llm".
-        const assessor = assessorRaw === 'ai' ? 'llm' : assessorRaw;
-        const provider = document.getElementById('assess-provider')?.value || 'ollama';
         const assessorModel = document.getElementById('assess-model')?.value
             || (PROVIDER_MODELS[provider]?.[0]?.value ?? null);
-        const maxAttempts = parseInt(document.getElementById('assess-max-attempts').value, 10);
 
         const data = {
             scenario,
@@ -923,7 +1483,12 @@ async function startAssessment() {
             data.port = parseInt(document.getElementById('assess-port').value, 10);
         }
 
-        const result = await api.startRun(data);
+        // The runtime key rides in a HEADER — never in the JSON body, so it
+        // cannot reach a stored, logged or replayed request payload. It is
+        // attached only when OpenRouter is actually the selected provider.
+        const headers = (provider === 'openrouter') ? openrouterKeyHeaders() : null;
+
+        const result = await api.startRun(data, headers);
         state.currentRun = result.run_id;
         // FIX 5: only the new result is displayed, bound to its run_id.
         state.displayedRun = result.run_id;
@@ -959,6 +1524,25 @@ async function startWebAssessment() {
     const btn = document.getElementById('btn-run-web');
     const resultCard = document.getElementById('run-result');
     const resultContent = document.getElementById('run-result-content');
+
+    // OpenRouter gate (same rule as the scenario form): reveal the setup
+    // panel and stop BEFORE the button enters its in-flight state.
+    const webAssessorRaw = document.getElementById('web-assessor').value;
+    const webProviderGate = document.getElementById('web-provider')?.value || 'ollama';
+    if ((webAssessorRaw === 'ai') && webProviderGate === 'openrouter') {
+        const gate = openRouterGateError();
+        if (gate) {
+            updateOpenRouterSetupVisibility();
+            renderOpenRouterSetup();
+            state.displayedRun = null;
+            resultCard.style.display = 'block';
+            resultContent.innerHTML =
+                `<div class="alert alert-warning"><strong>OpenRouter setup required.</strong> ${escapeHtml(gate)}</div>`;
+            document.getElementById('openrouter-setup')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('or-key')?.focus();
+            return;
+        }
+    }
 
     // FIX 6: hide any post-run bar and stale output; the in-flight run owns
     // the action area until the backend responds.
@@ -1042,7 +1626,9 @@ async function startWebAssessment() {
             if (el) el.textContent = `${((Date.now() - vaptStart) / 1000).toFixed(1)}s`;
         }, 500);
 
-        const result = await api.startRun(data);
+        // Runtime credential in a header only, and only for OpenRouter.
+        const webHeaders = (webProvider === 'openrouter') ? openrouterKeyHeaders() : null;
+        const result = await api.startRun(data, webHeaders);
         stopVaptTimer();
         state.currentRun = result.run_id;
         // FIX 5: only the new result is displayed, bound to its run_id.

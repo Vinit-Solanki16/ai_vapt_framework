@@ -6,7 +6,15 @@ from pydantic import BaseModel, Field
 
 
 class RunRequest(BaseModel):
-    """Request to start a new decision engine run."""
+    """Request to start a new decision engine run.
+
+    Security: the runtime OpenRouter credential is NOT carried in this body.
+    It arrives in the ``X-OpenRouter-API-Key`` request header and is read
+    directly off the FastAPI request, so a serialized request payload — which
+    may be logged, stored or replayed — never contains a secret.
+    ``assessor_api_key`` remains only for CLI/automation callers that
+    deliberately pass a key in-body; it is never persisted or echoed back.
+    """
     scenario: str = Field("failure_pivot", description="Scenario name")
     max_attempts: int = Field(2, ge=1, le=10, description="Max attempts per candidate before pivot")
     mode: Literal["simulation", "lab", "web"] = Field("simulation", description="Execution mode")
@@ -23,7 +31,9 @@ class RunRequest(BaseModel):
     assessor_api_key: Optional[str] = Field(
         None,
         description="Hosted-provider API key (openrouter/openai). Optional "
-        "for ollama. Never persisted or echoed back in responses.",
+        "for ollama. Prefer the X-OpenRouter-API-Key header instead: it keeps "
+        "the secret out of the request body. Never persisted or echoed back "
+        "in responses.",
     )
     assessor_model: Optional[str] = Field(
         None,
@@ -37,6 +47,45 @@ class RunRequest(BaseModel):
     target_url: Optional[str] = Field(None, description="Authorized web target URL (required for web assessments)")
     use_nmap: bool = Field(True, description="Run Nmap discovery for web assessments")
     use_nuclei: bool = Field(True, description="Run Nuclei scan for web assessments")
+
+
+class OpenRouterValidateRequest(BaseModel):
+    """Optional body for the OpenRouter credential check.
+
+    Carries the model to check for availability. Deliberately has NO API-key
+    field: the credential arrives in the ``X-OpenRouter-API-Key`` header.
+    """
+    model: Optional[str] = Field(
+        None,
+        description="Model ID to check against the live catalogue (optional).",
+    )
+
+
+class OpenRouterModelInfo(BaseModel):
+    """One catalogue entry, shaped for the selector (never contains a key)."""
+    id: str
+    name: str
+    free: bool
+    paid: bool = False
+    context_length: Optional[int] = None
+    pricing: dict = Field(default_factory=dict)
+
+
+class OpenRouterValidateResponse(BaseModel):
+    """Result of validating a runtime OpenRouter credential.
+
+    Never contains the key itself — only configuration state, an actionable
+    message, and catalogue data for the model selector.
+    """
+    status: Literal[
+        "not_configured", "validating", "configured", "invalid_credentials",
+        "model_unavailable", "rate_limited", "unreachable",
+    ]
+    message: str = ""
+    model: Optional[str] = None
+    model_available: Optional[bool] = None
+    catalogue_count: int = 0
+    models: List[OpenRouterModelInfo] = []
 
 
 class TargetValidateRequest(BaseModel):
