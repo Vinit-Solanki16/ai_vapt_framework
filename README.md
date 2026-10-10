@@ -117,6 +117,63 @@ export OPENROUTER_MODEL=vendor/custom-model  # optional override
 streamlit run frontend/app.py
 ```
 
+### Runtime key setup — configure OpenRouter from the GUI
+
+You do **not** have to create a Codespaces secret, edit `.env`, or restart
+either frontend. Both UIs accept the key at runtime:
+
+- **Web UI** — select `openrouter` as the provider; the *OpenRouter Setup*
+  panel appears with a masked key field, a model selector, and
+  **Validate Connection** / **Use OpenRouter** / **Forget Key**.
+- **Streamlit** — select `openrouter` in the sidebar; the same controls appear
+  under *OpenRouter Setup*.
+
+Validation issues a single **authenticated model-catalogue request**
+(`GET /api/v1/models/user`, falling back to `GET /api/v1/auth/key` +
+`GET /api/v1/models` when a non-management key is rejected with 403). It never
+sends a completion, so checking a credential costs nothing and cannot spend
+credit. The same round trip returns the live model catalogue, sorted
+free-first, so availability is never guessed.
+
+| Status | Meaning |
+|--------|---------|
+| `not_configured` | No key in this session yet |
+| `configured` | Validated for this session |
+| `invalid_credentials` | OpenRouter returned 401 (or the pasted key has stray whitespace) |
+| `model_unavailable` | The selected model is not in the current catalogue |
+| `rate_limited` | 429 — wait and retry |
+| `unreachable` | Network/timeout/server error — **not** a bad key |
+| `validating` | Transient, client-side |
+
+**Security properties**
+
+- The key is held **in memory only**: module/session scope in the web UI,
+  `st.session_state` in Streamlit. It is never written to
+  `localStorage` / `sessionStorage` / IndexedDB / cookies / the URL, never to
+  `.env`, never to `os.environ`, and never to a run record, report, health
+  response, event or log.
+- It travels **browser → your own backend → OpenRouter** as the
+  `X-OpenRouter-API-Key` request header — never inside the JSON body, so a
+  logged or replayed request payload contains no secret.
+- **Forget key** drops it from the session outright. A page reload starts a
+  fresh session, so the key is asked for again — by design.
+- A run will not start on an unvalidated credential: the setup panel is
+  revealed with an actionable message instead. Providers are never switched
+  silently.
+- No CORS, authentication or network-exposure behaviour was changed to make
+  this work.
+
+**Free models.** A model counts as free only when the catalogue's
+`pricing.prompt` and `pricing.completion` are both `"0"` — never inferred from
+a `:free` name suffix. Free entries are listed first and the default is
+`openrouter/free` (the Free Models Router) when present, otherwise the first
+free model. **A paid model is never selected implicitly**; picking one shows an
+explicit pricing warning. Free availability and quotas change without notice.
+
+`OPENROUTER_API_KEY` remains supported as a server-wide fallback for shared or
+headless deployments. When a session key is present it takes precedence for
+that run only.
+
 **Missing-key behaviour differs by provider — this difference is intentional.**
 
 - `openrouter` raises `RuntimeError` at construction time, naming the missing
