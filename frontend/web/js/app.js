@@ -82,6 +82,12 @@ const state = {
     scenarios: [],
     loading: false,
     openrouter: null,   // assigned below from createOpenRouterSession()
+    // Web-target authorization state. webValidation holds the last
+    // BACKEND /targets/validate response; webAckFor holds the exact
+    // "host:port" the user explicitly acknowledged via the checkbox
+    // (null otherwise — never set by validation itself).
+    webValidation: null,
+    webAckFor: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -750,14 +756,15 @@ async function renderNewAssessment(container) {
                     </div>
 
                     <div class="form-group" id="web-scope-ack-group" style="display:none;">
-                        <label class="form-label">Authorization Acknowledgement (external target)</label>
+                        <label class="form-label">Authorization Acknowledgement (required for external targets)</label>
                         <label style="display:block;font-size:0.9rem;">
                             <input type="checkbox" id="web-scope-ack">
                             I confirm that <span style="font-family:monospace;" id="web-scope-ack-target"></span>
-                            is a target I am authorized to assess, and that it is covered by the
-                            configured exact scope entry. This acknowledgement supplements — it never
-                            replaces — the backend allowlist.
+                            is an exact target I am personally authorized to assess, and that it is covered by
+                            the configured scope entry. This acknowledgement supplements — it never
+                            replaces — the backend allowlist, which is re-checked on every run.
                         </label>
+                        <p id="web-ack-gate-note" class="text-muted" style="font-size:0.75rem;margin-top:0.4rem;color:#e0a458;"></p>
                     </div>
 
                     <div class="form-group">
@@ -1039,6 +1046,30 @@ async function renderNewAssessment(container) {
         updateOpenRouterSetupVisibility();
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
+        // Editing the URL invalidates any previous acknowledgement: the
+        // checkbox is cleared immediately (input fires per keystroke) so a
+        // prior acknowledgement can never carry over to a new host:port.
+        document.getElementById('web-target-url').addEventListener('input', () => {
+            resetWebScopeAck();
+        });
+        // Acknowledgement is recorded ONLY by explicit checkbox interaction,
+        // and only for the exact host:port that was validated.
+        document.getElementById('web-scope-ack').addEventListener('change', function () {
+            if (!this.checked) {
+                state.webAckFor = null;
+            } else {
+                const v = state.webValidation;
+                const identity = webTargetIdentity(v);
+                if (v && v.authorized && (v.external_scope || v.acknowledgement_required) && identity) {
+                    state.webAckFor = identity;
+                } else {
+                    // No validated external target: never record an ack.
+                    this.checked = false;
+                    state.webAckFor = null;
+                }
+            }
+            updateWebRunGate();
+        });
 
         // FIX 5: fresh page shows no previous result; surface an explicit
         // link when a previous run exists in this session.
@@ -1446,6 +1477,54 @@ function renderWebScopeDetails(res, detailsEl, ackGroup, ackTarget) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// External-target acknowledgement state (explicit user interaction only).
+//
+// state.webAckFor holds the exact "host:port" the user explicitly
+// acknowledged via the checkbox. It is NEVER set by validation, never
+// carried over to a different hostname/port, and never auto-checked.
+// Revalidation of a different target always resets it to null.
+// ---------------------------------------------------------------------------
+
+// Identity of the currently validated web target ("host:port" or "").
+function webTargetIdentity(v) {
+    if (!v || !v.authorized || !v.target && !v.normalized_host) return '';
+    const host = v.normalized_host || (v.target && v.target.host) || '';
+    const port = v.port != null ? v.port : (v.target && v.target.port);
+    return host && port != null ? `${host}:${port}` : '';
+}
+
+// Clear any previous acknowledgement (checkbox + recorded identity).
+// Called on URL edits, failed validation and any target change so an
+// acknowledgement for one target can never silently cover another.
+function resetWebScopeAck() {
+    const ackBox = document.getElementById('web-scope-ack');
+    if (ackBox) ackBox.checked = false;
+    state.webAckFor = null;
+    updateWebRunGate();
+}
+
+// Enable/disable the web run button: blocked while an external target
+// requires acknowledgement that has not been explicitly given for THIS
+// exact host:port. Never auto-enables the acknowledgement itself.
+function updateWebRunGate() {
+    const btn = document.getElementById('btn-run-web');
+    if (!btn) return;
+    const v = state.webValidation;
+    const identity = webTargetIdentity(v);
+    const ackRequired = !!(v && v.authorized
+        && (v.external_scope || v.acknowledgement_required));
+    const ackGiven = !!(identity && state.webAckFor === identity);
+    const blocked = ackRequired && !ackGiven;
+    btn.disabled = blocked;
+    const note = document.getElementById('web-ack-gate-note');
+    if (note) {
+        note.textContent = blocked
+            ? `Assessment start is blocked until the authorization acknowledgement for ${identity} is checked.`
+            : '';
+    }
+}
+
 async function validateTargetUrl() {
     const input = document.getElementById('web-target-url');
     const authEl = document.getElementById('web-auth-status');
@@ -1461,6 +1540,7 @@ async function validateTargetUrl() {
         authEl.innerHTML = '<div class="badge badge-error">❌ REJECTED — URL required</div>';
         if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
         renderWebScopeDetails(null, detailsEl, ackGroup, ackTarget);
+        resetWebScopeAck();
         return null;
     }
 
@@ -1472,6 +1552,16 @@ async function validateTargetUrl() {
         // port authorization and resolved-address validation.
         const res = await api.validateTarget(url);
         state.webValidation = res;
+        // Any revalidation resets a previous acknowledgement UNLESS the
+        // user explicitly acknowledged this exact host:port before.
+        // Validation itself never acknowledges anything.
+        const identity = webTargetIdentity(res);
+        if (state.webAckFor && state.webAckFor !== identity) {
+            resetWebScopeAck();
+        }
+        if (!res.authorized) {
+            resetWebScopeAck();
+        }
         if (res.authorized && res.reachable) {
             const label = res.external_scope
                 ? '✅ AUTHORIZED EXTERNAL TARGET'
@@ -1489,6 +1579,7 @@ async function validateTargetUrl() {
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
         }
         renderWebScopeDetails(res, detailsEl, ackGroup, ackTarget);
+        updateWebRunGate();
         return res;
     } catch (err) {
         state.webValidation = null;
@@ -1496,6 +1587,7 @@ async function validateTargetUrl() {
             <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(err.message)}</p>`;
         if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
         renderWebScopeDetails(null, detailsEl, ackGroup, ackTarget);
+        resetWebScopeAck();
         return null;
     }
 }
@@ -1684,12 +1776,17 @@ async function startWebAssessment() {
         }
         // External targets require the explicit per-assessment acknowledgement
         // (supplements — never replaces — the backend allowlist, which is
-        // re-checked by the API on every run).
+        // re-checked by the API on every run). The acknowledgement is valid
+        // only when the checkbox is checked AND it was given for THIS exact
+        // freshly-validated host:port — never inherited from a prior target.
         const ackRequired = !!(pre.external_scope || pre.acknowledgement_required);
         const ackBox = document.getElementById('web-scope-ack');
-        if (ackRequired && !(ackBox && ackBox.checked)) {
+        const preIdentity = webTargetIdentity(pre);
+        const ackGiven = !!(ackBox && ackBox.checked
+            && state.webAckFor === preIdentity);
+        if (ackRequired && !ackGiven) {
             throw new Error(
-                `External target ${pre.normalized_host || ''}:${pre.port ?? ''} requires the `
+                `External target ${preIdentity} requires the `
                 + 'authorization acknowledgement: confirm the exact target is covered by your '
                 + 'authorization before starting.');
         }
@@ -1699,7 +1796,10 @@ async function startWebAssessment() {
             mode: 'web',
             assessment_type: 'web',
             target_url: targetUrl,
-            target_scope_acknowledged: ackRequired,
+            // Only true after the explicit checkbox interaction for this
+            // exact target; never set silently by validation or carried
+            // over from a previous hostname/port.
+            target_scope_acknowledged: ackGiven,
             use_nmap: useNmap,
             use_nuclei: useNuclei,
             assessor,

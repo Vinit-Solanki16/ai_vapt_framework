@@ -1117,10 +1117,15 @@ def show_new_assessment():
                     web_acknowledged = st.checkbox(
                         "I confirm this exact target is covered by my authorization",
                         value=False,
-                        help="Required for external targets. This acknowledgement "
-                             "supplements — it never replaces — the backend "
-                             "VAPT_AUTHORIZED_WEB_SCOPES allowlist, which is "
-                             "re-checked by the API on every run.",
+                        # Keyed by the exact scope entry so changing the
+                        # hostname/port produces a FRESH unchecked box —
+                        # an acknowledgement for one target can never carry
+                        # over to another. Revalidation never auto-acks.
+                        key=f"web_scope_ack::{t.scope_entry}",
+                        help=f"Required before assessing {t.host}:{t.port}. This "
+                             "acknowledgement supplements — it never replaces — "
+                             "the backend VAPT_AUTHORIZED_WEB_SCOPES allowlist, "
+                             "which is re-checked by the API on every run.",
                     )
                 else:
                     web_acknowledged = False
