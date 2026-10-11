@@ -69,6 +69,44 @@ def _ai_outcome_text(ai: dict) -> str:
     return outcome
 
 
+def _authorization_rows(auth: dict) -> list[tuple[str, str]]:
+    """Ordered (label, value) rows for the web-target authorization record.
+
+    Renders the backend-captured authorization outcome: scope kind, exact
+    scope entry, authorized host:port, validated destination address and
+    the per-assessment acknowledgement state (external targets only).
+    Empty list when no authorization record was persisted.
+    """
+    auth = auth or {}
+    if not auth:
+        return []
+    rows: list[tuple[str, str]] = [
+        ("Authorization", auth.get("status") or "NOT RECORDED"),
+    ]
+    scope_kind = auth.get("scope_kind") or ""
+    scope_entry = auth.get("scope_entry") or ""
+    if scope_kind or scope_entry:
+        rows.append(("Scope", " — ".join(p for p in (scope_kind, scope_entry) if p)))
+    hostname = auth.get("hostname") or ""
+    if hostname:
+        scheme = auth.get("scheme") or ""
+        port = auth.get("port")
+        prefix = f"{scheme}://" if scheme else ""
+        rows.append(("Authorized host:port", f"{prefix}{hostname}:{port}"))
+    resolved = auth.get("resolved_host") or ""
+    if resolved:
+        rows.append(("Validated destination", resolved))
+    address_validation = auth.get("address_validation") or ""
+    if address_validation:
+        rows.append(("Address validation", address_validation))
+    if auth.get("acknowledgement_required"):
+        rows.append((
+            "Operator acknowledgement",
+            "RECORDED" if auth.get("acknowledged") else "MISSING",
+        ))
+    return rows
+
+
 def _render_web_provenance_html(prov: dict) -> str:
     """Render the web-assessment provenance section (HTML) or ''."""
     if not prov:
@@ -91,6 +129,13 @@ def _render_web_provenance_html(prov: dict) -> str:
     ai = prov.get("ai", {}) or {}
     ai_text = _ai_provenance_text(ai)
     ai_outcome = _ai_outcome_text(ai)
+    auth_rows = ""
+    for label, value in _authorization_rows(prov.get("authorization")):
+        auth_rows += f"""
+                    <div class="meta-item">
+                        <div class="label">{label}</div>
+                        <div class="value">{value}</div>
+                    </div>"""
     return f"""
             <!-- Web Assessment Provenance (Phase 32B: recorded data only) -->
             <div class="section">
@@ -100,6 +145,7 @@ def _render_web_provenance_html(prov: dict) -> str:
                         <div class="label">Target</div>
                         <div class="value">{prov.get('target_url', 'N/A')}</div>
                     </div>
+                    {auth_rows}
                     {rows}
                     <div class="meta-item">
                         <div class="label">AI</div>
@@ -129,6 +175,8 @@ def _render_web_provenance_markdown(prov: dict) -> list[str]:
     lines.append(f"| Field | Value |")
     lines.append(f"|-------|-------|")
     lines.append(f"| Target | {prov.get('target_url', 'N/A')} |")
+    for label, value in _authorization_rows(prov.get("authorization")):
+        lines.append(f"| {label} | {value} |")
     for scan in prov.get("scanners", []):
         detail = f" — {scan.get('detail')}" if scan.get("status") in ("FAILED", "NOT AVAILABLE") and scan.get("detail") else ""
         lines.append(
@@ -155,6 +203,8 @@ def _render_web_provenance_txt(prov: dict) -> list[str]:
         "-" * 70,
         f"Target:          {prov.get('target_url', 'N/A')}",
     ]
+    for label, value in _authorization_rows(prov.get("authorization")):
+        lines.append(f"{(label + ':'):<17}{value}")
     for scan in prov.get("scanners", []):
         detail = f" — {scan.get('detail')}" if scan.get("status") in ("FAILED", "NOT AVAILABLE") and scan.get("detail") else ""
         lines.append(

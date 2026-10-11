@@ -89,6 +89,7 @@ def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None)
         target_url=req.target_url,
         use_nmap=req.use_nmap,
         use_nuclei=req.use_nuclei,
+        target_scope_acknowledged=req.target_scope_acknowledged,
     )
 
     job_manager.update(run_id, status="running")
@@ -143,6 +144,23 @@ def start_run(
         validation = validate_web_target(req.target_url or "")
         if not validation.authorized:
             raise HTTPException(status_code=400, detail=f"Target not authorized: {validation.reason}")
+        # External (non-local) targets additionally require the explicit
+        # per-assessment acknowledgement. It supplements the configured
+        # allowlist — it can never authorize a target on its own.
+        if (
+            validation.target is not None
+            and validation.target.external
+            and not req.target_scope_acknowledged
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"External target {validation.target.host}:{validation.target.port} "
+                    "requires target_scope_acknowledged=true: confirm that this exact "
+                    "target is covered by your authorization before starting the "
+                    "assessment."
+                ),
+            )
 
     runtime_key = _runtime_key(x_openrouter_api_key)
 
@@ -163,6 +181,7 @@ def start_run(
         target_url=req.target_url,
         use_nmap=req.use_nmap,
         use_nuclei=req.use_nuclei,
+        target_scope_acknowledged=req.target_scope_acknowledged,
     )
 
     # Run the canonical workflow
@@ -283,8 +302,12 @@ def list_runs(limit: int = 100):
 def validate_target(req: TargetValidateRequest):
     """Preflight an authorized web target (authorization + reachability).
 
-    Performs NO scanning — only URL validation and a single safe
-    connectivity probe. Used by the GUI authorization indicator.
+    Performs NO scanning — only URL validation, DNS/address validation and
+    a single safe connectivity probe against the validated destination.
+    Used by the GUI authorization indicator. The response reports hostname
+    authorization, port authorization, resolved-destination validation and
+    configured-scope membership separately so the UI never shows a
+    misleading "authorized" state.
     """
     from vapt_platform.web_target import preflight_web_target, validate_web_target
 
@@ -297,9 +320,15 @@ def validate_target(req: TargetValidateRequest):
             reachable=False,
             target_url=(req.target_url or "").strip(),
             detail=validation.reason,
+            in_scope=False,
+            scope_kind=None,
+            external_scope=None,
+            acknowledgement_required=False,
+            address_validation="NOT VALIDATED",
         )
 
     preflight = preflight_web_target(req.target_url)
+    target = validation.target
     return TargetValidateResponse(
         authorized=True,
         authorization_status=preflight["authorization_status"],
@@ -310,19 +339,37 @@ def validate_target(req: TargetValidateRequest):
         port=preflight["port"],
         http_status=preflight["http_status"],
         detail=preflight["detail"],
+        scheme=target.scheme,
+        hostname=target.host,
+        normalized_host=target.host,
+        in_scope=True,
+        scope_kind=target.scope_kind,
+        scope_entry=target.scope_entry,
+        external_scope=target.external,
+        acknowledgement_required=bool(target.external),
+        address_validation=preflight.get("address_validation", ""),
+        resolved_ips=list(target.resolved_ips),
+        redirect=preflight.get("redirect"),
     )
 
 
 @app.get("/scanners/status")
 def get_scanner_status():
-    """Report scanner executable availability (Nmap/Nuclei)."""
+    """Report scanner executable availability (Nmap/Nuclei) + web scope."""
     from vapt_platform import scanner_service
-    from vapt_platform.web_target import AUTHORIZED_WEB_HOSTS, AUTHORIZED_WEB_PORTS
+    from vapt_platform.web_target import (
+        AUTHORIZED_WEB_HOSTS,
+        AUTHORIZED_WEB_PORTS,
+        SCOPE_ENV_VAR,
+        authorized_external_scope_strings,
+    )
 
     return {
         **scanner_service.scanner_status(),
         "authorized_hosts": sorted(AUTHORIZED_WEB_HOSTS),
         "authorized_ports": sorted(AUTHORIZED_WEB_PORTS),
+        "authorized_external_scopes": authorized_external_scope_strings(),
+        "scope_env_var": SCOPE_ENV_VAR,
     }
 
 

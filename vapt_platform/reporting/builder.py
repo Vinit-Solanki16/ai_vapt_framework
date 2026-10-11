@@ -169,6 +169,9 @@ def _build_web_provenance(
     if not web:
         return {}
     assessment = assessment or {}
+    # Authorization record captured at validation time (scheme/host/port,
+    # exact scope entry, validated destination, acknowledgement state).
+    auth = web.get("authorization") or {}
 
     def _scanner(name: str, raw: Any) -> dict[str, Any]:
         raw = raw or {}
@@ -211,6 +214,19 @@ def _build_web_provenance(
         first_error = redact(first_error)
     return {
         "target_url": web.get("target_url", ""),
+        "authorization": {
+            "status": auth.get("status", "NOT RECORDED"),
+            "scope_kind": auth.get("scope_kind", ""),
+            "scope_entry": auth.get("scope_entry", ""),
+            "scheme": auth.get("scheme", ""),
+            "hostname": auth.get("hostname", ""),
+            "port": auth.get("port"),
+            "resolved_host": auth.get("resolved_host", ""),
+            "resolved_ips": list(auth.get("resolved_ips", []) or []),
+            "address_validation": auth.get("address_validation", ""),
+            "acknowledgement_required": auth.get("acknowledgement_required", False),
+            "acknowledged": auth.get("acknowledged", False),
+        },
         "scanners": [
             _scanner("Nmap", web.get("nmap")),
             _scanner("Nuclei", web.get("nuclei")),

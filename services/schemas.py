@@ -45,6 +45,13 @@ class RunRequest(BaseModel):
     scan_file: Optional[str] = Field(None, description="Path to scan file (overrides scenario)")
     assessment_type: Literal["scenario", "web"] = Field("scenario", description="Assessment type")
     target_url: Optional[str] = Field(None, description="Authorized web target URL (required for web assessments)")
+    target_scope_acknowledged: bool = Field(
+        False,
+        description="Explicit per-assessment acknowledgement that an EXTERNAL "
+        "(non-local) web target is covered by the operator's authorization. "
+        "Required for external VAPT_AUTHORIZED_WEB_SCOPES targets. Supplements "
+        "— never replaces — the configured backend allowlist.",
+    )
     use_nmap: bool = Field(True, description="Run Nmap discovery for web assessments")
     use_nuclei: bool = Field(True, description="Run Nuclei scan for web assessments")
 
@@ -94,7 +101,12 @@ class TargetValidateRequest(BaseModel):
 
 
 class TargetValidateResponse(BaseModel):
-    """Preflight result for a web target."""
+    """Preflight result for a web target.
+
+    Populated only after the BACKEND has completed hostname authorization,
+    port authorization and resolved-address validation — the UI never
+    shows an authorized state that the backend has not confirmed.
+    """
     authorized: bool
     authorization_status: str
     preflight_status: str
@@ -104,6 +116,18 @@ class TargetValidateResponse(BaseModel):
     port: Optional[int] = None
     http_status: Optional[int] = None
     detail: str = ""
+    # Scope transparency (configurable authorized web scopes).
+    scheme: Optional[str] = None
+    hostname: Optional[str] = None
+    normalized_host: Optional[str] = None
+    in_scope: Optional[bool] = None
+    scope_kind: Optional[str] = None
+    scope_entry: Optional[str] = None
+    external_scope: Optional[bool] = None
+    acknowledgement_required: Optional[bool] = None
+    address_validation: Optional[str] = None
+    resolved_ips: List[str] = Field(default_factory=list)
+    redirect: Optional[dict] = None
 
 
 class RunResponse(BaseModel):

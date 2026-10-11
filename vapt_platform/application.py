@@ -78,6 +78,11 @@ class VAPTRequest:
             e.g., "http://127.0.0.1:9191"). Backend-validated, fail closed.
         use_nmap: Run Nmap discovery for web assessments (default: True)
         use_nuclei: Run Nuclei scan for web assessments (default: True)
+        target_scope_acknowledged: Explicit per-assessment acknowledgement that
+            an EXTERNAL (non-local) web target is covered by the operator's
+            authorization. Required for external scope targets, never a
+            substitute for the configured VAPT_AUTHORIZED_WEB_SCOPES
+            allowlist (which stays authoritative).
     """
     scenario: str = "failure_pivot"
     mode: str = "simulation"
@@ -94,6 +99,7 @@ class VAPTRequest:
     target_url: Optional[str] = None
     use_nmap: bool = True
     use_nuclei: bool = True
+    target_scope_acknowledged: bool = False
 
 
 @dataclass
@@ -591,6 +597,7 @@ class VAPTApplication:
             split_findings,
         )
         from vapt_platform.web_target import (
+            SCOPE_ENV_VAR,
             WebTargetAuthorizationError,
             parse_web_target,
             preflight_web_target,
@@ -605,6 +612,20 @@ class VAPTApplication:
 
         # --- Phase: authorization + scope (fail closed) ---
         target = parse_web_target(request.target_url)
+
+        # External targets require an explicit per-assessment acknowledgement
+        # that this EXACT host:port is covered by the operator's own
+        # authorization. The acknowledgement supplements — never replaces —
+        # the configured allowlist, which was enforced by parse_web_target.
+        acknowledged = bool(getattr(request, "target_scope_acknowledged", False))
+        if target.external and not acknowledged:
+            raise WebTargetAuthorizationError(
+                f"External target {target.host}:{target.port} requires an "
+                "explicit per-assessment acknowledgement that this exact "
+                "target is covered by your authorization "
+                "(target_scope_acknowledged). This supplements — never "
+                f"replaces — the {SCOPE_ENV_VAR} allowlist."
+            )
 
         # Seed request context so reports/history show the real target.
         request.target = target.host
@@ -657,6 +678,28 @@ class VAPTApplication:
         request._web_context = {  # type: ignore[attr-defined]
             "target": target.to_dict(),
             "target_url": target.normalized_url,
+            # Explicit authorization record: scheme/host/port, the exact
+            # scope entry that authorized the target, the validated
+            # destination address(es) and the per-assessment acknowledgement
+            # state. No secrets are ever included here.
+            "authorization": {
+                "status": "AUTHORIZED",
+                "scope_kind": target.scope_kind,
+                "scope_entry": target.scope_entry,
+                "external": target.external,
+                "scheme": target.scheme,
+                "hostname": target.host,
+                "port": target.port,
+                "resolved_host": target.resolved_host,
+                "resolved_ips": list(target.resolved_ips),
+                "address_validation": (
+                    "LOOPBACK — every resolved address is loopback"
+                    if not target.external
+                    else "PUBLIC — every resolved address is a public destination"
+                ),
+                "acknowledgement_required": bool(target.external),
+                "acknowledged": acknowledged,
+            },
             "preflight": preflight,
             "nmap": nmap_result.to_dict() if nmap_result else {
                 "scanner": "nmap", "status": "SKIPPED",

@@ -636,7 +636,7 @@ async function renderNewAssessment(container) {
                     <label class="form-label">Assessment Type</label>
                     <select class="form-select" id="assess-type">
                         <option value="scenario">Research Scenario (offline / Docker demo)</option>
-                        <option value="web">Web Application (authorized local URL target)</option>
+                        <option value="web">Web Application (configured authorized scope)</option>
                     </select>
                     <p class="text-muted" id="assess-type-hint" style="font-size:0.8rem;margin-top:0.5rem;">
                         Run a frozen research scenario (GAP-1 / GAP-2 demos preserved).
@@ -724,7 +724,7 @@ async function renderNewAssessment(container) {
             <div class="grid-2">
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">Web Target (authorized local only)</span>
+                        <span class="card-title">Web Target (configured authorized scope)</span>
                     </div>
 
                     <div class="form-group">
@@ -736,13 +736,28 @@ async function renderNewAssessment(container) {
                             <button class="btn btn-secondary" id="btn-validate-url" onclick="validateTargetUrl()">Validate</button>
                         </div>
                         <p class="text-muted" style="font-size:0.75rem;margin-top:0.5rem;">
-                            Only explicitly authorized local targets are accepted. Backend authorization is authoritative.
+                            Only targets inside the configured scope are accepted: the local loopback
+                            policy (127.0.0.1 / localhost) plus exact host:port entries in
+                            <span style="font-family:monospace;">VAPT_AUTHORIZED_WEB_SCOPES</span>.
+                            Backend authorization is authoritative.
                         </p>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Authorization</label>
                         <div id="web-auth-status"><div class="badge badge-warning">NOT VALIDATED</div></div>
+                        <div id="web-scope-details" style="margin-top:0.5rem;"></div>
+                    </div>
+
+                    <div class="form-group" id="web-scope-ack-group" style="display:none;">
+                        <label class="form-label">Authorization Acknowledgement (external target)</label>
+                        <label style="display:block;font-size:0.9rem;">
+                            <input type="checkbox" id="web-scope-ack">
+                            I confirm that <span style="font-family:monospace;" id="web-scope-ack-target"></span>
+                            is a target I am authorized to assess, and that it is covered by the
+                            configured exact scope entry. This acknowledgement supplements — it never
+                            replaces — the backend allowlist.
+                        </label>
                     </div>
 
                     <div class="form-group">
@@ -900,7 +915,7 @@ async function renderNewAssessment(container) {
             hidePostRunActions();
             setRunButtonsEnabled(true);
             document.getElementById('assess-type-hint').textContent = isWeb
-                ? 'Real controlled assessment of an authorized local web target (Juice Shop demo: http://127.0.0.1:9191).'
+                ? 'Real controlled assessment of a web target inside the configured authorized scope (local demo default: http://127.0.0.1:9191; external targets require an exact VAPT_AUTHORIZED_WEB_SCOPES entry).'
                 : 'Run a frozen research scenario (GAP-1 / GAP-2 demos preserved).';
             if (isWeb) validateTargetUrl();
         });
@@ -1369,26 +1384,99 @@ function openRouterGateError() {
     return null;
 }
 
+// Render the backend-validated scope/authorization detail panel.
+// Every field shown here comes from the backend /targets/validate
+// response — the UI never fabricates an "authorized" state.
+function renderWebScopeDetails(res, detailsEl, ackGroup, ackTarget) {
+    if (!detailsEl) return;
+    if (!res) {
+        detailsEl.innerHTML = '';
+        if (ackGroup) ackGroup.style.display = 'none';
+        return;
+    }
+    if (!res.authorized) {
+        detailsEl.innerHTML = `
+            <div class="alert alert-error" style="font-size:0.8rem;">
+                <strong>OUT OF SCOPE.</strong>
+                ${escapeHtml(res.detail || 'The exact host and port are not in the configured scope.')}
+                <br><br>
+                <strong>Administrator:</strong> add the exact entry to
+                <span style="font-family:monospace;">VAPT_AUTHORIZED_WEB_SCOPES</span>
+                (comma-separated <span style="font-family:monospace;">host:port</span> values,
+                e.g. <span style="font-family:monospace;">pentest-ground.com:4280</span>) and restart
+                the backend. Local targets (127.0.0.1 / localhost) remain authorized by default;
+                arbitrary public hosts are never implicitly authorized.
+            </div>`;
+        if (ackGroup) ackGroup.style.display = 'none';
+        return;
+    }
+    const ips = (res.resolved_ips && res.resolved_ips.length)
+        ? res.resolved_ips.join(', ') : (res.resolved_host || 'N/A');
+    const redirectNote = res.redirect
+        ? `<tr><td>Redirect</td><td style="font-family:monospace;font-size:0.8rem;">${escapeHtml(res.redirect.note || 'not followed')}</td></tr>`
+        : '<tr><td>Redirects</td><td>Never followed by preflight or scanners</td></tr>';
+    detailsEl.innerHTML = `
+        <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Target URL</td>
+                <td style="font-family:monospace;">${escapeHtml(res.target_url || '')}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Normalized host</td>
+                <td style="font-family:monospace;">${escapeHtml(res.normalized_host || 'N/A')}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Port</td>
+                <td style="font-family:monospace;">${escapeHtml(String(res.port ?? 'N/A'))}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">In configured scope</td>
+                <td>${res.in_scope ? 'Yes' : 'No'}${res.scope_entry ? ` (entry: <span style="font-family:monospace;">${escapeHtml(res.scope_kind || '')} — ${escapeHtml(res.scope_entry)}</span>)` : ''}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Authorization</td>
+                <td>${escapeHtml(res.authorization_status || (res.authorized ? 'AUTHORIZED' : 'REJECTED'))}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Resolved destination</td>
+                <td style="font-family:monospace;">${escapeHtml(ips)}</td></tr>
+            <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Address validation</td>
+                <td>${escapeHtml(res.address_validation || 'N/A')}</td></tr>
+            ${redirectNote}
+        </table>`;
+    // External targets require the explicit per-assessment acknowledgement.
+    if (ackGroup) {
+        if (res.external_scope || res.acknowledgement_required) {
+            ackGroup.style.display = 'block';
+            if (ackTarget) {
+                ackTarget.textContent = `${res.normalized_host || ''}:${res.port ?? ''}`;
+            }
+        } else {
+            ackGroup.style.display = 'none';
+        }
+    }
+}
+
 async function validateTargetUrl() {
     const input = document.getElementById('web-target-url');
     const authEl = document.getElementById('web-auth-status');
     const safetyEl = document.getElementById('web-safety-status');
-    if (!input || !authEl) return;
+    const detailsEl = document.getElementById('web-scope-details');
+    const ackGroup = document.getElementById('web-scope-ack-group');
+    const ackTarget = document.getElementById('web-scope-ack-target');
+    if (!input || !authEl) return null;
 
+    state.webValidation = null;
     const url = input.value.trim();
     if (!url) {
         authEl.innerHTML = '<div class="badge badge-error">❌ REJECTED — URL required</div>';
         if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
-        return;
+        renderWebScopeDetails(null, detailsEl, ackGroup, ackTarget);
+        return null;
     }
 
     authEl.innerHTML = '<div class="badge badge-warning">VALIDATING...</div>';
     if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-warning">VALIDATING...</div>';
 
     try {
+        // Backend re-validates authoritatively: hostname authorization,
+        // port authorization and resolved-address validation.
         const res = await api.validateTarget(url);
+        state.webValidation = res;
         if (res.authorized && res.reachable) {
-            authEl.innerHTML = `<div class="badge badge-success">✅ AUTHORIZED LOCAL TARGET</div>
+            const label = res.external_scope
+                ? '✅ AUTHORIZED EXTERNAL TARGET'
+                : '✅ AUTHORIZED LOCAL TARGET';
+            authEl.innerHTML = `<div class="badge badge-success">${label}</div>
                 <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')} — resolved ${escapeHtml(res.resolved_host || '')}:${escapeHtml(String(res.port || ''))}</p>`;
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-success">AUTHORIZED</div>';
         } else if (res.authorized) {
@@ -1396,15 +1484,18 @@ async function validateTargetUrl() {
                 <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')}</p>`;
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-warning">AUTHORIZED / UNREACHABLE</div>';
         } else {
-            authEl.innerHTML = `<div class="badge badge-error">❌ REJECTED — TARGET NOT AUTHORIZED</div>
+            authEl.innerHTML = `<div class="badge badge-error">❌ REJECTED — TARGET OUT OF SCOPE</div>
                 <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')}</p>`;
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
         }
+        renderWebScopeDetails(res, detailsEl, ackGroup, ackTarget);
         return res;
     } catch (err) {
+        state.webValidation = null;
         authEl.innerHTML = `<div class="badge badge-error">❌ VALIDATION ERROR</div>
             <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(err.message)}</p>`;
         if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-error">REJECTED</div>';
+        renderWebScopeDetails(null, detailsEl, ackGroup, ackTarget);
         return null;
     }
 }
@@ -1583,10 +1674,24 @@ async function startWebAssessment() {
         btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> ASSESSMENT IN PROGRESS...';
         const pre = await validateTargetUrl();
         if (!pre || !pre.authorized) {
-            throw new Error('Target is not authorized. Resolve the authorization error before starting.');
+            throw new Error(
+                'Target is outside the configured authorized scope. The exact host and port '
+                + 'must be authorized (local policy or VAPT_AUTHORIZED_WEB_SCOPES) before starting. '
+                'See the validation panel for the administrator configuration instructions.');
         }
         if (!pre.reachable) {
             throw new Error('Target is not reachable. Scanners will not run against an unreachable target.');
+        }
+        // External targets require the explicit per-assessment acknowledgement
+        // (supplements — never replaces — the backend allowlist, which is
+        // re-checked by the API on every run).
+        const ackRequired = !!(pre.external_scope || pre.acknowledgement_required);
+        const ackBox = document.getElementById('web-scope-ack');
+        if (ackRequired && !(ackBox && ackBox.checked)) {
+            throw new Error(
+                `External target ${pre.normalized_host || ''}:${pre.port ?? ''} requires the `
+                + 'authorization acknowledgement: confirm the exact target is covered by your '
+                + 'authorization before starting.');
         }
 
         const data = {
@@ -1594,6 +1699,7 @@ async function startWebAssessment() {
             mode: 'web',
             assessment_type: 'web',
             target_url: targetUrl,
+            target_scope_acknowledged: ackRequired,
             use_nmap: useNmap,
             use_nuclei: useNuclei,
             assessor,
@@ -3017,7 +3123,7 @@ async function renderSystemHealth(container) {
             { name: 'Scanner Registry', status: 'READY', detail: 'Nmap, Nuclei, Custom' },
             { name: 'Nmap', status: health.nmap || 'UNKNOWN', detail: 'Local discovery (authorized targets only)' },
             { name: 'Nuclei', status: health.nuclei || 'UNKNOWN', detail: 'Web vuln scan (graceful if not installed)' },
-            { name: 'Web Targets', status: 'READY', detail: 'Loopback only: 127.0.0.1, localhost :9191' },
+            { name: 'Web Targets', status: 'READY', detail: 'Local policy + exact VAPT_AUTHORIZED_WEB_SCOPES entries' },
             { name: 'Ollama', status: health.ollama, detail: health.ollama_model || 'Not configured' },
             {
                 name: 'OpenRouter',
@@ -3088,7 +3194,17 @@ async function renderSystemHealth(container) {
 
 async function renderConfiguration(container) {
     try {
-        const health = await api.getSystemHealth().catch(() => null);
+        const [health, scanners] = await Promise.all([
+            api.getSystemHealth().catch(() => null),
+            api.getScannerStatus().catch(() => null),
+        ]);
+
+        const extScopes = (scanners && scanners.authorized_external_scopes)
+            ? scanners.authorized_external_scopes : [];
+        const scopeVar = (scanners && scanners.scope_env_var) || 'VAPT_AUTHORIZED_WEB_SCOPES';
+        const extScopeHtml = extScopes.length
+            ? extScopes.map(s => `${escapeHtml(s)}<br>`).join('')
+            : '<span style="color:#9aa4b2;">(none configured — local-only default)</span>';
 
         container.innerHTML = `
             <div class="page-header">
@@ -3102,13 +3218,25 @@ async function renderConfiguration(container) {
                         <span class="card-title">Safety Configuration</span>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Target Allowlist</label>
+                        <label class="form-label">Lab Target Allowlist</label>
                         <div style="background:var(--bg-primary);padding:0.75rem;border-radius:4px;font-family:monospace;font-size:0.85rem;">
                             127.0.0.1<br>
                             172.28.0.2
                         </div>
                         <p class="text-muted" style="font-size:0.75rem;margin-top:0.5rem;">
                             Only allowlisted targets can be assessed. This is enforced by the backend SafetyGate.
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Authorized Web Target Scope</label>
+                        <div style="background:var(--bg-primary);padding:0.75rem;border-radius:4px;font-family:monospace;font-size:0.85rem;">
+                            Local policy: 127.0.0.1, localhost (port 9191)<br>
+                            ${escapeHtml(scopeVar)}:<br>${extScopeHtml}
+                        </div>
+                        <p class="text-muted" style="font-size:0.75rem;margin-top:0.5rem;">
+                            External web targets are authorized only through exact comma-separated
+                            host:port entries in <span style="font-family:monospace;">${escapeHtml(scopeVar)}</span>.
+                            Empty configuration = local-only. No wildcards, no arbitrary public hosts.
                         </p>
                     </div>
                     <div class="form-group">

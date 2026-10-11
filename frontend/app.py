@@ -977,11 +977,14 @@ def show_new_assessment():
         # Execution mode
         mode = st.radio(
             "Execution Mode",
-            ["Simulation", "Docker Lab", "Loopback"],
-            help="Simulation = ground-truth labels | Docker Lab = real HTTP to emulator | Loopback = local",
+            ["Simulation", "Docker Lab", "Loopback", "Web Application"],
+            help="Simulation = ground-truth labels | Docker Lab = real HTTP to emulator "
+                 "| Loopback = local | Web Application = URL target inside the configured "
+                 "authorized scope (exact host:port)",
         )
 
         # Target configuration
+        web_url = None
         if mode == "Docker Lab":
             target = st.selectbox(
                 "Target",
@@ -994,6 +997,20 @@ def show_new_assessment():
             target = st.selectbox("Target", ["127.0.0.1"])
             port = st.number_input("Port", value=8080, min_value=1, max_value=65535)
             path = st.text_input("Path", value="/vuln")
+        elif mode == "Web Application":
+            # Named "web_url" (not "target") so the field stays a free-text URL
+            # input; the backend re-validates authorization on every run.
+            web_url = st.text_input(
+                "Web application URL",
+                value="http://127.0.0.1:9191",
+                help="Only targets inside the configured authorized scope are accepted: "
+                     "the local loopback policy (127.0.0.1 / localhost) plus exact "
+                     "host:port entries in VAPT_AUTHORIZED_WEB_SCOPES. "
+                     "Backend authorization is authoritative.",
+            )
+            target = None
+            port = 8080
+            path = "/vuln"
         else:
             target = None
             port = 8080
@@ -1071,6 +1088,61 @@ def show_new_assessment():
 
         st.markdown("---")
 
+        # Web target validation — backend authorization is authoritative.
+        # Nothing here can mark a target "authorized" without validate_web_target.
+        web_validation = None
+        web_acknowledged = False
+        web_ok = True
+        if mode == "Web Application":
+            st.markdown('<div class="nav-label">Web Target Validation</div>',
+                        unsafe_allow_html=True)
+            try:
+                from vapt_platform.web_target import validate_web_target
+                web_validation = validate_web_target(web_url or "")
+            except Exception as exc:  # configuration error => fail closed
+                web_validation = None
+                st.error(f"Scope validation failed: {exc}")
+
+            if web_validation is not None and web_validation.authorized and web_validation.target:
+                t = web_validation.target
+                st.markdown('<div class="evidence-local" style="padding:0.5rem;">'
+                            '✅ AUTHORIZED TARGET<br/>'
+                            f'<small>Scope: {t.scope_kind} — {t.scope_entry}</small></div>',
+                            unsafe_allow_html=True)
+                st.caption(
+                    f"Normalized: {t.host}:{t.port} | Resolved: {t.resolved_host} | "
+                    f"Addresses: {', '.join(t.resolved_ips) or 'N/A'}"
+                )
+                if t.external:
+                    web_acknowledged = st.checkbox(
+                        "I confirm this exact target is covered by my authorization",
+                        value=False,
+                        help="Required for external targets. This acknowledgement "
+                             "supplements — it never replaces — the backend "
+                             "VAPT_AUTHORIZED_WEB_SCOPES allowlist, which is "
+                             "re-checked by the API on every run.",
+                    )
+                else:
+                    web_acknowledged = False
+            else:
+                web_ok = False
+                reason = (web_validation.reason if web_validation is not None
+                          else "scope configuration error")
+                st.markdown('<div class="evidence-simulated" style="padding:0.5rem;">'
+                            '❌ OUT OF SCOPE — ASSESSMENT BLOCKED</div>',
+                            unsafe_allow_html=True)
+                st.error(f"{reason} — the exact host and port are not in the "
+                         "configured authorized scope.")
+                st.caption(
+                    "Administrator: add an exact entry to "
+                    "VAPT_AUTHORIZED_WEB_SCOPES (comma-separated host:port, e.g. "
+                    "pentest-ground.com:4280) and restart the backend. Local targets "
+                    "(127.0.0.1 / localhost) remain authorized by default; arbitrary "
+                    "public hosts are never implicitly authorized."
+                )
+
+        st.markdown("---")
+
         # Safety status
         st.markdown('<div class="nav-label">Safety Status</div>', unsafe_allow_html=True)
         if mode == "Docker Lab":
@@ -1083,6 +1155,19 @@ def show_new_assessment():
                        '🔵 LOOPBACK'
                        '<br/><small>Target: 127.0.0.1</small></div>',
                        unsafe_allow_html=True)
+        elif mode == "Web Application":
+            if web_ok:
+                _scope_kind = web_validation.target.scope_kind.upper()
+                st.markdown(f'<div class="evidence-local" style="padding:0.5rem;">'
+                            f'✅ WEB TARGET — SCOPE {_scope_kind}'
+                            f'<br/><small>{web_validation.target.host}:'
+                            f'{web_validation.target.port}</small></div>',
+                            unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="evidence-simulated" style="padding:0.5rem;">'
+                            '⛔ OUT OF SCOPE'
+                            '<br/><small>Assessment blocked</small></div>',
+                            unsafe_allow_html=True)
         else:
             st.markdown('<div class="evidence-simulated" style="padding:0.5rem;">'
                        '🟡 SIMULATION'
@@ -1092,22 +1177,37 @@ def show_new_assessment():
         st.markdown("---")
 
         # Run button
-        run_clicked = st.button("🚀 Run Assessment", type="primary", use_container_width=True)
+        run_clicked = st.button(
+            "🚀 Run Assessment", type="primary", use_container_width=True,
+            disabled=(mode == "Web Application" and not web_ok),
+        )
 
     # Main content area
     if run_clicked:
-        execute_assessment(
-            mode=mode,
-            target=target,
-            port=port,
-            path=path,
-            scenario_name=scenario_name,
-            assessor_mode=assessor_mode,
-            assessor_provider=assessor_provider,
-            max_attempts=max_attempts,
-            scan_file_obj=scan_file_obj,
-            assessor_model=assessor_model,
-        )
+        if mode == "Web Application" and not web_ok:
+            st.error("Target is outside the configured authorized scope. "
+                     "Assessment blocked — configure the exact host:port entry "
+                     "in VAPT_AUTHORIZED_WEB_SCOPES (administrator) and retry.")
+        elif mode == "Web Application" and web_validation.target.external \
+                and not web_acknowledged:
+            st.error("External target requires the per-assessment authorization "
+                     "acknowledgement. Confirm the exact target is covered by "
+                     "your authorization in the sidebar, then run again.")
+        else:
+            execute_assessment(
+                mode=mode,
+                target=target,
+                port=port,
+                path=path,
+                scenario_name=scenario_name,
+                assessor_mode=assessor_mode,
+                assessor_provider=assessor_provider,
+                max_attempts=max_attempts,
+                scan_file_obj=scan_file_obj,
+                assessor_model=assessor_model,
+                web_url=web_url,
+                web_acknowledged=web_acknowledged,
+            )
     else:
         # Welcome / info screen
         st.markdown('<div class="section-header">Quick Start</div>', unsafe_allow_html=True)
@@ -1139,6 +1239,8 @@ def execute_assessment(
     scan_file_obj,
     assessor_model: Optional[str] = None,
     assessor_provider: str = "ollama",
+    web_url: Optional[str] = None,
+    web_acknowledged: bool = False,
 ):
     """Execute the assessment and display results."""
     # Map mode string to internal mode
@@ -1146,6 +1248,7 @@ def execute_assessment(
         "Docker Lab": "lab",
         "Loopback": "lab",
         "Simulation": "simulation",
+        "Web Application": "web",
     }
     internal_mode = mode_map[mode]
 
@@ -1194,6 +1297,13 @@ def execute_assessment(
         assessor_model=assessor_model,
         max_attempts=max_attempts,
         scan_file=scan_file_path,
+        # Web Application mode: the URL is the target; the backend
+        # re-validates hostname/port/address scope on every run. The
+        # acknowledgement only applies to external scope entries and
+        # supplements (never replaces) the configured allowlist.
+        target_url=web_url if mode == "Web Application" else None,
+        target_scope_acknowledged=bool(web_acknowledged),
+        assessment_type="web" if mode == "Web Application" else "scenario",
     )
 
     # Explicit hosted provider -> require its key up front, with a clear

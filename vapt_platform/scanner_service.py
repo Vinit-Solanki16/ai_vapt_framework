@@ -1,14 +1,26 @@
 """Controlled scanner execution service for authorized web targets (Phase 32).
 
 Builds on the existing offline scanner adapters (vapt_platform/scanners.py)
-by adding guarded live execution for explicitly authorized LOCAL targets only.
+by adding guarded live execution for explicitly authorized targets only
+(local loopback policy + exact host:port entries in VAPT_AUTHORIZED_WEB_SCOPES).
 
 Safety rules:
     - Every entry point re-validates the target via web_target.parse_web_target
       (fail closed). No validation → no subprocess, ever.
+    - Resolution is re-checked immediately before dispatch and must still
+      match the validated address set; any change aborts with an explicit
+      UNSUPPORTED status (DNS-rebinding defense) instead of scanning.
     - No shell strings: subprocess argv lists only.
     - No user-controlled template/command input; fixed safe scan profiles.
-    - Nuclei absence is handled gracefully (status NOT AVAILABLE).
+    - Nmap scans ONLY the validated destination IP and the authorized port
+      (with -n: no DNS/neighbor discovery). No port ranges, no -p-, no
+      surrounding-range or virtual-host enumeration.
+    - Nuclei runs a bounded template subset against the single validated
+      base URL with redirects disabled (-dr) and fixed rate limits. No
+      brute force, fuzzing, verification/exploit execution or DAST flags.
+    - Nuclei/Nmap absence is handled gracefully (status NOT AVAILABLE).
+    - If a scanner cannot honor the validated scope, the result is an
+      explicit UNSUPPORTED/FAILED status — never a silent scope bypass.
 
 Provenance recorded for every scan: scanner, target, command metadata,
 start/end time, output path, exit code, finding count.
@@ -93,7 +105,7 @@ class ScanResult:
     output_path: str = ""
     exit_code: int = -1
     finding_count: int = 0
-    status: str = "UNKNOWN"  # COMPLETED | FAILED | NOT AVAILABLE | SKIPPED
+    status: str = "UNKNOWN"  # COMPLETED | FAILED | NOT AVAILABLE | SKIPPED | UNSUPPORTED
     detail: str = ""
     findings: list[Any] = field(default_factory=list)
 
@@ -129,6 +141,42 @@ def _ensure_output_dir(output_dir: Optional[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Pre-dispatch scope re-validation (DNS-rebinding / TOCTOU defense)
+# ---------------------------------------------------------------------------
+
+def _revalidate_for_scan(target: Any) -> Optional[str]:
+    """Re-resolve and re-check the validated target just before dispatch.
+
+    Returns None when the resolution is still consistent with the target
+    that passed authorization. Returns an explicit failure reason
+    (fail closed) when resolution now fails, yields a different address
+    set (possible DNS rebinding), or resolves to an address that is not
+    permitted for the target's scope kind. Callers must NOT run a
+    scanner when a reason is returned.
+    """
+    from vapt_platform.web_target import (
+        WebTargetAuthorizationError,
+        resolve_addresses,
+        validate_resolved_addresses,
+    )
+
+    try:
+        ips = resolve_addresses(target.host)
+        validate_resolved_addresses(target.host, ips, target.scope_kind)
+    except WebTargetAuthorizationError as e:
+        return f"Target re-validation failed before scanner dispatch: {e}"
+
+    validated = set(target.resolved_ips or [target.resolved_host])
+    if set(ips) != validated:
+        return (
+            f"Resolution for {target.host!r} changed since authorization "
+            f"(validated {sorted(validated)}, now {sorted(set(ips))}); "
+            "refusing to scan (possible DNS rebinding)."
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Nmap web-target discovery
 # ---------------------------------------------------------------------------
 
@@ -146,6 +194,12 @@ def run_nmap_discovery(
 
     # Fail closed BEFORE any subprocess or output-dir side effects.
     target = parse_web_target(raw_url)
+    scope_error = _revalidate_for_scan(target)
+    if scope_error:
+        return ScanResult(
+            scanner="nmap", target=target.normalized_url, status="UNSUPPORTED",
+            detail=scope_error,
+        )
 
     status = nmap_status()
     if not status["available"]:
@@ -156,12 +210,15 @@ def run_nmap_discovery(
 
     out_dir = _ensure_output_dir(output_dir)
     out_path = os.path.join(out_dir, f"nmap_{target.host}_{target.port}.xml")
-    # Use the deterministically resolved loopback IP (127.0.0.1 for localhost)
-    # to avoid DNS in scans. resolved_host is guaranteed loopback by
-    # parse_web_target, so this never widens the target scope.
+    # Use the deterministically validated destination IP (127.0.0.1 for
+    # localhost, the pinned public address for external scopes) so the scan
+    # never re-resolves a user-controlled hostname. `-n` disables DNS
+    # resolution and neighbor discovery inside Nmap itself. Only the single
+    # authorized port is ever scanned — no ranges, no -p-, no CIDR.
     argv = [
         status["path"], "-Pn", "-sV",
         "-p", str(target.port),
+        "-n",
         "-oX", out_path,
         target.resolved_host,
     ]
@@ -218,19 +275,22 @@ def run_nmap_discovery(
 # Nuclei web vulnerability scan (controlled local-target profile)
 # ---------------------------------------------------------------------------
 
-#: Fixed safe Nuclei profile for the local training application.
+#: Fixed safe Nuclei profile for authorized web targets.
 #: No user-supplied templates or flags are accepted.
 #: Scope: technology fingerprinting + misconfiguration + exposure templates
 #: (bounded subset appropriate for a training app — NOT the full corpus).
-#: Throughput (-rate-limit/-c) is set for loopback-only targets, which is
-#: safe because parse_web_target() guarantees locality before execution.
+#: ``-dr`` disables redirect following so no request can leave the
+#: authorized host:port; throughput (-rate-limit/-c) stays bounded and the
+#: target is a single validated base URL (never a list, never a wildcard).
+#: No brute-force, fuzzing (-dast), verification/exploit (-V) or
+#: destructive flags are ever enabled.
 NUCLEI_TEMPLATE_SUBDIRS = (
     "http/technologies",
     "http/misconfiguration",
     "http/exposures",
     "http/exposed-panels",
 )
-NUCLEI_FIXED_FLAGS = ["-silent", "-timeout", "5", "-rate-limit", "150",
+NUCLEI_FIXED_FLAGS = ["-silent", "-dr", "-timeout", "5", "-rate-limit", "150",
                       "-c", "50", "-retries", "1"]
 
 
@@ -261,6 +321,12 @@ def run_nuclei_scan(
 
     # Fail closed BEFORE any subprocess or output-dir side effects.
     target = parse_web_target(raw_url)
+    scope_error = _revalidate_for_scan(target)
+    if scope_error:
+        return ScanResult(
+            scanner="nuclei", target=target.normalized_url, status="UNSUPPORTED",
+            detail=scope_error,
+        )
 
     status = nuclei_status()
     if not status["available"]:

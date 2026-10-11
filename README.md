@@ -100,6 +100,47 @@ uvicorn services.api:app --reload --port 8000
 python -m pytest tests/ -q
 ```
 
+## Authorized Web Target Scope
+
+Web assessments are authorized through an exact **host-and-port allowlist**
+enforced by the backend (`vapt_platform/web_target.py`). Arbitrary public
+URLs are **never** implicitly authorized.
+
+- **Local policy (always on):** `127.0.0.1` / `localhost` on the configured
+  local ports (`AI_VAPT_AUTHORIZED_WEB_PORTS`, default `9191`), resolved
+  addresses must all be loopback.
+- **External targets:** exact `host:port` entries in the environment
+  variable `VAPT_AUTHORIZED_WEB_SCOPES` (comma-separated). No wildcards,
+  no schemes/paths/queries/fragments/userinfo in the entries, port
+  mandatory (IPv6 bracketed: `[2001:db8::1]:443`). Empty/unset preserves
+  the local-only default.
+
+For this development environment, start the app with the single authorized
+Pentest-Ground scope like this:
+
+```bash
+VAPT_AUTHORIZED_WEB_SCOPES=pentest-ground.com:4280 streamlit run frontend/app.py
+```
+
+or for the API server:
+
+```bash
+VAPT_AUTHORIZED_WEB_SCOPES=pentest-ground.com:4280 uvicorn services.api:app --reload --port 8000
+```
+
+A target such as `https://pentest-ground.com:4280/` is then accepted by the
+validator (GUI preflight and backend agree); the same hostname on any other
+port, a lookalike hostname, or any other public host is rejected with an
+out-of-scope error explaining how to configure the exact entry. External
+targets additionally require a per-assessment acknowledgement in the UI —
+this supplements the backend allowlist and never replaces it. DNS is
+re-resolved and re-validated at scan time (public-only for external
+targets, mixed results fail closed), redirects outside the authorized
+host:port are never followed, and Nmap/Nuclei receive only the validated
+host and the selected port.
+
+See `.env.example` for the full format and validation rules.
+
 ## Assessment Providers
 
 Provider and model selection is explicit and lives in one place —
