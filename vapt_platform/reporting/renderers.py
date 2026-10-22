@@ -494,6 +494,10 @@ class HTMLRenderer(ReportRenderer):
                 <h2>Run Metadata</h2>
                 <div class="meta-grid">
                     <div class="meta-item">
+                        <div class="label">Run ID</div>
+                        <div class="value"><code>{report.metadata.run_id or 'N/A'}</code></div>
+                    </div>
+                    <div class="meta-item">
                         <div class="label">Scenario</div>
                         <div class="value">{report.metadata.scenario}</div>
                     </div>
@@ -720,6 +724,7 @@ class MarkdownRenderer(ReportRenderer):
         lines.append("")
         lines.append("| Field | Value |")
         lines.append("|-------|-------|")
+        lines.append(f"| Run ID | `{report.metadata.run_id or 'N/A'}` |")
         lines.append(f"| Scenario | {report.metadata.scenario} |")
         lines.append(f"| Execution Mode | {report.metadata.mode.upper()} |")
         lines.append(f"| Evidence Tier | {evidence_emoji} **{evidence_tier}** |")
@@ -888,6 +893,7 @@ class TXTRenderer(ReportRenderer):
         lines.append("=" * 70)
         lines.append("AI VAPT DECISION ENGINE — MENTOR PROTOTYPE — RUN REPORT")
         lines.append("=" * 70)
+        lines.append(f"Run ID:          {report.metadata.run_id or 'N/A'}")
         lines.append(f"Scenario:        {report.metadata.scenario}")
         lines.append(f"Execution Mode:  {report.metadata.mode.upper()}")
         lines.append(f"Evidence Tier:   {evidence_tier}")

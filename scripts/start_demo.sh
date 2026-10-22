@@ -67,7 +67,7 @@ else
         echo "✅ Docker lab containers are running"
     else
         echo "⚠️  Docker lab containers not running."
-        echo "   To start lab: cd lab && docker-compose up -d && cd .."
+        echo "   To start lab: ./scripts/start_lab.sh"
     fi
 fi
 
