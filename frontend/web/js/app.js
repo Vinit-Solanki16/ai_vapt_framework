@@ -1769,7 +1769,7 @@ async function startWebAssessment() {
             throw new Error(
                 'Target is outside the configured authorized scope. The exact host and port '
                 + 'must be authorized (local policy or VAPT_AUTHORIZED_WEB_SCOPES) before starting. '
-                'See the validation panel for the administrator configuration instructions.');
+                + 'See the validation panel for the administrator configuration instructions.');
         }
         if (!pre.reachable) {
             throw new Error('Target is not reachable. Scanners will not run against an unreachable target.');
@@ -3358,6 +3358,7 @@ async function renderConfiguration(container) {
                             ${escapeHtml(health?.ollama || 'UNKNOWN')}
                         </div>
                         ${health?.ollama_model ? `<p class="text-muted" style="font-size:0.75rem;margin-top:0.25rem;">Model: ${escapeHtml(health.ollama_model)}</p>` : ''}
+                        ${health?.ollama_error ? `<p class="text-muted" style="font-size:0.75rem;margin-top:0.25rem;color:#e0a458;">${escapeHtml(health.ollama_error)}</p>` : ''}
                     </div>
                     <div class="form-group">
                         <label class="form-label">Docker Status</label>

@@ -71,33 +71,51 @@ and dynamically pivots after a configurable failure threshold.
 
 ## Quick Start
 
+### Environment & Compatibility
+
+- **Primary Environments:** Linux (Ubuntu 20.04+), WSL2 (Windows Subsystem for Linux), and GitHub Codespaces.
+- **Windows Users:** Run within **WSL2**. Native Windows execution of scanner subprocesses and Unix paths is not supported.
+- **Python:** Python 3.10+ (tested through 3.14).
+
 ### Setup
 
 ```bash
-cd ~/ai_vapt_framework
-python3.10 -m venv venv
-source venv/bin/activate
+cd /workspaces/ai_vapt_framework  # or ~/ai_vapt_framework
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Optional: Start Ollama for AI assessment
+# Verify host scanner dependencies
+nmap --version          # Required for network discovery (sudo apt install nmap)
+nuclei -version         # Optional (gracefully degrades to NOT AVAILABLE if absent)
+
+# Optional: Local Ollama setup for offline AI mode
 ollama serve &
-ollama pull llama3.2:3b
+ollama pull llama3.2:3b  # Official thesis baseline model
+curl -s http://127.0.0.1:11434/api/tags  # Verify reachability
 ```
 
-### Run
+### Run Interfaces
 
 ```bash
-# 1) CLI — run a scenario
-python -m prototype.cli run --scenario failure_pivot --mode simulation
-
-# 2) Web dashboard
-streamlit run frontend/app.py
-
-# 3) API
+# 1) Dedicated Web Operations Console & REST API (Recommended)
 uvicorn services.api:app --reload --port 8000
+# Open http://localhost:8000 in your browser
 
-# 4) Run tests
-python -m pytest tests/ -q
+# 2) Streamlit Dashboard
+streamlit run frontend/app.py
+# Open http://localhost:8501 in your browser
+
+# 3) Command Line Interface (CLI)
+# Run simulation scenario
+python -m prototype.cli run --scenario failure_pivot --mode simulation
+# Run with local Ollama AI assessment
+python -m prototype.cli run --scenario failure_pivot --assessor llm --provider ollama
+# Run against an authorized web target
+python -m prototype.cli run --target-url http://127.0.0.1:9191
+
+# 4) Run the complete automated test suite
+python -m pytest -q
 ```
 
 ## Authorized Web Target Scope
@@ -303,8 +321,10 @@ ai_vapt_framework/
 
 ## Documentation
 
+- [Canonical Workflow Architecture](docs/project_management/CANONICAL_WORKFLOW_ARCHITECTURE.md)
+- [Comprehensive Mentor Demo Guide](docs/project_management/MENTOR_DEMO_COMPREHENSIVE_GUIDE.md)
 - [Current State Audit](docs/project_management/CURRENT_STATE_AUDIT.md)
 - [Research Core Protection](docs/project_management/RESEARCH_CORE_PROTECTION.md)
-- [Mentor Demo](docs/project_management/MENTOR_DEMO.md)
 - [Current Architecture](docs/architecture/CURRENT_ARCHITECTURE.md)
 - [Known Limitations](docs/project_management/KNOWN_LIMITATIONS.md)
+- [Portable Development Restore Guide](docs/PORTABLE_DEVELOPMENT_RESTORE.md)

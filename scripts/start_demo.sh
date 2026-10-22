@@ -8,14 +8,16 @@ echo "=========================================="
 echo "  AI-VAPT Operations Console — Startup"
 echo "=========================================="
 
-# Check if venv exists
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3.10 -m venv venv
+# Check if virtualenv exists
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+elif [ -d "venv" ]; then
+    source venv/bin/activate
+elif [ -z "$VIRTUAL_ENV" ]; then
+    echo "Creating virtual environment (.venv)..."
+    python3 -m venv .venv
+    source .venv/bin/activate
 fi
-
-# Activate venv
-source venv/bin/activate
 
 # Install dependencies if needed
 if ! python -c "import fastapi" 2>/dev/null; then
@@ -23,9 +25,24 @@ if ! python -c "import fastapi" 2>/dev/null; then
     pip install -r requirements.txt
 fi
 
+# Check Nmap
+if ! which nmap > /dev/null 2>&1; then
+    echo "⚠️  Nmap not found on PATH. Install with: sudo apt install nmap"
+else
+    echo "✅ Nmap is available ($(nmap --version | head -n 1))"
+fi
+
+# Check Nuclei
+if ! which nuclei > /dev/null 2>&1; then
+    echo "ℹ️  Nuclei not installed on PATH (optional: runs will proceed with Nmap discovery only)."
+else
+    echo "✅ Nuclei is available ($(nuclei -version 2>&1 | head -n 1))"
+fi
+
 # Check if Ollama is running
-if ! pgrep -x "ollama" > /dev/null; then
-    echo "⚠️  Ollama not running. AI assessment will use deterministic fallback."
+if ! curl -s http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+    echo "⚠️  Ollama HTTP API not reachable at http://127.0.0.1:11434."
+    echo "   Local AI assessment will use deterministic fallback."
     echo "   To start Ollama: ollama serve &"
 else
     echo "✅ Ollama is running"

@@ -267,6 +267,20 @@ def openrouter_status():
     }
 
 
+@app.get("/providers/ollama/status")
+def ollama_provider_status(model: Optional[str] = None):
+    """Report live Ollama reachability, installed models, and baseline status.
+
+    Probes the local Ollama HTTP API (GET /api/tags). Never claims offline
+    AI readiness when the service is stopped or the model is not installed.
+    """
+    from vapt_platform.model_config import default_model_for
+    from vapt_platform.ollama_service import probe_ollama
+
+    target_model = model or default_model_for("ollama")
+    return probe_ollama(target_model)
+
+
 @app.get("/runs")
 def list_runs(limit: int = 100):
     """List recent runs."""
@@ -566,19 +580,24 @@ def system_health():
         "research_core": "PROTECTED",
     }
 
-    # Check Ollama
+    # Check Ollama via live reachability and model probe
     try:
-        from core.exploit_assessor import get_llm
-        from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+        from vapt_platform.model_config import (
+            DEFAULT_OLLAMA_MODEL, EXPERIMENTAL_MODELS,
+        )
+        from vapt_platform.ollama_service import probe_ollama
 
-        llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
-        health_status["ollama"] = "READY"
+        probe = probe_ollama(DEFAULT_OLLAMA_MODEL)
+        health_status["ollama"] = probe["status"]
+        health_status["ollama_reachable"] = probe["reachable"]
+        health_status["ollama_model_installed"] = probe["model_installed"]
         health_status["ollama_model"] = DEFAULT_OLLAMA_MODEL
-        # Phase 33A: expose the experimental arm separately so the UI can
-        # offer it without ever making it the implicit default.
-        from vapt_platform.model_config import EXPERIMENTAL_MODELS
-
+        health_status["ollama_models"] = probe["installed_models"]
         health_status["ollama_experimental_models"] = list(EXPERIMENTAL_MODELS)
+        if probe.get("error"):
+            health_status["ollama_error"] = probe["error"]
+        if probe.get("actionable_message"):
+            health_status["ollama_actionable"] = probe["actionable_message"]
     except Exception as e:
         health_status["ollama"] = "UNAVAILABLE"
         health_status["ollama_error"] = _safe_error_detail(e)

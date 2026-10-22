@@ -484,14 +484,25 @@ def render_sidebar_nav() -> str:
 
         # Check Ollama
         try:
-            from core.exploit_assessor import get_llm
             from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+            from vapt_platform.ollama_service import probe_ollama
 
-            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
-            st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
-                       '<span class="status-ready">● Ollama: READY</span>'
-                       f'<br/><small style="color:#6a8aaa;">{DEFAULT_OLLAMA_MODEL}</small></div>',
-                       unsafe_allow_html=True)
+            probe = probe_ollama(DEFAULT_OLLAMA_MODEL)
+            if probe["status"] == "READY":
+                st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
+                           '<span class="status-ready">● Ollama: READY</span>'
+                           f'<br/><small style="color:#6a8aaa;">{DEFAULT_OLLAMA_MODEL}</small></div>',
+                           unsafe_allow_html=True)
+            elif probe["status"] == "MODEL_UNAVAILABLE":
+                st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
+                           '<span class="status-degraded">● Ollama: MODEL MISSING</span>'
+                           f'<br/><small style="color:#6a8aaa;">ollama pull {DEFAULT_OLLAMA_MODEL}</small></div>',
+                           unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
+                           '<span class="status-unavailable">● Ollama: UNAVAILABLE</span>'
+                           '<br/><small style="color:#6a8aaa;">ollama serve</small></div>',
+                           unsafe_allow_html=True)
         except Exception:
             st.markdown('<div class="metric-card" style="padding:0.4rem 0.6rem;">'
                        '<span class="status-degraded">● Ollama: UNAVAILABLE</span></div>',
@@ -743,14 +754,25 @@ def show_dashboard():
     with col3:
         # Check Ollama
         try:
-            from core.exploit_assessor import get_llm
             from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+            from vapt_platform.ollama_service import probe_ollama
 
-            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
-            st.markdown('<div class="metric-card">'
-                       '<div class="label">Ollama</div>'
-                       '<div class="value status-ready">READY</div></div>',
-                       unsafe_allow_html=True)
+            probe = probe_ollama(DEFAULT_OLLAMA_MODEL)
+            if probe["status"] == "READY":
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-ready">READY</div></div>',
+                           unsafe_allow_html=True)
+            elif probe["status"] == "MODEL_UNAVAILABLE":
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-degraded">MODEL MISSING</div></div>',
+                           unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-unavailable">UNAVAILABLE</div></div>',
+                           unsafe_allow_html=True)
         except Exception:
             st.markdown('<div class="metric-card">'
                        '<div class="label">Ollama</div>'
@@ -1857,15 +1879,28 @@ def show_system():
     with col3:
         # Check Ollama
         try:
-            from core.exploit_assessor import get_llm
             from vapt_platform.model_config import DEFAULT_OLLAMA_MODEL
+            from vapt_platform.ollama_service import probe_ollama
 
-            llm = get_llm(provider="ollama", model_name=DEFAULT_OLLAMA_MODEL)
-            st.markdown('<div class="metric-card">'
-                       '<div class="label">Ollama</div>'
-                       '<div class="value status-ready">READY</div>'
-                       f'<small>{DEFAULT_OLLAMA_MODEL}</small></div>',
-                       unsafe_allow_html=True)
+            probe = probe_ollama(DEFAULT_OLLAMA_MODEL)
+            if probe["status"] == "READY":
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-ready">READY</div>'
+                           f'<small>{DEFAULT_OLLAMA_MODEL}</small></div>',
+                           unsafe_allow_html=True)
+            elif probe["status"] == "MODEL_UNAVAILABLE":
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-degraded">MODEL MISSING</div>'
+                           f'<small>ollama pull {DEFAULT_OLLAMA_MODEL}</small></div>',
+                           unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="metric-card">'
+                           '<div class="label">Ollama</div>'
+                           '<div class="value status-unavailable">UNAVAILABLE</div>'
+                           '<small>ollama serve</small></div>',
+                           unsafe_allow_html=True)
         except Exception:
             st.markdown('<div class="metric-card">'
                        '<div class="label">Ollama</div>'

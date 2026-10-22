@@ -94,6 +94,10 @@ def _run_scenario(
     path: str = "/vuln",
     assessor: str = "deterministic",
     scan_file: str | None = None,
+    provider: str = "ollama",
+    model: str | None = None,
+    target_url: str | None = None,
+    target_scope_acknowledged: bool = False,
 ) -> dict:
     # Explicit allowlist validation for lab mode (fail-closed)
     if mode == "lab" and target:
@@ -104,16 +108,26 @@ def _run_scenario(
             print(f"ERROR: {exc}", file=sys.stderr)
             sys.exit(400)
 
+    # Web target assessment
+    assessment_type = "web" if target_url else "scenario"
+    effective_mode = "web" if target_url else mode
+    effective_scenario = "web_target" if target_url else scenario_name
+
     # Build unified request
     request = VAPTRequest(
-        scenario=scenario_name,
-        mode=mode,
+        scenario=effective_scenario,
+        mode=effective_mode,
         target=target,
         port=port,
         path=path,
         assessor_mode="ai" if assessor == "llm" else "deterministic",
+        assessor_provider=provider,
+        assessor_model=model,
         max_attempts=max_attempts,
         scan_file=scan_file,
+        assessment_type=assessment_type,
+        target_url=target_url,
+        target_scope_acknowledged=target_scope_acknowledged,
     )
 
     # Run canonical workflow
@@ -217,6 +231,28 @@ def main() -> None:
         default="/vuln",
         help="Lab target path (default: /vuln)",
     )
+    run_parser.add_argument(
+        "--provider",
+        choices=["ollama", "openrouter", "openai"],
+        default="ollama",
+        help="AI provider when assessor=llm: ollama (default, local), openrouter (hosted), or openai",
+    )
+    run_parser.add_argument(
+        "--model",
+        default=None,
+        help="Explicit model name override (e.g. llama3.2:3b, meta-llama/llama-3.3-70b-instruct)",
+    )
+    run_parser.add_argument(
+        "--target-url",
+        default=None,
+        help="Authorized web application target URL (e.g. http://127.0.0.1:9191)",
+    )
+    run_parser.add_argument(
+        "--target-scope-acknowledged",
+        action="store_true",
+        default=False,
+        help="Explicitly acknowledge authorization for an external web target",
+    )
 
     version_parser = sub.add_parser("version", help="Print version")
 
@@ -275,6 +311,10 @@ def main() -> None:
             path=args.path,
             assessor=args.assessor,
             scan_file=args.scan,
+            provider=args.provider,
+            model=args.model,
+            target_url=args.target_url,
+            target_scope_acknowledged=args.target_scope_acknowledged,
         )
 
     elif args.command == "resume":

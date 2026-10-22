@@ -84,6 +84,16 @@ def _try_ollama_assess(
     """Attempt to assess a candidate using Ollama."""
     model = resolve_model("ollama", model_name)
     try:
+        from vapt_platform.ollama_service import probe_ollama
+
+        probe = probe_ollama(model)
+        if not probe["available"]:
+            msg = probe["error"] or f"Ollama model {model} not available"
+            log.warning(f"Ollama not available: {msg}")
+            if errors is not None:
+                errors.append(msg)
+            return None
+
         from core.exploit_assessor import assess_exploit_quality, get_llm
 
         # Check if Ollama is reachable first
