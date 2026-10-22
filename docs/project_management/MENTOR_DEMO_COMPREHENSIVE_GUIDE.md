@@ -1,9 +1,9 @@
 # Comprehensive Mentor Demonstration Guide — AI VAPT Platform
 
-**Project:** Autonomous AI VAPT Framework  
-**Version:** 1.0 (Mentor Demonstration Ready)  
-**Branch:** `feature/mentor-demo-readiness`  
-**Date:** 2026-10-22  
+**Project:** Autonomous AI VAPT Framework<br>
+**Version:** 1.1 (Mid-Semester Prototype Ready)<br>
+**Branch:** `feature/midsem-prototype-readiness`<br>
+**Date:** 2026-10-22<br>
 
 ---
 
@@ -24,10 +24,11 @@ The demonstration proves:
 
 ### Option A: Standard Web Operations Console (Recommended)
 ```bash
-# 1. Activate environment
-source .venv/bin/activate  # or source venv/bin/activate
+# Canonical launcher (auto-activates venv, loads .env, checks Nmap/Nuclei/Docker/Ollama)
+./scripts/start_demo.sh
 
-# 2. Start the API & Web Console
+# Or manual direct start:
+source .venv/bin/activate
 uvicorn services.api:app --reload --port 8000
 ```
 Open **`http://localhost:8000`** in any web browser.
