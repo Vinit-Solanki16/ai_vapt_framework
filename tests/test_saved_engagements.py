@@ -357,6 +357,70 @@ class TestEngagementSecurityHardening:
                 "authorization_reference": "REF-1",
             })
 
+    def test_zero_byte_storage_fails_closed_and_creates_backup(self, tmp_path):
+        zero_byte_file = tmp_path / "zero_byte_engagements.json"
+        zero_byte_file.write_bytes(b"")
+        assert zero_byte_file.exists()
+        assert zero_byte_file.stat().st_size == 0
+
+        mgr = EngagementManager(storage_path=str(zero_byte_file))
+        assert mgr.storage_corrupted is True
+        assert mgr.last_storage_error is not None
+        assert "empty (0 bytes)" in mgr.last_storage_error
+
+        # Original zero-byte file must NOT be silently overwritten with defaults
+        assert zero_byte_file.exists()
+        assert zero_byte_file.stat().st_size == 0
+
+        # Fails closed: only safe local lab fallback available; no external engagements active
+        profiles = mgr.list_profiles()
+        assert len(profiles) == 1
+        assert profiles[0].id == "eng-local-lab"
+        assert profiles[0].is_external() is False
+        assert profiles[0].is_active() is True
+        assert mgr.get_profile("eng-pentest-ground") is None
+
+        # Timestamped corruption backup was created preserving the zero-byte file
+        backups = list(tmp_path.glob("zero_byte_engagements.json.corrupt.*"))
+        assert len(backups) == 1
+        assert backups[0].stat().st_size == 0
+
+        # Normal persistence mutations must not overwrite invalid storage in isolation mode
+        with pytest.raises(EngagementStorageError, match="storage at .* is corrupted"):
+            mgr.create_profile({
+                "name": "Attempt on Zero Byte Storage",
+                "authorized_hosts": ["127.0.0.1"],
+                "allowed_ports": [80],
+                "authorization_reference": "REF-ZERO",
+            })
+        assert zero_byte_file.stat().st_size == 0
+
+    def test_missing_storage_file_initializes_clean_defaults(self, tmp_path):
+        missing_file = tmp_path / "fresh_run_engagements.json"
+        assert not missing_file.exists()
+
+        mgr = EngagementManager(storage_path=str(missing_file))
+        assert mgr.storage_corrupted is False
+        assert mgr.last_storage_error is None
+
+        # Missing storage file follows normal first-run initialization
+        assert missing_file.exists()
+        assert missing_file.stat().st_size > 0
+        assert len(mgr.list_profiles()) == 2
+
+        # No corruption backups created for normal first-run initialization
+        backups = list(tmp_path.glob("*.corrupt.*"))
+        assert len(backups) == 0
+
+        # Normal persistence mutations succeed on cleanly initialized storage
+        new_prof = mgr.create_profile({
+            "name": "Fresh Lab Profile",
+            "authorized_hosts": ["127.0.0.1"],
+            "allowed_ports": [8000],
+            "authorization_reference": "REF-FRESH",
+        })
+        assert new_prof.id in [p.id for p in mgr.list_profiles()]
+
     def test_persistence_failure_rolls_back_in_memory_state(self, tmp_path, monkeypatch):
         storage_file = str(tmp_path / "readonly_engagements.json")
         mgr = EngagementManager(storage_path=storage_file)

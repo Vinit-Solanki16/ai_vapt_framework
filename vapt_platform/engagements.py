@@ -256,7 +256,7 @@ class EngagementManager:
 
     def _load(self) -> None:
         """Load profiles from JSON storage file; seed defaults or migrate if absent."""
-        if not os.path.exists(self.storage_path) or os.path.getsize(self.storage_path) == 0:
+        if not os.path.exists(self.storage_path):
             # Check for legacy file migration first
             legacy_file = LEGACY_REPO_ENGAGEMENTS_FILE
             if os.path.abspath(self.storage_path) != os.path.abspath(legacy_file) and os.path.exists(legacy_file):
