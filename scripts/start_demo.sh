@@ -8,7 +8,7 @@ echo "=========================================="
 echo "  AI-VAPT Operations Console — Startup"
 echo "=========================================="
 
-# Check if virtualenv exists
+# Activate virtualenv
 if [ -d ".venv" ]; then
     source .venv/bin/activate
 elif [ -d "venv" ]; then
@@ -17,6 +17,14 @@ elif [ -z "$VIRTUAL_ENV" ]; then
     echo "Creating virtual environment (.venv)..."
     python3 -m venv .venv
     source .venv/bin/activate
+fi
+
+# Load .env if present
+if [ -f ".env" ]; then
+    echo "Loading environment from .env..."
+    set -a
+    source .env
+    set +a
 fi
 
 # Install dependencies if needed
