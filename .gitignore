@@ -65,3 +65,8 @@ Thumbs.db
 
 # --- Student's personal thesis papers (untracked, unrelated to framework) ---
 docs/MTech_Project/
+
+# --- Runtime engagement scope profiles (must never be committed) ---
+data/engagements.json
+data/engagements*.json
+!data/engagement_templates.json

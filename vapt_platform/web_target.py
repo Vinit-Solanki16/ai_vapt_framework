@@ -37,6 +37,7 @@ AuthorizationTracker / ScopeEnforcer / SafetyGate — it feeds them.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import http.client
 import ipaddress
 import os
@@ -179,6 +180,7 @@ class WebTarget:
     engagement_id: Optional[str] = None
     engagement_name: Optional[str] = None
     authorization_reference: Optional[str] = None
+    engagement_snapshot: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -195,6 +197,7 @@ class WebTarget:
             "engagement_id": self.engagement_id,
             "engagement_name": self.engagement_name,
             "authorization_reference": self.authorization_reference,
+            "engagement_snapshot": self.engagement_snapshot,
         }
 
 
@@ -216,6 +219,7 @@ class WebTargetValidation:
     engagement_id: Optional[str] = None
     engagement_name: Optional[str] = None
     authorization_reference: Optional[str] = None
+    engagement_snapshot: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -229,6 +233,7 @@ class WebTargetValidation:
             "engagement_id": self.engagement_id,
             "engagement_name": self.engagement_name,
             "authorization_reference": self.authorization_reference,
+            "engagement_snapshot": self.engagement_snapshot,
         }
 
 
@@ -477,7 +482,8 @@ def authorize_hostname(host: str, engagement_id: Optional[str] = None) -> str:
                 )
             if not profile.is_active():
                 raise WebTargetAuthorizationError(
-                    f"Engagement profile '{profile.name}' is inactive or expired."
+                    f"Engagement profile '{profile.name}' is inactive or expired. "
+                    f"An operator must review and activate it with a genuine recorded authorization reference before use."
                 )
             if host in [h.lower() for h in profile.authorized_hosts]:
                 return SCOPE_KIND_EXTERNAL
@@ -791,6 +797,21 @@ def parse_web_target(raw_url: str, engagement_id: Optional[str] = None) -> WebTa
     external = scope_kind == SCOPE_KIND_EXTERNAL
     scope_entry = f"{host}:{port}"
     base_url = f"{scheme}://{host}:{port}"
+
+    engagement_snapshot = None
+    if matched_profile:
+        engagement_snapshot = {
+            "id": matched_profile.id,
+            "name": matched_profile.name,
+            "authorized_hosts": list(matched_profile.authorized_hosts),
+            "allowed_ports": list(matched_profile.allowed_ports),
+            "permitted_paths": list(matched_profile.permitted_paths),
+            "authorization_reference": matched_profile.authorization_reference,
+            "scanner_policy": matched_profile.scanner_policy,
+            "status": matched_profile.status,
+            "snapshot_at": datetime.now(timezone.utc).isoformat(),
+        }
+
     return WebTarget(
         scheme=scheme,
         host=host,
@@ -805,6 +826,7 @@ def parse_web_target(raw_url: str, engagement_id: Optional[str] = None) -> WebTa
         engagement_id=matched_profile.id if matched_profile else None,
         engagement_name=matched_profile.name if matched_profile else None,
         authorization_reference=matched_profile.authorization_reference if matched_profile else None,
+        engagement_snapshot=engagement_snapshot,
     )
 
 
@@ -838,6 +860,7 @@ def validate_web_target(raw_url: str, engagement_id: Optional[str] = None) -> We
         engagement_id=target.engagement_id,
         engagement_name=target.engagement_name,
         authorization_reference=target.authorization_reference,
+        engagement_snapshot=target.engagement_snapshot,
     )
 
 
