@@ -69,3 +69,68 @@
   - Live Docker lab containers are offline by default (expected; operator can run `./scripts/start_lab.sh` when Docker daemon is active).
   - External web scans intentionally remain in assessment-only mode without fabricated exploits.
 - **Next Action:** Push to remote branch `feature/midsem-prototype-readiness`, prepare Draft PR, and deliver final comprehensive handover report.
+
+---
+
+# Final Autonomous Handover Report
+
+## A. Repository State
+- **Starting Branch & Commit:** `fix/engagement-empty-storage-recovery` at `b3e7312` (`fix(scope): treat zero-byte engagement storage as corrupt instead of uninitialized`).
+- **Final Feature Branch & Commit:** `feature/midsem-prototype-readiness` at `0223e29` (`docs: record implementation commits in execution log`).
+- **Working Tree Status:** Clean (`nothing to commit, working tree clean`).
+- **Remote Push Status:** Pushed to `origin/feature/midsem-prototype-readiness`.
+- **Open Pull Requests (Linear Ancestry):**
+  1. **PR #1:** `fix/engagement-empty-storage-recovery` -> `fix/engagement-profile-security` (Draft)
+  2. **PR #2:** `fix/engagement-profile-security` -> `feature/reusable-engagement-mentor-ready` (Draft)
+  3. **PR #3:** `feature/midsem-prototype-readiness` -> `fix/engagement-empty-storage-recovery` (Draft)
+- **Recommended Merge Order:** Merge PR #2 into `feature/reusable-engagement-mentor-ready`, then PR #1 into `fix/engagement-profile-security`, then PR #3 into `fix/engagement-empty-storage-recovery`.
+- **Confirmation:** Nothing was merged automatically; all PRs remain open in Draft mode awaiting operator review.
+
+## B. Exact Changes
+- **New Files (8):**
+  - `docs/project_management/MIDSEM_PROTOTYPE_READINESS_AUDIT.md` (Capability matrix, audit findings)
+  - `docs/project_management/MIDSEM_PROTOTYPE_IMPLEMENTATION_PLAN.md` (Master roadmap, GAP-1/2 design)
+  - `docs/project_management/MIDSEM_PROTOTYPE_EXECUTION_LOG.md` (Live step-by-step audit & execution checkpoints)
+  - `docs/research/MIDSEM_EVALUATION_PROTOCOL.md` (2x2 factorial experiment design, metrics, air-gap oracle isolation)
+  - `vapt_platform/env_loader.py` (Lightweight standard-library `.env` parser with test-mode isolation)
+  - `tests/test_env_loader.py` (Regression tests for environment loader)
+  - `scripts/start_lab.sh` (Docker lab orchestration script for `vuln-emulator` and `vuln-executor`)
+  - `scripts/stop_lab.sh` (Docker lab shutdown script)
+- **Modified Files (7):**
+  - `services/api.py` (Auto-load configuration from `.env` via `load_env()`)
+  - `vapt_platform/application.py` (Coerce string outcomes to `Outcome` enum before `model_dump()`, eliminating Pydantic serializer warnings)
+  - `prototype/report_generator.py` (Safely extract `.value` attribute, resolving `AttributeError: 'str' object has no attribute 'value'`)
+  - `vapt_platform/reporting/renderers.py` (Added `Run ID` to HTML, Markdown, and TXT report headers)
+  - `tests/test_reporting.py` (Added `test_all_renderers_include_run_id` regression test)
+  - `scripts/start_demo.sh` (Updated to reference `scripts/start_lab.sh`)
+  - `scripts/reset_demo.sh` (Auto-detect `.venv` virtual environment)
+  - `README.md` & `docs/project_management/MENTOR_DEMO_COMPREHENSIVE_GUIDE.md` (Documented canonical `./scripts/start_demo.sh` launcher on port 8000)
+- **What Was Not Implemented & Why:**
+  - Live exploit execution against web scanner targets (intentionally rejected; web targets remain in assessment-only mode to prevent unvalidated / dangerous execution claims).
+  - External repository integrations (Strix, Shannon, HexStrike, CyberStrike) are deferred per the integration plan to protect core scope.
+
+## C. Verification Results
+- **Test Totals:** 1018 collected, **1011 passed, 7 skipped, 0 failures**.
+- **Skipped Tests (7):** All in `prototype/tests/test_docker_lab.py:80, 90, 99, 108, 124, 132, 141` because Docker lab containers are offline by default (expected in standard CI/mocked mode).
+- **Warnings:** **0 warnings** (all 3 pre-existing Pydantic serializer warnings completely eliminated).
+- **Startup Smoke Test:** Verified live via Uvicorn daemon on port 8000; HTTP 200 on `/health`, `/scanners/status`, `/engagements`, and root `/` serving SPA.
+- **Local Lab Status:** Simulation lab mode exercised and passed; live container lab requires running `./scripts/start_lab.sh`.
+- **AI-Provider Paths:** Verified offline Ollama fallback provenance and OpenRouter credential missing-key fast-fail semantics.
+- **End-to-End Pipeline:** Verified full simulation run -> finding ingestion -> ranking -> decision trace -> 4 report format generation.
+
+## D. Research Integrity
+- **Frozen Path Diff:** `git diff v1.0.1-thesis..HEAD -- decision_engine/core decision_engine/benchmarks decision_engine/tests experiments/ docs/thesis/` produces **0 lines of diff**.
+- **Thesis Tags:** Tag `v1.0.1-thesis` and baseline CSV benchmarks remain completely unmodified.
+- **Deviations:** Zero deviations from research constraints.
+
+## E. Mentor Demonstration Summary
+1. Start Console: `./scripts/start_demo.sh` (open `http://localhost:8000`).
+2. Run Simulation: Select `failure_pivot` scenario -> observe Attempt 1 on `DEMO-WORKER` (`SUCCESS`) and Attempt 1 & 2 on `DEMO-DEAD-END` (`FAIL_TIMEOUT`) with threshold abandonment at attempt 2.
+3. Observe Provenance: Run with AI mode (Ollama offline) -> observe transparent fallback badge and error provenance.
+4. Verify Safety: Input `http://example.com` -> observe immediate red rejection alert before scanning.
+5. Export Report: Download Markdown or HTML -> observe matching `Run ID`, `SIMULATED` evidence tier, and exact 3 total attempts.
+
+## F. Next Actions
+1. **Before Demo:** Operator dry-run of `./scripts/start_demo.sh` and browser walkthrough of `failure_pivot` scenario.
+2. **Optional Live Lab Demo:** Run `./scripts/start_lab.sh` to start container emulator if mentor requests live network packet verification.
+3. **Post-Midsem:** Implementation of Phase 2 (multi-domain VAPT expansion, source code audit ingestion).
