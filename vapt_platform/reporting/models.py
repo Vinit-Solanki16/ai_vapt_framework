@@ -15,6 +15,7 @@ class EvidenceTier(str, Enum):
     """Evidence tier classification."""
     SIMULATED = "SIMULATED"
     OBSERVED_LOCAL = "OBSERVED_LOCAL"
+    OBSERVED_EXTERNAL = "OBSERVED_EXTERNAL"
     DOCKER_OBSERVED = "DOCKER_OBSERVED"
     CONTROLLED_VALIDATION = "CONTROLLED_VALIDATION"
     UNKNOWN = "UNKNOWN"
@@ -32,6 +33,12 @@ class ReportMetadata:
     total_attempts: int = 0
     pivot_count: int = 0
     candidates_processed: list[str] = field(default_factory=list)
+    candidates_discovered: int = 0
+    candidates_assessed: int = 0
+    candidates_eligible: int = 0
+    candidates_validated: int = 0
+    execution_attempts: int = 0
+    successful_validations: int = 0
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     run_created_at: str = ""
     run_updated_at: str = ""
@@ -175,6 +182,12 @@ class ReportModel:
                 "total_attempts": self.metadata.total_attempts,
                 "pivot_count": self.metadata.pivot_count,
                 "candidates_processed": self.metadata.candidates_processed,
+                "candidates_discovered": self.metadata.candidates_discovered,
+                "candidates_assessed": self.metadata.candidates_assessed,
+                "candidates_eligible": self.metadata.candidates_eligible,
+                "candidates_validated": self.metadata.candidates_validated,
+                "execution_attempts": self.metadata.execution_attempts,
+                "successful_validations": self.metadata.successful_validations,
                 "generated_at": self.metadata.generated_at,
                 "run_created_at": self.metadata.run_created_at,
                 "run_updated_at": self.metadata.run_updated_at,

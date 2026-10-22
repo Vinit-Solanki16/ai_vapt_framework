@@ -78,9 +78,12 @@ class JSONRunRepository(RunRepository):
 
     def _ensure_storage(self) -> None:
         """Ensure storage directory and index file exist."""
-        os.makedirs(self._config.storage_dir, exist_ok=True)
-        if not os.path.exists(self._config.index_file):
-            self._write_index([])
+        try:
+            os.makedirs(self._config.storage_dir, exist_ok=True)
+            if not os.path.exists(self._config.index_file):
+                self._write_index([])
+        except OSError:
+            pass
 
     def _read_index(self) -> list[str]:
         """Read the run index."""

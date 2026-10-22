@@ -1,0 +1,44 @@
+[
+  {
+    "id": "eng-local-lab",
+    "name": "Local Lab Default",
+    "description": "Default loopback scope for local lab demonstrations and Juice Shop tests",
+    "authorized_hosts": [
+      "127.0.0.1",
+      "localhost"
+    ],
+    "allowed_ports": [
+      9191,
+      8080,
+      80,
+      443
+    ],
+    "permitted_paths": [],
+    "authorization_reference": "LAB-POLICY-LOCAL-LOOPBACK",
+    "created_at": "2026-10-22T10:16:47.709550+00:00",
+    "updated_at": "2026-10-22T10:16:47.709550+00:00",
+    "expires_at": null,
+    "scanner_policy": "safe_non_destructive",
+    "status": "active",
+    "is_active": true
+  },
+  {
+    "id": "eng-pentest-ground",
+    "name": "Pentest Ground Authorized Lab",
+    "description": "Controlled external web testing on pentest-ground.com port 4280",
+    "authorized_hosts": [
+      "pentest-ground.com"
+    ],
+    "allowed_ports": [
+      4280
+    ],
+    "permitted_paths": [],
+    "authorization_reference": "ROE-2026-PENTEST-GROUND-4280",
+    "created_at": "2026-10-22T10:16:47.709550+00:00",
+    "updated_at": "2026-10-22T10:16:47.709550+00:00",
+    "expires_at": null,
+    "scanner_policy": "safe_non_destructive",
+    "status": "active",
+    "is_active": true
+  }
+]

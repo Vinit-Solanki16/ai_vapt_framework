@@ -46,7 +46,29 @@ const api = {
     getRunCandidates(runId) { return this.request('GET', `/runs/${runId}/candidates`); },
     getRunAssessment(runId) { return this.request('GET', `/runs/${runId}/assessment`); },
     getRunReport(runId, format = 'json') { return this.request('GET', `/runs/${runId}/report?format=${format}`); },
-    validateTarget(targetUrl) { return this.request('POST', '/targets/validate', { target_url: targetUrl }); },
+    validateTarget(targetUrl, engagementId = null) {
+        const body = { target_url: targetUrl };
+        if (engagementId) body.engagement_id = engagementId;
+        return this.request('POST', '/targets/validate', body);
+    },
+    listEngagements(activeOnly = false) {
+        return this.request('GET', `/engagements${activeOnly ? '?active_only=true' : ''}`);
+    },
+    getEngagement(id) {
+        return this.request('GET', `/engagements/${id}`);
+    },
+    createEngagement(data) {
+        return this.request('POST', '/engagements', data);
+    },
+    updateEngagement(id, data) {
+        return this.request('PUT', `/engagements/${id}`, data);
+    },
+    deleteEngagement(id) {
+        return this.request('DELETE', `/engagements/${id}`);
+    },
+    validateEngagementTarget(id, targetUrl) {
+        return this.request('POST', `/engagements/${id}/validate`, { target_url: targetUrl });
+    },
     getScannerStatus() { return this.request('GET', '/scanners/status'); },
     getOpenRouterStatus() { return this.request('GET', '/providers/openrouter/status'); },
 
@@ -374,6 +396,7 @@ function evidenceClass(tier) {
     const t = (tier || '').toUpperCase();
     if (t === 'DOCKER_OBSERVED') return 'evidence-docker';
     if (t === 'OBSERVED_LOCAL') return 'evidence-local';
+    if (t === 'OBSERVED_EXTERNAL') return 'evidence-external';
     if (t === 'CONTROLLED_VALIDATION') return 'evidence-controlled';
     return 'evidence-simulated';
 }
@@ -421,6 +444,7 @@ const routes = {
     '/dashboard': renderDashboard,
     '/assessment/new': renderNewAssessment,
     '/assessment/active': renderActiveAssessment,
+    '/engagements': renderEngagements,
     '/findings': renderFindings,
     '/intelligence': renderIntelligence,
     '/candidates': renderCandidates,
@@ -434,8 +458,21 @@ const routes = {
 
 function getRoute() {
     const hash = window.location.hash || '#/dashboard';
-    const path = hash.replace('#', '') || '/dashboard';
-    return path;
+    const rawPath = hash.replace('#', '') || '/dashboard';
+    return rawPath.split('?')[0];
+}
+
+function getQueryParams() {
+    const hash = window.location.hash || '';
+    const queryIdx = hash.indexOf('?');
+    if (queryIdx === -1) return {};
+    const qs = hash.slice(queryIdx + 1);
+    const params = new URLSearchParams(qs);
+    const obj = {};
+    for (const [k, v] of params.entries()) {
+        obj[k] = v;
+    }
+    return obj;
 }
 
 function navigate(path) {
@@ -457,6 +494,7 @@ async function router() {
         '/dashboard': 'dashboard',
         '/assessment/new': 'assessment-new',
         '/assessment/active': 'assessment-active',
+        '/engagements': 'engagements',
         '/findings': 'findings',
         '/intelligence': 'intelligence',
         '/candidates': 'candidates',
@@ -615,14 +653,16 @@ async function renderNewAssessment(container) {
     state.displayedRun = null;
 
     try {
-        const [scenarios, health, scanners] = await Promise.all([
+        const [scenarios, health, scanners, engagementsRes] = await Promise.all([
             api.getScenarios().catch(() => ({ scenarios: [] })),
             api.getSystemHealth().catch(() => null),
             api.getScannerStatus().catch(() => null),
+            api.listEngagements().catch(() => ({ engagements: [] })),
         ]);
 
         state.scenarios = scenarios.scenarios || [];
         state.scanners = scanners;
+        state.engagements = engagementsRes.engagements || [];
 
         const allowlistedTargets = ['127.0.0.1', '172.28.0.2'];
         const nmapAvailable = !!(scanners && scanners.nmap && scanners.nmap.available);
@@ -731,6 +771,22 @@ async function renderNewAssessment(container) {
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">Web Target (configured authorized scope)</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Authorized Scope / Engagement Profile</label>
+                        <select class="form-select" id="web-engagement-select">
+                            <option value="">-- Direct Scope (Local loopback or VAPT_AUTHORIZED_WEB_SCOPES) --</option>
+                            ${(state.engagements || []).map(p => `
+                                <option value="${escapeHtml(p.id)}"${!p.is_active ? ' disabled' : ''}>
+                                    ${escapeHtml(p.name)} [${escapeHtml((p.authorized_hosts || []).join(', '))}:${escapeHtml((p.allowed_ports || []).join(','))}]${!p.is_active ? ' (INACTIVE/EXPIRED)' : ''}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <div id="web-engagement-info" style="display:none;margin-top:0.5rem;padding:0.6rem;background:rgba(0,180,216,0.08);border-left:3px solid var(--accent-cyan);border-radius:4px;font-size:0.8rem;"></div>
+                        <p class="text-muted" style="font-size:0.75rem;margin-top:0.35rem;">
+                            Select a saved authorization profile or enter an authorized target below. Manage profiles in <a href="#/engagements" style="color:var(--accent-blue-light);">Saved Engagements</a>.
+                        </p>
                     </div>
 
                     <div class="form-group">
@@ -1046,6 +1102,58 @@ async function renderNewAssessment(container) {
         updateOpenRouterSetupVisibility();
 
         document.getElementById('web-target-url').addEventListener('change', validateTargetUrl);
+
+        const engSelect = document.getElementById('web-engagement-select');
+        if (engSelect) {
+            engSelect.addEventListener('change', function () {
+                const engId = this.value;
+                const infoEl = document.getElementById('web-engagement-info');
+                const targetInput = document.getElementById('web-target-url');
+                if (!engId) {
+                    if (infoEl) infoEl.style.display = 'none';
+                    validateTargetUrl();
+                    return;
+                }
+                const profile = (state.engagements || []).find(p => p.id === engId);
+                if (profile) {
+                    if (infoEl) {
+                        infoEl.style.display = 'block';
+                        infoEl.innerHTML = `
+                            <strong>📋 ${escapeHtml(profile.name)}</strong> (Ref: <span style="font-family:monospace;">${escapeHtml(profile.authorization_reference || 'N/A')}</span>)<br>
+                            <span class="text-muted">Hosts:</span> <span style="font-family:monospace;">${escapeHtml((profile.authorized_hosts || []).join(', '))}</span> |
+                            <span class="text-muted">Ports:</span> <span style="font-family:monospace;">${escapeHtml((profile.allowed_ports || []).join(', '))}</span>
+                            ${profile.permitted_paths && profile.permitted_paths.length ? `<br><span class="text-muted">Permitted paths:</span> <span style="font-family:monospace;">${escapeHtml(profile.permitted_paths.join(', '))}</span>` : ''}
+                        `;
+                    }
+                    if (targetInput && profile.authorized_hosts && profile.authorized_hosts.length > 0) {
+                        const host = profile.authorized_hosts[0];
+                        const port = (profile.allowed_ports && profile.allowed_ports[0]) || 80;
+                        const scheme = (port === 443 || port === 4280) ? 'https' : 'http';
+                        const currentUrl = targetInput.value.trim();
+                        if (!currentUrl || !currentUrl.includes(host)) {
+                            targetInput.value = (port === 80 && scheme === 'http') || (port === 443 && scheme === 'https')
+                                ? `${scheme}://${host}/`
+                                : `${scheme}://${host}:${port}/`;
+                        }
+                    }
+                    validateTargetUrl();
+                }
+            });
+        }
+
+        // Check query parameters to pre-select engagement or switch to web
+        const qp = getQueryParams();
+        if (qp.engagement || qp.type === 'web') {
+            const assessTypeSel = document.getElementById('assess-type');
+            if (assessTypeSel) {
+                assessTypeSel.value = 'web';
+                assessTypeSel.dispatchEvent(new Event('change'));
+            }
+            if (qp.engagement && engSelect) {
+                engSelect.value = qp.engagement;
+                engSelect.dispatchEvent(new Event('change'));
+            }
+        }
         // Editing the URL invalidates any previous acknowledgement: the
         // checkbox is cleared immediately (input fires per keystroke) so a
         // prior acknowledgement can never carry over to a new host:port.
@@ -1456,6 +1564,8 @@ function renderWebScopeDetails(res, detailsEl, ackGroup, ackTarget) {
                 <td style="font-family:monospace;">${escapeHtml(String(res.port ?? 'N/A'))}</td></tr>
             <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">In configured scope</td>
                 <td>${res.in_scope ? 'Yes' : 'No'}${res.scope_entry ? ` (entry: <span style="font-family:monospace;">${escapeHtml(res.scope_kind || '')} — ${escapeHtml(res.scope_entry)}</span>)` : ''}</td></tr>
+            ${res.engagement_name ? `<tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Engagement Profile</td><td><strong>${escapeHtml(res.engagement_name)}</strong> (ID: <span style="font-family:monospace;">${escapeHtml(res.engagement_id || '')}</span>)</td></tr>` : ''}
+            ${res.authorization_reference ? `<tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Authorization Ref</td><td style="font-family:monospace;">${escapeHtml(res.authorization_reference)}</td></tr>` : ''}
             <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Authorization</td>
                 <td>${escapeHtml(res.authorization_status || (res.authorized ? 'AUTHORIZED' : 'REJECTED'))}</td></tr>
             <tr><td style="padding:0.15rem 0.5rem 0.15rem 0;color:#9aa4b2;">Resolved destination</td>
@@ -1532,6 +1642,8 @@ async function validateTargetUrl() {
     const detailsEl = document.getElementById('web-scope-details');
     const ackGroup = document.getElementById('web-scope-ack-group');
     const ackTarget = document.getElementById('web-scope-ack-target');
+    const engSelect = document.getElementById('web-engagement-select');
+    const engagementId = engSelect?.value || null;
     if (!input || !authEl) return null;
 
     state.webValidation = null;
@@ -1550,7 +1662,7 @@ async function validateTargetUrl() {
     try {
         // Backend re-validates authoritatively: hostname authorization,
         // port authorization and resolved-address validation.
-        const res = await api.validateTarget(url);
+        const res = await api.validateTarget(url, engagementId);
         state.webValidation = res;
         // Any revalidation resets a previous acknowledgement UNLESS the
         // user explicitly acknowledged this exact host:port before.
@@ -1563,14 +1675,19 @@ async function validateTargetUrl() {
             resetWebScopeAck();
         }
         if (res.authorized && res.reachable) {
-            const label = res.external_scope
-                ? '✅ AUTHORIZED EXTERNAL TARGET'
-                : '✅ AUTHORIZED LOCAL TARGET';
+            const label = res.engagement_name
+                ? `✅ AUTHORIZED UNDER PROFILE: ${escapeHtml(res.engagement_name)}`
+                : (res.external_scope
+                    ? '✅ AUTHORIZED EXTERNAL TARGET'
+                    : '✅ AUTHORIZED LOCAL TARGET');
             authEl.innerHTML = `<div class="badge badge-success">${label}</div>
                 <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')} — resolved ${escapeHtml(res.resolved_host || '')}:${escapeHtml(String(res.port || ''))}</p>`;
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-success">AUTHORIZED</div>';
         } else if (res.authorized) {
-            authEl.innerHTML = `<div class="badge badge-warning">⚠️ AUTHORIZED / TARGET NOT REACHABLE</div>
+            const label = res.engagement_name
+                ? `⚠️ AUTHORIZED UNDER ${escapeHtml(res.engagement_name)} / TARGET NOT REACHABLE`
+                : '⚠️ AUTHORIZED / TARGET NOT REACHABLE';
+            authEl.innerHTML = `<div class="badge badge-warning">${label}</div>
                 <p class="text-muted" style="margin-top:0.5rem;font-size:0.8rem;">${escapeHtml(res.detail || '')}</p>`;
             if (safetyEl) safetyEl.innerHTML = '<div class="badge badge-warning">AUTHORIZED / UNREACHABLE</div>';
         } else {
@@ -1752,6 +1869,8 @@ async function startWebAssessment() {
 
     try {
         const targetUrl = document.getElementById('web-target-url').value.trim();
+        const engSelect = document.getElementById('web-engagement-select');
+        const engagementId = engSelect?.value || null;
         const useNmap = document.getElementById('web-use-nmap')?.checked ?? true;
         const useNuclei = document.getElementById('web-use-nuclei')?.checked ?? false;
         const assessorRaw = document.getElementById('web-assessor').value;
@@ -1796,6 +1915,7 @@ async function startWebAssessment() {
             mode: 'web',
             assessment_type: 'web',
             target_url: targetUrl,
+            engagement_id: engagementId,
             // Only true after the explicit checkbox interaction for this
             // exact target; never set silently by validation or carried
             // over from a previous hostname/port.
@@ -2327,6 +2447,14 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
             </tr>`;
     }).join('');
 
+    const isExt = run.evidence_tier === 'OBSERVED_EXTERNAL' || (w.target_url && !w.target_url.includes('127.0.0.1') && !w.target_url.includes('localhost'));
+    const appName = w.application
+        || (w.target_url && (w.target_url.includes(':9191') || w.target_url.includes('juice-shop')) ? 'OWASP Juice Shop (local controlled test app)'
+        : (w.engagement_name ? `${w.engagement_name} (${w.authorization_reference || 'Authorized Target'})`
+        : (isExt ? 'External Web Application (authorized target)' : 'Local Controlled Application')));
+    const envName = w.environment
+        || (isExt ? 'AUTHORIZED EXTERNAL TARGET' : 'LOCAL CONTROLLED TEST APPLICATION');
+
     container.innerHTML = `
         <div class="card" style="margin-bottom:1rem;">
             <div class="card-header">
@@ -2335,8 +2463,8 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
             </div>
             <div class="grid-4" style="margin-bottom:1rem;">
                 <div><div class="text-muted" style="font-size:0.75rem;">Target</div><div style="font-family:monospace;font-size:0.85rem;">${escapeHtml(w.target_url || run.target_url || 'N/A')}</div></div>
-                <div><div class="text-muted" style="font-size:0.75rem;">Application</div><div>OWASP Juice Shop (local controlled test app)</div></div>
-                <div><div class="text-muted" style="font-size:0.75rem;">Environment</div><div>LOCAL CONTROLLED TEST APPLICATION</div></div>
+                <div><div class="text-muted" style="font-size:0.75rem;">Application</div><div>${escapeHtml(appName)}</div></div>
+                <div><div class="text-muted" style="font-size:0.75rem;">Environment</div><div>${escapeHtml(envName)}</div></div>
                 <div><div class="text-muted" style="font-size:0.75rem;">Evidence</div><div><span class="badge ${evidenceClass(run.evidence_tier)}">${escapeHtml(run.evidence_tier || 'UNKNOWN')}</span></div></div>
             </div>
             <div class="pipeline-container">${stages.join('')}</div>
@@ -2493,6 +2621,373 @@ async function renderActiveAssessment(container) {
                 <a href="#/assessment/new" class="btn btn-primary" style="margin-top:1rem;text-decoration:none;">New Assessment</a>
             </div>
         `;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Page: Saved Engagements & Scope Governance
+// ═══════════════════════════════════════════════════════════════════════
+
+let _currentEditingEngagementId = null;
+
+async function renderEngagements(container) {
+    showLoading(container, 'Loading engagement profiles...');
+
+    try {
+        const res = await api.listEngagements(false);
+        state.engagements = res.engagements || [];
+
+        container.innerHTML = `
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h1 class="page-title">Saved Engagements & Scope Governance</h1>
+                    <p class="page-subtitle">Configure reusable authorized scopes, rules of engagement (RoE), and target boundaries</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="toggleEngagementForm(true)">
+                        ➕ New Engagement Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Create / Edit Profile Form Card -->
+            <div class="card" id="engagement-form-card" style="display:none;margin-bottom:1.5rem;border-left:4px solid var(--accent-cyan);">
+                <div class="card-header">
+                    <span class="card-title" id="eng-form-title">Create Engagement Profile</span>
+                    <button class="btn btn-secondary" onclick="toggleEngagementForm(false)" style="padding:0.25rem 0.6rem;font-size:0.8rem;">✕ Close</button>
+                </div>
+                <div id="eng-form-feedback" style="margin-bottom:0.75rem;"></div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-name">Profile Name *</label>
+                        <input type="text" class="form-input" id="eng-input-name" placeholder="e.g. Pentest Ground Authorized Lab">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-id">Profile ID (alphanumeric, dashes, underscores)</label>
+                        <input type="text" class="form-input" id="eng-input-id" placeholder="e.g. eng-pentest-ground (leave blank to auto-generate)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="eng-input-desc">Description</label>
+                    <input type="text" class="form-input" id="eng-input-desc" placeholder="Scope description or authorization boundary notes">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-hosts">Authorized Hostnames or IPs * (comma-separated)</label>
+                        <input type="text" class="form-input" id="eng-input-hosts" placeholder="pentest-ground.com, 127.0.0.1">
+                        <p class="text-muted" style="font-size:0.75rem;margin-top:0.25rem;">Wildcards, paths, and schemes are strictly rejected.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-ports">Allowed Ports * (comma-separated)</label>
+                        <input type="text" class="form-input" id="eng-input-ports" placeholder="4280, 80, 443">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-paths">Permitted Path Prefixes (optional, comma-separated)</label>
+                        <input type="text" class="form-input" id="eng-input-paths" placeholder="/, /api, /app">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-ref">Authorization Reference / RoE Reference *</label>
+                        <input type="text" class="form-input" id="eng-input-ref" placeholder="ROE-2026-CLIENT-01 or TICKET-1092">
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-expiry">Expiration Date (optional)</label>
+                        <input type="text" class="form-input" id="eng-input-expiry" placeholder="YYYY-MM-DD or ISO timestamp">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-policy">Scanner Policy</label>
+                        <select class="form-select" id="eng-input-policy">
+                            <option value="safe_non_destructive">safe_non_destructive (Default)</option>
+                            <option value="nmap_only">nmap_only</option>
+                            <option value="nuclei_only">nuclei_only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="eng-input-status">Status</label>
+                        <select class="form-select" id="eng-input-status">
+                            <option value="active">active</option>
+                            <option value="inactive">inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+                    <button class="btn btn-primary" id="btn-save-eng" onclick="submitEngagementForm()">💾 Save Profile</button>
+                    <button class="btn btn-secondary" onclick="toggleEngagementForm(false)">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Scope Validation Tester Card -->
+            <div class="card" style="margin-bottom:1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">🧪 Scope Validation Tester</span>
+                </div>
+                <p class="text-muted" style="font-size:0.8rem;margin-bottom:0.75rem;">
+                    Test whether a specific target URL matches an active engagement profile before starting an assessment.
+                </p>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                    <input type="text" class="form-input" id="eng-test-url"
+                        placeholder="https://pentest-ground.com:4280/"
+                        style="flex:2;min-width:240px;font-family:monospace;">
+                    <select class="form-select" id="eng-test-profile" style="flex:1;min-width:180px;">
+                        <option value="">-- Any Active Scope --</option>
+                        ${state.engagements.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-secondary" onclick="runEngagementTest()">Verify Target</button>
+                </div>
+                <div id="eng-test-result" style="margin-top:0.75rem;display:none;"></div>
+            </div>
+
+            <!-- Profiles List Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Authorized Scope Profiles (${state.engagements.length})</span>
+                </div>
+                ${state.engagements.length === 0 ? `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎯</div>
+                        <div class="empty-state-text">No engagement profiles found</div>
+                        <div class="empty-state-hint">Create an authorized engagement profile to start testing web targets.</div>
+                    </div>
+                ` : `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Profile &amp; Reference</th>
+                                <th>Authorized Scope</th>
+                                <th>Permitted Paths</th>
+                                <th>Status</th>
+                                <th>Expires</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${state.engagements.map(p => {
+                                const isActive = p.is_active;
+                                const statusBadge = isActive
+                                    ? '<span class="badge badge-success">ACTIVE</span>'
+                                    : (p.status === 'active' ? '<span class="badge badge-error">EXPIRED</span>' : '<span class="badge badge-warning">INACTIVE</span>');
+                                const hostsStr = (p.authorized_hosts || []).join(', ');
+                                const portsStr = (p.allowed_ports || []).join(', ');
+                                const pathsStr = (p.permitted_paths && p.permitted_paths.length) ? p.permitted_paths.join(', ') : 'All Paths (/)';
+                                return `
+                                    <tr>
+                                        <td>
+                                            <strong>${escapeHtml(p.name)}</strong>
+                                            <div class="text-dim" style="font-family:monospace;font-size:0.75rem;">ID: ${escapeHtml(p.id)}</div>
+                                            <div class="text-muted" style="font-size:0.75rem;">Ref: <span style="font-family:monospace;">${escapeHtml(p.authorization_reference || 'N/A')}</span></div>
+                                            ${p.description ? `<div class="text-muted" style="font-size:0.75rem;margin-top:0.2rem;">${escapeHtml(p.description)}</div>` : ''}
+                                        </td>
+                                        <td>
+                                            <div style="font-family:monospace;font-size:0.8rem;">${escapeHtml(hostsStr)}</div>
+                                            <div class="text-muted" style="font-size:0.75rem;">Ports: <span style="font-family:monospace;">${escapeHtml(portsStr)}</span></div>
+                                        </td>
+                                        <td style="font-family:monospace;font-size:0.75rem;">
+                                            ${escapeHtml(pathsStr)}
+                                        </td>
+                                        <td>${statusBadge}</td>
+                                        <td style="font-size:0.75rem;">${p.expires_at ? escapeHtml(p.expires_at.slice(0, 10)) : '<span class="text-dim">No expiry</span>'}</td>
+                                        <td style="text-align:right;white-space:nowrap;">
+                                            <a href="#/assessment/new?engagement=${encodeURIComponent(p.id)}&type=web" class="btn btn-primary" style="padding:0.25rem 0.5rem;font-size:0.75rem;text-decoration:none;margin-right:0.25rem;" title="Launch assessment with this profile">
+                                                🚀 Launch
+                                            </a>
+                                            <button class="btn btn-secondary" onclick="editEngagementProfile('${escapeHtml(p.id)}')" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;">
+                                                ✏️ Edit
+                                            </button>
+                                            <button class="btn btn-secondary" onclick="toggleEngagementActive('${escapeHtml(p.id)}')" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;">
+                                                ${p.status === 'active' ? '⏸️ Deactivate' : '▶️ Activate'}
+                                            </button>
+                                            <button class="btn btn-danger" onclick="deleteEngagementProfile('${escapeHtml(p.id)}')" style="padding:0.25rem 0.5rem;font-size:0.75rem;">
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `}
+            </div>
+        `;
+    } catch (err) {
+        showError(container, `Failed to load engagement profiles: ${err.message}`);
+    }
+}
+
+function toggleEngagementForm(show, profile = null) {
+    const card = document.getElementById('engagement-form-card');
+    const titleEl = document.getElementById('eng-form-title');
+    const feedbackEl = document.getElementById('eng-form-feedback');
+    if (!card) return;
+
+    if (feedbackEl) feedbackEl.innerHTML = '';
+
+    if (show) {
+        card.style.display = 'block';
+        if (profile) {
+            _currentEditingEngagementId = profile.id;
+            if (titleEl) titleEl.textContent = `Edit Engagement Profile: ${profile.name}`;
+            document.getElementById('eng-input-id').value = profile.id;
+            document.getElementById('eng-input-id').disabled = true;
+            document.getElementById('eng-input-name').value = profile.name || '';
+            document.getElementById('eng-input-desc').value = profile.description || '';
+            document.getElementById('eng-input-hosts').value = (profile.authorized_hosts || []).join(', ');
+            document.getElementById('eng-input-ports').value = (profile.allowed_ports || []).join(', ');
+            document.getElementById('eng-input-paths').value = (profile.permitted_paths || []).join(', ');
+            document.getElementById('eng-input-ref').value = profile.authorization_reference || '';
+            document.getElementById('eng-input-expiry').value = profile.expires_at || '';
+            document.getElementById('eng-input-policy').value = profile.scanner_policy || 'safe_non_destructive';
+            document.getElementById('eng-input-status').value = profile.status || 'active';
+        } else {
+            _currentEditingEngagementId = null;
+            if (titleEl) titleEl.textContent = 'Create Engagement Profile';
+            document.getElementById('eng-input-id').value = '';
+            document.getElementById('eng-input-id').disabled = false;
+            document.getElementById('eng-input-name').value = '';
+            document.getElementById('eng-input-desc').value = '';
+            document.getElementById('eng-input-hosts').value = '';
+            document.getElementById('eng-input-ports').value = '';
+            document.getElementById('eng-input-paths').value = '';
+            document.getElementById('eng-input-ref').value = '';
+            document.getElementById('eng-input-expiry').value = '';
+            document.getElementById('eng-input-policy').value = 'safe_non_destructive';
+            document.getElementById('eng-input-status').value = 'active';
+        }
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        _currentEditingEngagementId = null;
+        card.style.display = 'none';
+    }
+}
+
+async function submitEngagementForm() {
+    const feedbackEl = document.getElementById('eng-form-feedback');
+    const btn = document.getElementById('btn-save-eng');
+    const isEdit = !!_currentEditingEngagementId;
+
+    const name = document.getElementById('eng-input-name').value.trim();
+    const id = isEdit ? _currentEditingEngagementId : document.getElementById('eng-input-id').value.trim();
+    const desc = document.getElementById('eng-input-desc').value.trim();
+    const hosts = document.getElementById('eng-input-hosts').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const ports = document.getElementById('eng-input-ports').value.split(',').map(s => parseInt(s.trim(), 10)).filter(p => !isNaN(p) && p >= 1 && p <= 65535);
+    const paths = document.getElementById('eng-input-paths').value.split(',').map(s => s.trim()).filter(Boolean);
+    const ref = document.getElementById('eng-input-ref').value.trim();
+    const expiry = document.getElementById('eng-input-expiry').value.trim() || null;
+    const policy = document.getElementById('eng-input-policy').value;
+    const status = document.getElementById('eng-input-status').value;
+
+    if (!name) {
+        if (feedbackEl) feedbackEl.innerHTML = '<div class="alert alert-danger">Profile Name is required.</div>';
+        return;
+    }
+    if (hosts.length === 0) {
+        if (feedbackEl) feedbackEl.innerHTML = '<div class="alert alert-danger">At least one authorized hostname or IP is required.</div>';
+        return;
+    }
+    if (ports.length === 0) {
+        if (feedbackEl) feedbackEl.innerHTML = '<div class="alert alert-danger">At least one valid port (1-65535) is required.</div>';
+        return;
+    }
+    if (!ref) {
+        if (feedbackEl) feedbackEl.innerHTML = '<div class="alert alert-danger">Authorization / RoE reference is required for audit provenance.</div>';
+        return;
+    }
+
+    const payload = {
+        name,
+        description: desc,
+        authorized_hosts: hosts,
+        allowed_ports: ports,
+        permitted_paths: paths,
+        authorization_reference: ref,
+        expires_at: expiry,
+        scanner_policy: policy,
+        status,
+    };
+    if (id) {
+        payload.id = id;
+    }
+
+    btn.disabled = true;
+    try {
+        if (isEdit) {
+            await api.updateEngagement(_currentEditingEngagementId, payload);
+        } else {
+            await api.createEngagement(payload);
+        }
+        toggleEngagementForm(false);
+        renderEngagements(document.getElementById('content'));
+    } catch (err) {
+        if (feedbackEl) feedbackEl.innerHTML = `<div class="alert alert-danger">Error: ${escapeHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function editEngagementProfile(id) {
+    const profile = (state.engagements || []).find(p => p.id === id);
+    if (profile) {
+        toggleEngagementForm(true, profile);
+    }
+}
+
+async function toggleEngagementActive(id) {
+    const profile = (state.engagements || []).find(p => p.id === id);
+    if (!profile) return;
+    const newStatus = profile.status === 'active' ? 'inactive' : 'active';
+    try {
+        await api.updateEngagement(id, { status: newStatus });
+        renderEngagements(document.getElementById('content'));
+    } catch (err) {
+        alert(`Failed to update status: ${err.message}`);
+    }
+}
+
+async function deleteEngagementProfile(id) {
+    if (!confirm(`Are you sure you want to delete engagement profile "${id}"?`)) return;
+    try {
+        await api.deleteEngagement(id);
+        renderEngagements(document.getElementById('content'));
+    } catch (err) {
+        alert(`Failed to delete profile: ${err.message}`);
+    }
+}
+
+async function runEngagementTest() {
+    const url = document.getElementById('eng-test-url').value.trim();
+    const profId = document.getElementById('eng-test-profile').value || null;
+    const resEl = document.getElementById('eng-test-result');
+    if (!url) {
+        resEl.style.display = 'block';
+        resEl.innerHTML = '<div class="alert alert-warning">Please enter a target URL to verify.</div>';
+        return;
+    }
+
+    resEl.style.display = 'block';
+    resEl.innerHTML = '<div class="badge badge-warning">Validating target scope...</div>';
+
+    try {
+        const res = await api.validateTarget(url, profId);
+        if (res.authorized) {
+            resEl.innerHTML = `
+                <div class="alert alert-success" style="margin-top:0.5rem;">
+                    <strong>✅ TARGET AUTHORIZED IN SCOPE</strong><br>
+                    ${res.engagement_name ? `Authorized under profile: <strong>${escapeHtml(res.engagement_name)}</strong> (Ref: ${escapeHtml(res.authorization_reference || 'N/A')})<br>` : ''}
+                    ${escapeHtml(res.detail || '')} — Resolved: ${escapeHtml(res.resolved_host || '')}:${escapeHtml(String(res.port || ''))}
+                </div>
+            `;
+        } else {
+            resEl.innerHTML = `
+                <div class="alert alert-danger" style="margin-top:0.5rem;">
+                    <strong>❌ TARGET OUT OF SCOPE</strong><br>
+                    ${escapeHtml(res.detail || 'Target is not covered by any active scope.')}
+                </div>
+            `;
+        }
+    } catch (err) {
+        resEl.innerHTML = `<div class="alert alert-danger">Validation error: ${escapeHtml(err.message)}</div>`;
     }
 }
 

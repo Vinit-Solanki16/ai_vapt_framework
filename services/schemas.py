@@ -53,7 +53,8 @@ class RunRequest(BaseModel):
         "— never replaces — the configured backend allowlist.",
     )
     use_nmap: bool = Field(True, description="Run Nmap discovery for web assessments")
-    use_nuclei: bool = Field(True, description="Run Nuclei scan for web assessments")
+    use_nuclei: bool = True
+    engagement_id: Optional[str] = Field(None, description="Optional saved engagement profile ID")
 
 
 class OpenRouterValidateRequest(BaseModel):
@@ -98,6 +99,7 @@ class OpenRouterValidateResponse(BaseModel):
 class TargetValidateRequest(BaseModel):
     """Request to preflight an authorized web target (no scanning)."""
     target_url: str = Field(..., description="Web application URL to validate")
+    engagement_id: Optional[str] = Field(None, description="Optional engagement profile ID to validate against")
 
 
 class TargetValidateResponse(BaseModel):
@@ -128,6 +130,9 @@ class TargetValidateResponse(BaseModel):
     address_validation: Optional[str] = None
     resolved_ips: List[str] = Field(default_factory=list)
     redirect: Optional[dict] = None
+    engagement_id: Optional[str] = None
+    engagement_name: Optional[str] = None
+    authorization_reference: Optional[str] = None
 
 
 class RunResponse(BaseModel):
@@ -191,3 +196,23 @@ class ErrorResponse(BaseModel):
     """Error response."""
     error: str
     detail: Optional[str] = None
+
+
+class EngagementProfileSchema(BaseModel):
+    """Schema for creating or updating an engagement profile."""
+    id: Optional[str] = Field(None, description="Unique profile ID (generated if omitted)")
+    name: str = Field(..., description="Engagement name")
+    description: str = Field("", description="Description of the engagement")
+    authorized_hosts: List[str] = Field(..., description="List of authorized hostnames or IP addresses")
+    allowed_ports: List[int] = Field(..., description="List of allowed TCP ports")
+    permitted_paths: List[str] = Field(default_factory=list, description="Optional permitted URL path prefixes")
+    authorization_reference: str = Field(..., description="Authorization document, ticket or RoE reference")
+    expires_at: Optional[str] = Field(None, description="Optional scope expiry ISO timestamp")
+    scanner_policy: str = Field("safe_non_destructive", description="Scanner profile policy")
+    status: str = Field("active", description="Status: 'active' or 'inactive'")
+
+
+class TargetValidationRequest(BaseModel):
+    """Request to validate a target URL against scopes and engagements."""
+    target_url: str = Field(..., description="Target URL to validate")
+    engagement_id: Optional[str] = Field(None, description="Optional engagement profile ID to validate against")

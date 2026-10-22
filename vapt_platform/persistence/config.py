@@ -2,12 +2,31 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 
+def _default_storage_dir() -> str:
+    env_dir = os.environ.get("VAPT_STORAGE_DIR")
+    if env_dir:
+        return env_dir
+    user_home = os.path.expanduser("~")
+    home_dir = os.path.join(user_home, ".ai_vapt_framework", "runs")
+    try:
+        os.makedirs(home_dir, exist_ok=True)
+        return home_dir
+    except OSError:
+        tmp_dir = os.path.join(tempfile.gettempdir(), ".ai_vapt_framework", "runs")
+        try:
+            os.makedirs(tmp_dir, exist_ok=True)
+        except OSError:
+            pass
+        return tmp_dir
+
+
 # Default storage location
-DEFAULT_STORAGE_DIR = os.path.join(os.path.expanduser("~"), ".ai_vapt_framework", "runs")
+DEFAULT_STORAGE_DIR = _default_storage_dir()
 
 
 @dataclass
@@ -18,7 +37,10 @@ class PersistenceConfig:
 
     def __post_init__(self) -> None:
         """Ensure storage directory exists."""
-        Path(self.storage_dir).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(self.storage_dir).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
     @property
     def index_file(self) -> str:

@@ -74,7 +74,7 @@ def _fallback_validation_status(candidate: dict[str, Any], evidence_tier: str) -
         return "VALIDATION NOT AVAILABLE"
     if evidence_tier == EvidenceTier.DOCKER_OBSERVED.value:
         return "DOCKER_OBSERVED"
-    if evidence_tier == EvidenceTier.OBSERVED_LOCAL.value:
+    if evidence_tier in (EvidenceTier.OBSERVED_LOCAL.value, EvidenceTier.OBSERVED_EXTERNAL.value):
         return "VALIDATION NOT AVAILABLE"
     return "SIMULATED"
 
@@ -87,6 +87,7 @@ def _get_evidence_tier(mode: str) -> str:
         "lab_docker": EvidenceTier.DOCKER_OBSERVED.value,
         "lab": EvidenceTier.DOCKER_OBSERVED.value,
         "web": EvidenceTier.OBSERVED_LOCAL.value,
+        "web_external": EvidenceTier.OBSERVED_EXTERNAL.value,
         "real": EvidenceTier.CONTROLLED_VALIDATION.value,
     }
     return mode_map.get(mode.lower(), EvidenceTier.UNKNOWN.value)
@@ -97,6 +98,7 @@ def _get_evidence_description(tier: str) -> str:
     descriptions = {
         EvidenceTier.SIMULATED.value: "Outcomes resolved from supplied demo ground truth (labels). No real execution occurred.",
         EvidenceTier.OBSERVED_LOCAL.value: "Outcomes observed from loopback (127.0.0.1) target. No external systems were targeted.",
+        EvidenceTier.OBSERVED_EXTERNAL.value: "Outcomes observed from authorized external network target. No automated exploit execution occurred.",
         EvidenceTier.DOCKER_OBSERVED.value: "Outcomes observed from Docker-isolated vulnerability emulator. No external systems were targeted.",
         EvidenceTier.CONTROLLED_VALIDATION.value: "Outcomes from live target systems. Requires proper authorization.",
     }
@@ -113,6 +115,11 @@ def _get_safety_notice(tier: str) -> str:
         EvidenceTier.OBSERVED_LOCAL.value: (
             "LOOPBACK OBSERVED MODE — Outcomes are from loopback (127.0.0.1) target. "
             "No external systems were targeted."
+        ),
+        EvidenceTier.OBSERVED_EXTERNAL.value: (
+            "EXTERNAL TARGET OBSERVED MODE — Outcomes are from explicitly authorized external network target. "
+            "Findings reflect scanner observations, not confirmed exploit validations. "
+            "Validation was not available and no execution occurred."
         ),
         EvidenceTier.DOCKER_OBSERVED.value: (
             "DOCKER OBSERVED MODE — Outcomes are from Docker-isolated emulator responses. "
@@ -187,20 +194,26 @@ def _build_web_provenance(
 
     executed = len(execution_results or [])
     # AI outcome: distinguish a real model assessment from an explicit
-    # deterministic fallback. Reports must never imply the model answered
-    # when the deterministic assessor actually produced the rank.
+    # deterministic fallback or deterministic mode. Reports must never imply
+    # the model answered when the deterministic assessor produced the rank.
     details = assessment.get("details") or []
     detail_total = len(details)
     fell_back = sum(1 for d in details if (d or {}).get("fallback"))
-    if detail_total == 0:
-        ai_outcome = "NOT RECORDED"
+    provider = (assessment.get("provider") or "").strip().lower()
+    mode = (assessment.get("mode") or "").strip().lower()
+
+    if provider == "deterministic" or mode == "deterministic":
+        ai_outcome = "DETERMINISTIC ASSESSMENT"
         ai_fallback_count = 0
-    elif fell_back == 0:
-        ai_outcome = "MODEL ASSESSED"
+    elif detail_total == 0:
+        ai_outcome = "NOT RECORDED"
         ai_fallback_count = 0
     elif fell_back == detail_total:
         ai_outcome = "DETERMINISTIC FALLBACK"
         ai_fallback_count = fell_back
+    elif fell_back == 0:
+        ai_outcome = "MODEL ASSESSED"
+        ai_fallback_count = 0
     else:
         ai_outcome = f"PARTIAL ({fell_back} of {detail_total} fell back)"
         ai_fallback_count = fell_back
@@ -212,12 +225,33 @@ def _build_web_provenance(
     if first_error:
         from vapt_platform.provider_errors import redact
         first_error = redact(first_error)
+
+    target_url = web.get("target_url", "")
+    scope_kind = auth.get("scope_kind", "")
+    is_external = scope_kind == "EXTERNAL_SCOPE" or auth.get("external", False)
+
+    if not is_external and (target_url.startswith("http://127.0.0.1") or target_url.startswith("http://localhost")):
+        if ":9191" in target_url:
+            app_desc = "OWASP Juice Shop (local controlled test app)"
+            env_desc = "LOCAL CONTROLLED TEST APPLICATION"
+        else:
+            app_desc = "Local web service"
+            env_desc = "LOCAL LAB TARGET"
+    else:
+        app_desc = "External web target"
+        env_desc = "AUTHORIZED EXTERNAL TARGET"
+
     return {
-        "target_url": web.get("target_url", ""),
+        "target_url": target_url,
+        "application": app_desc,
+        "environment": env_desc,
         "authorization": {
             "status": auth.get("status", "NOT RECORDED"),
             "scope_kind": auth.get("scope_kind", ""),
             "scope_entry": auth.get("scope_entry", ""),
+            "engagement_id": auth.get("engagement_id"),
+            "engagement_name": auth.get("engagement_name"),
+            "authorization_reference": auth.get("authorization_reference"),
             "scheme": auth.get("scheme", ""),
             "hostname": auth.get("hostname", ""),
             "port": auth.get("port"),
@@ -231,6 +265,13 @@ def _build_web_provenance(
             _scanner("Nmap", web.get("nmap")),
             _scanner("Nuclei", web.get("nuclei")),
         ],
+        "findings_summary": {
+            "nmap_raw": (web.get("nmap") or {}).get("finding_count", 0),
+            "nuclei_raw": (web.get("nuclei") or {}).get("finding_count", 0),
+            "total_findings": web.get("total_findings", 0),
+            "actionable_candidates": web.get("finding_count", 0),
+            "service_discovery": web.get("service_discovery_count", 0),
+        },
         "ai": {
             "mode": assessment.get("mode", ""),
             "provider": assessment.get("provider", ""),
@@ -265,7 +306,9 @@ class ReportBuilder:
         Returns:
             ReportModel ready for rendering
         """
-        evidence_tier = _get_evidence_tier(domain.mode)
+        evidence_tier = getattr(domain, "evidence_tier", None)
+        if not evidence_tier or (evidence_tier == "SIMULATED" and getattr(domain, "mode", "") != "simulation"):
+            evidence_tier = _get_evidence_tier(domain.mode)
         
         # Build candidates (ACTIONABLE only; every ranked candidate carries
         # explicit eligibility + backend validation_status for FIX 3).
@@ -301,7 +344,17 @@ class ReportBuilder:
                 attempt_number=i + 1,
             ))
         
-        # Build metadata
+        # Build metadata with honest candidate and execution counters
+        cands_assessed = len(candidates)
+        cands_eligible = sum(1 for c in candidates if c.candidate_eligibility == "ACTIONABLE")
+        cands_validated = len(domain.candidates_processed)
+        exec_attempts = domain.total_attempts
+        successful_validations = sum(1 for r in execution_results if r.outcome in ("SUCCESS", "VALIDATED"))
+
+        service_disc_count = len(
+            getattr(domain, "service_discovery", [])
+            or ((pipeline_summary or {}).get("web", {}) or {}).get("service_discovery", [])
+        )
         metadata = ReportMetadata(
             run_id=domain.run_id,
             scenario=domain.scenario,
@@ -312,6 +365,12 @@ class ReportBuilder:
             total_attempts=domain.total_attempts,
             pivot_count=domain.pivot_count,
             candidates_processed=domain.candidates_processed,
+            candidates_discovered=cands_assessed + service_disc_count,
+            candidates_assessed=cands_assessed,
+            candidates_eligible=cands_eligible,
+            candidates_validated=cands_validated,
+            execution_attempts=exec_attempts,
+            successful_validations=successful_validations,
         )
         
         # Build report (FIX 1: discovery preserved separately, labelled).
@@ -348,12 +407,31 @@ class ReportBuilder:
         """Build report from PersistentRun.
         
         Args:
-            run: PersistentRun from RunRepository
+            run: PersistentRun from RunRepository or dict representation
             
         Returns:
             ReportModel ready for rendering
         """
-        evidence_tier = _get_evidence_tier(run.mode)
+        if isinstance(run, dict):
+            from dataclasses import fields
+            from vapt_platform.persistence.models import PersistentRun
+            valid_fields = {f.name for f in fields(PersistentRun)}
+            filtered = {k: v for k, v in run.items() if k in valid_fields}
+            if "mode" not in filtered:
+                filtered["mode"] = run.get("mode") or ("web" if run.get("scenario") == "web_target" else "simulation")
+            if "scenario" not in filtered:
+                filtered["scenario"] = run.get("scenario") or "web_target"
+            if "run_id" not in filtered:
+                filtered["run_id"] = run.get("run_id") or "run-temp"
+            if "web" in run:
+                ps = dict(filtered.get("pipeline_summary") or {})
+                ps["web"] = run["web"]
+                filtered["pipeline_summary"] = ps
+            run = PersistentRun(**filtered)
+
+        evidence_tier = getattr(run, "evidence_tier", None)
+        if not evidence_tier or (evidence_tier == "SIMULATED" and getattr(run, "mode", "") != "simulation"):
+            evidence_tier = _get_evidence_tier(run.mode)
         
         # Build candidates (ACTIONABLE only, with explicit eligibility +
         # backend validation_status for FIX 3; honest fallback, never VALIDATED).
@@ -385,7 +463,21 @@ class ReportBuilder:
                 attempt_number=i + 1,
             ))
         
-        # Build metadata
+        # Build metadata with honest candidate and execution counters
+        raw_discovery = getattr(run, "service_discovery", []) or []
+        if not raw_discovery:
+            try:
+                web = (run.pipeline_summary or {}).get("web", {}) or {}
+                raw_discovery = web.get("service_discovery", []) or web.get("discovery_snapshots", []) or []
+            except Exception:
+                raw_discovery = []
+
+        cands_assessed = len(candidates)
+        cands_eligible = sum(1 for c in candidates if c.candidate_eligibility == "ACTIONABLE")
+        cands_validated = len(run.candidates_processed)
+        exec_attempts = run.total_attempts
+        successful_validations = sum(1 for r in execution_results if r.outcome in ("SUCCESS", "VALIDATED"))
+
         metadata = ReportMetadata(
             run_id=run.run_id,
             scenario=run.scenario,
@@ -396,19 +488,18 @@ class ReportBuilder:
             total_attempts=run.total_attempts,
             pivot_count=run.pivot_count,
             candidates_processed=run.candidates_processed,
+            candidates_discovered=cands_assessed + len(raw_discovery),
+            candidates_assessed=cands_assessed,
+            candidates_eligible=cands_eligible,
+            candidates_validated=cands_validated,
+            execution_attempts=exec_attempts,
+            successful_validations=successful_validations,
             run_created_at=run.created_at,
             run_updated_at=run.updated_at,
         )
         
         # Build report (FIX 1 + FIX 2: non-actionable inventory preserved
         # with eligibility INFORMATIONAL / DISCOVERY, never ranked).
-        raw_discovery = getattr(run, "service_discovery", []) or []
-        if not raw_discovery:
-            try:
-                web = (run.pipeline_summary or {}).get("web", {}) or {}
-                raw_discovery = web.get("service_discovery", []) or web.get("discovery_snapshots", []) or []
-            except Exception:
-                raw_discovery = []
         report = ReportModel(
             metadata=metadata,
             executive_summary=self._build_executive_summary_from_run(run, evidence_tier),
@@ -482,6 +573,10 @@ class ReportBuilder:
             limitations.append("This run used loopback (127.0.0.1) targets only.")
             limitations.append("Scanner findings are discovery output, not confirmed vulnerabilities.")
             limitations.append("No external systems were targeted.")
+        elif evidence_tier == EvidenceTier.OBSERVED_EXTERNAL.value:
+            limitations.append("This run targeted an explicitly authorized external target.")
+            limitations.append("Scanner findings are discovery output, not confirmed vulnerabilities.")
+            limitations.append("Validation actions were not executed against the external target.")
         elif evidence_tier == EvidenceTier.DOCKER_OBSERVED.value:
             limitations.append("This run used Docker-isolated emulator targets.")
             limitations.append("No external systems were targeted.")

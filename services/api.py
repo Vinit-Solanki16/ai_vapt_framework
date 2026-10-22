@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import Body, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -141,7 +141,7 @@ def start_run(
     # Frontend validation is UX only — this check is authoritative.
     if req.assessment_type == "web" or req.target_url:
         from vapt_platform.web_target import validate_web_target
-        validation = validate_web_target(req.target_url or "")
+        validation = validate_web_target(req.target_url or "", engagement_id=req.engagement_id)
         if not validation.authorized:
             raise HTTPException(status_code=400, detail=f"Target not authorized: {validation.reason}")
         # External (non-local) targets additionally require the explicit
@@ -182,6 +182,7 @@ def start_run(
         use_nmap=req.use_nmap,
         use_nuclei=req.use_nuclei,
         target_scope_acknowledged=req.target_scope_acknowledged,
+        engagement_id=req.engagement_id,
     )
 
     # Run the canonical workflow
@@ -325,7 +326,7 @@ def validate_target(req: TargetValidateRequest):
     """
     from vapt_platform.web_target import preflight_web_target, validate_web_target
 
-    validation = validate_web_target(req.target_url or "")
+    validation = validate_web_target(req.target_url or "", engagement_id=req.engagement_id)
     if not validation.authorized or validation.target is None:
         return TargetValidateResponse(
             authorized=False,
@@ -339,9 +340,12 @@ def validate_target(req: TargetValidateRequest):
             external_scope=None,
             acknowledgement_required=False,
             address_validation="NOT VALIDATED",
+            engagement_id=validation.engagement_id,
+            engagement_name=validation.engagement_name,
+            authorization_reference=validation.authorization_reference,
         )
 
-    preflight = preflight_web_target(req.target_url)
+    preflight = preflight_web_target(req.target_url, engagement_id=req.engagement_id)
     target = validation.target
     return TargetValidateResponse(
         authorized=True,
@@ -364,7 +368,78 @@ def validate_target(req: TargetValidateRequest):
         address_validation=preflight.get("address_validation", ""),
         resolved_ips=list(target.resolved_ips),
         redirect=preflight.get("redirect"),
+        engagement_id=target.engagement_id,
+        engagement_name=target.engagement_name,
+        authorization_reference=target.authorization_reference,
     )
+
+
+@app.get("/engagements")
+def list_engagements(active_only: bool = False):
+    """List saved authorized engagement scope profiles."""
+    from vapt_platform.engagements import get_engagement_manager
+    manager = get_engagement_manager()
+    profiles = manager.list_profiles(active_only=active_only)
+    return {"engagements": [p.to_dict() for p in profiles]}
+
+
+@app.post("/engagements")
+def create_engagement(payload: dict = Body(...)):
+    """Create a new authorized engagement scope profile."""
+    from vapt_platform.engagements import get_engagement_manager, EngagementValidationError
+    manager = get_engagement_manager()
+    try:
+        profile = manager.create_profile(payload)
+        return {"status": "created", "engagement": profile.to_dict()}
+    except (EngagementValidationError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/engagements/{profile_id}")
+def get_engagement(profile_id: str):
+    """Get an engagement scope profile by ID."""
+    from vapt_platform.engagements import get_engagement_manager
+    manager = get_engagement_manager()
+    profile = manager.get_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Engagement profile not found")
+    return {"engagement": profile.to_dict()}
+
+
+@app.put("/engagements/{profile_id}")
+def update_engagement(profile_id: str, payload: dict = Body(...)):
+    """Update an existing engagement scope profile."""
+    from vapt_platform.engagements import get_engagement_manager, EngagementValidationError
+    manager = get_engagement_manager()
+    try:
+        profile = manager.update_profile(profile_id, payload)
+        return {"status": "updated", "engagement": profile.to_dict()}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Engagement profile not found")
+    except (EngagementValidationError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/engagements/{profile_id}")
+def delete_engagement(profile_id: str):
+    """Delete an engagement scope profile."""
+    from vapt_platform.engagements import get_engagement_manager
+    manager = get_engagement_manager()
+    if manager.delete_profile(profile_id):
+        return {"status": "deleted", "id": profile_id}
+    raise HTTPException(status_code=404, detail="Engagement profile not found")
+
+
+@app.post("/engagements/{profile_id}/validate")
+def validate_target_against_engagement(profile_id: str, payload: dict = Body(...)):
+    """Validate a target URL specifically against an engagement profile scope."""
+    from vapt_platform.engagements import get_engagement_manager
+    target_url = str(payload.get("target_url", "")).strip()
+    if not target_url:
+        raise HTTPException(status_code=400, detail="target_url is required")
+    manager = get_engagement_manager()
+    result = manager.validate_target_against_profile(profile_id, target_url)
+    return result
 
 
 @app.get("/scanners/status")

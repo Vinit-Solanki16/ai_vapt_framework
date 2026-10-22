@@ -161,7 +161,10 @@ class WebTarget:
         resolved_ips: ALL validated destination IPs (fail-closed set)
         scope_kind: SCOPE_KIND_LOCAL or SCOPE_KIND_EXTERNAL
         scope_entry: the exact authorized scope entry (e.g. "localhost:9191")
-        external: True when authorization came from VAPT_AUTHORIZED_WEB_SCOPES
+        external: True when authorization came from VAPT_AUTHORIZED_WEB_SCOPES or Engagement
+        engagement_id: Optional ID of authorizing EngagementProfile
+        engagement_name: Optional name of authorizing EngagementProfile
+        authorization_reference: Optional authorization document/RoE reference
     """
     scheme: str = "http"
     host: str = ""
@@ -173,6 +176,9 @@ class WebTarget:
     scope_kind: str = ""
     scope_entry: str = ""
     external: bool = False
+    engagement_id: Optional[str] = None
+    engagement_name: Optional[str] = None
+    authorization_reference: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -186,6 +192,9 @@ class WebTarget:
             "scope_kind": self.scope_kind,
             "scope_entry": self.scope_entry,
             "external": self.external,
+            "engagement_id": self.engagement_id,
+            "engagement_name": self.engagement_name,
+            "authorization_reference": self.authorization_reference,
         }
 
 
@@ -204,6 +213,9 @@ class WebTargetValidation:
     port_authorized: bool = False
     addresses_validated: bool = False
     in_configured_scope: bool = False
+    engagement_id: Optional[str] = None
+    engagement_name: Optional[str] = None
+    authorization_reference: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -214,6 +226,9 @@ class WebTargetValidation:
             "port_authorized": self.port_authorized,
             "addresses_validated": self.addresses_validated,
             "in_configured_scope": self.in_configured_scope,
+            "engagement_id": self.engagement_id,
+            "engagement_name": self.engagement_name,
+            "authorization_reference": self.authorization_reference,
         }
 
 
@@ -436,10 +451,11 @@ def authorized_external_scope_strings() -> list[str]:
 # Stage 1 — hostname authorization
 # ---------------------------------------------------------------------------
 
-def authorize_hostname(host: str) -> str:
+def authorize_hostname(host: str, engagement_id: Optional[str] = None) -> str:
     """Authorize an already-normalized hostname. Returns the scope kind.
 
     Local policy: exact membership in AUTHORIZED_WEB_HOSTS.
+    Engagement policy: if engagement_id is specified.
     External policy: the host must appear in at least one EXACT
     ``host:port`` entry of VAPT_AUTHORIZED_WEB_SCOPES (port checked in
     the next, separate stage).
@@ -450,8 +466,31 @@ def authorize_hostname(host: str) -> str:
     scopes = configured_external_web_scopes()
     if host in AUTHORIZED_WEB_HOSTS:
         return SCOPE_KIND_LOCAL
+
+    if engagement_id:
+        try:
+            from vapt_platform.engagements import get_engagement_manager
+            profile = get_engagement_manager().get_profile(engagement_id)
+            if not profile:
+                raise WebTargetAuthorizationError(
+                    f"Engagement profile {engagement_id!r} not found."
+                )
+            if not profile.is_active():
+                raise WebTargetAuthorizationError(
+                    f"Engagement profile '{profile.name}' is inactive or expired."
+                )
+            if host in [h.lower() for h in profile.authorized_hosts]:
+                return SCOPE_KIND_EXTERNAL
+            raise WebTargetAuthorizationError(
+                f"Host {host!r} is not authorized under engagement '{profile.name}'. "
+                f"Authorized hosts in profile: {profile.authorized_hosts}."
+            )
+        except ImportError:
+            pass
+
     if any(h == host for h, _port in scopes):
         return SCOPE_KIND_EXTERNAL
+
     scope_list = ", ".join(sorted(f"{h}:{p}" for h, p in scopes)) or "none"
     raise WebTargetAuthorizationError(
         f"Host {host!r} is not authorized. Local hosts: "
@@ -466,7 +505,9 @@ def authorize_hostname(host: str) -> str:
 # Stage 2 — port authorization
 # ---------------------------------------------------------------------------
 
-def authorize_port(host: str, port: int, scope_kind: str) -> None:
+def authorize_port(
+    host: str, port: int, scope_kind: str, engagement_id: Optional[str] = None
+) -> None:
     """Authorize a port for an already-authorized host (separate check)."""
     if scope_kind == SCOPE_KIND_LOCAL:
         if port not in AUTHORIZED_WEB_PORTS:
@@ -475,16 +516,33 @@ def authorize_port(host: str, port: int, scope_kind: str) -> None:
                 f"Authorized local ports: {sorted(AUTHORIZED_WEB_PORTS)}."
             )
         return
+
+    if engagement_id:
+        try:
+            from vapt_platform.engagements import get_engagement_manager
+            profile = get_engagement_manager().get_profile(engagement_id)
+            if profile and profile.is_active():
+                if port not in profile.allowed_ports:
+                    raise WebTargetAuthorizationError(
+                        f"Port {port} is not authorized for host {host!r} under engagement "
+                        f"'{profile.name}'. Allowed ports: {sorted(profile.allowed_ports)}."
+                    )
+                return
+        except ImportError:
+            pass
+
     scopes = configured_external_web_scopes()
-    if (host, port) not in scopes:
-        allowed = sorted(
-            f"{h}:{p}" for h, p in scopes if h == host
-        ) or "none"
-        raise WebTargetAuthorizationError(
-            f"Port {port} is not authorized for host {host!r}. Authorized "
-            f"host:port entries for this host: {allowed}. Configure the "
-            f"exact entry via {SCOPE_ENV_VAR}."
-        )
+    if (host, port) in scopes:
+        return
+
+    allowed = sorted(
+        f"{h}:{p}" for h, p in scopes if h == host
+    ) or "none"
+    raise WebTargetAuthorizationError(
+        f"Port {port} is not authorized for host {host!r}. Authorized "
+        f"host:port entries for this host: {allowed}. Configure the "
+        f"exact entry via {SCOPE_ENV_VAR}."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -647,15 +705,15 @@ def _preferred_destination(ips: list[str], scope_kind: str) -> str:
 # Parsing / validation
 # ---------------------------------------------------------------------------
 
-def parse_web_target(raw_url: str) -> WebTarget:
+def parse_web_target(raw_url: str, engagement_id: Optional[str] = None) -> WebTarget:
     """Parse and strictly validate a web-target URL.
 
     Three separate enforcement stages, in order:
-      1. hostname authorization (local policy or external scope),
+      1. hostname authorization (local policy, external scope, or engagement profile),
       2. port authorization for that host,
       3. resolution + destination-address validation for the scope kind.
-    A URL's path, query and fragment are never used for authorization and
-    are stripped from the normalized scanner target.
+    A URL's path, query and fragment are stripped from the normalized scanner target,
+    though path prefixes may be verified against engagement restrictions.
 
     Raises:
         WebTargetAuthorizationError: if the URL is malformed or outside the
@@ -691,7 +749,7 @@ def parse_web_target(raw_url: str) -> WebTarget:
         raise WebTargetAuthorizationError("URL must contain a valid host.")
 
     # --- Stage 1: hostname authorization ---------------------------------
-    scope_kind = authorize_hostname(host)
+    scope_kind = authorize_hostname(host, engagement_id=engagement_id)
 
     # Port: explicit or scheme default (invalid ports fail closed).
     try:
@@ -700,7 +758,30 @@ def parse_web_target(raw_url: str) -> WebTarget:
         raise WebTargetAuthorizationError("URL contains an invalid port.")
 
     # --- Stage 2: port authorization -------------------------------------
-    authorize_port(host, port, scope_kind)
+    authorize_port(host, port, scope_kind, engagement_id=engagement_id)
+
+    # Check engagement path restrictions if applicable
+    matched_profile = None
+    try:
+        from vapt_platform.engagements import get_engagement_manager
+        mgr = get_engagement_manager()
+        if engagement_id:
+            matched_profile = mgr.get_profile(engagement_id)
+        else:
+            for p in mgr.list_profiles(active_only=True):
+                if host in [h.lower() for h in p.authorized_hosts] and port in p.allowed_ports:
+                    matched_profile = p
+                    break
+    except ImportError:
+        pass
+
+    if matched_profile and matched_profile.permitted_paths:
+        path = parsed.path or "/"
+        if not any(path.startswith(prefix) for prefix in matched_profile.permitted_paths):
+            raise WebTargetAuthorizationError(
+                f"Target path {path!r} is outside permitted paths for engagement "
+                f"'{matched_profile.name}'. Permitted prefixes: {matched_profile.permitted_paths}."
+            )
 
     # --- Stage 3: resolution + destination-address validation ------------
     resolved_ips = resolve_addresses(host)
@@ -721,20 +802,29 @@ def parse_web_target(raw_url: str) -> WebTarget:
         scope_kind=scope_kind,
         scope_entry=scope_entry,
         external=external,
+        engagement_id=matched_profile.id if matched_profile else None,
+        engagement_name=matched_profile.name if matched_profile else None,
+        authorization_reference=matched_profile.authorization_reference if matched_profile else None,
     )
 
 
-def validate_web_target(raw_url: str) -> WebTargetValidation:
+def validate_web_target(raw_url: str, engagement_id: Optional[str] = None) -> WebTargetValidation:
     """Validate a URL without raising (for UX preflight + API responses)."""
     try:
-        target = parse_web_target(raw_url)
+        target = parse_web_target(raw_url, engagement_id=engagement_id)
     except WebTargetAuthorizationError as e:
         return WebTargetValidation(authorized=False, reason=str(e))
     if target.external:
-        reason = (
-            f"AUTHORIZED EXTERNAL TARGET ({target.host}:{target.port}) — "
-            f"covered by {SCOPE_ENV_VAR} entry {target.scope_entry}"
-        )
+        if target.engagement_name:
+            reason = (
+                f"AUTHORIZED ENGAGEMENT TARGET ({target.host}:{target.port}) — "
+                f"covered by engagement '{target.engagement_name}' (Ref: {target.authorization_reference or 'N/A'})"
+            )
+        else:
+            reason = (
+                f"AUTHORIZED EXTERNAL TARGET ({target.host}:{target.port}) — "
+                f"covered by {SCOPE_ENV_VAR} entry {target.scope_entry}"
+            )
     else:
         reason = f"AUTHORIZED LOCAL TARGET ({target.host}:{target.port})"
     return WebTargetValidation(
@@ -745,6 +835,9 @@ def validate_web_target(raw_url: str) -> WebTargetValidation:
         port_authorized=True,
         addresses_validated=True,
         in_configured_scope=True,
+        engagement_id=target.engagement_id,
+        engagement_name=target.engagement_name,
+        authorization_reference=target.authorization_reference,
     )
 
 
@@ -883,7 +976,11 @@ def _evaluate_redirect(target: WebTarget, location: str) -> dict[str, Any]:
     return info
 
 
-def preflight_web_target(raw_url: str, timeout: float = 5.0) -> dict[str, Any]:
+def preflight_web_target(
+    raw_url: str,
+    timeout: float = 5.0,
+    engagement_id: Optional[str] = None,
+) -> dict[str, Any]:
     """Run target preflight: parse, authorize, scope-check, connectivity.
 
     The connectivity check opens a plain TCP connection to the VALIDATED
@@ -896,7 +993,7 @@ def preflight_web_target(raw_url: str, timeout: float = 5.0) -> dict[str, Any]:
     authorization_status, preflight_status, reachable, http_status,
     redirect, detail.
     """
-    validation = validate_web_target(raw_url)
+    validation = validate_web_target(raw_url, engagement_id=engagement_id)
     if not validation.authorized or validation.target is None:
         return {
             "target_url": str(raw_url).strip() if raw_url else "",

@@ -83,6 +83,10 @@ def _authorization_rows(auth: dict) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = [
         ("Authorization", auth.get("status") or "NOT RECORDED"),
     ]
+    engagement_name = auth.get("engagement_name")
+    auth_ref = auth.get("authorization_reference")
+    if engagement_name:
+        rows.append(("Engagement", f"{engagement_name} (Ref: {auth_ref or 'N/A'})"))
     scope_kind = auth.get("scope_kind") or ""
     scope_entry = auth.get("scope_entry") or ""
     if scope_kind or scope_entry:
@@ -145,6 +149,14 @@ def _render_web_provenance_html(prov: dict) -> str:
                         <div class="label">Target</div>
                         <div class="value">{prov.get('target_url', 'N/A')}</div>
                     </div>
+                    <div class="meta-item">
+                        <div class="label">Application</div>
+                        <div class="value">{prov.get('application', 'External web target' if (prov.get('authorization', {}) or {}).get('scope_kind') == 'EXTERNAL_SCOPE' else 'Local web service')}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Environment</div>
+                        <div class="value">{prov.get('environment', 'AUTHORIZED EXTERNAL TARGET' if (prov.get('authorization', {}) or {}).get('scope_kind') == 'EXTERNAL_SCOPE' else 'LOCAL LAB TARGET')}</div>
+                    </div>
                     {auth_rows}
                     {rows}
                     <div class="meta-item">
@@ -175,6 +187,10 @@ def _render_web_provenance_markdown(prov: dict) -> list[str]:
     lines.append(f"| Field | Value |")
     lines.append(f"|-------|-------|")
     lines.append(f"| Target | {prov.get('target_url', 'N/A')} |")
+    if prov.get("application"):
+        lines.append(f"| Application | {prov.get('application')} |")
+    if prov.get("environment"):
+        lines.append(f"| Environment | {prov.get('environment')} |")
     for label, value in _authorization_rows(prov.get("authorization")):
         lines.append(f"| {label} | {value} |")
     for scan in prov.get("scanners", []):
@@ -203,6 +219,10 @@ def _render_web_provenance_txt(prov: dict) -> list[str]:
         "-" * 70,
         f"Target:          {prov.get('target_url', 'N/A')}",
     ]
+    if prov.get("application"):
+        lines.append(f"Application:     {prov.get('application')}")
+    if prov.get("environment"):
+        lines.append(f"Environment:     {prov.get('environment')}")
     for label, value in _authorization_rows(prov.get("authorization")):
         lines.append(f"{(label + ':'):<17}{value}")
     for scan in prov.get("scanners", []):
@@ -661,6 +681,7 @@ class HTMLRenderer(ReportRenderer):
         color_map = {
             EvidenceTier.SIMULATED.value: "#ff9800",
             EvidenceTier.OBSERVED_LOCAL.value: "#2196f3",
+            EvidenceTier.OBSERVED_EXTERNAL.value: "#9c27b0",
             EvidenceTier.DOCKER_OBSERVED.value: "#00bcd4",
             EvidenceTier.CONTROLLED_VALIDATION.value: "#4caf50",
             EvidenceTier.UNKNOWN.value: "#9e9e9e",
@@ -672,6 +693,7 @@ class HTMLRenderer(ReportRenderer):
         emoji_map = {
             EvidenceTier.SIMULATED.value: "🧪",
             EvidenceTier.OBSERVED_LOCAL.value: "👁️",
+            EvidenceTier.OBSERVED_EXTERNAL.value: "🌐",
             EvidenceTier.DOCKER_OBSERVED.value: "🐳",
             EvidenceTier.CONTROLLED_VALIDATION.value: "✅",
             EvidenceTier.UNKNOWN.value: "❓",
@@ -845,6 +867,7 @@ class MarkdownRenderer(ReportRenderer):
         emoji_map = {
             EvidenceTier.SIMULATED.value: "🧪",
             EvidenceTier.OBSERVED_LOCAL.value: "👁️",
+            EvidenceTier.OBSERVED_EXTERNAL.value: "🌐",
             EvidenceTier.DOCKER_OBSERVED.value: "🐳",
             EvidenceTier.CONTROLLED_VALIDATION.value: "✅",
             EvidenceTier.UNKNOWN.value: "❓",

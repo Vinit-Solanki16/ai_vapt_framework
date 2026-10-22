@@ -100,6 +100,7 @@ class VAPTRequest:
     use_nmap: bool = True
     use_nuclei: bool = True
     target_scope_acknowledged: bool = False
+    engagement_id: Optional[str] = None
 
 
 @dataclass
@@ -611,7 +612,9 @@ class VAPTApplication:
         pipeline_start = _time.perf_counter()
 
         # --- Phase: authorization + scope (fail closed) ---
-        target = parse_web_target(request.target_url)
+        target = parse_web_target(
+            request.target_url, engagement_id=getattr(request, "engagement_id", None)
+        )
 
         # External targets require an explicit per-assessment acknowledgement
         # that this EXACT host:port is covered by the operator's own
@@ -686,6 +689,9 @@ class VAPTApplication:
                 "status": "AUTHORIZED",
                 "scope_kind": target.scope_kind,
                 "scope_entry": target.scope_entry,
+                "engagement_id": target.engagement_id,
+                "engagement_name": target.engagement_name,
+                "authorization_reference": target.authorization_reference,
                 "external": target.external,
                 "scheme": target.scheme,
                 "hostname": target.host,
@@ -1115,17 +1121,31 @@ class VAPTApplication:
             )
         elif getattr(request, "_web_context", None):
             web_ctx = request._web_context
-            domain.evidence_tier = "OBSERVED_LOCAL"
-            domain.safety_notice = (
-                "WEB TARGET MODE (OBSERVED LOCAL): Findings are real scanner output "
-                f"from the authorized local target {web_ctx.get('target_url', '')} "
-                "(Nmap discovery"
-                f"{' + Nuclei scan' if (web_ctx.get('nuclei') or {}).get('status') == 'COMPLETED' else ''}). "
-                "Scanner findings are NOT automatically confirmed vulnerabilities: "
-                "validation status is VALIDATION NOT AVAILABLE unless a controlled "
-                "validation action was executed and verified. "
-                "No external systems were targeted."
-            )
+            auth = web_ctx.get("authorization") or {}
+            is_external = auth.get("scope_kind") == "EXTERNAL_SCOPE" or auth.get("external", False)
+            if is_external:
+                domain.evidence_tier = "OBSERVED_EXTERNAL"
+                domain.safety_notice = (
+                    "WEB TARGET MODE (OBSERVED EXTERNAL): Findings are real scanner output "
+                    f"from the authorized external target {web_ctx.get('target_url', '')} "
+                    "(Nmap discovery"
+                    f"{' + Nuclei scan' if (web_ctx.get('nuclei') or {}).get('status') == 'COMPLETED' else ''}). "
+                    "Scanner findings are NOT automatically confirmed vulnerabilities: "
+                    "validation status is VALIDATION NOT AVAILABLE unless a controlled "
+                    "validation action was executed and verified."
+                )
+            else:
+                domain.evidence_tier = "OBSERVED_LOCAL"
+                domain.safety_notice = (
+                    "WEB TARGET MODE (OBSERVED LOCAL): Findings are real scanner output "
+                    f"from the authorized local target {web_ctx.get('target_url', '')} "
+                    "(Nmap discovery"
+                    f"{' + Nuclei scan' if (web_ctx.get('nuclei') or {}).get('status') == 'COMPLETED' else ''}). "
+                    "Scanner findings are NOT automatically confirmed vulnerabilities: "
+                    "validation status is VALIDATION NOT AVAILABLE unless a controlled "
+                    "validation action was executed and verified. "
+                    "No external systems were targeted."
+                )
             self._merge_web_finding_metadata(domain, final_state, request)
         else:
             domain.evidence_tier = "SIMULATED"
