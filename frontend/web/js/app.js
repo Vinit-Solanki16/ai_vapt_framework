@@ -54,17 +54,24 @@ const api = {
     listEngagements(activeOnly = false) {
         return this.request('GET', `/engagements${activeOnly ? '?active_only=true' : ''}`);
     },
+    getEngagementDiagnostics() {
+        return this.request('GET', '/engagements/diagnostics');
+    },
     getEngagement(id) {
         return this.request('GET', `/engagements/${id}`);
     },
+    _adminHeaders() {
+        const token = (typeof state !== 'undefined' && state.adminToken) || '';
+        return token ? { 'X-Admin-Token': token } : {};
+    },
     createEngagement(data) {
-        return this.request('POST', '/engagements', data);
+        return this.request('POST', '/engagements', data, this._adminHeaders());
     },
     updateEngagement(id, data) {
-        return this.request('PUT', `/engagements/${id}`, data);
+        return this.request('PUT', `/engagements/${id}`, data, this._adminHeaders());
     },
     deleteEngagement(id) {
-        return this.request('DELETE', `/engagements/${id}`);
+        return this.request('DELETE', `/engagements/${id}`, null, this._adminHeaders());
     },
     validateEngagementTarget(id, targetUrl) {
         return this.request('POST', `/engagements/${id}/validate`, { target_url: targetUrl });
@@ -110,6 +117,8 @@ const state = {
     // (null otherwise — never set by validation itself).
     webValidation: null,
     webAckFor: null,
+    adminToken: null,
+    engagementDiagnostics: null,
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2634,8 +2643,12 @@ async function renderEngagements(container) {
     showLoading(container, 'Loading engagement profiles...');
 
     try {
-        const res = await api.listEngagements(false);
+        const [res, diag] = await Promise.all([
+            api.listEngagements(false),
+            api.getEngagementDiagnostics().catch(() => null),
+        ]);
         state.engagements = res.engagements || [];
+        state.engagementDiagnostics = diag;
 
         container.innerHTML = `
             <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
@@ -2649,6 +2662,22 @@ async function renderEngagements(container) {
                     </button>
                 </div>
             </div>
+
+            ${diag ? `
+            <div style="margin-bottom:1.25rem;padding:0.75rem 1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:0.8rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+                <div>
+                    <span class="text-muted">Storage:</span> <span style="font-family:monospace;color:var(--accent-cyan);">${escapeHtml(diag.storage_path || 'Default')}</span>
+                    ${diag.corrupted ? '<span class="badge badge-error" style="margin-left:0.5rem;">⚠️ STORAGE CORRUPTED (FAIL-CLOSED)</span>' : '<span class="badge badge-success" style="margin-left:0.5rem;">SECURE STORAGE</span>'}
+                    ${diag.legacy_migrated ? '<span class="badge badge-warning" style="margin-left:0.5rem;">MIGRATED FROM LEGACY</span>' : ''}
+                </div>
+                <div>
+                    <button class="btn btn-secondary" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="promptAdminToken()">
+                        🔑 ${state.adminToken ? 'Change Admin Token' : 'Set Admin Token'}
+                    </button>
+                    ${state.adminToken ? '<button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-left:0.25rem;" onclick="clearAdminToken()">✕ Clear</button>' : ''}
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Create / Edit Profile Form Card -->
             <div class="card" id="engagement-form-card" style="display:none;margin-bottom:1.5rem;border-left:4px solid var(--accent-cyan);">
@@ -2920,10 +2949,28 @@ async function submitEngagementForm() {
         toggleEngagementForm(false);
         renderEngagements(document.getElementById('content'));
     } catch (err) {
-        if (feedbackEl) feedbackEl.innerHTML = `<div class="alert alert-danger">Error: ${escapeHtml(err.message)}</div>`;
+        let msg = err.message;
+        if (msg.includes('401') || msg.includes('403') || msg.includes('Admin authentication') || msg.includes('Remote engagement')) {
+            msg += ' — <a href="javascript:void(0)" onclick="promptAdminToken()" style="color:var(--accent-cyan);text-decoration:underline;">Click to enter Admin Token</a>';
+        }
+        if (feedbackEl) feedbackEl.innerHTML = `<div class="alert alert-danger">Error: ${msg}</div>`;
     } finally {
         btn.disabled = false;
     }
+}
+
+function promptAdminToken() {
+    const current = state.adminToken || '';
+    const token = prompt('Enter VAPT Admin Token for profile management (X-Admin-Token):', current);
+    if (token !== null) {
+        state.adminToken = token.trim() || null;
+        renderEngagements(document.getElementById('content'));
+    }
+}
+
+function clearAdminToken() {
+    state.adminToken = null;
+    renderEngagements(document.getElementById('content'));
 }
 
 function editEngagementProfile(id) {
@@ -2941,7 +2988,11 @@ async function toggleEngagementActive(id) {
         await api.updateEngagement(id, { status: newStatus });
         renderEngagements(document.getElementById('content'));
     } catch (err) {
-        alert(`Failed to update status: ${err.message}`);
+        if (err.message.includes('401') || err.message.includes('403')) {
+            promptAdminToken();
+        } else {
+            alert(`Failed to update status: ${err.message}`);
+        }
     }
 }
 
@@ -2951,7 +3002,11 @@ async function deleteEngagementProfile(id) {
         await api.deleteEngagement(id);
         renderEngagements(document.getElementById('content'));
     } catch (err) {
-        alert(`Failed to delete profile: ${err.message}`);
+        if (err.message.includes('401') || err.message.includes('403')) {
+            promptAdminToken();
+        } else {
+            alert(`Failed to delete profile: ${err.message}`);
+        }
     }
 }
 

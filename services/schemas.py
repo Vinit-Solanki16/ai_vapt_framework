@@ -133,6 +133,7 @@ class TargetValidateResponse(BaseModel):
     engagement_id: Optional[str] = None
     engagement_name: Optional[str] = None
     authorization_reference: Optional[str] = None
+    engagement_snapshot: Optional[dict] = None
 
 
 class RunResponse(BaseModel):

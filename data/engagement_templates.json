@@ -15,17 +15,13 @@
     ],
     "permitted_paths": [],
     "authorization_reference": "LAB-POLICY-LOCAL-LOOPBACK",
-    "created_at": "2026-10-22T10:16:47.709550+00:00",
-    "updated_at": "2026-10-22T10:16:47.709550+00:00",
-    "expires_at": null,
     "scanner_policy": "safe_non_destructive",
-    "status": "active",
-    "is_active": true
+    "status": "active"
   },
   {
     "id": "eng-pentest-ground",
     "name": "Pentest Ground Authorized Lab",
-    "description": "Controlled external web testing on pentest-ground.com port 4280",
+    "description": "External web testing template for pentest-ground.com port 4280 (INACTIVE by default — requires operator review and authorization reference before activation)",
     "authorized_hosts": [
       "pentest-ground.com"
     ],
@@ -33,12 +29,8 @@
       4280
     ],
     "permitted_paths": [],
-    "authorization_reference": "ROE-2026-PENTEST-GROUND-4280",
-    "created_at": "2026-10-22T10:16:47.709550+00:00",
-    "updated_at": "2026-10-22T10:16:47.709550+00:00",
-    "expires_at": null,
+    "authorization_reference": "PENDING_OPERATOR_AUTHORIZATION_REVIEW",
     "scanner_policy": "safe_non_destructive",
-    "status": "active",
-    "is_active": true
+    "status": "inactive"
   }
 ]

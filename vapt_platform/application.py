@@ -692,6 +692,7 @@ class VAPTApplication:
                 "engagement_id": target.engagement_id,
                 "engagement_name": target.engagement_name,
                 "authorization_reference": target.authorization_reference,
+                "engagement_snapshot": getattr(target, "engagement_snapshot", None),
                 "external": target.external,
                 "scheme": target.scheme,
                 "hostname": target.host,

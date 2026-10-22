@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from fastapi import Body, FastAPI, Header, HTTPException, Request
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,6 +90,7 @@ def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None)
         use_nmap=req.use_nmap,
         use_nuclei=req.use_nuclei,
         target_scope_acknowledged=req.target_scope_acknowledged,
+        engagement_id=req.engagement_id,
     )
 
     job_manager.update(run_id, status="running")
@@ -343,6 +344,7 @@ def validate_target(req: TargetValidateRequest):
             engagement_id=validation.engagement_id,
             engagement_name=validation.engagement_name,
             authorization_reference=validation.authorization_reference,
+            engagement_snapshot=validation.engagement_snapshot,
         )
 
     preflight = preflight_web_target(req.target_url, engagement_id=req.engagement_id)
@@ -371,7 +373,67 @@ def validate_target(req: TargetValidateRequest):
         engagement_id=target.engagement_id,
         engagement_name=target.engagement_name,
         authorization_reference=target.authorization_reference,
+        engagement_snapshot=target.engagement_snapshot,
     )
+
+
+def _is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return True
+    import urllib.parse
+    parsed = urllib.parse.urlparse(origin)
+    host = (parsed.hostname or "").lower()
+    if host in ("localhost", "127.0.0.1", "::1"):
+        return True
+    allowed_env = os.getenv("VAPT_CORS_ORIGINS", "").strip()
+    if allowed_env:
+        allowed_list = [o.strip().lower() for o in allowed_env.split(",") if o.strip()]
+        if "*" in allowed_list or origin.lower() in allowed_list or host in allowed_list:
+            return True
+    return False
+
+
+def _verify_admin_access(
+    request: Request,
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    authorization: Optional[str] = Header(None),
+) -> None:
+    origin = request.headers.get("origin")
+    if origin and not _is_allowed_origin(origin):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Untrusted origin {origin!r} for engagement management.",
+        )
+
+    admin_token = os.getenv("VAPT_ADMIN_TOKEN", "").strip()
+
+    token = (x_admin_token or "").strip()
+    if not token and authorization:
+        parts = authorization.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+
+    client_host = request.client.host if request.client else "unknown"
+    is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+
+    if admin_token:
+        if not token:
+            raise HTTPException(
+                status_code=401,
+                detail="Admin authentication required. Provide X-Admin-Token or Authorization header.",
+            )
+        import hmac
+        if not hmac.compare_digest(token, admin_token):
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid admin token.",
+            )
+    else:
+        if not is_loopback:
+            raise HTTPException(
+                status_code=403,
+                detail="Remote engagement profile management requires VAPT_ADMIN_TOKEN configured on server.",
+            )
 
 
 @app.get("/engagements")
@@ -383,16 +445,30 @@ def list_engagements(active_only: bool = False):
     return {"engagements": [p.to_dict() for p in profiles]}
 
 
+@app.get("/engagements/diagnostics")
+def get_engagement_diagnostics():
+    """Diagnostic details about engagement storage and status."""
+    from vapt_platform.engagements import get_engagement_manager
+    manager = get_engagement_manager()
+    return manager.get_diagnostics()
+
+
 @app.post("/engagements")
-def create_engagement(payload: dict = Body(...)):
+def create_engagement(payload: dict = Body(...), _admin: None = Depends(_verify_admin_access)):
     """Create a new authorized engagement scope profile."""
-    from vapt_platform.engagements import get_engagement_manager, EngagementValidationError
+    from vapt_platform.engagements import (
+        get_engagement_manager,
+        EngagementValidationError,
+        EngagementStorageError,
+    )
     manager = get_engagement_manager()
     try:
         profile = manager.create_profile(payload)
         return {"status": "created", "engagement": profile.to_dict()}
     except (EngagementValidationError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except EngagementStorageError as e:
+        raise HTTPException(status_code=500, detail=f"Storage error: {e}")
 
 
 @app.get("/engagements/{profile_id}")
@@ -407,9 +483,13 @@ def get_engagement(profile_id: str):
 
 
 @app.put("/engagements/{profile_id}")
-def update_engagement(profile_id: str, payload: dict = Body(...)):
+def update_engagement(profile_id: str, payload: dict = Body(...), _admin: None = Depends(_verify_admin_access)):
     """Update an existing engagement scope profile."""
-    from vapt_platform.engagements import get_engagement_manager, EngagementValidationError
+    from vapt_platform.engagements import (
+        get_engagement_manager,
+        EngagementValidationError,
+        EngagementStorageError,
+    )
     manager = get_engagement_manager()
     try:
         profile = manager.update_profile(profile_id, payload)
@@ -418,16 +498,21 @@ def update_engagement(profile_id: str, payload: dict = Body(...)):
         raise HTTPException(status_code=404, detail="Engagement profile not found")
     except (EngagementValidationError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except EngagementStorageError as e:
+        raise HTTPException(status_code=500, detail=f"Storage error: {e}")
 
 
 @app.delete("/engagements/{profile_id}")
-def delete_engagement(profile_id: str):
+def delete_engagement(profile_id: str, _admin: None = Depends(_verify_admin_access)):
     """Delete an engagement scope profile."""
-    from vapt_platform.engagements import get_engagement_manager
+    from vapt_platform.engagements import get_engagement_manager, EngagementStorageError
     manager = get_engagement_manager()
-    if manager.delete_profile(profile_id):
-        return {"status": "deleted", "id": profile_id}
-    raise HTTPException(status_code=404, detail="Engagement profile not found")
+    try:
+        if manager.delete_profile(profile_id):
+            return {"status": "deleted", "id": profile_id}
+        raise HTTPException(status_code=404, detail="Engagement profile not found")
+    except EngagementStorageError as e:
+        raise HTTPException(status_code=500, detail=f"Storage error: {e}")
 
 
 @app.post("/engagements/{profile_id}/validate")
