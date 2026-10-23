@@ -1074,6 +1074,12 @@ class VAPTApplication:
         from vapt_platform.normalization import FINDING_KIND_VULNERABILITY as _VULN_KIND
 
         for c in final_state.get("candidates", []):
+            if hasattr(c, "execution_outcome") and isinstance(c.execution_outcome, str):
+                from decision_engine.core.schemas import Outcome
+                try:
+                    c.execution_outcome = Outcome(c.execution_outcome)
+                except (ValueError, TypeError):
+                    pass
             if hasattr(c, 'model_dump'):
                 domain.candidates.append(c.model_dump(mode="json"))
             elif hasattr(c, '__dict__'):

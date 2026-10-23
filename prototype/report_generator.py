@@ -46,14 +46,17 @@ def _candidate_to_dict(c) -> dict:
     """Convert a candidate to a JSON-safe dict."""
     if isinstance(c, dict):
         return c
+    quality_val = c.quality_rank.value if hasattr(getattr(c, "quality_rank", None), "value") else getattr(c, "quality_rank", None)
+    outcome_val = c.execution_outcome.value if hasattr(getattr(c, "execution_outcome", None), "value") else getattr(c, "execution_outcome", None)
+    ground_truth_val = c.ground_truth.value if hasattr(getattr(c, "ground_truth", None), "value") else getattr(c, "ground_truth", None)
     return {
         "id": getattr(c, "id", "?"),
         "probability": getattr(c, "probability", 0.0),
-        "quality_rank": c.quality_rank.value if getattr(c, "quality_rank", None) else None,
+        "quality_rank": quality_val,
         "assessed": getattr(c, "assessed", False),
         "attempted": getattr(c, "attempted", False),
-        "execution_outcome": c.execution_outcome.value if getattr(c, "execution_outcome", None) else None,
-        "ground_truth": c.ground_truth.value if getattr(c, "ground_truth", None) else None,
+        "execution_outcome": outcome_val,
+        "ground_truth": ground_truth_val,
     }
 
 

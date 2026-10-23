@@ -98,7 +98,11 @@ curl -s http://127.0.0.1:11434/api/tags  # Verify reachability
 ### Run Interfaces
 
 ```bash
-# 1) Dedicated Web Operations Console & REST API (Recommended)
+# 0) Canonical Demo Startup Script (Recommended — auto-activates venv, loads .env, checks dependencies)
+./scripts/start_demo.sh
+# Open http://localhost:8000 in your browser
+
+# 1) Dedicated Web Operations Console & REST API (Manual launch)
 uvicorn services.api:app --reload --port 8000
 # Open http://localhost:8000 in your browser
 

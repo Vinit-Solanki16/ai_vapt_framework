@@ -354,3 +354,34 @@ class TestPersistedRunReporting:
         # Evidence tier must be preserved
         assert report.evidence_tier == EvidenceTier.DOCKER_OBSERVED.value
         assert "DOCKER" in report.safety_notice
+
+    def test_all_renderers_include_run_id(self):
+        """All report renderers (JSON, HTML, Markdown, TXT) must include the Run ID."""
+        from vapt_platform.persistence.models import PersistentRun
+        from vapt_platform.reporting.builder import ReportBuilder
+
+        run = PersistentRun(
+            run_id="run-traceability-xyz-42",
+            scenario="failure_pivot",
+            mode="simulation",
+            evidence_tier="SIMULATED",
+            final_status="COMPLETED",
+        )
+        report = ReportBuilder().from_persisted_run(run)
+
+        # JSON
+        json_out = JSONRenderer().render(report)
+        assert '"run_id": "run-traceability-xyz-42"' in json_out
+
+        # HTML
+        html_out = HTMLRenderer().render(report)
+        assert "run-traceability-xyz-42" in html_out
+        assert "Run ID" in html_out
+
+        # Markdown
+        md_out = MarkdownRenderer().render(report)
+        assert "| Run ID | `run-traceability-xyz-42` |" in md_out
+
+        # TXT
+        txt_out = TXTRenderer().render(report)
+        assert "Run ID:          run-traceability-xyz-42" in txt_out

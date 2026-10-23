@@ -11,8 +11,12 @@ echo "=========================================="
 echo "  AI-VAPT Operations Console — Reset"
 echo "=========================================="
 
-# Activate venv
-source venv/bin/activate
+# Activate virtualenv
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+elif [ -d "venv" ]; then
+    source venv/bin/activate
+fi
 
 echo ""
 echo "Clearing persisted runs..."
