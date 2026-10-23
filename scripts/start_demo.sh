@@ -4,6 +4,10 @@
 
 set -e
 
+# Ensure script runs from repository root
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "=========================================="
 echo "  AI-VAPT Operations Console — Startup"
 echo "=========================================="
@@ -58,8 +62,8 @@ fi
 
 # Check if Docker is running
 if ! docker ps > /dev/null 2>&1; then
-    echo "⚠️  Docker not available. Docker Lab mode will be unavailable."
-    echo "   To start Docker: cd lab && docker-compose up -d && cd .."
+    echo "⚠️  Docker daemon not available. Docker Lab mode will be unavailable."
+    echo "   Ensure Docker is active if live container testing is required."
 else
     echo "✅ Docker is available"
     # Check if lab containers are running

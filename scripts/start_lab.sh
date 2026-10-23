@@ -4,6 +4,10 @@
 
 set -e
 
+# Ensure script runs from repository root
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "=========================================="
 echo "  AI-VAPT Controlled Lab — Startup"
 echo "=========================================="

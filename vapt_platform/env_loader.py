@@ -6,11 +6,12 @@ using `setdefault` semantics (never overwrites existing variables).
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
 
-def load_env(env_path: Optional[str] = None) -> None:
+def load_env(env_path: Optional[str] = None, allow_test_env: bool = False) -> None:
     """Load configuration variables from .env if present.
 
     - Uses setdefault (does not overwrite existing environment variables).
@@ -18,10 +19,11 @@ def load_env(env_path: Optional[str] = None) -> None:
     - Strips surrounding quotes.
     - Safe: silently ignores missing or inaccessible file.
     - When auto-discovering (env_path is None), skips during pytest test runs
-      to prevent local untracked developer .env files from polluting unit tests.
+      (both during test collection and test execution) to prevent local
+      untracked developer .env files from polluting unit tests.
     """
     if env_path is None:
-        if os.environ.get("PYTEST_CURRENT_TEST"):
+        if not allow_test_env and ("pytest" in sys.modules or os.environ.get("PYTEST_CURRENT_TEST")):
             return
         cwd = Path.cwd()
         repo_root = Path(__file__).resolve().parent.parent

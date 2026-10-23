@@ -181,6 +181,9 @@ def _run_scenario(
 
 
 def main() -> None:
+    from vapt_platform.env_loader import load_env
+    load_env()
+
     parser = argparse.ArgumentParser(
         description="AI VAPT Decision Engine — Mentor Prototype CLI"
     )

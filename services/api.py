@@ -7,6 +7,10 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+# Auto-load configuration from .env if present before configuring app services
+from vapt_platform.env_loader import load_env
+load_env()
+
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,12 +25,8 @@ from services.schemas import (
 )
 from services.jobs import job_manager
 from vapt_platform.application import VAPTRequest, get_application
-from vapt_platform.env_loader import load_env
 from vapt_platform.openrouter_setup import RUNTIME_KEY_HEADER
 from vapt_platform.provider_errors import redact
-
-# Auto-load configuration from .env if present (setdefault semantics)
-load_env()
 
 
 def _safe_error_detail(exc: BaseException, req: "RunRequest" = None,

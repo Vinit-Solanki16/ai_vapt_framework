@@ -61,16 +61,24 @@ This hotfix (`fix/engagement-profile-security`) hardens profile security, separa
 - Any external profile (containing non-loopback hostnames or IPs) **cannot be active** if its `authorization_reference` is missing, empty, or set to a placeholder (e.g., `PENDING_OPERATOR_AUTHORIZATION_REVIEW`, `TODO`, `TEST`, `SAMPLE`).
 - An external profile requires explicit operator activation and entry of a genuine RoE document reference or ticket identifier.
 
-### 3.3 Fail-Closed Corruption Handling
+### 3.3 Fail-Closed Corruption Handling & Storage Recovery
 
-When reading `engagements.json`:
-1. If the file is missing or 0 bytes, clean default profiles are initialized from `data/engagement_templates.json`.
-2. If the file contains invalid JSON, corrupt schema, or unparseable data:
+When loading `engagements.json`:
+1. **Genuinely Missing Storage File (First-Run Initialization):**
+   - If the storage file does not exist on disk, clean default profiles are initialized from `data/engagement_templates.json` (or safely migrated from legacy `data/engagements.json` if present outside Git).
+   - Storage corruption flag remains `False`, and subsequent persistence mutations succeed normally.
+2. **Existing Zero-Byte Storage File (Data-Integrity Edge Case):**
+   - An existing zero-byte file is treated strictly as **invalid/corrupted storage**, never silently overwritten with default templates.
+   - A timestamped backup is immediately created preserving the 0-byte file: `<storage_path>.corrupt.<YYYYMMDDHHMMSS>`.
+   - The in-memory manager enters **Fail-Closed Mode** (`storage_corrupted = True`, `last_storage_error = "Engagements storage file is empty (0 bytes)."`).
+   - Only the safe default local lab fallback profile (`eng-local-lab`) is retained in memory; external profiles never become active.
+   - Mutations (`create_profile`, `update_profile`, `delete_profile`, `_save`) raise `EngagementStorageError` and refuse to overwrite the invalid storage while in isolation mode.
+3. **Malformed JSON, Schema Corruption, or Unparseable Data:**
    - A timestamped backup is immediately created: `<storage_path>.corrupt.<YYYYMMDDHHMMSS>`.
    - The in-memory manager enters **Fail-Closed Mode** (`storage_corrupted = True`).
    - Only the safe default local lab profile (`eng-local-lab`) is retained in memory.
    - All external targets are strictly **unauthorized**.
-   - Mutations (`create_profile`, `update_profile`, `delete_profile`) raise `EngagementStorageError` and refuse to overwrite the corrupted file until an administrator inspects or restores it.
+   - Mutations raise `EngagementStorageError` and refuse to overwrite the corrupted file until an operator inspects or restores it.
 
 ### 3.4 Secret Scanning & Credential Rejection
 

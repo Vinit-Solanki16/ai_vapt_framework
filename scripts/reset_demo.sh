@@ -7,6 +7,10 @@
 
 set -e
 
+# Ensure script runs from repository root
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "=========================================="
 echo "  AI-VAPT Operations Console — Reset"
 echo "=========================================="
@@ -42,5 +46,5 @@ echo "To start the application:"
 echo "  ./scripts/start_demo.sh"
 echo ""
 echo "Or manually:"
-echo "  source venv/bin/activate"
+echo "  source .venv/bin/activate"
 echo "  uvicorn services.api:app --reload --port 8000"
