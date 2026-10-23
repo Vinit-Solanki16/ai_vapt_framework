@@ -1225,9 +1225,13 @@ class VAPTApplication:
                 c["priority"] = priority_of[cid]
             # Honest validation labelling. Phase 32B: web runs are
             # assessment-only — no validator executed, so every web finding
-            # is VALIDATION NOT AVAILABLE. SIMULATED-OUTCOME is never set
-            # here (no simulation-mode execution happens for web targets).
-            c["validation_status"] = "VALIDATION NOT AVAILABLE"
+            # defaults to VALIDATION NOT AVAILABLE unless active verification was performed.
+            if c.get("verification_evidence") or snap.get("verification_evidence"):
+                evidence = c.get("verification_evidence") or snap.get("verification_evidence")
+                c["verification_evidence"] = evidence
+                c["validation_status"] = evidence.get("status", "VALIDATION NOT AVAILABLE")
+            else:
+                c["validation_status"] = "VALIDATION NOT AVAILABLE"
             merged.append(c)
         domain.candidates = merged
 

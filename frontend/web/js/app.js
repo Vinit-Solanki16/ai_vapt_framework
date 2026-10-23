@@ -205,6 +205,7 @@ function openRouterIsConfigured() {
 const PROVIDER_MODELS = {
     ollama: [
         { value: 'llama3.2:3b', label: 'llama3.2:3b (thesis baseline)' },
+        { value: 'qwen3.5:4b', label: 'qwen3.5:4b (configurable local model default)' },
         { value: 'qwen2.5:3b', label: 'qwen2.5:3b (experimental arm)' },
     ],
     openrouter: [
@@ -218,7 +219,7 @@ const PROVIDER_MODELS = {
 };
 
 const PROVIDER_NOTES = {
-    ollama: 'Runs fully offline against your local Ollama.',
+    ollama: 'Runs fully offline against your local Ollama instance (default: qwen3.5:4b). If Ollama is offline or model is missing, deterministic fallback is recorded with clear provenance.',
     openrouter: 'Hosted API. Selecting it opens the setup panel below: paste your key, validate the connection, then run. The key lives in this tab\'s memory only and is forgotten on reload. Produces a separate run arm — never merged with the historical Ollama baseline.',
     openai: 'Hosted API. Requires OPENAI_API_KEY on the server (never entered here).',
 };
@@ -2145,12 +2146,13 @@ function webStageNeutral(label, detail) {
 // SIMULATED, DOCKER_OBSERVED, VALIDATED. Only an explicit VALIDATED
 // counts as validated; everything else is NOT AVAILABLE / non-validated.
 function isValidatedStatus(status) {
-    return String(status || '').trim().toUpperCase() === 'VALIDATED';
+    const s = String(status || '').trim().toUpperCase();
+    return s === 'VALIDATED' || s === 'VALIDATED_TRUE_POSITIVE';
 }
 
 function isNotAvailableStatus(status) {
     const s = String(status || '').toUpperCase();
-    return s.includes('NOT AVAILABLE') || s === 'SCANNER-DETECTED' || s === '';
+    return s.includes('NOT AVAILABLE') || s === 'SCANNER-DETECTED' || s === 'SCANNER_DETECTED' || s === '';
 }
 
 function validationBadgeClass(status) {
@@ -2158,7 +2160,9 @@ function validationBadgeClass(status) {
     const s = String(status || '').toUpperCase();
     if (s === 'SIMULATED' || s.includes('SIMULATED')) return 'badge-info';
     if (s === 'DOCKER_OBSERVED' || s.includes('DOCKER')) return 'badge-info';
-    if (s === 'SCANNER-DETECTED') return 'badge-info';
+    if (s === 'SCANNER-DETECTED' || s === 'SCANNER_DETECTED') return 'badge-info';
+    if (s === 'FALSE_POSITIVE') return 'badge-danger';
+    if (s === 'INCONCLUSIVE') return 'badge-warning';
     return 'badge-warning';
 }
 
@@ -2385,6 +2389,8 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
     const targetOk = !!pre.reachable;
     const findingsOk = cands.length > 0;
     const aiOk = assess.mode === 'ai' || assess.mode === 'deterministic';
+    const isAiMode = assess.mode === 'ai';
+    const hasFallback = Array.isArray(details) && details.length > 0 && details.every(d => d.fallback);
 
     // FIX 3: VALIDATION reflects the backend per-finding validation_status.
     // Web-mode scanner findings are SCANNER-DETECTED → VALIDATION NOT
@@ -2423,7 +2429,11 @@ function renderWebRunDetails(container, run, events, candidates, assessment, web
         webStage(findingsOk, 'FINDINGS', String(cands.length)),
         webStage(findingsOk, 'NORMALIZATION', 'CanonicalFinding + dedup'),
         webStage(findingsOk, 'ENRICHMENT', 'EPSS / KEV / CVSS / CWE'),
-        webStage(aiOk, 'AI ASSESSMENT', `${assess.provider || '?'}${assess.model ? ' / ' + assess.model : ''}`),
+        (isAiMode && hasFallback
+            ? `<div class="pipeline-step"><div class="step-circle warning" style="background:#f59e0b;color:#fff;">!</div><div class="step-label warning" style="color:#f59e0b;">FALLBACK USED</div><div class="text-dim" style="font-size:0.65rem;">${escapeHtml(assess.provider || 'ollama')} offline - fallback used</div></div>`
+            : (assess.mode === 'deterministic'
+                ? `<div class="pipeline-step"><div class="step-circle completed">✓</div><div class="step-label completed">DETERMINISTIC</div><div class="text-dim" style="font-size:0.65rem;">baseline scoring</div></div>`
+                : webStage(aiOk, 'AI ASSESSMENT', `${assess.provider || '?'}${assess.model ? ' / ' + assess.model : ''}`))),
         webStage(true, 'RANKING', 'assessment → rank (GAP-1)'),
         webStage(true, 'DECISION', `${run.final_status || run.status || '?'}`),
         webStage(true, 'SAFETY', 'SafetyGate authorized (scope check)'),

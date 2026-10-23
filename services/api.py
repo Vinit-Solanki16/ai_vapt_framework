@@ -747,15 +747,17 @@ def system_health():
     # Check Ollama via live reachability and model probe
     try:
         from vapt_platform.model_config import (
-            DEFAULT_OLLAMA_MODEL, EXPERIMENTAL_MODELS,
+            DEFAULT_OLLAMA_MODEL, EXPERIMENTAL_MODELS, default_ollama_model_from_env,
         )
         from vapt_platform.ollama_service import probe_ollama
 
-        probe = probe_ollama(DEFAULT_OLLAMA_MODEL)
+        active_model = default_ollama_model_from_env()
+        probe = probe_ollama(active_model)
         health_status["ollama"] = probe["status"]
         health_status["ollama_reachable"] = probe["reachable"]
         health_status["ollama_model_installed"] = probe["model_installed"]
-        health_status["ollama_model"] = DEFAULT_OLLAMA_MODEL
+        health_status["ollama_model"] = active_model
+        health_status["ollama_baseline_model"] = DEFAULT_OLLAMA_MODEL
         health_status["ollama_models"] = probe["installed_models"]
         health_status["ollama_experimental_models"] = list(EXPERIMENTAL_MODELS)
         if probe.get("error"):

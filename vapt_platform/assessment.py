@@ -52,6 +52,7 @@ class AssessmentResult:
         fallback: True if AI was requested but deterministic was used
         reasoning: Optional reasoning text from LLM
         error: Optional error message if fallback occurred
+        llm_response_received: True if an LLM HTTP response was received (even if malformed)
     """
     quality_rank: QualityRank = QualityRank.LOW
     source: str = "deterministic"
@@ -60,6 +61,7 @@ class AssessmentResult:
     fallback: bool = False
     reasoning: Optional[str] = None
     error: Optional[str] = None
+    llm_response_received: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -70,6 +72,7 @@ class AssessmentResult:
             "fallback": self.fallback,
             "reasoning": self.reasoning,
             "error": self.error,
+            "llm_response_received": self.llm_response_received,
         }
 
 
@@ -79,7 +82,7 @@ class AssessmentResult:
 
 def _try_ollama_assess(
     candidate: ActionCandidate, model_name: Optional[str] = None,
-    errors: Optional[list] = None,
+    errors: Optional[list] = None, diag: Optional[dict] = None,
 ) -> Optional[AssessmentResult]:
     """Attempt to assess a candidate using Ollama."""
     model = resolve_model("ollama", model_name)
@@ -113,9 +116,15 @@ def _try_ollama_assess(
             model=model,
             fallback=False,
             reasoning=a.reasoning,
+            llm_response_received=True,
         )
     except Exception as e:
         log.warning(f"Ollama assessment failed for {candidate.id}: {e}")
+        # Detect if an LLM HTTP response arrived but was malformed or failed validation
+        err_str = str(e).lower()
+        if any(term in err_str for term in ("validation", "json", "schema", "malformed", "syntax")):
+            if diag is not None:
+                diag["llm_response_received"] = True
         if errors is not None:
             errors.append(_describe("ollama", e))
         return None
@@ -279,6 +288,7 @@ def create_assessor(
         # different one — the provenance below always names the provider the
         # user actually selected.
         errors: list[str] = []
+        diag: dict[str, Any] = {"llm_response_received": False}
         if provider == "openrouter":
             result = _try_openrouter_assess(
                 candidate, api_key=api_key, model_name=resolved_model,
@@ -292,6 +302,7 @@ def create_assessor(
         else:
             result = _try_ollama_assess(
                 candidate, model_name=resolved_model, errors=errors,
+                diag=diag,
             )
 
         if result is not None:
@@ -313,6 +324,7 @@ def create_assessor(
             fallback=True,
             error=f"{provider} unavailable; deterministic fallback used "
                   f"({detail})",
+            llm_response_received=bool(diag.get("llm_response_received", False)),
         )
 
     return _ai_assess

@@ -63,6 +63,7 @@ class CandidateReport:
     score: dict[str, Any] = field(default_factory=dict)
     candidate_eligibility: str = "ACTIONABLE"
     validation_status: str = ""
+    verification_evidence: Optional[dict[str, Any]] = None
 
 
 @dataclass
@@ -205,6 +206,7 @@ class ReportModel:
                     "score": c.score,
                     "candidate_eligibility": c.candidate_eligibility,
                     "validation_status": c.validation_status,
+                    "verification_evidence": c.verification_evidence,
                 }
                 for c in self.candidates
             ],

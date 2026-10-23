@@ -332,6 +332,7 @@ class ReportBuilder:
                     c.get("validation_status", "")
                     or _fallback_validation_status(c, evidence_tier)
                 ),
+                verification_evidence=c.get("verification_evidence"),
             ))
         
         # Build execution results
@@ -451,6 +452,7 @@ class ReportBuilder:
                     c.get("validation_status", "")
                     or _fallback_validation_status(c, evidence_tier)
                 ),
+                verification_evidence=c.get("verification_evidence"),
             ))
         
         # Build execution results

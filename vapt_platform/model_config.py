@@ -24,6 +24,7 @@ from typing import Optional
 
 # --- Official baseline / production default (do not change silently) -------
 DEFAULT_OLLAMA_MODEL = "llama3.2:3b"
+DEFAULT_LOCAL_MODEL = "qwen3.5:4b"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 #: Hosted default for the OPTIONAL OpenRouter provider. OpenRouter runs are a
 #: separate, clearly-labelled arm — they are NEVER compared against, merged
@@ -34,6 +35,7 @@ DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct"
 # Ordered: first entry is the default for that provider.
 OLLAMA_MODELS: tuple[str, ...] = (
     DEFAULT_OLLAMA_MODEL,   # baseline (thesis)
+    DEFAULT_LOCAL_MODEL,    # small configurable local model default
     "qwen2.5:3b",           # experimental comparison arm (Phase 33A)
 )
 OPENAI_MODELS: tuple[str, ...] = (
@@ -69,12 +71,22 @@ PROVIDER_API_KEY_ENV: dict[str, str] = {
 # without hardcoding the tag string in multiple places.
 EXPERIMENTAL_MODELS: dict[str, str] = {
     "qwen2.5:3b": "experimental comparison arm (not the baseline)",
+    DEFAULT_LOCAL_MODEL: "configurable local model (default)",
 }
 
 
 def is_known_provider(provider: Optional[str]) -> bool:
     """True when *provider* is a registered dispatch target."""
     return (provider or "").strip().lower() in KNOWN_PROVIDERS
+
+
+def default_ollama_model_from_env() -> str:
+    """Configurable Ollama model default, overridable via ``OLLAMA_MODEL``.
+
+    Falls back to DEFAULT_OLLAMA_MODEL (thesis baseline) when the var is unset or blank.
+    """
+    requested = (os.getenv("OLLAMA_MODEL") or "").strip()
+    return requested or DEFAULT_OLLAMA_MODEL
 
 
 def default_openrouter_model_from_env() -> str:
@@ -116,6 +128,8 @@ def default_model_for(provider: Optional[str]) -> str:
         return DEFAULT_OPENAI_MODEL
     if p == "openrouter":
         return default_openrouter_model_from_env()
+    if p == "ollama":
+        return default_ollama_model_from_env()
     return DEFAULT_OLLAMA_MODEL
 
 
