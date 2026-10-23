@@ -363,8 +363,9 @@ def test_api_start_run_passes_assessor_model_to_the_request():
     import services.api
 
     source = inspect.getsource(services.api)
-    # Both request->VAPTRequest adapters must thread the model through.
-    assert source.count("assessor_model=req.assessor_model") >= 2
+    # The asynchronous API has one request->VAPTRequest adapter in the worker;
+    # POST /runs now only validates and queues the request.
+    assert source.count("assessor_model=req.assessor_model") >= 1
 
 
 # ---------------------------------------------------------------------------

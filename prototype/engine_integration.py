@@ -163,8 +163,10 @@ def run_decision_scenario(
             "provider": result.provider,
             "model": result.model,
             "fallback": result.fallback,
+            "fallback_reason": result.error,
             "reasoning": result.reasoning,
             "error": result.error,
+            "llm_response_received": result.llm_response_received,
             "latency_s": round(_latency, 4),
         })
         return result.quality_rank

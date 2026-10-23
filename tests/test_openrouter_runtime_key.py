@@ -28,6 +28,7 @@ import inspect
 import json
 import os
 import sys
+import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -645,6 +646,14 @@ class TestUiGating:
 # ===========================================================================
 class TestRunThreading:
     @staticmethod
+    def _wait_for_capture(captured):
+        for _ in range(200):
+            if captured:
+                return
+            time.sleep(0.01)
+        raise AssertionError("asynchronous worker did not start")
+
+    @staticmethod
     def _fake_application(captured):
         from types import SimpleNamespace
 
@@ -689,7 +698,8 @@ class TestRunThreading:
                   "assessor_provider": "openrouter"},
             headers={ors.RUNTIME_KEY_HEADER: FAKE_KEY},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
+        self._wait_for_capture(captured)
         assert len(captured) == 1
         assert captured[0].assessor_api_key == FAKE_KEY
         assert captured[0].assessor_provider == "openrouter"
@@ -707,6 +717,7 @@ class TestRunThreading:
             json={"scenario": "failure_pivot", "mode": "simulation"},
             headers={ors.RUNTIME_KEY_HEADER: FAKE_KEY},
         )
+        self._wait_for_capture(captured)
         assert os.getenv("OPENROUTER_API_KEY") is None
         assert "OPENROUTER_API_KEY" not in os.environ
 
@@ -722,7 +733,8 @@ class TestRunThreading:
             json={"scenario": "failure_pivot", "mode": "simulation"},
             headers={ors.RUNTIME_KEY_HEADER: FAKE_KEY},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
+        self._wait_for_capture(captured)
         assert FAKE_KEY not in resp.text
 
     def test_run_state_kept_by_the_job_manager_has_no_key(self, monkeypatch):
@@ -733,12 +745,13 @@ class TestRunThreading:
         captured: list = []
         monkeypatch.setattr(services.api, "get_application",
                             lambda: self._fake_application(captured))
-        TestClient(services.api.app).post(
+        resp = TestClient(services.api.app).post(
             "/runs",
             json={"scenario": "failure_pivot", "mode": "simulation"},
             headers={ors.RUNTIME_KEY_HEADER: FAKE_KEY},
         )
-        state = job_manager.get("run-test-1")
+        self._wait_for_capture(captured)
+        state = job_manager.get(resp.json()["run_id"])
         assert FAKE_KEY not in json.dumps(state, default=str)
 
     def test_body_key_still_works_for_cli_callers_but_is_never_persisted(
@@ -754,7 +767,8 @@ class TestRunThreading:
             json={"scenario": "failure_pivot", "mode": "simulation",
                   "assessor_api_key": FAKE_KEY},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
+        self._wait_for_capture(captured)
         assert captured[0].assessor_api_key == FAKE_KEY
         assert FAKE_KEY not in resp.text
 
@@ -776,8 +790,16 @@ class TestRunThreading:
             json={"scenario": "failure_pivot", "mode": "simulation"},
             headers={ors.RUNTIME_KEY_HEADER: FAKE_KEY},
         )
-        assert resp.status_code == 500
-        assert FAKE_KEY not in resp.text
+        assert resp.status_code == 202
+        run_id = resp.json()["run_id"]
+        status = None
+        for _ in range(200):
+            status = services.api.job_manager.get_status(run_id)
+            if status and status.status == "failed":
+                break
+            time.sleep(0.01)
+        assert status is not None and status.status == "failed"
+        assert FAKE_KEY not in (status.error or "")
 
     def test_assessor_api_key_is_not_a_persisted_or_reported_field(self):
         import vapt_platform.persistence.models as persistence_models

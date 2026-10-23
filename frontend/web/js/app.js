@@ -37,6 +37,7 @@ const api = {
     getSystemHealth() { return this.request('GET', '/system/health'); },
     getScenarios() { return this.request('GET', '/scenarios'); },
     startRun(data, headers = null) { return this.request('POST', '/runs', data, headers); },
+    getRunStatus(runId) { return this.request('GET', `/runs/${runId}`); },
     listRuns(limit = 100) { return this.request('GET', `/runs?limit=${limit}`); },
     getRun(runId) { return this.request('GET', `/runs/${runId}/persisted`); },
     getRunEvents(runId) { return this.request('GET', `/runs/${runId}/events`); },
@@ -434,6 +435,36 @@ function showError(container, message) {
             <strong>Error:</strong> ${escapeHtml(message)}
         </div>
     `;
+}
+
+async function pollRunStatus(runId, onUpdate, intervalMs = 750, maxWaitMs = 30 * 60 * 1000) {
+    const started = Date.now();
+    while (Date.now() - started < maxWaitMs) {
+        const status = await api.getRunStatus(runId);
+        if (typeof onUpdate === 'function') onUpdate(status);
+        if (status.status === 'completed' || status.status === 'failed') return status;
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+    throw new Error('The assessment is still running. Keep this run ID and refresh its status later.');
+}
+
+function renderRunProgress(container, status, target = '') {
+    if (!container) return;
+    const state = String(status?.status || 'queued').toUpperCase();
+    const detail = status?.error || (state === 'QUEUED'
+        ? 'Waiting for an available assessment worker.'
+        : 'Scanners and local inference are running on the backend.');
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header"><span class="card-title">Assessment ${escapeHtml(state)}</span></div>
+            <p class="text-muted" style="font-size:0.85rem;">
+                Run ID: <span style="font-family:monospace;">${escapeHtml(status?.run_id || '')}</span><br>
+                ${target ? `Target: <span style="font-family:monospace;">${escapeHtml(target)}</span><br>` : ''}
+                Attempts recorded: ${escapeHtml(String(status?.total_attempts ?? 0))} ·
+                Pivots recorded: ${escapeHtml(String(status?.pivot_count ?? 0))}
+            </p>
+            <div class="alert ${state === 'FAILED' ? 'alert-error' : 'alert-info'}">${escapeHtml(detail)}</div>
+        </div>`;
 }
 
 function showEmpty(container, icon = '📭', text = 'No data available', hint = '') {
@@ -1798,22 +1829,28 @@ async function startAssessment() {
         // attached only when OpenRouter is actually the selected provider.
         const headers = (provider === 'openrouter') ? openrouterKeyHeaders() : null;
 
+        // POST /runs only accepts the job. Poll the short status endpoint so
+        // scanner and Ollama latency never holds this browser request open.
         const result = await api.startRun(data, headers);
         state.currentRun = result.run_id;
-        // FIX 5: only the new result is displayed, bound to its run_id.
         state.displayedRun = result.run_id;
-
         resultCard.style.display = 'block';
+        resultContent.innerHTML = '<div id="active-run-details"></div>';
+        const activeDetails = document.getElementById('active-run-details');
+        const finalStatus = await pollRunStatus(result.run_id,
+            status => renderRunProgress(activeDetails, status));
+        if (finalStatus.status === 'failed') {
+            throw new Error(finalStatus.error || 'Assessment failed. Check the run status for details.');
+        }
         resultContent.innerHTML = `
             <div class="alert alert-success">
                 <strong>Run completed!</strong> Run ID: ${escapeHtml(result.run_id)}
             </div>
-            <div id="active-run-details"></div>
-        `;
+            <div id="active-run-details"></div>`;
         const prevCardOk = document.getElementById('previous-run-card');
         if (prevCardOk) prevCardOk.style.display = 'none';
 
-        // Load full run details
+        // Load full persisted report and assessment details after completion.
         await loadActiveRunDetails(result.run_id);
 
         // FIX 6: COMPLETED — explicit post-run bar bound to the new run_id;
@@ -1822,11 +1859,11 @@ async function startAssessment() {
 
     } catch (err) {
         // FIX 5: a fresh error is the new result — no stale run output.
-        state.displayedRun = null;
+        state.displayedRun = state.currentRun || null;
         resultCard.style.display = 'block';
         resultContent.innerHTML = `<div class="alert alert-error"><strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
         // FIX 6: FAILED — explicit recovery bar (VIEW ERROR / RETRY / NEW).
-        showPostRunActions({ status: 'failed', isWeb: false, error: err.message });
+        showPostRunActions({ status: 'failed', runId: state.currentRun, isWeb: false, error: err.message });
     }
 }
 
@@ -1865,10 +1902,10 @@ async function startWebAssessment() {
     // FIX 6: VALIDATING — real preflight call below; button says so.
     btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> VALIDATING...';
 
-    // FIX 7: honest in-flight indicator. The workflow is synchronous, so
-    // no per-stage progress exists to report (no percentages, no stage
-    // claims). The only truthful live facts are: the request is in
-    // flight, its target, and wall-clock elapsed. Timer cleared on settle.
+    // FIX 7: honest preflight indicator. Authorization is synchronous, but
+    // the accepted assessment is asynchronous; status polling below reports
+    // the backend's queued/running/terminal state. There is no per-stage
+    // progress claim before the worker reports a real status.
     let vaptTimer = null;
     const stopVaptTimer = () => {
         if (vaptTimer) {
@@ -1938,12 +1975,8 @@ async function startWebAssessment() {
             max_attempts: maxAttempts,
         };
 
-        // FIX 7: honest in-flight status. Only live facts are shown: the
-        // request is in flight, its target, and measured wall-clock
-        // elapsed. No per-stage RUNNING claims (the synchronous workflow
-        // exposes no live stage feed), no percentages, no WebSockets.
-        // Nuclei scans can take several minutes — this tells the user the
-        // assessment is not stuck without fabricating progress.
+        // The POST only accepts the job. The status poll below keeps the UI
+        // observable while Nuclei and local inference run in a worker.
         const vaptStart = Date.now();
         resultCard.style.display = 'block';
         resultContent.innerHTML = `
@@ -1965,10 +1998,15 @@ async function startWebAssessment() {
         // Runtime credential in a header only, and only for OpenRouter.
         const webHeaders = (webProvider === 'openrouter') ? openrouterKeyHeaders() : null;
         const result = await api.startRun(data, webHeaders);
-        stopVaptTimer();
         state.currentRun = result.run_id;
-        // FIX 5: only the new result is displayed, bound to its run_id.
         state.displayedRun = result.run_id;
+
+        const finalStatus = await pollRunStatus(result.run_id,
+            status => renderRunProgress(resultContent, status, targetUrl));
+        stopVaptTimer();
+        if (finalStatus.status === 'failed') {
+            throw new Error(finalStatus.error || 'Web assessment failed. Check the run status for details.');
+        }
 
         resultCard.style.display = 'block';
         resultContent.innerHTML = `
@@ -1988,11 +2026,11 @@ async function startWebAssessment() {
     } catch (err) {
         // FIX 5: a fresh error is the new result — no stale run output.
         stopVaptTimer();
-        state.displayedRun = null;
+        state.displayedRun = state.currentRun || null;
         resultCard.style.display = 'block';
         resultContent.innerHTML = `<div class="alert alert-error"><strong>Error:</strong> ${escapeHtml(err.message)}</div>`;
         // FIX 6: FAILED — explicit recovery bar (VIEW ERROR / RETRY / NEW).
-        showPostRunActions({ status: 'failed', isWeb: true, error: err.message });
+        showPostRunActions({ status: 'failed', runId: state.currentRun, isWeb: true, error: err.message });
     }
 }
 

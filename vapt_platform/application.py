@@ -101,6 +101,9 @@ class VAPTRequest:
     use_nuclei: bool = True
     target_scope_acknowledged: bool = False
     engagement_id: Optional[str] = None
+    # API workers allocate the stable run ID before queueing. CLI and direct
+    # callers leave this unset and retain the application-generated ID.
+    run_id: Optional[str] = None
 
 
 @dataclass
@@ -189,7 +192,7 @@ class VAPTApplication:
 
     def run(self, request: VAPTRequest) -> VAPTResult:
         """Execute the full VAPT workflow."""
-        run_id = self._generate_run_id()
+        run_id = request.run_id or self._generate_run_id()
         domain = DomainResult(run_id=run_id, scenario=request.scenario, mode=request.mode)
         
         # Initialize event publisher
@@ -958,8 +961,10 @@ class VAPTApplication:
                 "provider": assessed_result.provider,
                 "model": assessed_result.model,
                 "fallback": assessed_result.fallback,
+                "fallback_reason": assessed_result.error,
                 "reasoning": assessed_result.reasoning,
                 "error": assessed_result.error,
+                "llm_response_received": assessed_result.llm_response_received,
                 "latency_s": round(_latency, 4),
             })
             return assessed_result.quality_rank

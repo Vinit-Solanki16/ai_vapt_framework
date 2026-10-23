@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tempfile
 import shutil
+import time
 from unittest.mock import patch
 
 import pytest
@@ -29,6 +30,17 @@ def client():
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+def wait_for_terminal(client, run_id):
+    for _ in range(200):
+        status = client.get(f"/runs/{run_id}")
+        assert status.status_code == 200
+        payload = status.json()
+        if payload["status"] in {"completed", "failed"}:
+            return payload
+        time.sleep(0.01)
+    raise AssertionError(f"run {run_id} did not finish")
+
+
 class TestHealth:
     def test_health(self, client):
         resp = client.get("/health")
@@ -44,10 +56,11 @@ class TestStartRun:
             "mode": "simulation",
             "assessor": "deterministic",
         })
-        assert resp.status_code == 200
+        assert resp.status_code == 202
         data = resp.json()
         assert "run_id" in data
-        assert data["status"] == "completed"
+        assert data["status"] == "queued"
+        assert wait_for_terminal(client, data["run_id"])["status"] == "completed"
 
     def test_start_run_lab_rejects_non_allowlisted(self, client):
         resp = client.post("/runs", json={
@@ -65,6 +78,7 @@ class TestGetStatus:
         # Create a run first
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
+        wait_for_terminal(client, run_id)
         resp = client.get(f"/runs/{run_id}/persisted")
         assert resp.status_code == 200
         assert resp.json()["run_id"] == run_id
@@ -78,6 +92,7 @@ class TestGetTrace:
     def test_get_trace(self, client):
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
+        wait_for_terminal(client, run_id)
         resp = client.get(f"/runs/{run_id}/persisted")
         assert resp.status_code == 200
         data = resp.json()
@@ -88,6 +103,7 @@ class TestGetReport:
     def test_get_report(self, client):
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
+        wait_for_terminal(client, run_id)
         resp = client.get(f"/runs/{run_id}/report")
         assert resp.status_code == 200
         data = resp.json()
@@ -115,6 +131,7 @@ class TestNewEndpoints:
     def test_get_assessment(self, client):
         resp = client.post("/runs", json={"scenario": "success", "mode": "simulation"})
         run_id = resp.json()["run_id"]
+        wait_for_terminal(client, run_id)
         resp = client.get(f"/runs/{run_id}/assessment")
         assert resp.status_code == 200
         data = resp.json()

@@ -137,22 +137,31 @@ class TargetValidateResponse(BaseModel):
 
 
 class RunResponse(BaseModel):
-    """Response after starting a run."""
+    """Immediate response after a run is accepted by the worker queue."""
     run_id: str
-    status: str
+    status: Literal["queued", "running", "completed", "failed"]
     message: str
 
 
 class RunStatus(BaseModel):
-    """Status of a run."""
+    """Observable asynchronous run state and completed-run data."""
     run_id: str
-    status: Literal["pending", "running", "completed", "failed", "paused"]
+    status: Literal["queued", "running", "completed", "failed"]
     scenario: Optional[str] = None
     mode: str = "simulation"
     final_status: Optional[str] = None
     total_attempts: int = 0
     pivot_count: int = 0
-    candidates_processed: List[str] = []
+    candidates_processed: List[str] = Field(default_factory=list)
+    evidence_tier: Optional[str] = None
+    assessment: dict = Field(default_factory=dict)
+    candidates: List[dict] = Field(default_factory=list)
+    execution_results: List[dict] = Field(default_factory=list)
+    decision_trace: List[str] = Field(default_factory=list)
+    service_discovery: List[dict] = Field(default_factory=list)
+    report: dict = Field(default_factory=dict)
+    error: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class TraceEvent(BaseModel):

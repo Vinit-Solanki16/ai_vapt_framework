@@ -157,6 +157,7 @@ def _try_openai_assess(
             model=model,
             fallback=False,
             reasoning=a.reasoning,
+            llm_response_received=True,
         )
     except Exception as e:
         log.warning(f"OpenAI assessment failed for {candidate.id}: {e}")
@@ -207,6 +208,7 @@ def _try_openrouter_assess(
             model=model,
             fallback=False,
             reasoning=a.reasoning,
+            llm_response_received=True,
         )
     except Exception as e:
         log.warning(f"OpenRouter assessment failed for {candidate.id}: {e}")

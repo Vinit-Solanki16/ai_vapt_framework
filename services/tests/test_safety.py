@@ -30,9 +30,9 @@ class TestAPISafety:
             "port": 8080,
             "assessor": "deterministic",
         })
-        assert resp.status_code == 200
+        assert resp.status_code == 202
         data = resp.json()
-        assert data["status"] == "completed"
+        assert data["status"] == "queued"
 
     def test_lab_mode_accepts_allowlisted_127(self, client):
         """Lab mode must accept 127.0.0.1."""
@@ -44,9 +44,8 @@ class TestAPISafety:
             "port": 8080,
             "assessor": "deterministic",
         })
-        # Note: the engine may fail because no emulator is running,
-        # but the allowlist check should pass (200 or 500, not 400)
-        assert resp.status_code != 400, f"Got 400: {resp.json()}"
+        # The allowlist check runs before scheduling; accepted work is 202.
+        assert resp.status_code == 202, f"Got {resp.status_code}: {resp.json()}"
 
     def test_lab_mode_accepts_allowlisted_172(self, client):
         """Lab mode must accept 172.28.0.2."""
@@ -58,7 +57,7 @@ class TestAPISafety:
             "port": 8080,
             "assessor": "deterministic",
         })
-        assert resp.status_code != 400, f"Got 400: {resp.json()}"
+        assert resp.status_code == 202, f"Got {resp.status_code}: {resp.json()}"
 
     def test_lab_mode_rejects_non_allowlisted(self, client):
         """Lab mode must reject non-allowlisted targets with HTTP 400."""
@@ -108,4 +107,4 @@ class TestAPISafety:
             "port": 8080,
             "assessor": "deterministic",
         })
-        assert resp.status_code != 400
+        assert resp.status_code == 202

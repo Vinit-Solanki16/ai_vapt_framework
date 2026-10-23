@@ -19,6 +19,7 @@ Required coverage (hotfix section 4):
 from __future__ import annotations
 
 import socket
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -220,7 +221,11 @@ def test_api_ack_true_passes_gate_and_reaches_application(external_scope, monkey
     client = TestClient(api_app)
     resp = client.post("/runs", json=_run_body(target_scope_acknowledged=True))
     # Not the acknowledgement 400 — the request reached the application.
-    assert resp.status_code != 400 or "target_scope_acknowledged" not in resp.json().get("detail", "")
+    assert resp.status_code == 202
+    for _ in range(200):
+        if "req" in captured:
+            break
+        time.sleep(0.01)
     assert "req" in captured
     assert captured["req"].target_scope_acknowledged is True
     assert captured["req"].target_url == PG_URL

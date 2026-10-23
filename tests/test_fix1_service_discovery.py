@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -263,8 +264,14 @@ def test_findings_api_returns_service_discovery_separately(monkeypatch):
         "use_nmap": True,
         "use_nuclei": True,
     })
-    assert started.status_code == 200, started.text
+    assert started.status_code == 202, started.text
     run_id = started.json()["run_id"]
+    for _ in range(200):
+        status = client.get(f"/runs/{run_id}").json()
+        if status["status"] in {"completed", "failed"}:
+            break
+        time.sleep(0.01)
+    assert status["status"] == "completed"
 
     findings = client.get(f"/runs/{run_id}/findings").json()
     assert findings["candidates"] == []

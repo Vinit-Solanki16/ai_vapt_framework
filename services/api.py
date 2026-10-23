@@ -5,6 +5,9 @@ Uses the canonical VAPTApplication workflow service.
 from __future__ import annotations
 
 import os
+import hashlib
+import json
+import logging
 from typing import Optional
 
 # Auto-load configuration from .env if present before configuring app services
@@ -23,10 +26,12 @@ from services.schemas import (
     TargetValidateRequest, TargetValidateResponse,
     OpenRouterValidateRequest, OpenRouterValidateResponse,
 )
-from services.jobs import job_manager
+from services.jobs import JobCapacityError, job_manager
 from vapt_platform.application import VAPTRequest, get_application
 from vapt_platform.openrouter_setup import RUNTIME_KEY_HEADER
 from vapt_platform.provider_errors import redact
+
+log = logging.getLogger(__name__)
 
 
 def _safe_error_detail(exc: BaseException, req: "RunRequest" = None,
@@ -52,7 +57,7 @@ def _runtime_key(header_value: Optional[str]) -> Optional[str]:
     environment for CLI/manual deployments. The value is NEVER written back
     into ``os.environ`` — the runtime key is scoped to this single request.
     """
-    key = (header_value or "").strip()
+    key = header_value.strip() if isinstance(header_value, str) else ""
     return key or None
 
 
@@ -95,6 +100,7 @@ def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None)
         use_nuclei=req.use_nuclei,
         target_scope_acknowledged=req.target_scope_acknowledged,
         engagement_id=req.engagement_id,
+        run_id=run_id,
     )
 
     job_manager.update(run_id, status="running")
@@ -103,8 +109,12 @@ def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None)
     application = get_application()
     result = application.run(vapt_request)
 
-    # Store result in job manager (FIX 1: discovery kept separate).
-    job_manager.set_state(run_id, {
+    safe_notice = result.domain.safety_notice
+    if result.domain.final_status == "FAILED":
+        safe_notice = _safe_error_detail(
+            result.domain.safety_notice, req, extra_secrets=(runtime_key,)
+        )
+    state = {
         "scenario": result.domain.scenario,
         "mode": result.domain.mode,
         "status": result.domain.final_status,
@@ -117,27 +127,120 @@ def _run_engine(run_id: str, req: RunRequest, runtime_key: Optional[str] = None)
         "candidates_processed": result.domain.candidates_processed,
         "evidence_tier": result.domain.evidence_tier,
         "assessment": result.domain.assessment,
-        "safety_notice": result.domain.safety_notice,
+        "safety_notice": safe_notice,
         "report": result.report,
-    })
+        "target_url": vapt_request.target_url,
+        "assessment_type": vapt_request.assessment_type,
+    }
+
+    # VAPTApplication returns a structured FAILED result for workflow errors.
+    # Keep that terminal state visible instead of allowing the queue to report
+    # a misleading successful worker completion.
+    if result.domain.final_status == "FAILED":
+        try:
+            from vapt_platform.persistence import get_repository
+
+            persisted = get_repository().get(run_id)
+            if persisted is not None:
+                persisted.safety_notice = safe_notice
+                get_repository().save(persisted)
+        except Exception:
+            # The job status remains authoritative even if failure cleanup of
+            # the optional persistence record is unavailable.
+            pass
+        job_manager.set_failed(
+            run_id,
+            safe_notice,
+            state=state,
+        )
+    else:
+        job_manager.set_state(run_id, state)
 
     return result
 
 
-@app.post("/runs", response_model=RunResponse)
+def _request_fingerprint(req: RunRequest, runtime_key: Optional[str]) -> str:
+    """Return a non-secret identity for coalescing active duplicate jobs."""
+    payload = req.model_dump(exclude={"assessor_api_key"})
+    key_digest = hashlib.sha256((runtime_key or req.assessor_api_key or "").encode()).hexdigest()
+    payload["runtime_key_digest"] = key_digest
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode()).hexdigest()
+
+
+def _persist_queued_run(run_id: str, req: RunRequest) -> None:
+    """Record accepted work before the worker can publish its terminal state."""
+    from vapt_platform.persistence import PersistentRun, get_repository
+
+    try:
+        get_repository().save(PersistentRun(
+            run_id=run_id,
+            scenario=req.scenario,
+            mode=req.mode,
+            status="PENDING",
+            target=req.target,
+            port=req.port,
+            path=req.path,
+            max_attempts=req.max_attempts,
+            assessor_mode="ai" if req.assessor == "llm" else "deterministic",
+            assessor_provider=req.assessor_provider,
+            target_url=req.target_url,
+            assessment_type=req.assessment_type,
+        ))
+    except OSError as exc:
+        # Acceptance must not become a synchronous persistence dependency.
+        # The in-memory job remains authoritative for this process, while
+        # the terminal worker write can still succeed if storage returns.
+        log.warning("Could not persist queued run %s: %s", run_id, exc)
+
+
+def _run_in_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]) -> None:
+    """Run one accepted request and convert every ordinary exception to failed."""
+    job_manager.update(run_id, status="running")
+    try:
+        _run_engine(run_id, req, runtime_key)
+    except Exception as exc:
+        error = _safe_error_detail(exc, req, extra_secrets=(runtime_key,))
+        try:
+            from vapt_platform.persistence import PersistentRun, get_repository
+
+            get_repository().save(PersistentRun(
+                run_id=run_id,
+                scenario=req.scenario,
+                mode=req.mode,
+                status="FAILED",
+                final_status="FAILED",
+                safety_notice=error,
+                target=req.target,
+                port=req.port,
+                path=req.path,
+                max_attempts=req.max_attempts,
+                assessor_mode="ai" if req.assessor == "llm" else "deterministic",
+                assessor_provider=req.assessor_provider,
+                target_url=req.target_url,
+                assessment_type=req.assessment_type,
+            ))
+        except Exception:
+            # The in-memory terminal state is still available to the caller.
+            pass
+        job_manager.set_failed(run_id, error)
+
+
+@app.post("/runs", response_model=RunResponse, status_code=202)
 def start_run(
     req: RunRequest,
     x_openrouter_api_key: Optional[str] = Header(
         None, alias=RUNTIME_KEY_HEADER
     ),
 ):
-    """Start a new decision engine run.
+    """Validate and enqueue a new decision engine run.
 
     The runtime OpenRouter credential arrives in the
     ``X-OpenRouter-API-Key`` header (never in the JSON body, so it cannot
     end up in a logged or persisted request payload). It is threaded into
     this run's in-memory ``VAPTRequest`` only, and is released when the run
-    returns — it is never assigned to ``os.environ`` and never stored.
+    returns — it is never assigned to ``os.environ`` and never stored. The
+    response is returned as soon as the bounded worker queue accepts the job.
     """
     if req.mode == "lab" and req.target not in LAB_TARGET_ALLOWLIST:
         raise HTTPException(status_code=400, detail="Target not in allowlist")
@@ -169,59 +272,24 @@ def start_run(
 
     runtime_key = _runtime_key(x_openrouter_api_key)
 
-    # Convert API request to unified request
-    vapt_request = VAPTRequest(
-        scenario=req.scenario,
-        mode=req.mode,
-        target=req.target,
-        port=req.port,
-        path=req.path,
-        assessor_mode="ai" if req.assessor == "llm" else "deterministic",
-        assessor_provider=req.assessor_provider,
-        assessor_api_key=runtime_key or req.assessor_api_key,
-        assessor_model=req.assessor_model,
-        max_attempts=req.max_attempts,
-        scan_file=req.scan_file,
-        assessment_type=req.assessment_type,
-        target_url=req.target_url,
-        use_nmap=req.use_nmap,
-        use_nuclei=req.use_nuclei,
-        target_scope_acknowledged=req.target_scope_acknowledged,
-        engagement_id=req.engagement_id,
-    )
-
-    # Run the canonical workflow
-    application = get_application()
+    fingerprint = _request_fingerprint(req, runtime_key)
     try:
-        result = application.run(vapt_request)
-        run_id = result.domain.run_id
-
-        # Store result in job manager for later retrieval (FIX 1: separate).
-        job_manager.set_state(run_id, {
-            "scenario": result.domain.scenario,
-            "mode": result.domain.mode,
-            "status": result.domain.final_status,
-            "candidates": result.domain.candidates,
-            "service_discovery": result.domain.service_discovery,
-            "execution_results": result.domain.execution_results,
-            "decision_trace": result.domain.decision_trace,
-            "total_attempts": result.domain.total_attempts,
-            "pivot_count": result.domain.pivot_count,
-            "candidates_processed": result.domain.candidates_processed,
-            "evidence_tier": result.domain.evidence_tier,
-            "assessment": result.domain.assessment,
-            "safety_notice": result.domain.safety_notice,
-            "report": result.report,
-            "target_url": vapt_request.target_url,
-            "assessment_type": vapt_request.assessment_type,
-        })
-
-        return RunResponse(run_id=run_id, status="completed", message="Run completed")
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=_safe_error_detail(e, req, extra_secrets=(runtime_key,)),
+        run_id, deduplicated = job_manager.submit(
+            scenario=req.scenario,
+            mode=req.mode,
+            fingerprint=fingerprint,
+            worker=lambda accepted_id: _run_in_worker(accepted_id, req, runtime_key),
+            on_accept=lambda accepted_id: _persist_queued_run(accepted_id, req),
         )
+    except JobCapacityError as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
+
+    message = (
+        "Run already queued; returning the active run."
+        if deduplicated
+        else "Run accepted and queued for asynchronous processing."
+    )
+    return RunResponse(run_id=run_id, status="queued", message=message)
 
 
 @app.post("/providers/openrouter/validate", response_model=OpenRouterValidateResponse)
@@ -293,29 +361,57 @@ def list_runs(limit: int = 100):
     from vapt_platform.persistence import get_repository
     repository = get_repository()
     runs = repository.list_runs(limit=limit)
-    return {
-        "runs": [
-            {
-                "run_id": run.run_id,
-                "scenario": run.scenario,
-                "mode": run.mode,
-                "status": run.status,
-                "final_status": run.final_status,
-                "evidence_tier": run.evidence_tier,
-                "total_attempts": run.total_attempts,
-                "pivot_count": run.pivot_count,
-                "created_at": run.created_at,
-                "target": run.target,
-                "port": run.port,
-                "target_url": run.target_url,
-                "assessment_type": run.assessment_type,
-                "finding_count": len(run.candidates or []),
-                "service_discovery_count": len(getattr(run, "service_discovery", None) or []),
-                "assessor_provider": run.assessor_provider,
-            }
-            for run in runs
-        ]
-    }
+    listed = [
+        {
+            "run_id": run.run_id,
+            "scenario": run.scenario,
+            "mode": run.mode,
+            "status": run.status,
+            "final_status": run.final_status,
+            "evidence_tier": run.evidence_tier,
+            "total_attempts": run.total_attempts,
+            "pivot_count": run.pivot_count,
+            "created_at": run.created_at,
+            "target": run.target,
+            "port": run.port,
+            "target_url": run.target_url,
+            "assessment_type": run.assessment_type,
+            "finding_count": len(run.candidates or []),
+            "service_discovery_count": len(getattr(run, "service_discovery", None) or []),
+            "assessor_provider": run.assessor_provider,
+        }
+        for run in runs
+    ]
+
+    # Include jobs accepted by the current process before their final
+    # persistence write. Completed persisted records remain the source of
+    # truth; this fills the observable queued/running gap after submission.
+    known = {item["run_id"] for item in listed}
+    for job in job_manager.list_jobs():
+        if job["run_id"] in known:
+            continue
+        status = job_manager.get_status(job["run_id"])
+        listed.append({
+            "run_id": job["run_id"],
+            "scenario": job.get("scenario"),
+            "mode": job.get("mode", "simulation"),
+            "status": job.get("status", "queued").upper(),
+            "final_status": status.final_status if status else None,
+            "evidence_tier": status.evidence_tier if status else None,
+            "total_attempts": status.total_attempts if status else 0,
+            "pivot_count": status.pivot_count if status else 0,
+            "created_at": job.get("created_at"),
+            "target": None,
+            "port": None,
+            "target_url": None,
+            "assessment_type": "scenario",
+            "finding_count": len(status.candidates) if status else 0,
+            "service_discovery_count": len(status.service_discovery) if status else 0,
+            "assessor_provider": (
+                (status.assessment or {}).get("provider") if status else None
+            ),
+        })
+    return {"runs": listed[:limit]}
 
 
 @app.post("/targets/validate", response_model=TargetValidateResponse)
@@ -551,6 +647,47 @@ def get_scanner_status():
     }
 
 
+def _persisted_state(run_id: str) -> Optional[dict]:
+    """Adapt a persisted run into the state shape used by API detail routes."""
+    from vapt_platform.persistence import get_repository
+
+    run = get_repository().get(run_id)
+    if run is None:
+        return None
+    try:
+        from vapt_platform.reporting.builder import ReportBuilder
+
+        report = ReportBuilder().from_persisted_run(run).to_dict()
+    except Exception:
+        report = {}
+    return {
+        "scenario": run.scenario,
+        "mode": run.mode,
+        "status": run.final_status,
+        "candidates": run.candidates,
+        "service_discovery": getattr(run, "service_discovery", []) or [],
+        "execution_results": run.execution_results,
+        "decision_trace": run.decision_trace,
+        "total_attempts": run.total_attempts,
+        "pivot_count": run.pivot_count,
+        "candidates_processed": run.candidates_processed,
+        "evidence_tier": run.evidence_tier,
+        "assessment": run.assessment,
+        "safety_notice": redact(str(run.safety_notice)),
+        "report": report,
+        "target_url": run.target_url,
+        "assessment_type": run.assessment_type,
+    }
+
+
+def _state_for_run(run_id: str) -> Optional[dict]:
+    job = job_manager.get(run_id)
+    if job is not None:
+        state = job.get("state")
+        return state if isinstance(state, dict) else {}
+    return _persisted_state(run_id)
+
+
 @app.get("/runs/{run_id}/persisted")
 def get_persisted_run(run_id: str):
     """Get a persisted run by ID."""
@@ -559,25 +696,55 @@ def get_persisted_run(run_id: str):
     run = repository.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
-    return run.to_dict()
+    payload = run.to_dict()
+    if str(getattr(run.status, "value", run.status)).upper() == "FAILED":
+        payload["safety_notice"] = redact(str(payload.get("safety_notice", "")))
+        payload["error"] = payload["safety_notice"]
+    return payload
 
 
 @app.get("/runs/{run_id}", response_model=RunStatus)
 def get_status(run_id: str):
     """Get run status."""
     status = job_manager.get_status(run_id)
-    if not status:
+    if status:
+        return status
+
+    from vapt_platform.persistence import get_repository
+    persisted = get_repository().get(run_id)
+    if persisted is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    return status
+    status_name = str(getattr(persisted.status, "value", persisted.status)).lower()
+    if status_name == "pending":
+        status_name = "queued"
+    state = _persisted_state(run_id) or {}
+    return RunStatus(
+        run_id=run_id,
+        status=status_name,
+        scenario=persisted.scenario,
+        mode=persisted.mode,
+        final_status=persisted.final_status,
+        total_attempts=persisted.total_attempts,
+        pivot_count=persisted.pivot_count,
+        candidates_processed=persisted.candidates_processed or [],
+        evidence_tier=persisted.evidence_tier,
+        assessment=persisted.assessment or {},
+        candidates=persisted.candidates or [],
+        execution_results=persisted.execution_results or [],
+        decision_trace=persisted.decision_trace or [],
+        service_discovery=getattr(persisted, "service_discovery", []) or [],
+        report=state.get("report", {}),
+        error=(redact(str(persisted.safety_notice)) if status_name == "failed" else None),
+        updated_at=persisted.updated_at,
+    )
 
 
 @app.get("/runs/{run_id}/trace", response_model=RunTrace)
 def get_trace(run_id: str):
     """Get decision trace."""
-    job = job_manager.get(run_id)
-    if not job:
+    state = _state_for_run(run_id)
+    if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) or {}
     logs = state.get("decision_trace", []) if isinstance(state, dict) else []
     events = [TraceEvent(phase="log", detail=log) for log in logs]
     return RunTrace(run_id=run_id, events=events)
@@ -617,10 +784,9 @@ def get_report(run_id: str, format: str = "json"):
 @app.get("/runs/{run_id}/evidence")
 def get_evidence(run_id: str):
     """Get evidence tier and assessment provenance."""
-    job = job_manager.get(run_id)
-    if not job:
+    state = _state_for_run(run_id)
+    if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
     return {
         "run_id": run_id,
         "evidence_tier": state.get("evidence_tier", "UNKNOWN"),
@@ -642,10 +808,9 @@ def get_findings(run_id: str):
     shows both buckets with explicit eligibility.
     Falls back to the persisted run so inventory survives restarts.
     """
-    job = job_manager.get(run_id)
-    if not job:
+    state = _state_for_run(run_id)
+    if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
     service_discovery = state.get("service_discovery", [])
     if not service_discovery:
         try:
@@ -677,10 +842,9 @@ def get_candidates(run_id: str):
     → ``service_discovery`` and the Findings page inventory section with
     eligibility "INFORMATIONAL / DISCOVERY".
     """
-    job = job_manager.get(run_id)
-    if not job:
+    state = _state_for_run(run_id)
+    if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
     return {
         "run_id": run_id,
         "candidates": state.get("candidates", []),
@@ -839,10 +1003,9 @@ def system_health():
 @app.get("/runs/{run_id}/assessment")
 def get_assessment(run_id: str):
     """Get assessment details for a run."""
-    job = job_manager.get(run_id)
-    if not job:
+    state = _state_for_run(run_id)
+    if state is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    state = job.get("state", {}) if isinstance(job.get("state"), dict) else {}
     return {
         "run_id": run_id,
         "assessment": state.get("assessment", {}),
