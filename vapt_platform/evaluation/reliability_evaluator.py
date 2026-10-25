@@ -14,6 +14,7 @@ Implements Part C of the task:
 """
 from __future__ import annotations
 
+import sys
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -418,18 +419,24 @@ class ReliabilityEvaluator:
     def __init__(self, suite: Optional[list[EvaluationTestCase]] = None):
         self.suite = suite or build_evaluation_test_suite()
 
-    def run_evaluation(self) -> FullEvaluationReport:
+    def run_evaluation(self, verbose: bool = False) -> FullEvaluationReport:
         """Run the full evaluation against the isolated test server."""
         scanner_metrics = LayerMetrics(layer_name="Scanner Detection Layer")
         validation_metrics = LayerMetrics(layer_name="Active Validation Layer")
         test_results: list[TestCaseResult] = []
 
+        if verbose:
+            print("[1/3] Evaluating Scanner Detection and Active Validation Layers...", file=sys.stderr, flush=True)
+
         with run_eval_server() as base_url:
-            for tc in self.suite:
+            for i, tc in enumerate(self.suite, 1):
                 t0 = time.perf_counter()
                 target_url = f"{base_url}{tc.endpoint_path}"
                 is_external = tc.category == "external_safety"
                 timeout_s = 0.2 if tc.category == "timeout" else 5.0
+
+                if verbose:
+                    print(f"  - Case {i:02d}/{len(self.suite):02d}: {tc.test_id} [{tc.category}]", file=sys.stderr, flush=True)
 
                 # 1. Evaluate Scanner Detection Layer
                 scanner_metrics.total_cases += 1
@@ -491,10 +498,17 @@ class ReliabilityEvaluator:
                 )
 
         # 3. Evaluate AI Assessor Models & Modes
-        ai_evaluations = self._evaluate_ai_models()
+        if verbose:
+            print("[2/3] Evaluating AI Assessor Models & Modes...", file=sys.stderr, flush=True)
+        ai_evaluations = self._evaluate_ai_models(verbose=verbose)
 
         # 4. Evaluate GAP-2 Dynamic Pivoting
-        gap2_eval = self._evaluate_gap2_pivoting()
+        if verbose:
+            print("[3/3] Evaluating GAP-2 Dynamic Pivoting...", file=sys.stderr, flush=True)
+        gap2_eval = self._evaluate_gap2_pivoting(verbose=verbose)
+
+        if verbose:
+            print("Evaluation complete. Compiling final metrics report...", file=sys.stderr, flush=True)
 
         return FullEvaluationReport(
             scanner_metrics=scanner_metrics,
@@ -504,7 +518,7 @@ class ReliabilityEvaluator:
             gap2_evaluation=gap2_eval,
         )
 
-    def _evaluate_ai_models(self) -> list[AIModelEvaluationResult]:
+    def _evaluate_ai_models(self, verbose: bool = False) -> list[AIModelEvaluationResult]:
         """Evaluate local Ollama, hosted model (if key configured), and deterministic baseline."""
         from decision_engine.core.schemas import ActionCandidate, QualityRank
         from vapt_platform.assessment import create_assessor
@@ -524,6 +538,8 @@ class ReliabilityEvaluator:
         results: list[AIModelEvaluationResult] = []
 
         # Baseline: Deterministic Assessor
+        if verbose:
+            print("  - Running deterministic baseline assessor...", file=sys.stderr, flush=True)
         det_assessor = create_assessor(mode="deterministic")
         t0 = time.perf_counter()
         det_scores = [det_assessor(c) for c in sample_candidates]
@@ -545,11 +561,17 @@ class ReliabilityEvaluator:
 
         # Model Arm 1: Local Ollama (configurable local default, e.g. qwen3.5:4b)
         probe_local = probe_ollama(DEFAULT_LOCAL_MODEL)
+        if verbose:
+            print(f"  - Evaluating local Ollama arm ('{DEFAULT_LOCAL_MODEL}'; reachable={probe_local['reachable']}, installed={probe_local['model_installed']})...", file=sys.stderr, flush=True)
         local_assessor = create_assessor(
             mode="ai", provider="ollama", model_name=DEFAULT_LOCAL_MODEL,
         )
         t0 = time.perf_counter()
-        local_evals = [local_assessor(c) for c in sample_candidates]
+        local_evals = []
+        for idx, c in enumerate(sample_candidates, 1):
+            if verbose:
+                print(f"    [{idx}/{len(sample_candidates)}] Assessing {c.id} via {DEFAULT_LOCAL_MODEL}...", file=sys.stderr, flush=True)
+            local_evals.append(local_assessor(c))
         local_latency = (time.perf_counter() - t0) / len(sample_candidates)
         fallbacks = sum(1 for e in local_evals if e.fallback)
         responses = sum(1 for e in local_evals if getattr(e, "llm_response_received", False))
@@ -572,11 +594,17 @@ class ReliabilityEvaluator:
 
         # Model Arm 2: Thesis Baseline (llama3.2:3b)
         probe_thesis = probe_ollama(DEFAULT_OLLAMA_MODEL)
+        if verbose:
+            print(f"  - Evaluating thesis baseline arm ('{DEFAULT_OLLAMA_MODEL}'; reachable={probe_thesis['reachable']}, installed={probe_thesis['model_installed']})...", file=sys.stderr, flush=True)
         thesis_assessor = create_assessor(
             mode="ai", provider="ollama", model_name=DEFAULT_OLLAMA_MODEL,
         )
         t0 = time.perf_counter()
-        thesis_evals = [thesis_assessor(c) for c in sample_candidates]
+        thesis_evals = []
+        for idx, c in enumerate(sample_candidates, 1):
+            if verbose:
+                print(f"    [{idx}/{len(sample_candidates)}] Assessing {c.id} via {DEFAULT_OLLAMA_MODEL}...", file=sys.stderr, flush=True)
+            thesis_evals.append(thesis_assessor(c))
         thesis_latency = (time.perf_counter() - t0) / len(sample_candidates)
         t_fallbacks = sum(1 for e in thesis_evals if e.fallback)
         t_responses = sum(1 for e in thesis_evals if getattr(e, "llm_response_received", False))
@@ -599,7 +627,7 @@ class ReliabilityEvaluator:
 
         return results
 
-    def _evaluate_gap2_pivoting(self) -> dict[str, Any]:
+    def _evaluate_gap2_pivoting(self, verbose: bool = False) -> dict[str, Any]:
         """Verify GAP-2 threshold bounding and dynamic route abandonment."""
         from vapt_platform.application import VAPTApplication, VAPTRequest
 
@@ -637,8 +665,14 @@ FindingReliabilityEvaluator = ReliabilityEvaluator
 
 def main() -> None:
     """CLI runner for finding reliability evaluation."""
+    print("=" * 64, file=sys.stderr, flush=True)
+    print("AI-VAPT Ground-Truth Finding Reliability Evaluation", file=sys.stderr, flush=True)
+    print("=" * 64, file=sys.stderr, flush=True)
     evaluator = ReliabilityEvaluator()
-    report = evaluator.run_evaluation()
+    report = evaluator.run_evaluation(verbose=True)
+    print("=" * 64, file=sys.stderr, flush=True)
+    print("Evaluation Complete. Rendering Output Report...", file=sys.stderr, flush=True)
+    print("=" * 64, file=sys.stderr, flush=True)
     print(report.format_markdown_report())
 
 

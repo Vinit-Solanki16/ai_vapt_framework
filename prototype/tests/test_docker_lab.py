@@ -14,6 +14,29 @@ import time
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _ensure_bridge_forwarding():
+    """Ensure iptables-legacy permits intra-bridge communication on internal network if present."""
+    try:
+        proc = subprocess.run(
+            ["docker", "network", "inspect", "vuln-lab-network", "-f", "{{.Id}}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            net_id = proc.stdout.strip()[:12]
+            br_if = f"br-{net_id}"
+            check = subprocess.run(
+                ["sudo", "iptables-legacy", "-C", "DOCKER-USER", "-i", br_if, "-o", br_if, "-j", "ACCEPT"],
+                capture_output=True, timeout=5,
+            )
+            if check.returncode != 0:
+                subprocess.run(
+                    ["sudo", "iptables-legacy", "-I", "DOCKER-USER", "-i", br_if, "-o", br_if, "-j", "ACCEPT"],
+                    capture_output=True, timeout=5,
+                )
+    except Exception:
+        pass
+
+
 def docker_available() -> bool:
     """Return True if `docker ps` succeeds and port 9090 is reachable."""
     try:
@@ -30,9 +53,13 @@ def docker_available() -> bool:
     try:
         req = urllib.request.Request("http://localhost:9090/health", method="GET")
         with urllib.request.urlopen(req, timeout=5) as resp:
-            return resp.status == 200
+            ready = resp.status == 200
     except Exception:
         return False
+
+    if ready:
+        _ensure_bridge_forwarding()
+    return ready
 
 
 # ---------------------------------------------------------------------------

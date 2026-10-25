@@ -84,6 +84,7 @@ cd /workspaces/ai_vapt_framework  # or ~/ai_vapt_framework
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 
 # Verify host scanner dependencies
 nmap --version          # Required for network discovery (sudo apt install nmap)

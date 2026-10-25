@@ -37,6 +37,11 @@ if ! python -c "import fastapi" 2>/dev/null; then
     pip install -r requirements.txt
 fi
 
+if ! python -c "import vapt_platform" 2>/dev/null; then
+    echo "Installing project packages in editable mode..."
+    pip install --no-deps -e .
+fi
+
 # Check Nmap
 if ! which nmap > /dev/null 2>&1; then
     echo "⚠️  Nmap not found on PATH. Install with: sudo apt install nmap"

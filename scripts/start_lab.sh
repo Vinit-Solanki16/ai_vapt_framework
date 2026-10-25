@@ -41,6 +41,16 @@ while [ $TRIES -lt $MAX_TRIES ]; do
 done
 
 if [ $READY -eq 1 ]; then
+    # Ensure bridge forwarding for internal network if legacy iptables is active
+    if which iptables-legacy > /dev/null 2>&1 && which sudo > /dev/null 2>&1; then
+        NET_ID=$(docker network inspect vuln-lab-network -f '{{.Id}}' 2>/dev/null | cut -c1-12 || true)
+        if [ -n "$NET_ID" ]; then
+            BR_IF="br-$NET_ID"
+            sudo iptables-legacy -C DOCKER-USER -i "$BR_IF" -o "$BR_IF" -j ACCEPT 2>/dev/null || \
+            sudo iptables-legacy -I DOCKER-USER -i "$BR_IF" -o "$BR_IF" -j ACCEPT 2>/dev/null || true
+        fi
+    fi
+
     echo "✅ Lab environment is READY!"
     echo "   - Emulator: internal network (172.28.0.2:8080)"
     echo "   - Executor: localhost:9090"
