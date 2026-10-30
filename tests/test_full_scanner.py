@@ -10,21 +10,23 @@ from strix.core.scanner import (
 
 
 def test_scan_categories_definition():
-    """Verify all 6 HostedScan-aligned test categories exist with 72 total rules."""
-    assert len(SCAN_CATEGORIES) == 6
+    """Verify all 8 comprehensive assessment categories exist with 88 total rules."""
+    assert len(SCAN_CATEGORIES) == 8
     expected_categories = [
-        "info_disclosure",
+        "version_sca",
         "configuration",
-        "injection",
         "xss",
-        "redirection",
-        "cryptography",
+        "sqli",
+        "ssrf",
+        "ssti",
+        "prototype_pollution",
+        "code_injection",
     ]
     total_rules = 0
     for cat in expected_categories:
         assert cat in SCAN_CATEGORIES
         total_rules += SCAN_CATEGORIES[cat]["test_count"]
-    assert total_rules == 72
+    assert total_rules == 88
 
 
 def test_component_analyzer_bootstrap_and_jquery():

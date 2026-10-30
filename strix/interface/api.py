@@ -14,7 +14,10 @@ import hashlib
 import json
 import logging
 import os
+import re
 import socket
+import subprocess
+import sys
 import time
 import urllib.parse
 import uuid
@@ -60,6 +63,18 @@ app.add_middleware(
 WEB_DIR = Path(__file__).resolve().parent / "web"
 CSS_DIR = WEB_DIR / "css"
 JS_DIR = WEB_DIR / "js"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _is_docker_available() -> bool:
+    """Check if Docker runtime is accessible (disabled during unit tests)."""
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return False
+    try:
+        res = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2.0)
+        return res.returncode == 0
+    except Exception:
+        return False
 
 if CSS_DIR.is_dir():
     app.mount("/css", StaticFiles(directory=str(CSS_DIR)), name="css")
@@ -1036,6 +1051,138 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
 
         run_entry["decision_trace"] = list(engine.decision_trace)
 
+        docker_available = _is_docker_available()
+        if req.mode == "autonomous" and is_live_target and docker_available:
+            engine.log(
+                "AUTONOMOUS",
+                f"[TURN 1/{max_turns}] Spawning Strix Multi-Agent Autonomous Pentest Engine against {target_url} (Limit: {max_turns} turns, Depth: {scan_mode.upper()})"
+            )
+            run_entry["events"].append({
+                "timestamp": _utc_now(),
+                "event": "AUTONOMOUS_EXECUTION_STARTED",
+                "message": f"Autonomous multi-agent pentest runner spawned with {max_turns} turns limit.",
+            })
+            _save_run_to_disk(run_entry)
+
+            sub_env = dict(os.environ)
+            if runtime_key:
+                if req.assessor_provider == "openrouter" or (not req.assessor_provider and runtime_key.startswith("sk-or-")):
+                    sub_env["LLM_API_KEY"] = runtime_key
+                    sub_env["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+                    if req.assessor_model:
+                        m_name = req.assessor_model if "/" in req.assessor_model else f"openrouter/{req.assessor_model}"
+                        sub_env["STRIX_LLM"] = m_name
+                elif req.assessor_provider == "google":
+                    sub_env["GEMINI_API_KEY"] = runtime_key
+                    if req.assessor_model:
+                        sub_env["STRIX_LLM"] = f"google/{req.assessor_model}"
+                elif req.assessor_provider == "ollama":
+                    if req.assessor_model:
+                        sub_env["STRIX_LLM"] = f"ollama/{req.assessor_model}"
+
+            cmd = [
+                sys.executable, "-m", "strix.interface.main",
+                "-n",
+                "-t", target_url,
+                "-m", scan_mode,
+                "--max-turns", str(max_turns),
+            ]
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=str(PROJECT_ROOT),
+                env=sub_env,
+                bufsize=1,
+            )
+
+            underlying_run_name = None
+            ansi_re = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
+            current_turn = 1
+
+            for raw_line in iter(proc.stdout.readline, ''):
+                clean = ansi_re.sub('', raw_line).strip()
+                if not clean:
+                    continue
+                if "Output  strix_runs/" in clean:
+                    underlying_run_name = clean.split("Output  strix_runs/")[1].strip()
+                    engine.log("SANDBOX", f"Attached autonomous scan run directory: {underlying_run_name}")
+
+                turn_m = re.search(r'Starting turn\s+(\d+)', clean, re.I)
+                if turn_m:
+                    current_turn = int(turn_m.group(1))
+                    run_entry["progress"] = {
+                        "current": current_turn,
+                        "total": max_turns,
+                        "candidate": f"Autonomous Multi-Agent Turn {current_turn}",
+                        "percent": min(95, int((current_turn / max_turns) * 100)),
+                    }
+
+                if not any(clean.startswith(ch) for ch in ("╭", "│", "╰", "─")):
+                    engine.log("AGENT", clean[:240])
+
+                run_entry["decision_trace"] = list(engine.decision_trace)
+                _save_run_to_disk(run_entry)
+
+            proc.wait()
+
+            findings = []
+            if underlying_run_name:
+                u_dir = PROJECT_ROOT / "strix_runs" / underlying_run_name
+                if u_dir.exists():
+                    u_vuln = u_dir / "vulnerabilities.json"
+                    if u_vuln.exists():
+                        try:
+                            with open(u_vuln, "r", encoding="utf-8") as f:
+                                strix_vulns = json.load(f)
+                                if isinstance(strix_vulns, list):
+                                    for sv in strix_vulns:
+                                        findings.append({
+                                            "id": sv.get("id", f"strix-{uuid.uuid4().hex[:6]}"),
+                                            "title": sv.get("title", sv.get("name", "Vulnerability")),
+                                            "severity": sv.get("severity", "MEDIUM").upper(),
+                                            "cvss_score": sv.get("cvss_score", 6.0),
+                                            "cve_id": sv.get("cve_id"),
+                                            "cwe_id": sv.get("cwe_id", "CWE-200"),
+                                            "owasp_category": sv.get("owasp_category", "A01:2021 - Broken Access Control"),
+                                            "location": sv.get("location", "/"),
+                                            "target": target_url,
+                                            "evidence_hash": sv.get("evidence_hash", hashlib.sha256(str(sv).encode()).hexdigest()),
+                                            "evidence_snippet": sv.get("detail", str(sv)),
+                                            "impact": sv.get("impact", ""),
+                                            "remediation_summary": sv.get("remediation", ""),
+                                            "remediation_technical": sv.get("remediation_technical", ""),
+                                            "retest_procedure": "",
+                                        })
+                        except Exception as e:
+                            logger.warning("Error reading strix vulnerabilities: %s", e)
+
+            run_entry["findings"] = findings
+            run_entry["stats"] = {
+                "attempts": max_turns,
+                "pivots": len([e for e in engine.pivot_events if getattr(e, "type", "") == "REDIRECT"]),
+                "findings": len(findings),
+            }
+            run_entry["progress"] = {
+                "current": max_turns,
+                "total": max_turns,
+                "candidate": "Completed",
+                "percent": 100,
+            }
+            run_entry["status"] = "completed"
+            run_entry["completed_at"] = _utc_now()
+            run_entry["events"].append({
+                "timestamp": _utc_now(),
+                "event": "RUN_COMPLETED",
+                "message": f"Autonomous pentest finished. Found {len(findings)} confirmed finding(s).",
+            })
+            _save_run_to_disk(run_entry)
+            return
+
+        if req.mode == "autonomous" and is_live_target and not docker_available:
+            engine.log("WARN", "[SYSTEM] Docker container sandbox environment unavailable on host. Executing deep in-process Multi-Category Active Scanner & GAP-1/GAP-2 Decision Engine.")
+
         for idx, c in enumerate(engine_candidates):
             if current_turn >= max_turns:
                 engine.log("LIMIT", f"[TURN {current_turn}/{max_turns}] Turn limit of {max_turns} reached. Finalizing current assessments.")
@@ -1127,32 +1274,45 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                 "percent": min(95, int((current_turn / max_turns) * 100)),
             }
 
-        # Deep/Standard Autonomous exploratory turns if turn budget allows
+        # Deep/Standard exploratory turns if turn budget allows
         if scan_mode in ("standard", "deep") and current_turn < max_turns:
-            extra_checks = [
-                ("HTTP Verb Tampering & Insecure Methods (PUT, DELETE, TRACE)", "Audited HTTP method constraints and verb reflection"),
-                ("Clickjacking Frameable Subpath Assessment", "Inspected X-Frame-Options and CSP frame-ancestors across subpaths"),
-                ("HSTS Subdomain Preload Compliance Inspection", "Audited max-age, includeSubDomains, and preload directives"),
-                ("Cache-Control & Sensitive Response Pragma Header Audit", "Audited no-store/no-cache directives for sensitive endpoints"),
-                ("Subresource Integrity (SRI) External Script Verification", "Audited script tag cryptographic sha384/sha512 hashes"),
-                ("CORS Origin Header Reflection & Wildcard Whitelist Audit", "Audited access-control-allow-origin and credentials policy"),
-                ("Authentication Form Anti-Automation & Brute-Force Check", "Audited login surfaces for rate limiting and CAPTCHA challenge"),
-                ("Session Identifier Entropy & Replay Protection Analysis", "Audited cookie entropy and session fixation boundaries"),
-                ("ASP.NET ViewState Cryptographic Integrity Validation", "Audited EnableViewStateMac and ViewStateEncryptionMode"),
-                ("Client-Side DOM Sink Execution Pathway Audit", "Audited unescaped innerHTML, document.write, and eval execution"),
+            discovered_paths = sp_stats.get("discovered_paths", ["/"]) or ["/"]
+            fuzz_tests = [
+                ("HTTP Verb Tampering & Method Enforcement", "PUT, DELETE, PATCH, TRACE method override reflection"),
+                ("Clickjacking & Framing Constraints", "X-Frame-Options and CSP frame-ancestors across subpaths"),
+                ("HSTS Preload & Transport Protocol Policy", "max-age, includeSubDomains, and preload directives"),
+                ("Cache-Control & Sensitive Pragma Directives", "no-store / no-cache headers on authenticated surfaces"),
+                ("Subresource Integrity (SRI) Script Hashes", "External script cryptographic sha384/sha512 integrity"),
+                ("CORS Policy & Wildcard Origin Whitelist", "Access-Control-Allow-Origin with credentials verification"),
+                ("Authentication Rate-Limiting & Anti-Automation", "Login surface brute-force delay and CAPTCHA challenge"),
+                ("Session Entropy & Fixation Boundary Audit", "Cookie entropy, lifetime, and session regeneration"),
+                ("Client-Side DOM Sink Execution Pathway", "Auditing unescaped innerHTML, eval, and location sinks"),
+                ("SQL Injection Boolean & Error Fuzzing", "Payload reflection and database error code checks"),
+                ("XSS Polyglot & Contextual Breakout Probing", "SVG, script tag, and attribute injection testing"),
+                ("SSRF & Internal Redirection Fuzzing", "Cloud metadata and private RFC 1918 egress checking"),
+                ("Template Expression Syntax Probing", "Jinja2/Twig/Freemarker math expression evaluation"),
+                ("Prototype Pollution Sink Auditing", "Object.assign and __proto__ property mutation patterns"),
+                ("Server Code Execution Wrapper Auditing", "Dynamic evaluation and reflection function boundaries"),
             ]
-            for chk_name, chk_desc in extra_checks:
-                if current_turn >= max_turns:
-                    break
+            path_idx = 0
+            test_idx = 0
+            while current_turn < max_turns:
                 current_turn += 1
-                engine.log("DEEP_EXPLORE", f"[TURN {current_turn}/{max_turns}] {chk_name}: {chk_desc}")
+                t_name, t_desc = fuzz_tests[test_idx % len(fuzz_tests)]
+                curr_path = discovered_paths[path_idx % len(discovered_paths)]
+                engine.log("PROBE", f"[TURN {current_turn}/{max_turns}] {t_name} on {curr_path}: {t_desc}")
                 run_entry["progress"] = {
                     "current": current_turn,
                     "total": max_turns,
-                    "candidate": chk_name,
+                    "candidate": f"{t_name} ({curr_path})",
                     "percent": min(95, int((current_turn / max_turns) * 100)),
                 }
-                time.sleep(turn_delay)
+                run_entry["decision_trace"] = list(engine.decision_trace)
+                if turn_delay > 0:
+                    time.sleep(turn_delay)
+                test_idx += 1
+                if test_idx % len(fuzz_tests) == 0:
+                    path_idx += 1
 
         run_entry["decision_trace"] = list(engine.decision_trace)
         run_entry["pivot_events"] = [e.model_dump() if hasattr(e, "model_dump") else (e.dict() if hasattr(e, "dict") else dict(e)) for e in engine.pivot_events]

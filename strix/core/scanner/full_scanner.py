@@ -88,7 +88,7 @@ class FullScanner:
                 candidates.append({
                     "id": f"vuln-lib-{comp['library']}",
                     "name": f"Vulnerable JS Library: {comp['library']} {comp['version']}",
-                    "category": "cryptography",
+                    "category": "version_sca",
                     "severity": comp["severity"],
                     "cvss": comp["cvss"],
                     "exposure": 0.9,
@@ -98,7 +98,8 @@ class FullScanner:
                     "endpoint": comp["source_file"],
                     "detail": f"Identified library {comp['library']} v{comp['version']} contains known public vulnerabilities: {cve_str}.",
                 })
-                category_summary["cryptography"]["found"] += 1
+                if "version_sca" in category_summary:
+                    category_summary["version_sca"]["found"] += 1
 
         # 5. Active Probing, Directory Enumeration & Parameter Fuzzing
         fuzzer = ActiveFuzzer(base_url=target_url, scan_mode=scan_mode, timeout=2.0)
@@ -107,7 +108,7 @@ class FullScanner:
         path_findings = fuzzer.probe_paths()
         for pf in path_findings:
             candidates.append(pf)
-            cat_k = pf.get("category", "info_disclosure")
+            cat_k = pf.get("category", "configuration")
             if cat_k in category_summary:
                 category_summary[cat_k]["found"] += 1
 
@@ -126,7 +127,7 @@ class FullScanner:
         )
         for ff in fuzz_findings:
             candidates.append(ff)
-            cat_k = ff.get("category", "injection")
+            cat_k = ff.get("category", "sqli")
             if cat_k in category_summary:
                 category_summary[cat_k]["found"] += 1
 

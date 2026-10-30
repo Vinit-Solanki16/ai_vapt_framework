@@ -17,41 +17,53 @@ from typing import Any, Dict, List, Set, Tuple
 
 
 SCAN_CATEGORIES = {
-    "info_disclosure": {
-        "title": "Information Disclosure",
-        "description": "Exposures of system internals, debug metadata, stack traces, and sensitive files.",
-        "test_count": 19,
-        "capability": "Passive & Active Probing",
+    "version_sca": {
+        "title": "Version-based vulnerability detection",
+        "description": "Software component analysis (jQuery, Bootstrap, Angular, Vue) correlating authoritative CVEs.",
+        "test_count": 12,
+        "capability": "SCA & CVE Fingerprinting",
     },
     "configuration": {
-        "title": "Configuration Issues",
-        "description": "Server misconfigurations, missing security hardening headers, and cookie attributes.",
-        "test_count": 17,
-        "capability": "Passive Scan",
-    },
-    "injection": {
-        "title": "Injection Vulnerabilities",
-        "description": "Surface discovery for SQLi, Command Injection, Template Injection, and Traversal.",
-        "test_count": 15,
-        "capability": "Surface Profiling & Active PoC",
+        "title": "Common configuration issues",
+        "description": "Server misconfigurations, security hardening headers, cookie attributes, banners, and open ports.",
+        "test_count": 22,
+        "capability": "Passive HTTP & Port Recon",
     },
     "xss": {
-        "title": "Cross-Site Scripting (XSS)",
-        "description": "Reflected, Persistent, DOM-based XSS sinks, and user-controllable event handlers.",
-        "test_count": 6,
+        "title": "XSS testing using real browsers",
+        "description": "Reflected, Persistent, and DOM-based Cross-Site Scripting inspection across inputs and execution sinks.",
+        "test_count": 8,
         "capability": "DOM Analysis & Active Injection",
     },
-    "redirection": {
-        "title": "Insecure Redirection",
-        "description": "Open HTTP redirects, reverse tabnabbing, and insecure form action transport transitions.",
-        "test_count": 5,
-        "capability": "Passive & Form Analysis",
+    "sqli": {
+        "title": "SQL Injection",
+        "description": "Error-based, boolean-blind, and union-based database injection testing across DBMS engines.",
+        "test_count": 14,
+        "capability": "Active SQL Syntax Injection",
     },
-    "cryptography": {
-        "title": "Cryptographic & Component Vulnerabilities",
-        "description": "Vulnerable third-party JS libraries (Retire.js), unvalidated ViewState, and transport crypto.",
+    "ssrf": {
+        "title": "Server-Side Request Forgery (SSRF)",
+        "description": "Unvalidated URL redirection and loopback/cloud metadata probing (169.254.169.254, 127.0.0.1).",
+        "test_count": 8,
+        "capability": "Loopback & Redirect Auditing",
+    },
+    "ssti": {
+        "title": "Server-Side Template Injection",
+        "description": "Template expression evaluation (${7*7}, {{7*7}}) across Jinja2, Twig, and Freemarker runtimes.",
+        "test_count": 8,
+        "capability": "Active Expression Probing",
+    },
+    "prototype_pollution": {
+        "title": "Client-Side Prototype Pollution",
+        "description": "Client JavaScript prototype mutation patterns (__proto__, constructor.prototype, $.extend sinks).",
+        "test_count": 6,
+        "capability": "Client Script Pattern Analysis",
+    },
+    "code_injection": {
+        "title": "Python, Javascript, PHP Code Injection",
+        "description": "Remote code execution via dynamic evaluation functions (eval, assert, phpinfo) across server runtimes.",
         "test_count": 10,
-        "capability": "SCA & Protocol Validation",
+        "capability": "Active Runtime Execution Probing",
     },
 }
 
@@ -95,28 +107,28 @@ def run_passive_rules(
     # Server Banner & Version
     server_h = headers_lower.get("server", "") + " " + headers_lower.get("x-powered-by", "")
     if re.search(r"\d+\.\d+", server_h):
-        _add("server-banner-disclosure", "Server Banner Information Disclosure", "info_disclosure", "low", 3.5, 1.0, "CWE-200", base_ep, f"Banner reveals exact version: {server_h.strip()}")
+        _add("server-banner-disclosure", "Server Banner Information Disclosure", "configuration", "low", 3.5, 1.0, "CWE-200", base_ep, f"Banner reveals exact version: {server_h.strip()}")
 
     # X-AspNet-Version / X-Backend-Server / X-Debug-Token
     if "x-aspnet-version" in headers_lower:
-        _add("aspnet-version-disclosure", "X-AspNet-Version Response Header Leak", "info_disclosure", "low", 3.5, 1.0, "CWE-200", base_ep, f"ASP.NET runtime version leaked: {headers_lower['x-aspnet-version']}")
+        _add("aspnet-version-disclosure", "X-AspNet-Version Response Header Leak", "configuration", "low", 3.5, 1.0, "CWE-200", base_ep, f"ASP.NET runtime version leaked: {headers_lower['x-aspnet-version']}")
     if "x-backend-server" in headers_lower:
-        _add("backend-server-leak", "X-Backend-Server Header Information Leak", "info_disclosure", "low", 3.5, 1.0, "CWE-200", base_ep, f"Internal node revealed: {headers_lower['x-backend-server']}")
+        _add("backend-server-leak", "X-Backend-Server Header Information Leak", "configuration", "low", 3.5, 1.0, "CWE-200", base_ep, f"Internal node revealed: {headers_lower['x-backend-server']}")
     if "x-debug-token" in headers_lower or "x-chromelogger-data" in headers_lower:
-        _add("debug-token-leak", "Debug Profiler Token Information Leak", "info_disclosure", "medium", 5.0, 0.9, "CWE-200", base_ep, "Debug headers exposed in production response.")
+        _add("debug-token-leak", "Debug Profiler Token Information Leak", "configuration", "medium", 5.0, 0.9, "CWE-200", base_ep, "Debug headers exposed in production response.")
 
     # Application Error Disclosure (Stack traces)
     if any(k in body_snippet.lower() for k in ["stack trace:", "fatal error:", "uncaught exception", "system.web.httpunhandledexception", "sqlexception", "org.springframework."]):
-        _add("application-error-disclosure", "Application Error & Stack Trace Disclosure", "info_disclosure", "medium", 5.3, 0.9, "CWE-209", base_ep, "Verbose runtime error trace or framework exception visible in response body.")
+        _add("application-error-disclosure", "Application Error & Stack Trace Disclosure", "configuration", "medium", 5.3, 0.9, "CWE-209", base_ep, "Verbose runtime error trace or framework exception visible in response body.")
 
     # Private IP Address Disclosure in page comments/body
     private_ips = re.findall(r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b", body_snippet)
     if private_ips:
-        _add("private-ip-disclosure", "Private IP Address Information Disclosure", "info_disclosure", "low", 3.5, 0.8, "CWE-200", base_ep, f"Internal RFC1918 private IP exposed: {private_ips[0]}")
+        _add("private-ip-disclosure", "Private IP Address Information Disclosure", "configuration", "low", 3.5, 0.8, "CWE-200", base_ep, f"Internal RFC1918 private IP exposed: {private_ips[0]}")
 
     # Suspicious Comments
     if re.search(r"<!--(?!\s*\[if).*?(?:todo|fixme|password|pass|secret|api_key|admin).*?-->", body_snippet, re.IGNORECASE):
-        _add("suspicious-comments", "Suspicious Developer Comments Disclosing Internal Logic", "info_disclosure", "low", 3.1, 0.7, "CWE-615", base_ep, "HTML comment contains keywords (TODO, FIXME, credentials, internal endpoints).")
+        _add("suspicious-comments", "Suspicious Developer Comments Disclosing Internal Logic", "configuration", "low", 3.1, 0.7, "CWE-615", base_ep, "HTML comment contains keywords (TODO, FIXME, credentials, internal endpoints).")
 
     # =========================================================================
     # 2. CONFIGURATION ISSUES
@@ -180,15 +192,15 @@ def run_passive_rules(
 
         # Command injection surface
         if any(k in form_body.lower() for k in ['name="ip"', 'name="cmd"', 'name="ping"', 'name="command"', 'name="host"']):
-            _add("cmd-injection-rce", "Remote OS Command Injection Surface", "injection", "critical", 9.8, 0.95, "CWE-78", form_ep, "Form input field passes parameters directly to system command execution wrapper.")
+            _add("cmd-injection-rce", "Remote OS Command Injection Surface", "code_injection", "critical", 9.8, 0.95, "CWE-78", form_ep, "Form input field passes parameters directly to system command execution wrapper.")
 
         # SQL Injection surface on query forms
         if any(k in form_body.lower() for k in ['name="query"', 'name="search"', 'name="id"', 'name="user"', 'name="cat"']):
-            _add("sql-injection-error", "SQL Injection Parameter Surface", "injection", "high", 7.2, 0.9, "CWE-89", form_ep, "User-supplied query parameter mapped to backend database query syntax.")
+            _add("sql-injection-error", "SQL Injection Parameter Surface", "sqli", "high", 7.2, 0.9, "CWE-89", form_ep, "User-supplied query parameter mapped to backend database query syntax.")
 
         # File upload surface
         if 'type="file"' in form_body.lower():
-            _add("file-upload-rce", "Arbitrary File Upload Surface", "injection", "high", 8.1, 0.95, "CWE-434", form_ep, "Multipart form allows remote file uploading; requires strict extension & MIME verification.")
+            _add("file-upload-rce", "Arbitrary File Upload Surface", "code_injection", "high", 8.1, 0.95, "CWE-434", form_ep, "Multipart form allows remote file uploading; requires strict extension & MIME verification.")
 
     # =========================================================================
     # 4. CROSS-SITE SCRIPTING (XSS)
@@ -204,26 +216,26 @@ def run_passive_rules(
         _add("client-js-attacks", "Client-Side Insecure JavaScript Processing", "xss", "low", 3.5, 0.7, "CWE-116", base_ep, "Client scripts contain unencoded parameter handling or dynamic evaluation patterns.")
 
     # =========================================================================
-    # 5. INSECURE REDIRECTION
+    # 5. INSECURE REDIRECTION & SSRF
     # =========================================================================
     # Reverse Tabnabbing (target="_blank" without rel="noopener noreferrer")
     tabnab_links = re.findall(r'<a\b[^>]*\btarget=["\']_blank["\'](?![^>]*\brel=["\'][^"\']*(?:noopener|noreferrer)[^"\']*["\'])[^>]*>', body_snippet, re.IGNORECASE)
     if tabnab_links:
-        _add("reverse-tabnabbing", "Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank)", "redirection", "medium", 4.3, 0.8, "CWE-1022", base_ep, "Hyperlink opens new window with target='_blank' without 'noopener', allowing parent window hijacking.")
+        _add("reverse-tabnabbing", "Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank)", "configuration", "medium", 4.3, 0.8, "CWE-1022", base_ep, "Hyperlink opens new window with target='_blank' without 'noopener', allowing parent window hijacking.")
 
     # Open Redirect Parameter Surface
     links = re.findall(r'href=["\']([^"\']+)["\']', body_snippet, re.IGNORECASE)
     for link in links:
         if "?" in link and any(k in link.lower() for k in ["redirect=", "url=", "next=", "dest=", "return=", "goto="]):
-            _add("open-http-redirect", "Open HTTP Redirection", "redirection", "medium", 5.4, 0.85, "CWE-601", base_ep, "Unvalidated target redirection parameter permits off-site credential phishing attacks.")
+            _add("open-http-redirect", "Open HTTP Redirection", "ssrf", "medium", 5.4, 0.85, "CWE-601", base_ep, "Unvalidated target redirection parameter permits off-site credential phishing attacks.")
             break
 
     # =========================================================================
-    # 6. CRYPTOGRAPHIC & COMPONENT VULNERABILITIES
+    # 6. CRYPTOGRAPHIC & STATE INTEGRITY
     # =========================================================================
     # ASP.NET ViewState without protection / Insecure ViewState
     if "__viewstate" in body_snippet.lower():
-        _add("aspnet-viewstate-mac", "ASP.NET ViewState Cryptographic Integrity Validation", "cryptography", "low", 3.5, 0.8, "CWE-642", base_ep, "ASP.NET hidden ViewState present. Requires ViewStateMac verification and encryption enforcement.")
+        _add("aspnet-viewstate-mac", "ASP.NET ViewState Cryptographic Integrity Validation", "configuration", "low", 3.5, 0.8, "CWE-642", base_ep, "ASP.NET hidden ViewState present. Requires ViewStateMac verification and encryption enforcement.")
 
     # Absence of Anti-CSRF Tokens on POST forms
     for form_attrs, form_body in forms:
@@ -231,7 +243,7 @@ def run_passive_rules(
         if method == "POST":
             has_csrf = bool(re.search(r'name=["\'](?:[^"\']*(?:csrf|token|_token|authenticity_token|__requestverificationtoken))["\']', form_body, re.I))
             if not has_csrf:
-                _add("csrf-protection", "Absence of Anti-CSRF Tokens", "cryptography", "medium", 6.1, 0.85, "CWE-352", base_ep, "State-changing HTML POST form lacks anti-CSRF token verification, permitting cross-site request forgery.")
+                _add("csrf-protection", "Absence of Anti-CSRF Tokens", "configuration", "medium", 6.1, 0.85, "CWE-352", base_ep, "State-changing HTML POST form lacks anti-CSRF token verification, permitting cross-site request forgery.")
                 break
 
     # Summary by Category

@@ -109,11 +109,11 @@ def test_run_lifecycle_and_trace():
 
 def test_report_downloads():
     """Verify HTML and JSON report downloads with attachment disposition and CVE/CWE presence."""
-    # Launch quick run
+    # Launch quick run against local target
     post_res = client.post(
         "/runs",
         json={
-            "target_url": "https://pentest-ground.com:4280/",
+            "target_url": "http://127.0.0.1:8080/",
             "mode": "web",
             "max_attempts": 2,
         },
