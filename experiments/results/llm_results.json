@@ -1,0 +1,59 @@
+{
+  "gap1_ranking_effect": {
+    "ranking": [
+      "CVE-2021-44228",
+      "CVE-2017-0144",
+      "CVE-2023-38408"
+    ],
+    "scores": {
+      "CVE-2021-44228": 0.76,
+      "CVE-2017-0144": 0.3575,
+      "CVE-2023-38408": 0.195
+    },
+    "quality": {
+      "CVE-2021-44228": "MEDIUM",
+      "CVE-2017-0144": "LOW",
+      "CVE-2023-38408": "LOW"
+    },
+    "status": "COMPLETED",
+    "latency": 7.612670183181763,
+    "total_attempts": 5
+  },
+  "gap2_threshold_1": {
+    "ranking": [
+      "CVE-2021-44228",
+      "CVE-2017-0144"
+    ],
+    "scores": {
+      "CVE-2021-44228": 0.76,
+      "CVE-2017-0144": 0.3575
+    },
+    "quality": {
+      "CVE-2021-44228": "MEDIUM",
+      "CVE-2017-0144": "LOW"
+    },
+    "status": "SUCCESS",
+    "latency": 4.933387517929077,
+    "total_attempts": 3
+  },
+  "gap2_threshold_2": {
+    "ranking": [
+      "CVE-2021-44228",
+      "CVE-2017-0144",
+      "CVE-2023-38408"
+    ],
+    "scores": {
+      "CVE-2021-44228": 0.76,
+      "CVE-2017-0144": 0.3575,
+      "CVE-2023-38408": 0.195
+    },
+    "quality": {
+      "CVE-2021-44228": "MEDIUM",
+      "CVE-2017-0144": "LOW",
+      "CVE-2023-38408": "LOW"
+    },
+    "status": "COMPLETED",
+    "latency": 9.31134295463562,
+    "total_attempts": 5
+  }
+}

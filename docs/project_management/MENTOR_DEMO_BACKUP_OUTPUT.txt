@@ -1,0 +1,228 @@
+# MENTOR DEMO BACKUP OUTPUT — Canonical Snapshot
+
+**Captured:** 2026-09-02 (Phase 11 rehearsal)
+**Purpose:** If any live command in MENTOR_DEMO_SCRIPT.md fails or the terminal
+freezes during the mentor walkthrough, use this file as the canonical reference.
+The expected outputs here were copied verbatim from a successful rehearsal run.
+
+**Determinism guarantee:** all four scenarios are deterministic. Re-running any
+command in MENTOR_DEMO_SCRIPT.md §2 should reproduce the corresponding block
+below bit-identically. Only Scenario 4's comparison numbers depend on the
+`seed=42` constant in the inline command; that seed is fixed in the script.
+
+**Reminder when switching to backup mode:** "Let me show you the recorded
+output for this step — the command is identical but I have a saved trace we
+can read off." Then narrate from the matching block below.
+
+---
+
+## SCENARIO 1 — success (run: `python prototype/run_demo.py success 2`)
+
+```
+================================================================
+AI VAPT DECISION ENGINE — MENTOR PROTOTYPE — LIVE DEMO
+================================================================
+Scenario:  success
+Mode:      simulation
+Max Attempts: 2
+
+CANDIDATE RANKING
+----------------------------------------
+  1. DEMO-SUCCESS-A             prob=0.9500  quality=HIGH      score=0.9500
+  2. DEMO-WORKER                prob=0.8500  quality=HIGH      score=0.8500
+  3. DEMO-SUCCESS-B             prob=0.6000  quality=HIGH      score=0.6000
+
+ENGINE EXECUTION
+----------------------------------------
+  DEMO-SUCCESS-A             Outcome: SUCCESS  (simulated(ground_truth))
+  DEMO-WORKER                Outcome: SUCCESS  (simulated(ground_truth))
+  DEMO-SUCCESS-B             Outcome: SUCCESS  (simulated(ground_truth))
+
+DECISION TRACE
+----------------------------------------
+  [INIT]   Engine initialized: 3 candidates, pivot_threshold=2, mode=simulation
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-SUCCESS-A
+  [ADVANCE] DEMO-SUCCESS-A validated. Next candidate.
+  [PIVOT]   Redirected to: DEMO-WORKER
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-WORKER
+  [ADVANCE] DEMO-WORKER validated. Next candidate.
+  [PIVOT]   Redirected to: DEMO-SUCCESS-B
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-SUCCESS-B
+  [ADVANCE] DEMO-SUCCESS-B validated. Next candidate.
+  [PIVOT]   All candidates processed. Workflow complete.
+
+  [COMPLETED]  SUCCESS — candidate validated.
+
+FINAL RESULT
+----------------------------------------
+Status:         SUCCESS
+Total Attempts: 3
+Pivot Count:    2
+Candidates Processed: 3 (DEMO-SUCCESS-A, DEMO-WORKER, DEMO-SUCCESS-B)
+
+================================================================
+SAFETY
+================================================================
+SIMULATION MODE
+Outcomes are resolved from supplied demo ground truth.
+No external targets contacted. No real vulnerabilities validated.
+================================================================
+
+Reports written: ./demo_report_success_vapt.json, ./demo_report_success_vapt.txt
+```
+
+---
+
+## SCENARIO 2 — failure_pivot (run: `python prototype/run_demo.py failure_pivot 2`)
+
+```
+================================================================
+AI VAPT DECISION ENGINE — MENTOR PROTOTYPE — LIVE DEMO
+================================================================
+Scenario:  failure_pivot
+Mode:      simulation
+Max Attempts: 2
+
+CANDIDATE RANKING
+----------------------------------------
+  1. DEMO-WORKER                prob=0.8500  quality=HIGH      score=0.8500
+  2. DEMO-DEAD-END              prob=0.7000  quality=LOW       score=0.4550
+
+ENGINE EXECUTION
+----------------------------------------
+  DEMO-WORKER                Outcome: SUCCESS  (simulated(ground_truth))
+  DEMO-DEAD-END              Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+  DEMO-DEAD-END              Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+
+DECISION TRACE
+----------------------------------------
+  [INIT]   Engine initialized: 2 candidates, pivot_threshold=2, mode=simulation
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-WORKER
+  [ADVANCE] DEMO-WORKER validated. Next candidate.
+  [PIVOT]   Redirected to: DEMO-DEAD-END
+  [EXECUTE] Attempt: 1/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-DEAD-END
+  [EXECUTE] Attempt: 2/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-DEAD-END
+  [PIVOT]   Threshold reached for DEMO-DEAD-END. Abandoning route.
+  [PIVOT]   All candidates processed. Workflow complete.
+
+  [COMPLETED]  All candidates processed. Workflow complete.
+
+FINAL RESULT
+----------------------------------------
+Status:         COMPLETED
+Total Attempts: 3
+Pivot Count:    2
+Candidates Processed: 2 (DEMO-WORKER, DEMO-DEAD-END)
+
+================================================================
+SAFETY
+================================================================
+SIMULATION MODE
+Outcomes are resolved from supplied demo ground truth.
+No external targets contacted. No real vulnerabilities validated.
+================================================================
+
+Reports written: ./demo_report_failure_pivot_vapt.json, ./demo_report_failure_pivot_vapt.txt
+```
+
+---
+
+## SCENARIO 3 — multi_candidate (run: `python prototype/run_demo.py multi_candidate 2`)
+
+```
+================================================================
+AI VAPT DECISION ENGINE — MENTOR PROTOTYPE — LIVE DEMO
+================================================================
+Scenario:  multi_candidate
+Mode:      simulation
+Max Attempts: 2
+
+CANDIDATE RANKING
+----------------------------------------
+  1. DEMO-SUCCESS-A             prob=0.9500  quality=HIGH      score=0.9500
+  2. DEMO-WORKER                prob=0.8500  quality=HIGH      score=0.8500
+  3. DEMO-DEAD-END              prob=0.7000  quality=LOW       score=0.4550
+  4. DEMO-MID                   prob=0.5000  quality=LOW       score=0.3250
+  5. DEMO-LOW-QUALITY           prob=0.3000  quality=LOW       score=0.1950
+
+ENGINE EXECUTION
+----------------------------------------
+  DEMO-SUCCESS-A             Outcome: SUCCESS  (simulated(ground_truth))
+  DEMO-WORKER                Outcome: SUCCESS  (simulated(ground_truth))
+  DEMO-DEAD-END              Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+  DEMO-DEAD-END              Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+  DEMO-MID                   Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+  DEMO-MID                   Outcome: FAIL_TIMEOUT  (simulated(ground_truth))
+  DEMO-LOW-QUALITY           Outcome: FAIL_SYNTAX  (simulated(ground_truth))
+  DEMO-LOW-QUALITY           Outcome: FAIL_SYNTAX  (simulated(ground_truth))
+
+DECISION TRACE
+----------------------------------------
+  [INIT]   Engine initialized: 5 candidates, pivot_threshold=2, mode=simulation
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-SUCCESS-A
+  [ADVANCE] DEMO-SUCCESS-A validated. Next candidate.
+  [PIVOT]   Redirected to: DEMO-WORKER
+  [EXECUTE] Attempt: 1/2  Outcome: SUCCESS  Candidate: DEMO-WORKER
+  [ADVANCE] DEMO-WORKER validated. Next candidate.
+  [PIVOT]   Redirected to: DEMO-DEAD-END
+  [EXECUTE] Attempt: 1/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-DEAD-END
+  [EXECUTE] Attempt: 2/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-DEAD-END
+  [PIVOT]   Threshold reached for DEMO-DEAD-END. Abandoning route.
+  [PIVOT]   Redirected to: DEMO-MID
+  [EXECUTE] Attempt: 1/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-MID
+  [EXECUTE] Attempt: 2/2  Outcome: FAIL_TIMEOUT  Candidate: DEMO-MID
+  [PIVOT]   Threshold reached for DEMO-MID. Abandoning route.
+  [PIVOT]   Redirected to: DEMO-LOW-QUALITY
+  [EXECUTE] Attempt: 1/2  Outcome: FAIL_SYNTAX  Candidate: DEMO-LOW-QUALITY
+  [EXECUTE] Attempt: 2/2  Outcome: FAIL_SYNTAX  Candidate: DEMO-LOW-QUALITY
+  [PIVOT]   Threshold reached for DEMO-LOW-QUALITY. Abandoning route.
+  [PIVOT]   All candidates processed. Workflow complete.
+
+  [COMPLETED]  All candidates processed. Workflow complete.
+
+FINAL RESULT
+----------------------------------------
+Status:         COMPLETED
+Total Attempts: 8
+Pivot Count:    7
+Candidates Processed: 5 (DEMO-SUCCESS-A, DEMO-WORKER, DEMO-DEAD-END, DEMO-MID, DEMO-LOW-QUALITY)
+
+================================================================
+SAFETY
+================================================================
+SIMULATION MODE
+Outcomes are resolved from supplied demo ground truth.
+No external targets contacted. No real vulnerabilities validated.
+================================================================
+
+Reports written: ./demo_report_multi_candidate_vapt.json, ./demo_report_multi_candidate_vapt.txt
+```
+
+---
+
+## SCENARIO 4 — DUMB vs SMART (run: inline `python3 -c "..."` from §2.4)
+
+```
+Agent          Requests  Wasted  Pivots  Found
+DUMB                 32      30       0      2
+PIVOT-ONLY            8       6       3      2
+PRIORITY-ONLY        32      30       0      2
+SMART                  8       6       3      2
+
+Decomposition (identical cap T=2):
+  priority_component = DUMB - PRIORITY-ONLY  = 0  (priority alone does not reduce requests under cap)
+  pivot_component    = PRIORITY-ONLY - SMART = 24 (abandonment is the separable mechanism)
+```
+
+**Key reading for the mentor:**
+- DUMB and PRIORITY-ONLY both at 32 → priority ordering does not reduce
+  total requests under fair cap.
+- PIVOT-ONLY and SMART both at 8 → abandonment is the only mechanism that
+  reduces total requests.
+- pivot_component = 24 requests saved per 5-candidate run.
+- found_success = 2 for all four agents → the win is in *wasted* requests,
+  not in success recall.
+
+---
+
+## END OF BACKUP SNAPSHOT

@@ -777,6 +777,44 @@ def _do_delete(
     }
 
 
+def _attach_gap2(
+    result: dict[str, Any],
+    *,
+    title: str,
+    endpoint: str | None,
+    target: str,
+    success: bool,
+    detail: str = "",
+    report_id: str = "",
+) -> dict[str, Any]:
+    """Attach AI_VAPT GAP-2 attempt/pivot guidance when the bridge is active."""
+    try:
+        from strix.core.gap_bridge import (
+            control_dir,
+            gap2_enabled,
+            guidance_text,
+            record_outcome,
+        )
+
+        if control_dir() is None or not gap2_enabled():
+            return result
+        outcome = record_outcome(
+            title=title,
+            endpoint=endpoint or "",
+            target=target or "",
+            success=success,
+            detail=detail,
+            report_id=report_id,
+        )
+    except Exception:
+        return result
+    result["gap2"] = outcome
+    guidance = guidance_text(outcome)
+    if guidance:
+        result["pivot_guidance"] = guidance
+    return result
+
+
 async def _do_create(
     *,
     title: str,
@@ -851,12 +889,26 @@ async def _do_create(
     errors.extend(http_exchange_errors)
 
     if errors:
-        return {"success": False, "error": "Validation failed", "errors": errors}
+        return _attach_gap2(
+            {"success": False, "error": "Validation failed", "errors": errors},
+            title=title,
+            endpoint=endpoint,
+            target=target,
+            success=False,
+            detail="validation: " + "; ".join(errors)[:500],
+        )
 
     try:
         cvss_score, severity, _vector = _calculate_cvss(cvss_breakdown)
     except ValueError as exc:
-        return {"success": False, "error": "Validation failed", "errors": [str(exc)]}
+        return _attach_gap2(
+            {"success": False, "error": "Validation failed", "errors": [str(exc)]},
+            title=title,
+            endpoint=endpoint,
+            target=target,
+            success=False,
+            detail=f"cvss: {exc}"[:500],
+        )
 
     try:
         from strix.report.state import get_global_report_state
@@ -920,17 +972,24 @@ async def _do_create(
                 (r.get("title", "Unknown") for r in existing if r.get("id") == duplicate_id),
                 "",
             )
-            return {
-                "success": False,
-                "error": (
-                    f"Potential duplicate of '{duplicate_title}' "
-                    f"(id={duplicate_id[:8]}...) — do not re-report the same vulnerability"
-                ),
-                "duplicate_of": duplicate_id,
-                "duplicate_title": duplicate_title,
-                "confidence": dedupe.get("confidence", 0.0),
-                "reason": dedupe.get("reason", ""),
-            }
+            return _attach_gap2(
+                {
+                    "success": False,
+                    "error": (
+                        f"Potential duplicate of '{duplicate_title}' "
+                        f"(id={duplicate_id[:8]}...) — do not re-report the same vulnerability"
+                    ),
+                    "duplicate_of": duplicate_id,
+                    "duplicate_title": duplicate_title,
+                    "confidence": dedupe.get("confidence", 0.0),
+                    "reason": dedupe.get("reason", ""),
+                },
+                title=title,
+                endpoint=endpoint,
+                target=target,
+                success=False,
+                detail=f"duplicate of {duplicate_id}"[:500],
+            )
 
         report_id = report_state.add_vulnerability_report(
             **report_fields,
@@ -939,13 +998,20 @@ async def _do_create(
         )
     except Exception as e:
         logger.exception("create_vulnerability_report persistence failed")
-        return {
-            "success": False,
-            "error": (
-                f"Failed to create vulnerability report: {e!s}. "
-                "The finding was not stored; file it again."
-            ),
-        }
+        return _attach_gap2(
+            {
+                "success": False,
+                "error": (
+                    f"Failed to create vulnerability report: {e!s}. "
+                    "The finding was not stored; file it again."
+                ),
+            },
+            title=title,
+            endpoint=endpoint,
+            target=target,
+            success=False,
+            detail=f"persistence: {e}"[:500],
+        )
     else:
         logger.info(
             "Vulnerability report created: id=%s severity=%s cvss=%.1f title=%s",
@@ -954,13 +1020,21 @@ async def _do_create(
             cvss_score,
             title,
         )
-        return {
-            "success": True,
-            "message": f"Vulnerability report '{title}' created successfully",
-            "report_id": report_id,
-            "severity": severity,
-            "cvss_score": cvss_score,
-        }
+        return _attach_gap2(
+            {
+                "success": True,
+                "message": f"Vulnerability report '{title}' created successfully",
+                "report_id": report_id,
+                "severity": severity,
+                "cvss_score": cvss_score,
+            },
+            title=title,
+            endpoint=endpoint,
+            target=target,
+            success=True,
+            detail=f"severity={severity} cvss={cvss_score}",
+            report_id=report_id,
+        )
 
 
 def _caller_identity(ctx: RunContextWrapper) -> tuple[str | None, str | None]:

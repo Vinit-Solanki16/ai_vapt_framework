@@ -1,0 +1,76 @@
+{
+  "results": [
+    {
+      "config": "A",
+      "gap1": false,
+      "gap2": false,
+      "execution_order": [
+        "csrf",
+        "xss",
+        "sqli"
+      ],
+      "attempts": 13,
+      "pivots": 0,
+      "first_verified_finding": "sqli",
+      "attempts_before_first_finding": 13,
+      "ranking_changed": false
+    },
+    {
+      "config": "B",
+      "gap1": true,
+      "gap2": false,
+      "execution_order": [
+        "default-creds",
+        "sqli"
+      ],
+      "attempts": 7,
+      "pivots": 0,
+      "first_verified_finding": "sqli",
+      "attempts_before_first_finding": 7,
+      "ranking_changed": true
+    },
+    {
+      "config": "C",
+      "gap1": false,
+      "gap2": true,
+      "execution_order": [
+        "csrf",
+        "xss",
+        "sqli"
+      ],
+      "attempts": 5,
+      "pivots": 2,
+      "first_verified_finding": "sqli",
+      "attempts_before_first_finding": 5,
+      "ranking_changed": false
+    },
+    {
+      "config": "D",
+      "gap1": true,
+      "gap2": true,
+      "execution_order": [
+        "default-creds",
+        "sqli"
+      ],
+      "attempts": 3,
+      "pivots": 1,
+      "first_verified_finding": "sqli",
+      "attempts_before_first_finding": 3,
+      "ranking_changed": true
+    },
+    {
+      "config": "E",
+      "gap1": true,
+      "gap2": true,
+      "execution_order": [
+        "default-creds",
+        "sqli"
+      ],
+      "attempts": 3,
+      "pivots": 1,
+      "first_verified_finding": "sqli",
+      "attempts_before_first_finding": 3,
+      "ranking_changed": true
+    }
+  ]
+}

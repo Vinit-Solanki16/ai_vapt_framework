@@ -1,0 +1,146 @@
+{
+  "manifest_metadata": {
+    "framework": "AI-VAPT Framework",
+    "title": "Autonomous AI Framework for Vulnerability Assessment: Integrating Exploit Quality Scoring and Dynamic Decision-Pivoting",
+    "timestamp_utc": "2026-10-26T15:10:00Z",
+    "git_branch": "development",
+    "git_commit": "a4af8fd",
+    "environment": {
+      "os": "Ubuntu 22.04 LTS (WSL2 on Windows 11)",
+      "kernel": "Linux 6.6-wsl2",
+      "cpu_arch": "x86_64",
+      "system_ram_gb": 16.0,
+      "gpu": "NVIDIA GeForce MX550 (2048 MiB VRAM)",
+      "cuda_driver": "560.x / WSL2 DirectML-CUDA bridge",
+      "python_version": "3.10.12",
+      "package_manager": "uv"
+    },
+    "scanners": {
+      "nmap": {
+        "installed": true,
+        "path": "/usr/bin/nmap",
+        "version": "7.80"
+      },
+      "nuclei": {
+        "installed": true,
+        "path": "/home/vinit/.local/bin/nuclei",
+        "version": "v3.11.1",
+        "templates_path": "/home/vinit/nuclei-templates"
+      }
+    },
+    "models": {
+      "local_assessor": {
+        "provider": "ollama",
+        "model": "qwen2.5:1.5b",
+        "endpoint": "http://127.0.0.1:11434",
+        "offload_profile": "10/29 layers CUDA, 583 MiB VRAM, 59% CPU / 41% GPU offload",
+        "status": "ONLINE_ACTIVE"
+      },
+      "hosted_assessors": {
+        "google": {
+          "provider": "google",
+          "default_model": "gemini-2.0-flash",
+          "models_supported": ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+          "auth": "In-browser session key (X-Google-API-Key)",
+          "status": "INTEGRATED"
+        },
+        "openrouter": {
+          "provider": "openrouter",
+          "default_model": "meta-llama/llama-3.3-70b-instruct",
+          "status": "INTEGRATED"
+        }
+      }
+    }
+  },
+  "test_suite_execution": {
+    "total_tests": 1045,
+    "passed": 1045,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 9.15,
+    "pass_rate_pct": 100.0
+  },
+  "experiment_results": {
+    "layer_evaluation": {
+      "scanner_detection_layer": {
+        "total_cases": 10,
+        "true_positives": 4,
+        "false_positives": 6,
+        "true_negatives": 0,
+        "false_negatives": 0,
+        "inconclusive": 0,
+        "precision": 0.4000,
+        "recall": 1.0000,
+        "f1_score": 0.5714,
+        "inconclusive_rate": 0.0000
+      },
+      "active_validation_layer": {
+        "total_cases": 10,
+        "true_positives": 3,
+        "false_positives": 0,
+        "true_negatives": 4,
+        "false_negatives": 0,
+        "inconclusive": 2,
+        "precision": 1.0000,
+        "recall": 1.0000,
+        "f1_score": 1.0000,
+        "inconclusive_rate": 0.2000
+      }
+    },
+    "llm_assessor_comparison": [
+      {
+        "provider": "deterministic",
+        "model": "deterministic_baseline",
+        "daemon_online": true,
+        "samples": 3,
+        "llm_responses": 0,
+        "fallbacks": 0,
+        "agreement_with_baseline_pct": 100.0,
+        "avg_latency_ms": 0.0
+      },
+      {
+        "provider": "ollama",
+        "model": "qwen2.5:1.5b",
+        "daemon_online": true,
+        "samples": 3,
+        "llm_responses": 3,
+        "fallbacks": 0,
+        "agreement_with_baseline_pct": 66.7,
+        "avg_latency_ms": 9969.0
+      },
+      {
+        "provider": "ollama",
+        "model": "llama3.2:3b",
+        "daemon_online": false,
+        "samples": 3,
+        "llm_responses": 0,
+        "fallbacks": 3,
+        "agreement_with_baseline_pct": 100.0,
+        "avg_latency_ms": 2.1
+      }
+    ],
+    "gap2_failure_pivot_benchmark": {
+      "scenario_count": 8,
+      "all_prefixes_matched": true,
+      "scenarios": [
+        {"name": "S0_immediate_success", "no_pivot_attempts": 1, "t1_attempts": 1, "success": 1.0},
+        {"name": "S1_fail_then_success", "no_pivot_attempts": 6, "t1_attempts": 2, "success": 1.0, "pivots": 1},
+        {"name": "S2_flaky_then_success", "no_pivot_attempts": 3, "t1_attempts": 2, "success": 1.0, "pivots": 1},
+        {"name": "S3_early_recovery", "no_pivot_attempts": 2, "t1_attempts": 2, "success": 1.0, "pivots": 1},
+        {"name": "S4_multi_fail", "no_pivot_attempts": 9, "t1_attempts": 3, "success": 1.0, "pivots": 2},
+        {"name": "S5_all_fail", "no_pivot_attempts": 12, "t1_attempts": 3, "success": 0.0, "pivots": 2, "bounded_termination": true},
+        {"name": "S6_late_success", "no_pivot_attempts": 12, "t1_attempts": 3, "success": 1.0, "pivots": 2},
+        {"name": "S7_budget_interaction", "no_pivot_attempts": 4, "t1_attempts": 3, "success": 1.0, "pivots": 2}
+      ]
+    },
+    "wave12_expanded_evaluation": {
+      "gap1_experiments": 10,
+      "gap2_experiments": 30,
+      "combined_experiments": 4,
+      "total_runs": 44,
+      "gap2_bounded_rate_pct": 100.0,
+      "gap1_ranking_shift_pct": 40.0
+    }
+  }
+}
+

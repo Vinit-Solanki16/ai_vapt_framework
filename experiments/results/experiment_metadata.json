@@ -1,0 +1,52 @@
+{
+  "experiment_run_id": "20260916_081648",
+  "timestamp": "2026-09-16T08:16:48.448398+00:00",
+  "framework_version": "1.0.0",
+  "git_commit": "252c99a",
+  "environment": {
+    "python": "3.10.12",
+    "platform": "WSL2 (Ubuntu)",
+    "llm_provider": "Ollama",
+    "llm_model": "llama3.2:3b",
+    "llm_quantization": "Q4_K_M",
+    "llm_size_gb": 2.0,
+    "docker": "NOT AVAILABLE"
+  },
+  "experiments": {
+    "deterministic": {
+      "count": 10,
+      "repetitions": 1,
+      "duration_seconds": 0.035
+    },
+    "llm": {
+      "count": 3,
+      "repetitions": 1,
+      "duration_seconds": 21.85,
+      "avg_assessment_latency": 2.5
+    },
+    "harness_suite": {
+      "count": 6,
+      "repetitions": 3,
+      "duration_seconds": 0.18
+    }
+  },
+  "test_results": {
+    "total_tests": 536,
+    "passed": 536,
+    "skipped": 7,
+    "failed": 0
+  },
+  "research_claims": {
+    "gap1_ranking_effect": "PASS",
+    "gap1_assessment_inversion": "PASS",
+    "gap1_all_success": "PASS",
+    "gap2_threshold_1": "PASS",
+    "gap2_threshold_2": "PASS",
+    "gap2_threshold_3": "PASS",
+    "gap2_all_fail_bounded": "PASS",
+    "gap2_immediate_success": "PASS",
+    "combined_baseline": "PASS",
+    "combined_treatment": "PASS",
+    "real_llm_assessment": "PASS"
+  }
+}

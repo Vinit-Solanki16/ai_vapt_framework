@@ -1,0 +1,4 @@
+config_name,run_index,final_status,total_attempts,pivot_count,ranking_order,candidates_processed,timestamp
+gap2_immediate_success,0,SUCCESS,2,1,IS-1|IS-2,IS-1|IS-2,2026-10-26T15:05:49.288236+00:00
+gap2_immediate_success,1,SUCCESS,2,1,IS-1|IS-2,IS-1|IS-2,2026-10-26T15:05:49.291938+00:00
+gap2_immediate_success,2,SUCCESS,2,1,IS-1|IS-2,IS-1|IS-2,2026-10-26T15:05:49.295979+00:00

@@ -187,6 +187,14 @@ def build_root_task(scan_config: dict[str, Any]) -> str:
     task = " ".join(parts)
     if user_instructions:
         task = f"{task}\n\nSpecial instructions: {user_instructions}"
+    try:
+        from strix.core.gap_bridge import gap1_instruction_block
+
+        gap_block = gap1_instruction_block()
+    except Exception:
+        gap_block = ""
+    if gap_block:
+        task = f"{task}\n\n{gap_block}"
     return task
 
 

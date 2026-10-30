@@ -257,3 +257,45 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
         console.print(final_report_panel)
         console.print()
+
+
+def run_web(args: list[str] | None = None) -> int:
+    """Launch the STRIX AI-VAPT Web Operations Console."""
+    import argparse
+    import uvicorn
+
+    parser = argparse.ArgumentParser(
+        prog="strix web",
+        description="Launch STRIX AI-VAPT Web Operations Console",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host interface to bind to (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to listen on (default: 8000)",
+    )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
+    )
+    parsed = parser.parse_args(args)
+
+    console = Console()
+    console.print(
+        f"[bold #22c55e]Launching STRIX AI-VAPT Console on[/] [cyan]http://{parsed.host}:{parsed.port}/[/]"
+    )
+    uvicorn.run(
+        "strix.interface.api:app",
+        host=parsed.host,
+        port=parsed.port,
+        reload=parsed.reload,
+        log_level="info",
+    )
+    return 0
+

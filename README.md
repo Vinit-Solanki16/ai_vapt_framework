@@ -45,6 +45,33 @@
 
 Strix are autonomous AI penetration testing agents that act just like real hackers - they run your code dynamically, find vulnerabilities, and validate them through actual proofs-of-concept. Built for developers and security teams who need fast, accurate security testing without the overhead of manual pentesting or the false positives of static analysis tools.
 
+---
+
+## ⚡ AI-VAPT Operations Platform & Codespace Quickstart
+
+### 1. Launch AI-VAPT Web Operations Console
+```bash
+# Start the full autonomous operations console on port 8000
+uv run strix web --port 8000
+```
+Open `http://localhost:8000` in your browser. In GitHub Codespaces, port 8000 is forwarded automatically.
+
+### 2. Run Autonomous Pentests via CLI
+```bash
+# Deep autonomous scan (500 turns, web crawler, active fuzzer, SCA component analysis)
+uv run strix -n -t https://your-target.com/ -m deep --max-turns 500
+
+# View real-time scan viewer & audit reports
+uv run strix view
+```
+
+### 3. Run Verification Test Suite
+```bash
+uv run pytest tests/test_full_scanner.py tests/test_gap1_triage.py tests/test_gap2_pivoting.py tests/test_interface_api.py
+```
+
+---
+
 **Key Capabilities:**
 
 - **Full pentesting toolkit** - reconnaissance, exploitation, and validation out of the box

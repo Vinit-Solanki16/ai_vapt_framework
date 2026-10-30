@@ -1,0 +1,18 @@
+# 08 — RISK REGISTER
+
+| ID | Risk | Severity | Likelihood | Status | Mitigation / Task |
+|----|------|----------|-----------|--------|-------------------|
+|| R-001 | "real" executor mode shells corpus PoC that performs offensive socket sends (e.g. CVE-2021-44228 JNDI) while ignoring output and trusting labels; mislabeled "safe probe" | HIGH (safety + honesty) | Real (verified) | MITIGATED (2026-08-24, T-SAFE) | T-SAFE (P0): default real mode now connectivity-only, no PoC shell-out; opt-in danger_mode=True (warned, parses real output). READ-ONLY P0 review APPROVED (claude_p0_review_T-SAFE_20260824.md). No offensive runs outside isolated lab. |
+| R-002 | No Docker/sandbox for live PoC execution; no genuine exploit validation possible | MEDIUM (thesis) | Real | OPEN | T-DOCKER (P1) — gated; only in authorized isolated lab |
+| R-003 | Benchmark loop-avoidance metric hardcoded (smart_loop=0) → headline thesis metric unmeasured (INVALID experiment per §9) | HIGH (validity) | Real (verified) | MITIGATED (2026-08-24, T-BENCH-LOOP) | T-BENCH-LOOP (P0): SMART loop now MEASURED from final["results"]; runtime assert max_per_cve<=threshold; READ-ONLY P0 review APPROVED. |
+| R-004 | No pytest suite / assertions → regressions undetectable | MEDIUM | Real | OPEN | T-TESTS (P3) |
+| R-005 | Corpus n=3 → weak statistical basis for thesis | MEDIUM | Real | OPEN | T-CORPUS (P1), T-BENCH-VAR (P3) |
+| R-006 | GAP-1 impact on outcomes not empirically demonstrated | MEDIUM (thesis) | Real | OPEN | T-GAP1-VALID (P1) |
+| R-007 | OpenAI provider path unverified; silent 401 with dummy-key | LOW | Possible | OPEN | T-OPENAI (P2) |
+| R-008 | No version pin → reproducibility drift | LOW | Possible | OPEN | T-REQPIN (P3) |
+| R-009 | Streamlit UI never run interactively; unsafe_allow_html on logs | LOW | Possible | OPEN | T-UI (P4) |
+| R-010 | Independent review (Claude) unreliable → risk of acting on phantom findings | MEDIUM (process) | Realized | MITIGATED | D-001: verify against actual repo; only carry genuine overlaps |
+| R-011 | Benchmark numbers in README stale (SMART=1 vs actual 5) | LOW (docs) | Real | CLOSED | T-README (P4) DONE 2026-08-24: README SMART=1->5 (matches benchmark_results.csv); three-tier SIMULATION/CONTROLLED/REAL distinction; T-SAFE-aligned real-mode wording. |
+
+## Severity scale
+HIGH = P0 (safety / invalid experiment). MEDIUM = P1/P2. LOW = P3/P4.

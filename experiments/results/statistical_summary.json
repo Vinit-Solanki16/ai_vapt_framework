@@ -1,0 +1,172 @@
+{
+  "timestamp": "2026-10-26T15:06:16.330533+00:00",
+  "gap1": {
+    "total_experiments": 10,
+    "ranking_changed_count": 4,
+    "ranking_changed_rate": 0.4,
+    "ranking_unchanged_count": 6,
+    "attempts": {
+      "mean": 11.6,
+      "median": 7.0,
+      "stdev": 11.1176,
+      "min": 3,
+      "max": 36
+    },
+    "successful_validations": {
+      "mean": 2.6,
+      "median": 2.5,
+      "stdev": 1.4298,
+      "min": 0,
+      "max": 4
+    },
+    "pivots": {
+      "mean": 10.6,
+      "median": 6.0,
+      "stdev": 11.1176,
+      "min": 2,
+      "max": 35
+    },
+    "execution_time": {
+      "mean": 0.0086,
+      "median": 0.0065,
+      "stdev": 0.0048,
+      "min": 0.0045,
+      "max": 0.019
+    },
+    "by_scenario_type": {
+      "assessment_changes_ranking": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 5,
+        "mean_success": 1
+      },
+      "no_change": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 3,
+        "mean_success": 3
+      },
+      "high_prob_poor_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 4,
+        "mean_success": 2
+      },
+      "lower_prob_high_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 6,
+        "mean_success": 2
+      },
+      "mixed_population": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 8,
+        "mean_success": 2
+      },
+      "all_high_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 4,
+        "mean_success": 4
+      },
+      "all_low_quality": {
+        "count": 1,
+        "ranking_changed": 0,
+        "mean_attempts": 8,
+        "mean_success": 0
+      },
+      "large_set_10": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 16,
+        "mean_success": 4
+      },
+      "large_set_15": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 26,
+        "mean_success": 4
+      },
+      "large_set_20": {
+        "count": 1,
+        "ranking_changed": 1,
+        "mean_attempts": 36,
+        "mean_success": 4
+      }
+    }
+  },
+  "gap2": {
+    "total_experiments": 30,
+    "all_bounded": true,
+    "bounded_count": 30,
+    "attempts": {
+      "mean": 11.6667,
+      "median": 9.5,
+      "stdev": 10.2329,
+      "min": 3,
+      "max": 46
+    },
+    "pivots": {
+      "mean": 7.1667,
+      "median": 6.0,
+      "stdev": 5.2,
+      "min": 2,
+      "max": 18
+    },
+    "by_threshold": {
+      "1": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 4.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 10
+      },
+      "2": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 8.1667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 19
+      },
+      "3": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 11.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 28
+      },
+      "4": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 15.1667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 37
+      },
+      "5": {
+        "count": 6,
+        "all_bounded": true,
+        "mean_attempts": 18.6667,
+        "mean_pivots": 7.1667,
+        "max_attempts": 46
+      }
+    }
+  },
+  "llm_behavior": {},
+  "combined": {
+    "total_experiments": 4,
+    "baseline_count": 2,
+    "treatment_count": 2,
+    "baseline": {
+      "mean_attempts": 12,
+      "mean_success": 2,
+      "mean_pivots": 11
+    },
+    "treatment": {
+      "mean_attempts": 12,
+      "mean_success": 2,
+      "mean_pivots": 11,
+      "mean_assess_latency": 0.0
+    }
+  }
+}

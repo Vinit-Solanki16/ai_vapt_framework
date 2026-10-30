@@ -1,0 +1,259 @@
+{
+  "verdict": "PASS",
+  "probe": {
+    "llama3.2:3b": {
+      "model": "llama3.2:3b",
+      "attempts": 8,
+      "valid": 8,
+      "schema_violation": 0,
+      "parse_failure": 0,
+      "fallback": 0,
+      "latencies": [
+        2.6069,
+        4.8459,
+        2.4105,
+        1.9658,
+        2.5487,
+        2.6986,
+        4.1395,
+        2.1607
+      ],
+      "ranks": {
+        "CVE-2021-44228": "MEDIUM",
+        "CVE-2017-0144": "MEDIUM",
+        "CVE-2023-38408": "LOW",
+        "CVE-2022-22965": "LOW",
+        "CVE-2020-1472": "LOW",
+        "CVE-2021-26855": "LOW",
+        "CVE-2019-0708": "LOW",
+        "CVE-2022-1388": "LOW"
+      },
+      "errors": [],
+      "records": [
+        {
+          "cve": "CVE-2021-44228",
+          "valid": true,
+          "usability_rank": "MEDIUM",
+          "syntax_valid": true,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 6,
+          "prerequisites_met": true,
+          "latency_s": 2.6069,
+          "error": null
+        },
+        {
+          "cve": "CVE-2017-0144",
+          "valid": true,
+          "usability_rank": "MEDIUM",
+          "syntax_valid": true,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 6,
+          "prerequisites_met": true,
+          "latency_s": 4.8459,
+          "error": null
+        },
+        {
+          "cve": "CVE-2023-38408",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 2.4105,
+          "error": null
+        },
+        {
+          "cve": "CVE-2022-22965",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 1,
+          "prerequisites_met": false,
+          "latency_s": 1.9658,
+          "error": null
+        },
+        {
+          "cve": "CVE-2020-1472",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 6,
+          "prerequisites_met": false,
+          "latency_s": 2.5487,
+          "error": null
+        },
+        {
+          "cve": "CVE-2021-26855",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 2.6986,
+          "error": null
+        },
+        {
+          "cve": "CVE-2019-0708",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 4,
+          "prerequisites_met": true,
+          "latency_s": 4.1395,
+          "error": null
+        },
+        {
+          "cve": "CVE-2022-1388",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "root",
+          "network_noise": "low",
+          "complexity_score": 4,
+          "prerequisites_met": false,
+          "latency_s": 2.1607,
+          "error": null
+        }
+      ]
+    },
+    "qwen2.5:3b": {
+      "model": "qwen2.5:3b",
+      "attempts": 8,
+      "valid": 8,
+      "schema_violation": 0,
+      "parse_failure": 0,
+      "fallback": 0,
+      "latencies": [
+        1.8591,
+        1.9149,
+        2.2252,
+        2.1275,
+        2.3235,
+        1.6101,
+        1.4628,
+        2.2444
+      ],
+      "ranks": {
+        "CVE-2021-44228": "LOW",
+        "CVE-2017-0144": "LOW",
+        "CVE-2023-38408": "LOW",
+        "CVE-2022-22965": "LOW",
+        "CVE-2020-1472": "LOW",
+        "CVE-2021-26855": "LOW",
+        "CVE-2019-0708": "LOW",
+        "CVE-2022-1388": "LOW"
+      },
+      "errors": [],
+      "records": [
+        {
+          "cve": "CVE-2021-44228",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 5,
+          "prerequisites_met": false,
+          "latency_s": 1.8591,
+          "error": null
+        },
+        {
+          "cve": "CVE-2017-0144",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "user",
+          "network_noise": "low",
+          "complexity_score": 3,
+          "prerequisites_met": false,
+          "latency_s": 1.9149,
+          "error": null
+        },
+        {
+          "cve": "CVE-2023-38408",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": true,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 2.2252,
+          "error": null
+        },
+        {
+          "cve": "CVE-2022-22965",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 1,
+          "prerequisites_met": false,
+          "latency_s": 2.1275,
+          "error": null
+        },
+        {
+          "cve": "CVE-2020-1472",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "user",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 2.3235,
+          "error": null
+        },
+        {
+          "cve": "CVE-2021-26855",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 1.6101,
+          "error": null
+        },
+        {
+          "cve": "CVE-2019-0708",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "user",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 1.4628,
+          "error": null
+        },
+        {
+          "cve": "CVE-2022-1388",
+          "valid": true,
+          "usability_rank": "LOW",
+          "syntax_valid": false,
+          "privileges_required": "none",
+          "network_noise": "low",
+          "complexity_score": 2,
+          "prerequisites_met": false,
+          "latency_s": 2.2444,
+          "error": null
+        }
+      ]
+    }
+  }
+}
