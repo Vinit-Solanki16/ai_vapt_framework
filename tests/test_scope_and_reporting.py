@@ -16,6 +16,14 @@ def test_scope_validator_loopback_allowed():
     assert res.in_scope is True
 
 
+def test_scope_validator_rfc1918_router_allowed():
+    """Verify private RFC 1918 router/LAN IP addresses (e.g. 192.168.1.1) are authorized."""
+    res = validate_web_target("http://192.168.1.1/")
+    assert res.authorized is True
+    assert res.in_scope is True
+    assert res.scope_kind == "local_lab"
+
+
 def test_scope_validator_metadata_blocked():
     """Verify cloud metadata endpoint (169.254.169.254) is unconditionally rejected."""
     res = validate_web_target("http://169.254.169.254/latest/meta-data/")

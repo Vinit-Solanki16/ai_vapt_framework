@@ -126,19 +126,11 @@ def validate_web_target(
                     detail="Cloud instance metadata service (169.254.169.254) is strictly prohibited.",
                 )
 
-            # Block RFC 1918 private IPs unless local lab mode
-            if unwrapped.is_private and not is_local:
-                return TargetValidationResult(
-                    authorized=False,
-                    authorization_status="REJECTED_PRIVATE_IP",
-                    preflight_status="FAILED",
-                    reachable=False,
-                    target_url=raw,
-                    resolved_ips=resolved_ips,
-                    detail=f"Private RFC 1918 IP address {unwrapped} is not in authorized public scope.",
-                )
+            # Authorize RFC 1918 private IPs and loopback as local/intranet engagement scope
+            if unwrapped.is_private or unwrapped.is_loopback:
+                is_local = True
 
-            # Block Link-local & CGNAT
+            # Block Link-local (e.g. 169.254.x.x autoconfiguration / cloud metadata)
             if unwrapped.is_link_local:
                 return TargetValidationResult(
                     authorized=False,
