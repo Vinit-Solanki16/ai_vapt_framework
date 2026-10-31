@@ -93,11 +93,10 @@
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="execution-limits-select">Execution Limits</label>
               <select id="execution-limits-select" class="form-select">
-                <option value="25">25 Turns (Fast Smoke Test)</option>
-                <option value="50">50 Turns (Standard Audit)</option>
-                <option value="100">100 Turns (Extended Surface Exploration)</option>
+                <option value="50">50 Turns (Autonomous Smoke Test)</option>
+                <option value="100" selected>100 Turns (Standard Surface Exploration - Recommended)</option>
                 <option value="250">250 Turns (Deep Autonomous Pentest)</option>
-                <option value="500" selected>500 Turns (Full Exhaustive Pentest - Autonomous Default)</option>
+                <option value="500">500 Turns (Full Exhaustive Multi-Agent Core)</option>
               </select>
             </div>
           </div>
@@ -188,6 +187,17 @@
 
     <!-- VIEW 2: ACTIVE ASSESSMENT (Live Monitoring) -->
     <section class="view-section" id="view-active-assessment">
+      <!-- Error Alert Banner -->
+      <div id="hero-error-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fb7185; font-size: 0.85rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.1rem;">⚠️</span>
+          <div>
+            <strong>Assessment Error:</strong>
+            <span id="hero-error-text">Scanner exited unexpectedly.</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Active Run Hero Header -->
       <div class="status-hero">
         <div>

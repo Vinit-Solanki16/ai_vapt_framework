@@ -18,6 +18,7 @@ import re
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.parse
 import uuid
@@ -170,6 +171,7 @@ if JS_DIR.is_dir():
 # In-memory store for runs, traces, and engagements
 _RUNS: Dict[str, Dict[str, Any]] = {}
 _ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
+_CURRENT_ACTIVE_RUN_ID: Optional[str] = None
 _ENGAGEMENTS: Dict[str, Dict[str, Any]] = {
     "default-local": {
         "id": "default-local",
@@ -1105,17 +1107,24 @@ def _sync_engine_candidates(engine, candidate_map: Dict[str, Any]) -> List[Dict[
 
 def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]):
     """Background worker executing the assessment workflow."""
+    global _CURRENT_ACTIVE_RUN_ID
     run_entry = _RUNS.get(run_id)
     if not run_entry:
         return
+
+    if req.mode == "autonomous":
+        _CURRENT_ACTIVE_RUN_ID = run_id
 
     try:
         run_entry["status"] = "running"
         target_url = (req.target_url or req.target or "").strip()
         scan_mode = (getattr(req, "scan_mode", None) or "deep").lower()
-        default_turns = 25 if scan_mode == "quick" else (100 if scan_mode == "standard" else 500)
+        default_turns = 50 if scan_mode == "quick" else (100 if scan_mode == "standard" else 500)
         req_turns = getattr(req, "max_turns", None)
         max_turns = int(req_turns) if req_turns is not None and int(req_turns) > 0 else default_turns
+        if req.mode == "autonomous" and max_turns < 50:
+            logger.info("Autonomous mode requires >= 50 turns; upgrading %d to 50", max_turns)
+            max_turns = 50
         max_k = max(1, int(req.max_attempts or 2))
         if os.environ.get("PYTEST_CURRENT_TEST"):
             turn_delay = 0.0
@@ -1347,7 +1356,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             before_dirs = {d.name for d in base_dir.iterdir() if d.is_dir()} if base_dir.is_dir() else set()
 
             cmd = [
-                sys.executable, "-m", "strix.interface.main",
+                sys.executable, "-c",
+                "import sys; from strix.interface.main import main; sys.exit(main())",
                 "-n",
                 "-t", sandbox_target_url,
                 "-m", scan_mode,
@@ -1356,7 +1366,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=subprocess.PIPE,
                 text=True,
                 cwd=str(PROJECT_ROOT),
                 env=sub_env,
@@ -1369,10 +1379,55 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             current_turn = 1
             seen_gap_traces = set()
 
+            # Separate background reader for stderr to isolate crashes, tracebacks, and warnings
+            stderr_lines: List[str] = []
+            def _drain_stderr(pipe):
+                try:
+                    for raw_err in iter(pipe.readline, ''):
+                        clean_err = ansi_re.sub('', raw_err).strip()
+                        if clean_err:
+                            stderr_lines.append(clean_err)
+                            engine.log("STDERR", clean_err[:240])
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        pipe.close()
+                    except Exception:
+                        pass
+
+            err_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
+            err_thread.start()
+
+            # Wall-clock timeout: 10m quick, 30m standard, 45m deep (bounded by turns)
+            wall_clock_timeout = 600 if scan_mode == "quick" else (1800 if scan_mode == "standard" else 2700)
+            wall_clock_timeout = max(wall_clock_timeout, min(3600, max_turns * 30))
+
+            proc_start_time = time.time()
+            timed_out = False
+            last_stdout_lines: List[str] = []
+
             for raw_line in iter(proc.stdout.readline, ''):
+                if time.time() - proc_start_time > wall_clock_timeout:
+                    timed_out = True
+                    engine.log("TIMEOUT", f"Wall-clock timeout of {wall_clock_timeout}s exceeded. Terminating autonomous scanner.")
+                    try:
+                        proc.terminate()
+                        proc.wait(timeout=3.0)
+                    except Exception:
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                    break
+
                 clean = ansi_re.sub('', raw_line).strip()
                 if not clean:
                     continue
+                last_stdout_lines.append(clean)
+                if len(last_stdout_lines) > 25:
+                    last_stdout_lines.pop(0)
+
                 if "Output  strix_runs/" in clean:
                     m = re.search(r"Output\s+strix_runs/([a-zA-Z0-9_\-\.]+)", clean)
                     if m:
@@ -1409,8 +1464,34 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                 run_entry["decision_trace"] = list(engine.decision_trace)
                 _save_run_to_disk(run_entry)
 
-            proc.wait()
+            try:
+                proc.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=2.0)
+                except Exception:
+                    pass
+
             _ACTIVE_PROCESSES.pop(run_id, None)
+            err_thread.join(timeout=2.0)
+
+            ret_code = proc.returncode if proc.returncode is not None else 0
+            proc_failed = False
+            error_msg: Optional[str] = None
+
+            if timed_out:
+                proc_failed = True
+                error_msg = f"Assessment exceeded wall-clock limit of {wall_clock_timeout}s"
+            elif ret_code not in (0, 2):
+                proc_failed = True
+                err_snippet = "\n".join(stderr_lines[-5:]).strip()
+                if not err_snippet:
+                    err_candidates = [l for l in last_stdout_lines if any(k in l.lower() for k in ("error", "exception", "failed", "traceback", "fatal", "unauthorized", "rate", "exceeded", "missing"))]
+                    err_snippet = "\n".join(err_candidates[-3:]).strip()
+                if not err_snippet:
+                    err_snippet = "\n".join(last_stdout_lines[-3:]).strip()
+                error_msg = err_snippet or f"Scanner exited unexpectedly with status code {ret_code}"
 
             # Fallback directory discovery if banner regex was bypassed
             if not underlying_run_name and base_dir.is_dir():
@@ -1501,19 +1582,32 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                 "pivots": len([e for e in run_entry.get("pivot_events", []) if e.get("type") in ("REDIRECT", "GAP2_PIVOT")]),
                 "findings": len(findings),
             }
-            run_entry["progress"] = {
-                "current": max_turns,
-                "total": max_turns,
-                "candidate": "Completed",
-                "percent": 100,
-            }
-            run_entry["status"] = "completed"
             run_entry["completed_at"] = _utc_now()
-            run_entry["events"].append({
-                "timestamp": _utc_now(),
-                "event": "RUN_COMPLETED",
-                "message": f"Autonomous pentest finished. Found {len(findings)} confirmed finding(s).",
-            })
+
+            if proc_failed:
+                run_entry["status"] = "failed"
+                run_entry["error"] = error_msg
+                run_entry["events"].append({
+                    "timestamp": _utc_now(),
+                    "event": "RUN_FAILED",
+                    "message": f"Autonomous pentest failed (code {ret_code}): {error_msg}. Harvested {len(findings)} partial finding(s).",
+                })
+                engine.log("FAIL", f"Autonomous assessment failed (exit {ret_code}): {error_msg}")
+            else:
+                run_entry["status"] = "completed"
+                run_entry["progress"] = {
+                    "current": max_turns,
+                    "total": max_turns,
+                    "candidate": "Completed",
+                    "percent": 100,
+                }
+                run_entry["events"].append({
+                    "timestamp": _utc_now(),
+                    "event": "RUN_COMPLETED",
+                    "message": f"Autonomous pentest finished. Found {len(findings)} confirmed finding(s).",
+                })
+
+            run_entry["decision_trace"] = list(engine.decision_trace)
             _save_run_to_disk(run_entry)
             return
 
@@ -1720,6 +1814,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             "message": f"Run terminated with error: {exc}",
         })
         _save_run_to_disk(run_entry)
+    finally:
+        if _CURRENT_ACTIVE_RUN_ID == run_id:
+            _CURRENT_ACTIVE_RUN_ID = None
 
 
 @app.post("/runs", response_model=RunResponse)
@@ -1730,7 +1827,20 @@ async def create_run(
     x_openrouter_api_key: Optional[str] = Header(None, alias="X-OpenRouter-API-Key"),
 ):
     """Launch a new assessment run in the background."""
+    global _CURRENT_ACTIVE_RUN_ID
+    if req.mode == "autonomous":
+        if _CURRENT_ACTIVE_RUN_ID:
+            active_run = _RUNS.get(_CURRENT_ACTIVE_RUN_ID, {})
+            active_proc = _ACTIVE_PROCESSES.get(_CURRENT_ACTIVE_RUN_ID)
+            if active_run.get("status") in ("running", "queued") or (active_proc and active_proc.poll() is None):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"An autonomous assessment is already actively running ({_CURRENT_ACTIVE_RUN_ID}). Please wait for it to complete or stop it before launching a new scan.",
+                )
+
     run_id = f"run-{uuid.uuid4().hex[:8]}"
+    if req.mode == "autonomous":
+        _CURRENT_ACTIVE_RUN_ID = run_id
     runtime_key = x_google_api_key or x_openrouter_api_key or req.assessor_api_key
 
     run_record = {
@@ -1931,9 +2041,17 @@ async def get_run_report(
     # 3. SARIF Report
     if fmt == "sarif":
         sarif_file = runs_base_dir() / run_id / "findings.sarif"
+        content = None
         if sarif_file.is_file():
-            content = sarif_file.read_text(encoding="utf-8")
-        else:
+            try:
+                raw_text = sarif_file.read_text(encoding="utf-8")
+                sarif_data = json.loads(raw_text)
+                results = sarif_data.get("runs", [{}])[0].get("results", [])
+                if results or not run.get("findings"):
+                    content = raw_text
+            except Exception:
+                pass
+        if not content:
             from strix.report.sarif import build_sarif_report
             sarif_obj = build_sarif_report(run.get("findings", []))
             content = json.dumps(sarif_obj, indent=2)
@@ -1945,10 +2063,16 @@ async def get_run_report(
     # 4. Markdown Report
     if fmt in ("md", "markdown"):
         md_file = runs_base_dir() / run_id / "penetration_test_report.md"
+        structured_md = _generate_markdown_report(run)
         if md_file.is_file():
-            content = md_file.read_text(encoding="utf-8")
+            cli_md = md_file.read_text(encoding="utf-8")
+            if "## 2. Confirmed Vulnerability Findings" in cli_md:
+                content = cli_md
+            else:
+                # Merge CLI narrative summary with structured findings breakdown
+                content = f"{cli_md.strip()}\n\n---\n\n{structured_md}"
         else:
-            content = _generate_markdown_report(run)
+            content = structured_md
         headers = {}
         if download:
             headers["Content-Disposition"] = f'attachment; filename="vapt_report_{run_id}.md"'

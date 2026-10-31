@@ -560,12 +560,16 @@
       state.latestRunData = run;
       renderActiveRun(run);
 
-      if (run.status === 'completed' || run.status === 'failed') {
+      if (run.status === 'completed' || run.status === 'failed' || run.status === 'aborted') {
         clearInterval(state.pollTimer);
         state.pollTimer = null;
         if (run.status === 'completed') {
           elements.btnViewReportNow.style.display = 'inline-flex';
           showToast(`Assessment ${runId} completed!`, 'success');
+        } else if (run.status === 'failed') {
+          showToast(`Assessment ${runId} failed: ${run.error || 'Check terminal logs'}`, 'error');
+        } else if (run.status === 'aborted') {
+          showToast(`Assessment ${runId} stopped by operator.`, 'info');
         }
       }
     } catch (err) {
@@ -579,19 +583,33 @@
     elements.heroTargetText.textContent = run.target_url || 'Target Application';
     elements.heroModeText.textContent = `Mode: ${(run.mode || 'web').toUpperCase()}`;
 
+    const errorBanner = document.getElementById('hero-error-banner');
+    const errorText = document.getElementById('hero-error-text');
     const status = (run.status || 'running').toUpperCase();
     elements.heroRunStatus.textContent = status;
+
+    const findings = run.findings || [];
+
     if (status === 'COMPLETED') {
       elements.heroRunStatus.className = 'badge badge-emerald';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
       if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'inline-flex';
+      if (errorBanner) errorBanner.style.display = 'none';
     } else if (status === 'FAILED' || status === 'ABORTED') {
       elements.heroRunStatus.className = 'badge badge-rose';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
+      if (errorBanner && errorText) {
+        errorBanner.style.display = 'block';
+        errorText.textContent = run.error || (status === 'ABORTED' ? 'Assessment stopped by operator.' : 'Scanner exited unexpectedly. Check terminal logs.');
+      }
+      if (findings.length > 0 && elements.btnViewReportNow) {
+        elements.btnViewReportNow.style.display = 'inline-flex';
+      }
     } else {
       elements.heroRunStatus.className = 'badge badge-cyan';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'inline-flex';
       if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'none';
+      if (errorBanner) errorBanner.style.display = 'none';
     }
 
     // Metrics
@@ -1416,11 +1434,21 @@
       elements.scanIntensity.addEventListener('change', () => {
         const mode = elements.scanIntensity.value;
         if (mode === 'quick') {
-          elements.executionLimitsSelect.value = '25';
+          elements.executionLimitsSelect.value = '50';
         } else if (mode === 'standard') {
           elements.executionLimitsSelect.value = '100';
         } else if (mode === 'deep') {
-          elements.executionLimitsSelect.value = '500';
+          elements.executionLimitsSelect.value = '250';
+        }
+      });
+    }
+
+    if (elements.scanModeSelect && elements.executionLimitsSelect) {
+      elements.scanModeSelect.addEventListener('change', () => {
+        if (elements.scanModeSelect.value === 'autonomous') {
+          if (parseInt(elements.executionLimitsSelect.value, 10) < 50) {
+            elements.executionLimitsSelect.value = '100';
+          }
         }
       });
     }

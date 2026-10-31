@@ -324,4 +324,61 @@ def test_stop_run_endpoint():
     assert any(e.get("event") == "RUN_STOPPED" for e in _RUNS[test_run_id]["events"])
 
 
+def test_concurrency_guard_rejects_overlap():
+    """Verify that launching a second autonomous scan when one is active returns 409 Conflict."""
+    import strix.interface.api as api
+    import subprocess
+    import sys
+
+    # Simulate an active subprocess
+    proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(2)"])
+    active_id = "run-active-test-01"
+    api._CURRENT_ACTIVE_RUN_ID = active_id
+    api._ACTIVE_PROCESSES[active_id] = proc
+
+    try:
+        res = client.post(
+            "/runs",
+            json={
+                "target_url": "http://127.0.0.1:8080/",
+                "mode": "autonomous",
+            },
+        )
+        assert res.status_code == 409
+        assert "already actively running" in res.json()["detail"]
+    finally:
+        proc.kill()
+        proc.wait()
+        api._ACTIVE_PROCESSES.pop(active_id, None)
+        api._CURRENT_ACTIVE_RUN_ID = None
+
+
+def test_minimum_max_turns_enforced_in_autonomous_mode():
+    """Verify that autonomous mode upgrades max_turns < 50 to 50 minimum."""
+    import strix.interface.api as api
+    from strix.interface.schemas import RunRequest
+
+    req = RunRequest(
+        target_url="http://127.0.0.1:8080/",
+        mode="autonomous",
+        max_turns=10,
+    )
+    test_id = "run-turns-min-test"
+    api._RUNS[test_id] = {
+        "run_id": test_id,
+        "status": "queued",
+        "events": [],
+        "decision_trace": [],
+        "pivot_events": [],
+        "candidates": [],
+        "findings": [],
+    }
+
+    # Under PYTEST_CURRENT_TEST, _is_docker_available returns False, so worker exercises in-process engine
+    api._execute_run_worker(test_id, req, None)
+    run_entry = api._RUNS[test_id]
+    assert run_entry["max_turns"] >= 50
+
+
+
 
