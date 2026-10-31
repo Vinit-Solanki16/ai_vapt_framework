@@ -74,10 +74,11 @@
           <div class="form-group">
             <label class="form-label" for="scan-mode-select">Execution & Assessment Engine</label>
             <select id="scan-mode-select" class="form-select">
-              <option value="web" selected>🛡️ Safe Web VAPT (Non-Destructive Active Verification + GAP-1/GAP-2)</option>
-              <option value="autonomous">⚔️ Full Autonomous Pentest (Dynamic Recon, Shell & Deep Exploitation)</option>
+              <option value="autonomous" selected>⚔️ Full Autonomous Pentest (Autonomous Multi-Agent Core + GAP-1/GAP-2)</option>
+              <option value="web">🛡️ Fast Web Audit (Passive Discovery & Header/Cookie Scan)</option>
+              <option value="simulation">🧪 Simulation Benchmark (Harness Offline Validation)</option>
             </select>
-            <div class="form-help">Dynamic attack surface discovery with non-destructive active verification and cryptographic proof generation.</div>
+            <div class="form-help">Genuine autonomous multi-agent pentest with Docker sandbox isolation, real exploit verification, and GAP-1/GAP-2 dynamic bounded pivoting.</div>
           </div>
 
           <div class="grid-2" style="gap: 1rem; margin-bottom: 0.75rem;">
@@ -203,6 +204,9 @@
         </div>
 
         <div class="status-actions">
+          <button type="button" class="btn btn-danger" id="btn-stop-run" style="display: none;">
+            <span>🛑</span> Stop Scan
+          </button>
           <button type="button" class="btn btn-success" id="btn-view-report-now" style="display: none;">
             <span>📊</span> View Audit Report
           </button>
@@ -418,15 +422,21 @@
             <div class="card-title"><span>📄</span> Cryptographically Verified VAPT Audit Report</div>
             <div class="card-subtitle" id="report-run-ref">Run Reference: None</div>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn btn-secondary" onclick="window.print()">
-              <span>🖨️</span> Print / Save PDF
-            </button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-primary" id="btn-download-html-report">
-              <span>⬇️</span> Download HTML
+              <span>🌐</span> HTML
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-download-pdf-report">
+              <span>📕</span> PDF
             </button>
             <button type="button" class="btn btn-secondary" id="btn-download-json-report">
-              <span>💾</span> Export JSON
+              <span>💾</span> JSON
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-download-sarif-report">
+              <span>🛡️</span> SARIF
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-download-md-report">
+              <span>📝</span> Markdown
             </button>
           </div>
         </div>
@@ -497,24 +507,35 @@
             <button type="button" class="btn btn-secondary btn-block" id="btn-probe-ollama">Probe Ollama Service</button>
           </div>
 
-          <!-- Cloud API Tester Card -->
+          <!-- LLM Configuration & Cloud Providers Card -->
           <div class="card" style="margin-bottom: 0;">
             <div class="card-header">
-              <div class="card-title"><span>☁️</span> Cloud Providers Live Test</div>
-              <span class="badge badge-purple">Zero Credits Charged</span>
+              <div class="card-title"><span>🤖</span> LLM Provider & System Credentials</div>
+              <span id="settings-status-badge" class="badge badge-emerald">Ready</span>
             </div>
             <div class="form-group">
-              <label class="form-label">Provider to Validate:</label>
+              <label class="form-label" for="settings-provider-select">Provider:</label>
               <select id="settings-provider-select" class="form-select">
-                <option value="openrouter" selected>OpenRouter (Catalogue Endpoint)</option>
-                <option value="google">Google Gemini (Models Endpoint)</option>
+                <option value="openrouter" selected>OpenRouter (Hosted Hub & Free Models)</option>
+                <option value="google">Google Gemini (Gemini 2.0 / Flash)</option>
+                <option value="ollama">Local Ollama (Self-Hosted)</option>
+                <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">API Key:</label>
-              <input type="password" id="settings-api-key" class="form-input" placeholder="Paste API key to test">
+              <label class="form-label" for="settings-model-input">Model Name / Identifier:</label>
+              <input type="text" id="settings-model-input" class="form-input" placeholder="e.g. meta-llama/llama-3.2-3b-instruct:free" value="meta-llama/llama-3.2-3b-instruct:free">
+              <div class="form-help">Provider model string (e.g. <code>meta-llama/llama-3.2-3b-instruct:free</code> or <code>gemini-2.0-flash-exp</code>)</div>
             </div>
-            <button type="button" class="btn btn-primary btn-block" id="btn-test-cloud-key">Validate Connection</button>
+            <div class="form-group">
+              <label class="form-label" for="settings-api-key">API Key:</label>
+              <input type="password" id="settings-api-key" class="form-input" placeholder="Paste runtime API key (leave blank to keep current)">
+              <div id="settings-current-key-hint" class="form-help" style="color: var(--text-muted);">Current key: Checking saved config...</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary" id="btn-test-cloud-key">Validate Connection</button>
+              <button type="button" class="btn btn-primary" id="btn-save-llm-config">💾 Save Configuration</button>
+            </div>
             <div id="settings-key-result" style="margin-top: 0.75rem; font-size: 0.85rem;"></div>
           </div>
         </div>

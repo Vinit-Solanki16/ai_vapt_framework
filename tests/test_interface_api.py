@@ -236,3 +236,92 @@ def test_technology_aware_remediation_iis_aspnet():
     assert "Strict-Transport-Security" in res["remediation_technical"]
     assert "X-Frame-Options" in res["remediation_technical"]
 
+
+def test_llm_settings_endpoints():
+    """Verify GET and POST /settings/llm endpoints configure provider and model."""
+    # 1. GET settings
+    get_res = client.get("/settings/llm")
+    assert get_res.status_code == 200
+    cfg = get_res.json()
+    assert "provider" in cfg
+    assert "model" in cfg
+
+    # 2. POST update settings
+    post_res = client.post(
+        "/settings/llm",
+        json={
+            "provider": "openrouter",
+            "model": "meta-llama/llama-3.2-3b-instruct:free",
+            "api_key": "sk-or-v1-testkey1234567890abcdef",
+            "reasoning_effort": "medium",
+        },
+    )
+    assert post_res.status_code == 200
+    data = post_res.json()
+    assert data["status"] == "ok"
+
+    # Verify updated settings
+    verify_res = client.get("/settings/llm")
+    assert verify_res.status_code == 200
+    v_data = verify_res.json()
+    assert v_data["provider"] == "openrouter"
+    assert "llama" in v_data["model"].lower()
+    assert v_data["has_api_key"] is True
+
+
+def test_multiformat_report_endpoints():
+    """Verify report endpoint generates HTML, JSON, PDF, SARIF, and Markdown."""
+    # Launch quick run
+    post_res = client.post(
+        "/runs",
+        json={
+            "target_url": "http://127.0.0.1:8080/",
+            "mode": "web",
+            "max_attempts": 2,
+        },
+    )
+    assert post_res.status_code == 200
+    run_id = post_res.json()["run_id"]
+
+    import time
+    time.sleep(0.5)
+
+    # 1. SARIF format
+    sarif_res = client.get(f"/runs/{run_id}/report?format=sarif")
+    assert sarif_res.status_code == 200
+    assert "application/json" in sarif_res.headers.get("content-type", "")
+    sarif_data = sarif_res.json()
+    assert "$schema" in sarif_data or "runs" in sarif_data
+
+    # 2. Markdown format
+    md_res = client.get(f"/runs/{run_id}/report?format=markdown")
+    assert md_res.status_code == 200
+    assert "text/markdown" in md_res.headers.get("content-type", "")
+    assert "Security Penetration Test Report" in md_res.text or "Vulnerability" in md_res.text
+
+    # 3. PDF format
+    pdf_res = client.get(f"/runs/{run_id}/report?format=pdf")
+    assert pdf_res.status_code == 200
+    assert "application/pdf" in pdf_res.headers.get("content-type", "")
+    assert pdf_res.content.startswith(b"%PDF-")
+
+
+def test_stop_run_endpoint():
+    """Verify that POST /runs/{run_id}/stop gracefully marks a run as aborted."""
+    from strix.interface.api import _RUNS
+
+    test_run_id = "run-stop-test-01"
+    _RUNS[test_run_id] = {
+        "run_id": test_run_id,
+        "status": "running",
+        "events": [],
+    }
+
+    res = client.post(f"/runs/{test_run_id}/stop")
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
+    assert _RUNS[test_run_id]["status"] == "aborted"
+    assert any(e.get("event") == "RUN_STOPPED" for e in _RUNS[test_run_id]["events"])
+
+
+

@@ -64,6 +64,92 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 CSS_DIR = WEB_DIR / "css"
 JS_DIR = WEB_DIR / "js"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CLI_CONFIG_FILE = Path.home() / ".strix" / "cli-config.json"
+
+
+def _read_strix_cli_config() -> Dict[str, str]:
+    """Read persisted environment variables from ~/.strix/cli-config.json."""
+    if CLI_CONFIG_FILE.is_file():
+        try:
+            data = json.loads(CLI_CONFIG_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and "env" in data and isinstance(data["env"], dict):
+                return {k: str(v) for k, v in data["env"].items() if v is not None}
+        except Exception as exc:
+            logger.debug("Failed to read Strix CLI config: %s", exc)
+    return {}
+
+
+def _write_strix_cli_config(env_vars: Dict[str, str]) -> None:
+    """Safely persist environment variables to ~/.strix/cli-config.json (0o600)."""
+    current = _read_strix_cli_config()
+    current.update({k: str(v) for k, v in env_vars.items() if v is not None})
+    CLI_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        from strix.utils.secret_files import write_secret_text
+        write_secret_text(CLI_CONFIG_FILE, json.dumps({"env": current}, indent=2))
+    except Exception as exc:
+        logger.warning("Failed to persist CLI config: %s", exc)
+        CLI_CONFIG_FILE.write_text(json.dumps({"env": current}, indent=2), encoding="utf-8")
+
+
+def _generate_markdown_report(run_data: Dict[str, Any]) -> str:
+    """Generate professional Markdown penetration test report."""
+    target = run_data.get("target_url") or run_data.get("target") or "Target"
+    findings = run_data.get("findings", [])
+    run_id = run_data.get("run_id", "unknown")
+    lines = [
+        f"# AI-VAPT Autonomous Security Penetration Test Report",
+        f"",
+        f"- **Target URL:** {target}",
+        f"- **Run Reference:** `{run_id}`",
+        f"- **Execution Engine:** STRIX Autonomous Multi-Agent Core",
+        f"- **Assessment Mode:** {(run_data.get('mode') or 'autonomous').upper()}",
+        f"- **Scan Depth:** {(run_data.get('scan_mode') or 'deep').upper()}",
+        f"- **Generated:** {run_data.get('completed_at') or _utc_now()}",
+        f"- **Total Confirmed Findings:** {len(findings)}",
+        f"",
+        f"---",
+        f"",
+        f"## 1. Executive Summary",
+        f"",
+        f"An autonomous vulnerability assessment and penetration test was conducted against `{target}` using the STRIX multi-agent engine coupled with GAP-1 dynamic exploit quality triage and GAP-2 bounded failure pivoting.",
+        f"",
+        f"## 2. Confirmed Vulnerability Findings",
+        f"",
+    ]
+    if not findings:
+        lines.append("No critical vulnerabilities were confirmed during this assessment run.\n")
+    for idx, f in enumerate(findings, 1):
+        lines.extend([
+            f"### 2.{idx} {f.get('title', 'Vulnerability Finding')}",
+            f"",
+            f"- **Severity:** {f.get('severity', 'MEDIUM')}",
+            f"- **CVSS Score:** {f.get('cvss_score', 'N/A')}",
+            f"- **CVE Reference:** {f.get('cve_id') or 'N/A'}",
+            f"- **CWE Identifier:** {f.get('cwe_id') or 'CWE-200'}",
+            f"- **OWASP Top 10:** {f.get('owasp_category', 'A01:2021 - Broken Access Control')}",
+            f"- **Location / Route:** `{f.get('location', '/')}`",
+            f"- **Cryptographic SHA-256 Proof:** `{f.get('evidence_hash', 'N/A')}`",
+            f"",
+            f"#### Technical Analysis & Proof-of-Concept Evidence",
+            f"```",
+            f"{f.get('evidence_snippet', 'Verified')}",
+            f"```",
+            f"",
+            f"#### Impact",
+            f"{f.get('impact', 'Information disclosure and potential compromise of application integrity.')}",
+            f"",
+            f"#### Remediation Recommendations",
+            f"{f.get('remediation_summary', 'Apply defensive validation filters.')}",
+            f"",
+            f"```shell",
+            f"{f.get('remediation_technical', '# Implement secure configuration')}",
+            f"```",
+            f"",
+            f"---",
+            f"",
+        ])
+    return "\n".join(lines)
 
 
 def _is_docker_available() -> bool:
@@ -83,6 +169,7 @@ if JS_DIR.is_dir():
 
 # In-memory store for runs, traces, and engagements
 _RUNS: Dict[str, Dict[str, Any]] = {}
+_ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
 _ENGAGEMENTS: Dict[str, Dict[str, Any]] = {
     "default-local": {
         "id": "default-local",
@@ -206,11 +293,10 @@ async def system_health():
 
     # 2. Docker Execution Sandbox
     try:
-        from strix.interface.environment import check_docker_installed
-        docker_installed = check_docker_installed()
+        docker_available = _is_docker_available()
         components["docker"] = {
-            "status": "READY" if docker_installed else "UNAVAILABLE",
-            "installed": docker_installed,
+            "status": "READY" if docker_available else "UNAVAILABLE",
+            "installed": docker_available,
         }
     except Exception as e:
         components["docker"] = {"status": "UNAVAILABLE", "error": str(e)}
@@ -397,6 +483,111 @@ async def list_openrouter_models():
     except Exception as exc:
         logger.warning("Error fetching OpenRouter models: %s", exc)
         return []
+
+
+@app.get("/settings/llm")
+async def get_llm_settings():
+    """Retrieve currently active and persisted LLM configuration."""
+    cfg = _read_strix_cli_config()
+    model = os.environ.get("STRIX_LLM") or cfg.get("STRIX_LLM", "openrouter/meta-llama/llama-3.2-3b-instruct:free")
+    api_key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("GEMINI_API_KEY") or cfg.get("LLM_API_KEY", "")
+    api_base = os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_API_BASE") or cfg.get("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+    effort = os.environ.get("STRIX_REASONING_EFFORT") or cfg.get("STRIX_REASONING_EFFORT", "low")
+
+    # Detect provider
+    provider = "openrouter"
+    if model.startswith("google/") or model.startswith("gemini/") or "gemini" in model.lower():
+        provider = "google"
+    elif model.startswith("ollama/") or "ollama" in model.lower():
+        provider = "ollama"
+    elif model.startswith("openai/") or "gpt-" in model.lower():
+        provider = "openai"
+
+    masked_key = ""
+    if api_key:
+        masked_key = f"{api_key[:6]}...{api_key[-4:]}" if len(api_key) > 12 else "********"
+
+    clean_model = model
+    for pfx in ("openrouter/", "google/", "gemini/", "ollama/", "openai/"):
+        if clean_model.startswith(pfx):
+            clean_model = clean_model[len(pfx):]
+            break
+
+    return {
+        "provider": provider,
+        "model": clean_model,
+        "raw_model": model,
+        "api_base": api_base,
+        "has_api_key": bool(api_key),
+        "masked_api_key": masked_key,
+        "reasoning_effort": effort,
+    }
+
+
+@app.post("/settings/llm")
+async def update_llm_settings(payload: Dict[str, Any] = Body(...)):
+    """Save LLM configuration to ~/.strix/cli-config.json and update runtime environment."""
+    provider = (payload.get("provider") or "openrouter").lower().strip()
+    raw_model = (payload.get("model") or "").strip()
+    api_key = (payload.get("api_key") or "").strip()
+    api_base = (payload.get("api_base") or "").strip()
+    effort = (payload.get("reasoning_effort") or "low").strip()
+
+    env_updates: Dict[str, str] = {}
+    if effort:
+        env_updates["STRIX_REASONING_EFFORT"] = effort
+        os.environ["STRIX_REASONING_EFFORT"] = effort
+
+    if provider == "openrouter":
+        m_name = raw_model if raw_model.startswith("openrouter/") else f"openrouter/{raw_model}"
+        base = api_base or "https://openrouter.ai/api/v1"
+        env_updates["STRIX_LLM"] = m_name
+        env_updates["OPENAI_BASE_URL"] = base
+        os.environ["STRIX_LLM"] = m_name
+        os.environ["OPENAI_BASE_URL"] = base
+        if api_key:
+            env_updates["LLM_API_KEY"] = api_key
+            os.environ["LLM_API_KEY"] = api_key
+
+    elif provider == "google":
+        m_name = raw_model if (raw_model.startswith("google/") or raw_model.startswith("gemini/")) else f"google/{raw_model}"
+        env_updates["STRIX_LLM"] = m_name
+        os.environ["STRIX_LLM"] = m_name
+        if api_key:
+            env_updates["GEMINI_API_KEY"] = api_key
+            env_updates["LLM_API_KEY"] = api_key
+            os.environ["GEMINI_API_KEY"] = api_key
+            os.environ["LLM_API_KEY"] = api_key
+
+    elif provider == "ollama":
+        m_name = raw_model if raw_model.startswith("ollama/") else f"ollama/{raw_model}"
+        base = api_base or "http://127.0.0.1:11434"
+        env_updates["STRIX_LLM"] = m_name
+        env_updates["OLLAMA_API_BASE"] = base
+        env_updates["LLM_API_KEY"] = "ollama"
+        os.environ["STRIX_LLM"] = m_name
+        os.environ["OLLAMA_API_BASE"] = base
+        os.environ["LLM_API_KEY"] = "ollama"
+
+    elif provider == "openai":
+        m_name = raw_model if raw_model.startswith("openai/") else f"openai/{raw_model}"
+        base = api_base or "https://api.openai.com/v1"
+        env_updates["STRIX_LLM"] = m_name
+        env_updates["OPENAI_BASE_URL"] = base
+        os.environ["STRIX_LLM"] = m_name
+        os.environ["OPENAI_BASE_URL"] = base
+        if api_key:
+            env_updates["OPENAI_API_KEY"] = api_key
+            env_updates["LLM_API_KEY"] = api_key
+            os.environ["OPENAI_API_KEY"] = api_key
+            os.environ["LLM_API_KEY"] = api_key
+
+    _write_strix_cli_config(env_updates)
+    return {
+        "status": "ok",
+        "message": f"LLM configuration updated successfully for provider {provider}",
+        "config": {k: ("***" if "KEY" in k else v) for k, v in env_updates.items()},
+    }
 
 
 def _probe_web_candidate(target_url: str, cid: str, endpoint: str) -> tuple[bool, str, str]:
@@ -932,6 +1123,10 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             turn_delay = 0.05 if scan_mode == "quick" else (0.25 if scan_mode == "standard" else 0.50)
         is_live_target = req.mode in ("web", "autonomous") and target_url.startswith("http")
 
+        cli_cfg = _read_strix_cli_config()
+        if not runtime_key:
+            runtime_key = cli_cfg.get("LLM_API_KEY") or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
         target_ip = None
         if is_live_target:
             import socket
@@ -1064,26 +1259,97 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
             })
             _save_run_to_disk(run_entry)
 
+            # 1. Target URL sandbox rewriting for Docker (localhost/127.0.0.1 -> host.docker.internal)
+            parsed_target = urllib.parse.urlsplit(target_url)
+            host = parsed_target.hostname or ""
+            if host in ("localhost", "127.0.0.1", "::1"):
+                netloc = f"host.docker.internal:{parsed_target.port}" if parsed_target.port else "host.docker.internal"
+                sandbox_target_url = urllib.parse.urlunsplit((parsed_target.scheme, netloc, parsed_target.path, parsed_target.query, parsed_target.fragment))
+                engine.log("SANDBOX", f"Rewrote loopback target {target_url} -> {sandbox_target_url} for Docker sandbox reachability")
+            else:
+                sandbox_target_url = target_url
+
+            # 2. Control directory and GAP-1 queue injection for Strix gap_bridge
+            base_dir = runs_base_dir()
+            control_dir = base_dir / run_id / "control"
+            control_dir.mkdir(parents=True, exist_ok=True)
+            gap1_candidates = run_entry.get("candidates", [])
+            gap1_payload = {
+                "candidates": [
+                    {
+                        "candidate_id": c.get("id"),
+                        "gap1_rank": c.get("priority_rank", idx + 1),
+                        "title": c.get("name", c.get("id")),
+                        "endpoint": c.get("endpoint", "/"),
+                        "target": target_url,
+                        "method": "POST" if "post" in str(c.get("id", "")).lower() else "GET",
+                        "quality_rank": c.get("usability_rank", "HIGH"),
+                        "priority_score": c.get("composite_score", 0.5),
+                        "assessment_reasoning": c.get("reasoning", ""),
+                    }
+                    for idx, c in enumerate(gap1_candidates)
+                ],
+                "original_order": [c.get("id") for c in gap1_candidates],
+                "ranked_order": [c.get("id") for c in gap1_candidates],
+            }
+            (control_dir / "gap1_queue.json").write_text(json.dumps(gap1_payload, indent=2), encoding="utf-8")
+
+            # 3. Environment configuration with CLI config fallback
             sub_env = dict(os.environ)
-            if runtime_key:
-                if req.assessor_provider == "openrouter" or (not req.assessor_provider and runtime_key.startswith("sk-or-")):
-                    sub_env["LLM_API_KEY"] = runtime_key
-                    sub_env["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
-                    if req.assessor_model:
-                        m_name = req.assessor_model if "/" in req.assessor_model else f"openrouter/{req.assessor_model}"
-                        sub_env["STRIX_LLM"] = m_name
-                elif req.assessor_provider == "google":
-                    sub_env["GEMINI_API_KEY"] = runtime_key
-                    if req.assessor_model:
-                        sub_env["STRIX_LLM"] = f"google/{req.assessor_model}"
-                elif req.assessor_provider == "ollama":
-                    if req.assessor_model:
-                        sub_env["STRIX_LLM"] = f"ollama/{req.assessor_model}"
+            cli_cfg = _read_strix_cli_config()
+
+            key = runtime_key or cli_cfg.get("LLM_API_KEY") or os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            provider = (req.assessor_provider or "").lower().strip()
+            if not provider:
+                if key and key.startswith("sk-or-"):
+                    provider = "openrouter"
+                elif key and key.startswith("AIza"):
+                    provider = "google"
+                else:
+                    provider = "openrouter"
+
+            raw_model = req.assessor_model or cli_cfg.get("STRIX_LLM") or "meta-llama/llama-3.2-3b-instruct:free"
+
+            if provider == "openrouter":
+                m_name = raw_model if raw_model.startswith("openrouter/") else f"openrouter/{raw_model}"
+                sub_env["STRIX_LLM"] = m_name
+                sub_env["OPENAI_BASE_URL"] = cli_cfg.get("OPENAI_BASE_URL") or "https://openrouter.ai/api/v1"
+                if key:
+                    sub_env["LLM_API_KEY"] = key
+            elif provider == "google":
+                m_name = raw_model if (raw_model.startswith("google/") or raw_model.startswith("gemini/")) else f"google/{raw_model}"
+                sub_env["STRIX_LLM"] = m_name
+                if key:
+                    sub_env["GEMINI_API_KEY"] = key
+                    sub_env["LLM_API_KEY"] = key
+            elif provider == "ollama":
+                m_name = raw_model if raw_model.startswith("ollama/") else f"ollama/{raw_model}"
+                sub_env["STRIX_LLM"] = m_name
+                sub_env["OLLAMA_API_BASE"] = os.environ.get("OLLAMA_API_BASE") or "http://127.0.0.1:11434"
+                sub_env["LLM_API_KEY"] = "ollama"
+            elif provider == "openai":
+                m_name = raw_model if raw_model.startswith("openai/") else f"openai/{raw_model}"
+                sub_env["STRIX_LLM"] = m_name
+                sub_env["OPENAI_BASE_URL"] = "https://api.openai.com/v1"
+                if key:
+                    sub_env["OPENAI_API_KEY"] = key
+                    sub_env["LLM_API_KEY"] = key
+
+            sub_env["STRIX_GAP_CONTROL_DIR"] = str(control_dir)
+            sub_env["STRIX_GAP1_QUEUE"] = str(control_dir / "gap1_queue.json")
+            sub_env["STRIX_GAP2_THRESHOLD"] = str(max_k)
+            sub_env["STRIX_GAP1_ENABLED"] = "1"
+            sub_env["STRIX_GAP2_ENABLED"] = "1"
+            if cli_cfg.get("STRIX_REASONING_EFFORT"):
+                sub_env["STRIX_REASONING_EFFORT"] = cli_cfg["STRIX_REASONING_EFFORT"]
+
+            # Snapshot directory state prior to launch
+            before_dirs = {d.name for d in base_dir.iterdir() if d.is_dir()} if base_dir.is_dir() else set()
 
             cmd = [
                 sys.executable, "-m", "strix.interface.main",
                 "-n",
-                "-t", target_url,
+                "-t", sandbox_target_url,
                 "-m", scan_mode,
                 "--max-turns", str(max_turns),
             ]
@@ -1096,18 +1362,22 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                 env=sub_env,
                 bufsize=1,
             )
+            _ACTIVE_PROCESSES[run_id] = proc
 
             underlying_run_name = None
             ansi_re = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]')
             current_turn = 1
+            seen_gap_traces = set()
 
             for raw_line in iter(proc.stdout.readline, ''):
                 clean = ansi_re.sub('', raw_line).strip()
                 if not clean:
                     continue
                 if "Output  strix_runs/" in clean:
-                    underlying_run_name = clean.split("Output  strix_runs/")[1].strip()
-                    engine.log("SANDBOX", f"Attached autonomous scan run directory: {underlying_run_name}")
+                    m = re.search(r"Output\s+strix_runs/([a-zA-Z0-9_\-\.]+)", clean)
+                    if m:
+                        underlying_run_name = m.group(1).strip()
+                        engine.log("SANDBOX", f"Attached autonomous scan run directory: {underlying_run_name}")
 
                 turn_m = re.search(r'Starting turn\s+(\d+)', clean, re.I)
                 if turn_m:
@@ -1119,6 +1389,20 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                         "percent": min(95, int((current_turn / max_turns) * 100)),
                     }
 
+                # Periodically sync GAP-2 pivot decisions from decision_trace.jsonl
+                trace_file = control_dir / "decision_trace.jsonl"
+                if trace_file.is_file():
+                    try:
+                        for t_line in trace_file.read_text(encoding="utf-8").splitlines():
+                            if t_line.strip() and t_line not in seen_gap_traces:
+                                seen_gap_traces.add(t_line)
+                                t_obj = json.loads(t_line)
+                                if t_obj.get("event") == "GAP2_PIVOT":
+                                    engine.log("PIVOT", f"[GAP-2 PIVOT] Bounded threshold reached for {t_obj.get('candidate_id')}; pivoted to {t_obj.get('next_candidate')}")
+                                    run_entry["pivot_events"].append(t_obj)
+                    except Exception:
+                        pass
+
                 if not any(clean.startswith(ch) for ch in ("╭", "│", "╰", "─")):
                     engine.log("AGENT", clean[:240])
 
@@ -1126,10 +1410,19 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                 _save_run_to_disk(run_entry)
 
             proc.wait()
+            _ACTIVE_PROCESSES.pop(run_id, None)
+
+            # Fallback directory discovery if banner regex was bypassed
+            if not underlying_run_name and base_dir.is_dir():
+                new_dirs = [d for d in base_dir.iterdir() if d.is_dir() and d.name not in before_dirs and d.name != run_id]
+                if new_dirs:
+                    new_dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+                    underlying_run_name = new_dirs[0].name
+                    engine.log("SANDBOX", f"Discovered autonomous scan run directory: {underlying_run_name}")
 
             findings = []
             if underlying_run_name:
-                u_dir = PROJECT_ROOT / "strix_runs" / underlying_run_name
+                u_dir = base_dir / underlying_run_name
                 if u_dir.exists():
                     u_vuln = u_dir / "vulnerabilities.json"
                     if u_vuln.exists():
@@ -1138,30 +1431,74 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: Optional[str]
                                 strix_vulns = json.load(f)
                                 if isinstance(strix_vulns, list):
                                     for sv in strix_vulns:
+                                        mapped = map_finding_to_owasp(
+                                            sv.get("title") or sv.get("name") or "Vulnerability",
+                                            rule_id=sv.get("id", ""),
+                                            endpoint=sv.get("location") or sv.get("endpoint") or "/",
+                                            tech_stack=detected_tech,
+                                        )
+                                        raw_ev = sv.get("detail") or sv.get("evidence") or sv.get("poc_script_code") or str(sv)
+                                        ev_bytes = raw_ev.encode("utf-8") if isinstance(raw_ev, str) else str(raw_ev).encode()
                                         findings.append({
                                             "id": sv.get("id", f"strix-{uuid.uuid4().hex[:6]}"),
                                             "title": sv.get("title", sv.get("name", "Vulnerability")),
                                             "severity": sv.get("severity", "MEDIUM").upper(),
-                                            "cvss_score": sv.get("cvss_score", 6.0),
-                                            "cve_id": sv.get("cve_id"),
-                                            "cwe_id": sv.get("cwe_id", "CWE-200"),
-                                            "owasp_category": sv.get("owasp_category", "A01:2021 - Broken Access Control"),
-                                            "location": sv.get("location", "/"),
+                                            "cvss_score": sv.get("cvss_score") or sv.get("cvss") or mapped.get("cvss", 6.0),
+                                            "cve_id": sv.get("cve_id") or mapped.get("cve_id"),
+                                            "cwe_id": sv.get("cwe_id") or mapped.get("cwe_id", "CWE-200"),
+                                            "owasp_category": f"{mapped.get('owasp_id', 'A01:2021')} - {mapped.get('category_name', 'Broken Access Control')}",
+                                            "location": sv.get("location") or sv.get("endpoint") or "/",
                                             "target": target_url,
-                                            "evidence_hash": sv.get("evidence_hash", hashlib.sha256(str(sv).encode()).hexdigest()),
-                                            "evidence_snippet": sv.get("detail", str(sv)),
-                                            "impact": sv.get("impact", ""),
-                                            "remediation_summary": sv.get("remediation", ""),
-                                            "remediation_technical": sv.get("remediation_technical", ""),
-                                            "retest_procedure": "",
+                                            "evidence_hash": sv.get("evidence_hash") or hashlib.sha256(ev_bytes).hexdigest(),
+                                            "evidence_snippet": raw_ev,
+                                            "impact": sv.get("impact") or mapped.get("impact", ""),
+                                            "remediation_summary": sv.get("remediation") or mapped.get("remediation_summary", ""),
+                                            "remediation_technical": sv.get("remediation_technical") or mapped.get("remediation_technical", ""),
+                                            "retest_procedure": mapped.get("retest_procedure", ""),
                                         })
                         except Exception as e:
                             logger.warning("Error reading strix vulnerabilities: %s", e)
 
+                    # Persist run artifacts from Strix run folder to current run folder
+                    target_run_dir = base_dir / run_id
+                    target_run_dir.mkdir(parents=True, exist_ok=True)
+                    for art_name in ("findings.sarif", "coverage.json", "penetration_test_report.md"):
+                        src_art = u_dir / art_name
+                        if src_art.is_file():
+                            try:
+                                (target_run_dir / art_name).write_bytes(src_art.read_bytes())
+                            except Exception:
+                                pass
+
+            # Incorporate verified passive reconnaissance findings (e.g. vulnerable libraries or open ports)
+            if full_scan_res:
+                for c in full_scan_res.get("candidates", []):
+                    if c.get("category") == "version_sca" or "open-port" in str(c.get("id", "")):
+                        c_id = c.get("id")
+                        if not any(f.get("id") == f"find-{c_id}" for f in findings):
+                            mapped = map_finding_to_owasp(c.get("name", ""), rule_id=c_id, endpoint=c.get("endpoint", "/"), tech_stack=detected_tech)
+                            findings.append({
+                                "id": f"find-{c_id}",
+                                "title": c.get("name"),
+                                "severity": str(c.get("severity", "MEDIUM")).upper(),
+                                "cvss_score": c.get("cvss", 5.0),
+                                "cve_id": c.get("cve_id"),
+                                "cwe_id": mapped.get("cwe_id", "CWE-200"),
+                                "owasp_category": f"{mapped.get('owasp_id', 'A01:2021')} - {mapped.get('category_name', 'Broken Access Control')}",
+                                "location": c.get("endpoint", "/"),
+                                "target": target_url,
+                                "evidence_hash": hashlib.sha256(str(c.get("detail", "")).encode()).hexdigest(),
+                                "evidence_snippet": c.get("detail", "Verified during reconnaissance"),
+                                "impact": mapped.get("impact", ""),
+                                "remediation_summary": mapped.get("remediation_summary", ""),
+                                "remediation_technical": mapped.get("remediation_technical", ""),
+                                "retest_procedure": mapped.get("retest_procedure", ""),
+                            })
+
             run_entry["findings"] = findings
             run_entry["stats"] = {
                 "attempts": max_turns,
-                "pivots": len([e for e in engine.pivot_events if getattr(e, "type", "") == "REDIRECT"]),
+                "pivots": len([e for e in run_entry.get("pivot_events", []) if e.get("type") in ("REDIRECT", "GAP2_PIVOT")]),
                 "findings": len(findings),
             }
             run_entry["progress"] = {
@@ -1432,6 +1769,39 @@ async def create_run(
     )
 
 
+@app.post("/runs/{run_id}/stop")
+async def stop_run(run_id: str):
+    """Gracefully abort or stop a running assessment."""
+    run = _RUNS.get(run_id)
+    if not run:
+        _load_runs_from_disk()
+        run = _RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+    proc = _ACTIVE_PROCESSES.get(run_id)
+    if proc and proc.poll() is None:
+        try:
+            proc.terminate()
+            proc.wait(timeout=3.0)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        _ACTIVE_PROCESSES.pop(run_id, None)
+
+    run["status"] = "aborted"
+    run["completed_at"] = _utc_now()
+    run["events"].append({
+        "timestamp": _utc_now(),
+        "event": "RUN_STOPPED",
+        "message": "Operator requested early termination of assessment.",
+    })
+    _save_run_to_disk(run)
+    return {"status": "ok", "message": f"Run {run_id} stopped successfully"}
+
+
 @app.get("/runs")
 async def list_runs():
     """List recent runs from memory and persistent disk store."""
@@ -1522,7 +1892,7 @@ async def get_run_report(
     format: str = "json",
     download: Optional[bool] = False,
 ):
-    """Generate or retrieve assessment report (HTML or JSON)."""
+    """Generate or retrieve assessment report (HTML, JSON, PDF, SARIF, or Markdown)."""
     run = _RUNS.get(run_id)
     if not run:
         _load_runs_from_disk()
@@ -1530,7 +1900,10 @@ async def get_run_report(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
 
-    if format.lower() == "html":
+    fmt = format.lower().strip()
+
+    # 1. HTML Report
+    if fmt == "html":
         from strix.report.builder import render_html_report
         html_content = render_html_report(run)
         headers = {}
@@ -1538,7 +1911,50 @@ async def get_run_report(
             headers["Content-Disposition"] = f'attachment; filename="vapt_report_{run_id}.html"'
         return HTMLResponse(content=html_content, headers=headers)
 
-    # JSON export with 2-space indentation (pretty-printed)
+    # 2. PDF Report
+    if fmt == "pdf":
+        base_dir = runs_base_dir()
+        run_dir = base_dir / run_id
+        if not run_dir.exists():
+            _save_run_to_disk(run)
+        try:
+            from strix.interface.viewer.report_pdf import generate_report_pdf
+            pdf_bytes = generate_report_pdf(run_dir)
+            headers = {}
+            if download or True:
+                headers["Content-Disposition"] = f'attachment; filename="vapt_report_{run_id}.pdf"'
+            return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+        except Exception as exc:
+            logger.warning("PDF generation failed: %s", exc)
+            raise HTTPException(status_code=500, detail=f"Failed to generate PDF report: {exc}")
+
+    # 3. SARIF Report
+    if fmt == "sarif":
+        sarif_file = runs_base_dir() / run_id / "findings.sarif"
+        if sarif_file.is_file():
+            content = sarif_file.read_text(encoding="utf-8")
+        else:
+            from strix.report.sarif import build_sarif_report
+            sarif_obj = build_sarif_report(run.get("findings", []))
+            content = json.dumps(sarif_obj, indent=2)
+        headers = {}
+        if download:
+            headers["Content-Disposition"] = f'attachment; filename="vapt_findings_{run_id}.sarif"'
+        return Response(content=content, media_type="application/json", headers=headers)
+
+    # 4. Markdown Report
+    if fmt in ("md", "markdown"):
+        md_file = runs_base_dir() / run_id / "penetration_test_report.md"
+        if md_file.is_file():
+            content = md_file.read_text(encoding="utf-8")
+        else:
+            content = _generate_markdown_report(run)
+        headers = {}
+        if download:
+            headers["Content-Disposition"] = f'attachment; filename="vapt_report_{run_id}.md"'
+        return Response(content=content, media_type="text/markdown", headers=headers)
+
+    # 5. JSON export with 2-space indentation (pretty-printed)
     headers = {}
     if download:
         headers["Content-Disposition"] = f'attachment; filename="vapt_audit_{run_id}.json"'

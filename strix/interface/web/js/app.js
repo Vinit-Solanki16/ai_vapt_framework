@@ -94,6 +94,7 @@
     elements.heroRunId = document.getElementById('hero-run-id');
     elements.heroTargetText = document.getElementById('hero-target-text');
     elements.heroModeText = document.getElementById('hero-mode-text');
+    elements.btnStopRun = document.getElementById('btn-stop-run');
     elements.btnViewReportNow = document.getElementById('btn-view-report-now');
     elements.btnRefreshRun = document.getElementById('btn-refresh-run');
     elements.metricCandidates = document.getElementById('metric-candidates-count');
@@ -125,7 +126,10 @@
     elements.reportRunRef = document.getElementById('report-run-ref');
     elements.reportContentArea = document.getElementById('report-content-area');
     elements.btnDownloadHtml = document.getElementById('btn-download-html-report');
+    elements.btnDownloadPdf = document.getElementById('btn-download-pdf-report');
     elements.btnDownloadJson = document.getElementById('btn-download-json-report');
+    elements.btnDownloadSarif = document.getElementById('btn-download-sarif-report');
+    elements.btnDownloadMd = document.getElementById('btn-download-md-report');
 
     // History
     elements.tbodyHistory = document.getElementById('tbody-history');
@@ -136,8 +140,12 @@
     elements.ollamaModelsList = document.getElementById('ollama-models-list');
     elements.btnProbeOllama = document.getElementById('btn-probe-ollama');
     elements.settingsProviderSelect = document.getElementById('settings-provider-select');
+    elements.settingsModelInput = document.getElementById('settings-model-input');
     elements.settingsApiKey = document.getElementById('settings-api-key');
+    elements.settingsCurrentKeyHint = document.getElementById('settings-current-key-hint');
     elements.btnTestCloudKey = document.getElementById('btn-test-cloud-key');
+    elements.btnSaveLlmConfig = document.getElementById('btn-save-llm-config');
+    elements.settingsStatusBadge = document.getElementById('settings-status-badge');
     elements.settingsKeyResult = document.getElementById('settings-key-result');
 
     // Toasts
@@ -437,7 +445,7 @@
 
     const provider = elements.modelProviderSelect.value;
     const model = getSelectedModelId();
-    const mode = elements.scanModeSelect.value;
+    const mode = elements.scanModeSelect ? elements.scanModeSelect.value : 'autonomous';
     const maxAttempts = parseInt(elements.gap2Threshold.value, 10) || 2;
     const apiKey = elements.runtimeApiKey.value.trim();
 
@@ -457,9 +465,9 @@
         body: JSON.stringify({
           target_url: targetUrl,
           target: targetUrl,
-          mode: mode,
-          scan_mode: elements.scanIntensity ? elements.scanIntensity.value : 'quick',
-          max_turns: elements.executionLimitsSelect ? parseInt(elements.executionLimitsSelect.value, 10) : 25,
+          mode: mode || 'autonomous',
+          scan_mode: elements.scanIntensity ? elements.scanIntensity.value : 'deep',
+          max_turns: elements.executionLimitsSelect ? parseInt(elements.executionLimitsSelect.value, 10) : 100,
           scenario: 'web_assessment',
           assessor: 'llm',
           assessor_provider: provider,
@@ -575,10 +583,15 @@
     elements.heroRunStatus.textContent = status;
     if (status === 'COMPLETED') {
       elements.heroRunStatus.className = 'badge badge-emerald';
-    } else if (status === 'FAILED') {
+      if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
+      if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'inline-flex';
+    } else if (status === 'FAILED' || status === 'ABORTED') {
       elements.heroRunStatus.className = 'badge badge-rose';
+      if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
     } else {
       elements.heroRunStatus.className = 'badge badge-cyan';
+      if (elements.btnStopRun) elements.btnStopRun.style.display = 'inline-flex';
+      if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'none';
     }
 
     // Metrics
@@ -1414,6 +1427,28 @@
 
     elements.btnLaunch.addEventListener('click', launchAssessment);
 
+    if (elements.btnStopRun) {
+      elements.btnStopRun.addEventListener('click', async () => {
+        const runId = state.activeRunId || state.latestRunData?.run_id;
+        if (!runId) return;
+        if (!confirm('Are you sure you want to stop this assessment?')) return;
+        try {
+          elements.btnStopRun.disabled = true;
+          elements.btnStopRun.innerHTML = `<span>⏳</span> Stopping...`;
+          const res = await fetch(`/runs/${runId}/stop`, { method: 'POST' });
+          if (res.ok) {
+            showToast('Assessment stop signal sent!', 'info');
+            await fetchRunState(runId);
+          }
+        } catch (err) {
+          showToast(`Failed to stop run: ${err.message}`, 'error');
+        } finally {
+          elements.btnStopRun.disabled = false;
+          elements.btnStopRun.innerHTML = `<span>🛑</span> Stop Scan`;
+        }
+      });
+    }
+
     elements.btnRefreshRun.addEventListener('click', () => {
       if (state.activeRunId) fetchRunState(state.activeRunId);
     });
@@ -1426,58 +1461,30 @@
     });
 
     elements.btnDownloadHtml.addEventListener('click', async () => {
-      const runId = state.activeRunId || state.latestRunData?.run_id;
-      if (!runId) {
-        showToast('No assessment run available to download', 'error');
-        return;
-      }
-      try {
-        showToast('Preparing HTML audit report download...', 'info');
-        const res = await fetch(`/runs/${runId}/report?format=html&download=1`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `vapt_report_${runId}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        showToast('HTML Report downloaded successfully!', 'success');
-      } catch (err) {
-        window.location.href = `/runs/${runId}/report?format=html&download=1`;
-      }
+      downloadReportArtifact('html', 'vapt_report_{runId}.html', 'text/html', 'HTML Report');
     });
 
+    if (elements.btnDownloadPdf) {
+      elements.btnDownloadPdf.addEventListener('click', async () => {
+        downloadReportArtifact('pdf', 'vapt_report_{runId}.pdf', 'application/pdf', 'PDF Report');
+      });
+    }
+
     elements.btnDownloadJson.addEventListener('click', async () => {
-      const runId = state.activeRunId || state.latestRunData?.run_id;
-      if (!runId) {
-        showToast('No assessment run available to export', 'error');
-        return;
-      }
-      try {
-        showToast('Exporting JSON audit package...', 'info');
-        const res = await fetch(`/runs/${runId}/report?format=json&download=1`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const formattedStr = JSON.stringify(data, null, 2);
-        const blob = new Blob([formattedStr], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `vapt_audit_${runId}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        showToast('JSON Audit Package exported successfully (Formatted & Indented)!', 'success');
-      } catch (err) {
-        window.location.href = `/runs/${runId}/report?format=json&download=1`;
-      }
+      downloadReportArtifact('json', 'vapt_audit_{runId}.json', 'application/json', 'JSON Audit Package');
     });
+
+    if (elements.btnDownloadSarif) {
+      elements.btnDownloadSarif.addEventListener('click', async () => {
+        downloadReportArtifact('sarif', 'vapt_findings_{runId}.sarif', 'application/json', 'SARIF Report');
+      });
+    }
+
+    if (elements.btnDownloadMd) {
+      elements.btnDownloadMd.addEventListener('click', async () => {
+        downloadReportArtifact('markdown', 'vapt_report_{runId}.md', 'text/markdown', 'Markdown Report');
+      });
+    }
 
     // DAG Interactive Controls (Zoom, Pan, Filter)
     if (elements.btnDagZoomIn) {
@@ -1564,7 +1571,138 @@
       );
     });
 
+    if (elements.btnSaveLlmConfig) {
+      elements.btnSaveLlmConfig.addEventListener('click', saveLlmSettings);
+    }
+
     elements.btnRefreshHistory.addEventListener('click', loadHistory);
+  }
+
+  // Download Report Artifact Helper
+  async function downloadReportArtifact(format, filename, defaultMime, label) {
+    const runId = state.activeRunId || state.latestRunData?.run_id;
+    if (!runId) {
+      showToast('No assessment run available to download', 'error');
+      return;
+    }
+    try {
+      showToast(`Preparing ${label} download...`, 'info');
+      const res = await fetch(`/runs/${runId}/report?format=${format}&download=1`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename.replace('{runId}', runId);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      showToast(`${label} downloaded successfully!`, 'success');
+    } catch (err) {
+      window.location.href = `/runs/${runId}/report?format=${format}&download=1`;
+    }
+  }
+
+  // Load Persisted LLM Settings
+  async function loadLlmSettings() {
+    try {
+      const res = await fetch('/settings/llm');
+      if (!res.ok) return;
+      const cfg = await res.json();
+      if (elements.settingsProviderSelect && cfg.provider) {
+        elements.settingsProviderSelect.value = cfg.provider;
+      }
+      if (elements.settingsModelInput && cfg.model) {
+        elements.settingsModelInput.value = cfg.model;
+      }
+      if (elements.settingsCurrentKeyHint) {
+        if (cfg.has_api_key) {
+          elements.settingsCurrentKeyHint.innerHTML = `Saved key active: <code style="color:#34d399;">${escapeHtml(cfg.masked_api_key)}</code> (provider: ${escapeHtml(cfg.provider)})`;
+          if (elements.settingsStatusBadge) {
+            elements.settingsStatusBadge.textContent = 'Configured';
+            elements.settingsStatusBadge.className = 'badge badge-emerald';
+          }
+        } else {
+          elements.settingsCurrentKeyHint.textContent = 'No API key configured in ~/.strix/cli-config.json';
+          if (elements.settingsStatusBadge) {
+            elements.settingsStatusBadge.textContent = 'Not Configured';
+            elements.settingsStatusBadge.className = 'badge badge-amber';
+          }
+        }
+      }
+
+      // Synchronize active LLM settings to the New Assessment launch panel
+      if (elements.modelProviderSelect && cfg.provider) {
+        elements.modelProviderSelect.value = cfg.provider;
+        onProviderChange();
+      }
+      if (elements.runtimeApiKey && cfg.has_api_key) {
+        elements.runtimeApiKey.placeholder = `Saved key (${cfg.masked_api_key}) - leave blank to use`;
+        if (elements.apiKeyFeedback) {
+          elements.apiKeyFeedback.innerHTML = `<span style="color:#34d399;">Saved credentials ready (<code>${escapeHtml(cfg.masked_api_key)}</code>)</span>`;
+        }
+      }
+      if (elements.modelSelect && cfg.model) {
+        const matchingOpt = elements.modelSelect.querySelector(`option[value="${cfg.model}"]`);
+        if (matchingOpt) {
+          elements.modelSelect.value = cfg.model;
+          if (elements.modelCustomInput) elements.modelCustomInput.style.display = 'none';
+        } else {
+          elements.modelSelect.value = '__custom__';
+          if (elements.modelCustomInput) {
+            elements.modelCustomInput.value = cfg.model;
+            elements.modelCustomInput.style.display = 'block';
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('Failed to load LLM settings:', e);
+    }
+  }
+
+  // Save LLM Settings
+  async function saveLlmSettings() {
+    const provider = elements.settingsProviderSelect ? elements.settingsProviderSelect.value : 'openrouter';
+    const model = elements.settingsModelInput ? elements.settingsModelInput.value.trim() : '';
+    const apiKey = elements.settingsApiKey ? elements.settingsApiKey.value.trim() : '';
+
+    if (elements.btnSaveLlmConfig) {
+      elements.btnSaveLlmConfig.disabled = true;
+      elements.btnSaveLlmConfig.innerHTML = `<span>⏳</span> Saving...`;
+    }
+
+    try {
+      const res = await fetch('/settings/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: provider,
+          model: model,
+          api_key: apiKey || null,
+          reasoning_effort: 'low',
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      showToast('LLM Configuration saved to ~/.strix/cli-config.json!', 'success');
+      if (elements.settingsKeyResult) {
+        elements.settingsKeyResult.innerHTML = `<span style="color:#10b981;">✅ Saved successfully! Active model: <strong>${escapeHtml(model)}</strong></span>`;
+      }
+      if (elements.settingsApiKey) elements.settingsApiKey.value = '';
+      await loadLlmSettings();
+    } catch (err) {
+      showToast(`Failed to save config: ${err.message}`, 'error');
+      if (elements.settingsKeyResult) {
+        elements.settingsKeyResult.innerHTML = `<span style="color:#f43f5e;">❌ Error: ${escapeHtml(err.message)}</span>`;
+      }
+    } finally {
+      if (elements.btnSaveLlmConfig) {
+        elements.btnSaveLlmConfig.disabled = false;
+        elements.btnSaveLlmConfig.innerHTML = `<span>💾</span> Save Configuration`;
+      }
+    }
   }
 
   // Global App Interface
@@ -1585,6 +1723,7 @@
     initEvents();
     populateModelOptions('openrouter');
     loadOpenRouterFreeModels();
+    loadLlmSettings();
     checkSystemHealth();
 
     const initialHash = window.location.hash.replace('#/', '');

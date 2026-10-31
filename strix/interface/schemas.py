@@ -36,7 +36,7 @@ class RunRequest(BaseModel):
 class RunResponse(BaseModel):
     """Immediate response when a run is dispatched."""
     run_id: str
-    status: Literal["queued", "running", "completed", "failed"] = "running"
+    status: Literal["queued", "running", "completed", "failed", "aborted"] = "running"
     message: str = "Assessment initialized"
     created_at: str = Field(default_factory=_utc_now)
 
@@ -74,7 +74,7 @@ class CandidateSchema(BaseModel):
 class RunStatus(BaseModel):
     """Observable asynchronous run state and real-time outputs."""
     run_id: str
-    status: Literal["queued", "running", "completed", "failed"]
+    status: Literal["queued", "running", "completed", "failed", "aborted"]
     scenario: Optional[str] = None
     mode: Optional[str] = None
     target_url: Optional[str] = None
