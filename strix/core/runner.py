@@ -448,7 +448,7 @@ async def run_strix_scan(
             max_turns=max_turns,
             interactive=interactive,
             budget_policy=budget_policy,
-            record_tool_timings=settings.telemetry.run_record_timings,
+            record_tool_timings=getattr(getattr(settings, "telemetry", None), "run_record_timings", False),
         )
         coordinator.set_budget_limit_setter(hooks.set_max_budget_usd)
         if interactive and budget_policy != "pause":
@@ -676,6 +676,10 @@ async def run_strix_scan(
                     scan_id,
                     str(final)[:300],
                 )
+                _note_exit_reason("missing_finish_scan")
+                report_state = get_global_report_state()
+                if report_state is not None and report_state.run_record.get("status") != "completed":
+                    report_state.save_run_data(status="stopped")
         return result  # noqa: TRY300
     except BudgetExceededError as exc:
         logger.info("Scan %s stopped: %s", scan_id, exc)
@@ -683,6 +687,9 @@ async def run_strix_scan(
         if root_id is not None:
             with contextlib.suppress(Exception):
                 await coordinator.set_status(root_id, "stopped")
+        report_state = get_global_report_state()
+        if report_state is not None and report_state.run_record.get("status") != "completed":
+            report_state.save_run_data(status="stopped")
         return None
     except RateLimitError as exc:
         logger.warning(
@@ -696,6 +703,9 @@ async def run_strix_scan(
         if root_id is not None:
             with contextlib.suppress(Exception):
                 await coordinator.set_status(root_id, "stopped")
+        report_state = get_global_report_state()
+        if report_state is not None and report_state.run_record.get("status") != "completed":
+            report_state.save_run_data(status="failed")
         return None
     except (asyncio.CancelledError, KeyboardInterrupt):
         logger.info("Scan %s interrupted by the user", scan_id)

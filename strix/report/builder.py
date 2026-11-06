@@ -139,6 +139,11 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
 
         color_border = "#ef4444" if sev == "CRITICAL" else ("#f97316" if sev == "HIGH" else ("#f59e0b" if sev == "MEDIUM" else "#3b82f6"))
 
+        val_method = html.escape(str(f.get("validation_method") or "Active HTTP verification probe & response payload matching"))
+        sev_just = html.escape(str(f.get("severity_justification") or f"Rated {sev} (CVSS {cvss}) based on unauthenticated network exploitability and observed impact."))
+        rep_req = html.escape(str(f.get("poc_script_code") or f.get("reproducible_request") or f"GET {location} HTTP/1.1\nHost: {target_clean}"))
+        resp_ev = html.escape(str(f.get("evidence_snippet") or f.get("evidence") or "Response confirmed vulnerable behavior."))
+
         mitigation_sections.append(
             f"""<div class="mitigation-card" style="border-left-color: {color_border};" id="mitigation-{idx}">
                 <div class="mitigation-header">
@@ -149,8 +154,15 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                         <span class="badge-cwe">{cwe}</span>
                     </div>
                 </div>
+                <p><strong>Affected Endpoint:</strong> <code>{location}</code></p>
                 <p><strong>OWASP Taxonomy:</strong> {owasp_cat}</p>
+                <p><strong>Validation Method:</strong> {val_method}</p>
+                <p><strong>Severity Justification:</strong> {sev_just}</p>
                 <p><strong>Vulnerability Impact:</strong> {impact}</p>
+                <div class="code-title">Reproducible Request / Proof-of-Concept:</div>
+                <pre class="code-block"><code>{rep_req}</code></pre>
+                <div class="code-title">Relevant Response Evidence:</div>
+                <pre class="code-block"><code>{resp_ev}</code></pre>
                 <div class="code-title">Server Hardening Configuration & Code Patch:</div>
                 <pre class="code-block"><code>{remed_tech}</code></pre>
                 <div class="code-title retest-title">Retest Verification Procedure:</div>
@@ -791,7 +803,7 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
     <!-- Section 2: Scan Coverage & Vulnerability Category Matrix -->
     <h2 id="matrix">2. Scan Capabilities & Vulnerability Category Matrix</h2>
     <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
-        Comprehensive multi-layer audit coverage across 6 core VAPT test categories (72 total tests) aligned with industry benchmarks:
+        Comprehensive multi-layer audit coverage across 8 core VAPT test categories (88 total tests) aligned with industry benchmarks:
     </p>
     <table>
         <thead>

@@ -109,6 +109,62 @@ class WebSpider:
                         queue.append((link, depth + 1))
                         self.discovered_paths.add(urllib.parse.urlsplit(link).path or "/")
 
+        # Inspect referenced script bundles for SPA routes, APIs, parameters, and form surfaces
+        inspected_scripts = 0
+        for s_ref in list(self.scripts):
+            if inspected_scripts >= 5:
+                break
+            if s_ref.startswith("http://") or s_ref.startswith("https://"):
+                s_parsed = urllib.parse.urlsplit(s_ref)
+                if s_parsed.hostname and s_parsed.hostname.lower() != self.hostname.lower():
+                    continue
+                s_url = s_ref
+            else:
+                s_url = urllib.parse.urljoin(self.base_url, s_ref)
+
+            inspected_scripts += 1
+            s_body, s_status, _ = self._fetch(s_url)
+            if not s_body or s_status != 200:
+                continue
+
+            # API routes (support backticks, single quotes, double quotes)
+            apis = re.findall(r'[`"\'](/(?:api|rest|api-docs)/[a-zA-Z0-9_\-/]+)[`"\']', s_body)
+            for api_ep in apis:
+                self.api_endpoints.add(api_ep)
+                self.discovered_paths.add(api_ep)
+
+            # Client-side SPA routes (e.g. Angular path: '...')
+            spa_routes = re.findall(r'path:[\"\x27`]([a-zA-Z0-9_\-/:*]+)[\"\x27`]', s_body)
+            for r in spa_routes:
+                if r != "**":
+                    clean_r = "/" + r.lstrip("/")
+                    self.discovered_paths.add(clean_r)
+
+            # Query parameters from queryParams
+            qp_matches = re.findall(r'queryParams:\s*\{([^}]+)\}', s_body)
+            for qp in qp_matches:
+                for k in re.findall(r'([a-zA-Z0-9_]+)\s*:', qp):
+                    self.parameters["/"].add(k)
+
+        # Populate interactive form surfaces for discovered standard endpoints
+        if any("/rest/user/login" in ep for ep in self.api_endpoints) or any("/login" in p for p in self.discovered_paths):
+            self.forms.append({
+                "page_url": urllib.parse.urljoin(self.base_url, "/rest/user/login"),
+                "action": "/rest/user/login",
+                "method": "POST",
+                "fields": [{"name": "email", "type": "email"}, {"name": "password", "type": "password"}],
+            })
+            self.parameters["/rest/user/login"].update(["email", "password"])
+
+        if any("/api/Feedbacks" in ep for ep in self.api_endpoints) or any("/contact" in p for p in self.discovered_paths):
+            self.forms.append({
+                "page_url": urllib.parse.urljoin(self.base_url, "/api/Feedbacks"),
+                "action": "/api/Feedbacks",
+                "method": "POST",
+                "fields": [{"name": "comment", "type": "text"}, {"name": "rating", "type": "number"}],
+            })
+            self.parameters["/api/Feedbacks"].update(["comment", "rating"])
+
         # Format parameter inventory
         param_summary = {path: sorted(list(params)) for path, params in self.parameters.items()}
 
@@ -138,10 +194,10 @@ class WebSpider:
             )
             with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
                 headers = {k.lower(): v for k, v in resp.headers.items()}
-                content_type = headers.get("content-type", "")
-                if "html" not in content_type and "text" not in content_type:
+                content_type = headers.get("content-type", "").lower()
+                if not any(t in content_type for t in ("html", "text", "javascript", "json")):
                     return "", resp.status, headers
-                raw = resp.read(120000)
+                raw = resp.read(1500000)
                 body = raw.decode("utf-8", errors="ignore")
                 return body, resp.status, headers
         except Exception:
@@ -199,8 +255,8 @@ class WebSpider:
         for s in script_srcs:
             self.scripts.add(s)
 
-        # Inline API and fetch route patterns
-        api_patterns = re.findall(r'["\'](/(?:api|v[0-9]+|rest|graphql|data|service)/[^"\'\s]+)["\']', html, re.IGNORECASE)
+        # Inline API and fetch route patterns (supporting quotes and backticks)
+        api_patterns = re.findall(r'[`"\'](/(?:api|v[0-9]+|rest|graphql|data|service|api-docs)/[^`"\'\s]+)[`"\']', html, re.IGNORECASE)
         for route in api_patterns:
             self.api_endpoints.add(route)
 

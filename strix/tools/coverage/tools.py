@@ -72,6 +72,12 @@ def _generate_entry_id() -> str | None:
     return None
 
 
+def reset_coverage_state() -> None:
+    """Clear in-memory coverage storage (useful for test resets)."""
+    with _coverage_lock:
+        _coverage_storage.clear()
+
+
 def hydrate_coverage_from_disk(state_dir: Path) -> None:
     global _coverage_path  # noqa: PLW0603
     _coverage_path = state_dir / "coverage.json"
@@ -248,12 +254,48 @@ def _record_impl(
         normalized,
         entry["surface"],
     )
-    return {
+    gap_outcome = None
+    try:
+        from strix.core import gap_bridge
+        if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
+            if normalized == "reported":
+                p_status = "positive"
+                succ = True
+            elif normalized in ("no_issue_found", "ruled_out"):
+                p_status = "negative"
+                succ = True
+            elif normalized in ("needs_follow_up",):
+                p_status = "inconclusive"
+                succ = False
+            else:  # not_applicable
+                p_status = "negative"
+                succ = True
+            gap_outcome = gap_bridge.record_outcome(
+                title=entry["risk_area"],
+                endpoint=entry["surface"],
+                success=succ,
+                detail=entry.get("evidence", "") or f"Coverage recorded as {normalized}",
+                probe_status=p_status,
+            )
+    except Exception:
+        pass
+    ret = {
         "success": True,
         "entry_id": entry_id,
         "outcome": normalized,
         "message": f"Coverage recorded for '{entry['surface']}' ({normalized})",
     }
+    if gap_outcome:
+        ret["gap2"] = gap_outcome
+        try:
+            from strix.core.gap_bridge import guidance_text
+            guidance = guidance_text(gap_outcome)
+            if guidance:
+                ret["pivot_guidance"] = guidance
+                ret["message"] += f" | {guidance}"
+        except Exception:
+            pass
+    return ret
 
 
 def _update_impl(
@@ -311,7 +353,32 @@ def _update_impl(
         normalized,
         surface,
     )
-    return {
+    gap_outcome = None
+    try:
+        from strix.core import gap_bridge
+        if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
+            if normalized == "reported":
+                p_status = "positive"
+                succ = True
+            elif normalized in ("no_issue_found", "ruled_out"):
+                p_status = "negative"
+                succ = True
+            elif normalized in ("needs_follow_up",):
+                p_status = "inconclusive"
+                succ = False
+            else:  # not_applicable
+                p_status = "negative"
+                succ = True
+            gap_outcome = gap_bridge.record_outcome(
+                title=risk_area,
+                endpoint=surface,
+                success=succ,
+                detail=evidence.strip() or f"Coverage updated from {previous_outcome} to {normalized}",
+                probe_status=p_status,
+            )
+    except Exception:
+        pass
+    ret = {
         "success": True,
         "entry_id": key,
         "previous_outcome": previous_outcome,
@@ -321,6 +388,17 @@ def _update_impl(
             "The previous state is kept as history."
         ),
     }
+    if gap_outcome:
+        ret["gap2"] = gap_outcome
+        try:
+            from strix.core.gap_bridge import guidance_text
+            guidance = guidance_text(gap_outcome)
+            if guidance:
+                ret["pivot_guidance"] = guidance
+                ret["message"] += f" | {guidance}"
+        except Exception:
+            pass
+    return ret
 
 
 def _list_impl(

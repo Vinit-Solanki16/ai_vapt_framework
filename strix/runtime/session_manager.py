@@ -315,18 +315,41 @@ async def create_or_reuse(
     # agent-browser CDP daemon's localhost traffic from looping back
     # through Caido.
     container_caido_url = f"http://127.0.0.1:{_CONTAINER_CAIDO_PORT}"
+    container_env: dict[str, str] = {
+        "PYTHONUNBUFFERED": "1",
+        "HOST_GATEWAY": "host.docker.internal",
+        **_host_identity_env(),
+        "http_proxy": container_caido_url,
+        "https_proxy": container_caido_url,
+        "ALL_PROXY": container_caido_url,
+        "NO_PROXY": "localhost,127.0.0.1",
+    }
+    # Propagate LLM configuration and credentials to the sandbox environment if set
+    for env_var in (
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_API_BASE",
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "LLM_API_BASE",
+        "LLM_EXTRA_HEADERS",
+        "LLM_TIMEOUT",
+        "LLM_DISABLE_STREAMING",
+        "STRIX_CONTEXT_FALLBACK_TOKENS",
+        "STRIX_API_TYPE",
+        "STRIX_LLM_PROVIDER",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "LLM_API_KEY",
+        "STRIX_LLM",
+    ):
+        val = os.environ.get(env_var)
+        if val:
+            container_env[env_var] = val
+
     manifest = Manifest(
         entries=entries,
         environment=Environment(
-            value={
-                "PYTHONUNBUFFERED": "1",
-                "HOST_GATEWAY": "host.docker.internal",
-                **_host_identity_env(),
-                "http_proxy": container_caido_url,
-                "https_proxy": container_caido_url,
-                "ALL_PROXY": container_caido_url,
-                "NO_PROXY": "localhost,127.0.0.1",
-            },
+            value=container_env,
         ),
     )
 

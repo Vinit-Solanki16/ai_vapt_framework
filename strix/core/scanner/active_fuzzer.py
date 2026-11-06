@@ -13,6 +13,7 @@ import re
 import ssl
 import urllib.parse
 import urllib.request
+import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger("strix.core.scanner.fuzzer")
@@ -159,25 +160,55 @@ class ActiveFuzzer:
         if self.scan_mode in ("standard", "deep"):
             test_put_url = urllib.parse.urljoin(self.base_url, "/strix_probe_test.txt")
             try:
+                unique_marker = f"STRIX-VAPT-PROBE-{uuid.uuid4().hex[:12]}"
                 req = urllib.request.Request(
                     test_put_url,
-                    data=b"STRIX-VAPT-BENIGN-PROBE",
-                    headers={"User-Agent": "STRIX-VAPT/2.0"},
+                    data=unique_marker.encode("utf-8"),
+                    headers={"User-Agent": "STRIX-VAPT/2.0", "Content-Type": "text/plain"},
                     method="PUT",
                 )
                 with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
                     if resp.status in (200, 201, 204):
-                        findings.append({
-                            "id": "insecure-http-put",
-                            "name": "Insecure HTTP PUT Method Enabled (Arbitrary File Write)",
-                            "category": "injection",
-                            "severity": "critical",
-                            "cvss": 8.5,
-                            "exposure": 1.0,
-                            "cwe_id": "CWE-650",
-                            "endpoint": "/strix_probe_test.txt",
-                            "detail": f"Web server accepted HTTP PUT file creation without authentication: status {resp.status}.",
-                        })
+                        # Verify whether intended resource was created and read back
+                        try:
+                            get_req = urllib.request.Request(
+                                test_put_url,
+                                headers={"User-Agent": "STRIX-VAPT/2.0"},
+                            )
+                            with urllib.request.urlopen(get_req, timeout=self.timeout, context=self._ctx) as get_resp:
+                                get_body = get_resp.read(4096).decode("utf-8", errors="ignore")
+                                get_ct = get_resp.headers.get("content-type", "").lower()
+                                is_html = (
+                                    "text/html" in get_ct
+                                    or "<!doctype" in get_body.lower()
+                                    or "<html" in get_body.lower()
+                                    or "<!--" in get_body[:50]
+                                )
+                                # Only report if read-back matches marker and is not an SPA fallback
+                                if unique_marker in get_body and not is_html:
+                                    findings.append({
+                                        "id": "insecure-http-put",
+                                        "name": "Insecure HTTP PUT Method Enabled (Arbitrary File Write)",
+                                        "category": "configuration",
+                                        "severity": "critical",
+                                        "cvss": 8.5,
+                                        "exposure": 1.0,
+                                        "cwe_id": "CWE-650",
+                                        "endpoint": "/strix_probe_test.txt",
+                                        "detail": "Web server accepted HTTP PUT and confirmed file creation (unique marker read-back verified).",
+                                    })
+                                    # Clean up test artifact
+                                    try:
+                                        del_req = urllib.request.Request(
+                                            test_put_url,
+                                            headers={"User-Agent": "STRIX-VAPT/2.0"},
+                                            method="DELETE",
+                                        )
+                                        urllib.request.urlopen(del_req, timeout=self.timeout, context=self._ctx)
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
             except Exception:
                 pass
 

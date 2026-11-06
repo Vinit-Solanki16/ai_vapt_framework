@@ -1,0 +1,50 @@
+test_id,category,feature_name,method,endpoint,status,http_code,message,details
+FT-01,System,Health Check,GET,/health,PASS,200,Health check returned ok,"{""status"":""ok"",""service"":""strix-ai-vapt-gateway""}"
+FT-02,System,System Health Detail,GET,/system/health,PASS,200,System health returns component statuses,"{""status"":""READY"",""timestamp"":""2026-11-06T16:27:10.541506+00:00"",""components"":{""strix_core"":{""status"":""READY"",""version"":""1.7.0"",""engine"":""autonomous_multi_agent""},""docker"":{""status"":""READY"",""installed"":true},""ollama"":{""available"":true,""reachable"":true,""model_installed"":true,""status"":""READY"",""base_ur"
+FT-03,Configuration,List Scenarios,GET,/scenarios,PASS,200,Available scenarios returned successfully,"[{""id"":""failure_pivot"",""name"":""GAP-2 Bounded Pivot Demonstration"",""description"":""Simulates dead-end attempts triggering automatic GAP-2 candidate redirection."",""mode"":""simulation"",""default_attempts"":2},{""id"":""docker_pivot"",""name"":""Docker Exploit Pivot Benchmark"",""description"":""Tests multi-vector exp"
+FT-04,Target,Target Validation (Valid),POST,/targets/validate,PASS,200,Authorized localhost target validated,"{""authorized"":true,""authorization_status"":""AUTHORIZED"",""preflight_status"":""VALIDATED"",""reachable"":true,""target_url"":""http://127.0.0.1:3000/"",""resolved_host"":""127.0.0.1"",""port"":3000,""http_status"":null,""detail"":""Target authorized under ethical scope boundary."",""scheme"":""http"",""hostname"":""127.0.0.1"",""n"
+FT-05,Target,Target Validation (Malformed),POST,/targets/validate,PASS,200,Malformed target rejected cleanly,"{""authorized"":false,""authorization_status"":""REJECTED_SCHEME"",""preflight_status"":""FAILED"",""reachable"":false,""target_url"":""not-a-valid-url"",""resolved_host"":null,""port"":null,""http_status"":null,""detail"":""Unsupported scheme ''. Only http and https are authorized."",""scheme"":null,""hostname"":null,""normalize"
+FT-06,Settings,Get LLM Settings,GET,/settings/llm,PASS,200,LLM settings retrieved with masked credentials,"{""provider"":""cloud_hosted"",""model"":""kaggle-model"",""raw_model"":""openai/kaggle-model"",""api_base"":""https://expel-gizzard-effective.ngrok-free.dev/v1"",""has_api_key"":true,""masked_api_key"":""sk-loc...ggle"",""reasoning_effort"":""low"",""cloud_profile"":{""id"":""cloud-d2cd6b"",""name"":""Kaggle Dedicated LLM Server"",""a"
+FT-07,AI Provider,Model Discovery,POST,/providers/cloud_hosted/models,PASS,200,Model discovery succeeded (found kaggle-model),"{""valid"":true,""status"":""configured"",""message"":""Successfully discovered 1 model(s)"",""models"":[""kaggle-model""]}"
+FT-08,AI Provider,Test Connection,POST,/providers/cloud_hosted/validate,PASS,200,Chat completion ping responded with pong,"{""status"":""configured"",""message"":""Connection verified: 'kaggle-model' responded successfully in 419.32ms"",""valid"":true,""models"":[""kaggle-model""],""chat_completion_ok"":true,""latency_ms"":419.09,""ttft_ms"":419.09,""duration_ms"":419.32,""tokens_per_second"":4.8,""diagnostics"":{""endpoint"":""https://expel-gizzar"
+FT-09,AI Provider,Verify Structured Tools,POST,/providers/cloud_hosted/verify_tools,PASS,200,Structured tool calling verified compatible,"{""status"":""supported"",""message"":""Model 'kaggle-model' is fully compatible with autonomous agent structured tool calling."",""valid"":true,""tool_diagnostics"":{""supported"":true,""tool_call_generated"":true,""tool_name"":""check_service_port"",""arguments_parsed"":true,""arguments"":{""host"":""127.0.0.1"",""port"":80},"""
+FT-10,AI Provider,Model Warmup,POST,/providers/cloud_hosted/warmup,PASS,200,Warmup token generated successfully,"{""success"":true,""message"":""Model 'kaggle-model' warmed up successfully (640.74ms, 7.8 tok/s)"",""latency_ms"":638.71,""duration_ms"":640.74,""tokens_generated"":5,""tokens_per_second"":7.8}"
+FT-11,AI Profile,Create Profile,POST,/providers/cloud_hosted/profiles,PASS,200,Profile created with masked secret,"{""id"":""test-prof-qa-01"",""name"":""QA Transient Test Profile"",""api_base"":""https://expel-gizzard-effective.ngrok-free.dev/v1"",""has_api_key"":true,""masked_api_key"":""sk-l...ggle"",""model"":""kaggle-model"",""model_alias"":""QA-Model"",""extra_headers"":{},""context_window"":131072,""max_output_tokens"":null,""timeout"":30"
+FT-12,AI Profile,List Profiles,GET,/providers/cloud_hosted/profiles,PASS,200,Created profile appears in profiles list,"[{""id"":""cloud-d2cd6b"",""name"":""Kaggle Dedicated LLM Server"",""api_base"":""https://expel-gizzard-effective.ngrok-free.dev/v1"",""has_api_key"":true,""masked_api_key"":""sk-l...ggle"",""model"":""kaggle-model"",""model_alias"":""Qwen3-Coder-30B"",""extra_headers"":{},""context_window"":131072,""max_output_tokens"":null,""time"
+FT-13,AI Profile,Update Profile,POST,/providers/cloud_hosted/profiles,PASS,200,Profile updated cleanly,"{""id"":""test-prof-qa-01"",""name"":""QA Transient Test Profile (Updated)"",""api_base"":""https://expel-gizzard-effective.ngrok-free.dev/v1"",""has_api_key"":true,""masked_api_key"":""sk-l...ggle"",""model"":""kaggle-model"",""model_alias"":""QA-Model"",""extra_headers"":{},""context_window"":131072,""max_output_tokens"":null,""t"
+FT-14,AI Profile,Activate Profile,POST,/providers/cloud_hosted/profiles/{id}/activate,PASS,200,Profile activated,"{""id"":""test-prof-qa-01"",""name"":""QA Transient Test Profile (Updated)"",""api_base"":""https://expel-gizzard-effective.ngrok-free.dev/v1"",""has_api_key"":true,""masked_api_key"":""sk-l...ggle"",""model"":""kaggle-model"",""model_alias"":""QA-Model"",""extra_headers"":{},""context_window"":131072,""max_output_tokens"":null,""t"
+FT-15,AI Profile,Delete Profile,DELETE,/providers/cloud_hosted/profiles/{id},PASS,200,Profile deleted cleanly,"{""status"":""ok"",""message"":""Profile test-prof-qa-01 deleted""}"
+FT-16,Execution,Reject Unacknowledged Scope,POST,/runs,PASS,400,Refused to launch without explicit scope consent,"{""detail"":""Explicit operator scope acknowledgement is required to assess target.""}"
+FT-17,Execution,Reject Missing Target,POST,/runs,PASS,400,Rejected request without target URL,"{""detail"":""Target URL is required for live security assessment.""}"
+FT-18,Execution,Stop Active Assessment,POST,/runs/{id}/stop,PASS,200,Assessment stopped (Final status: aborted),"{""status"":""ok"",""message"":""Run run-647f5803 stopped successfully""}"
+FT-19-JSON,Export,Export JSON Report,GET,/runs/{id}/report?format=json,PASS,200,JSON report generated (44756 bytes),"{
+  ""run_id"": ""run-7be22192"",
+  ""status"": ""completed"",
+  ""scenario"": ""default"",
+  ""mode"": ""web"",
+  """
+FT-19-HTML,Export,Export HTML Report,GET,/runs/{id}/report?format=html,PASS,200,HTML report generated (66755 bytes),"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content"
+FT-19-PDF,Export,Export PDF Report,GET,/runs/{id}/report?format=pdf,PASS,200,PDF report generated (5885 bytes),"%PDF-1.4
+% ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R
+>>
+endobj
+2 "
+FT-19-SARIF,Export,Export SARIF Report,GET,/runs/{id}/report?format=sarif,PASS,200,SARIF report generated (15238 bytes),"{
+  ""version"": ""2.1.0"",
+  ""$schema"": ""https://json.schemastore.org/sarif-2.1.0.json"",
+  ""runs"": [
+  "
+FT-19-MARKDOWN,Export,Export MARKDOWN Report,GET,/runs/{id}/report?format=markdown,PASS,200,MARKDOWN report generated (7717 bytes),"# AI-VAPT Autonomous Security Penetration Test Report
+
+- **Target URL:** http://127.0.0.1:3000/
+- **"
+FT-19-CSV,Export,Export CSV Report,GET,/runs/{id}/report?format=csv,PASS,200,CSV report generated (1660 bytes),"id,title,severity,cvss_score,cwe_id,owasp_category,location,target,remediation_summary
+find-default-"
+FT-20,Persistence,Query Assessment History,GET,/runs,PASS,200,Retrieved 322 historical assessment records from disk,Total runs: 322

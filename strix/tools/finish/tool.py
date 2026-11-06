@@ -135,6 +135,118 @@ def _coverage_summary(agent_graph: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def _evaluate_completion_gate(*, control_dir: Path | None = None) -> dict[str, Any]:
+    """Inspect GAP-1 candidate queue and coverage records to prevent premature completion."""
+    try:
+        from strix.core import gap_bridge
+
+        ctrl_dir = control_dir or gap_bridge.control_dir()
+        if ctrl_dir is None or not gap_bridge.gap1_enabled():
+            return {"permitted": True}
+
+        candidates = gap_bridge.load_queue(directory=ctrl_dir)
+        if not candidates:
+            return {"permitted": True}
+
+        run_state = gap_bridge.get_run_state(directory=ctrl_dir)
+        completed_ids = set(run_state.completed)
+        exhausted_ids = set(run_state.exhausted)
+
+        from strix.tools.coverage.tools import get_coverage_entries
+
+        coverage_rows = get_coverage_entries()
+
+        from strix.report.state import get_global_report_state
+
+        report_state = get_global_report_state()
+        vulnerabilities = report_state.vulnerability_reports if report_state is not None else []
+
+        remaining: list[dict[str, Any]] = []
+
+        for cand in candidates:
+            cand_id = str(cand.get("candidate_id") or "")
+            if not cand_id:
+                continue
+
+            # Check 1: Explicitly marked completed or exhausted in GAP-2
+            if cand_id in completed_ids or cand_id in exhausted_ids:
+                continue
+
+            endpoint = str(cand.get("endpoint") or cand.get("target") or "").strip().lower()
+            title = str(cand.get("title") or "").strip().lower()
+
+            # Check 2: Coverage ledger row matching candidate with conclusive outcome
+            covered = False
+            for cov in coverage_rows:
+                cov_surface = str(cov.get("surface", "")).strip().lower()
+                cov_risk = str(cov.get("risk_area", "")).strip().lower()
+                cov_outcome = str(cov.get("outcome", "")).strip().lower()
+
+                # If outcome is needs_follow_up, it is unresolved (open proof gap)
+                if cov_outcome in ("reported", "no_issue_found", "ruled_out", "not_applicable"):
+                    matched = gap_bridge.candidate_for(cov_risk, cov_surface, "", directory=ctrl_dir)
+                    if matched and str(matched.get("candidate_id")) == cand_id:
+                        covered = True
+                        break
+
+            if covered:
+                continue
+
+            # Check 3: Vulnerability filed matching this candidate
+            reported = False
+            for vuln in vulnerabilities:
+                v_loc = str(vuln.get("location") or vuln.get("endpoint") or "").strip().lower()
+                v_title = str(vuln.get("title") or "").strip().lower()
+                matched = gap_bridge.candidate_for(v_title, v_loc, "", directory=ctrl_dir)
+                if matched and str(matched.get("candidate_id")) == cand_id:
+                    reported = True
+                    break
+
+            if reported:
+                continue
+
+            remaining.append(cand)
+
+        if not remaining:
+            return {
+                "permitted": True,
+                "investigated_count": len(candidates),
+                "total_candidates": len(candidates),
+            }
+
+        sample_str = "\n".join(
+            f"- [{c.get('candidate_id')}] {c.get('title', c.get('candidate_id'))} "
+            f"(endpoint: {c.get('endpoint', '/')})"
+            for c in remaining[:5]
+        )
+        if len(remaining) > 5:
+            sample_str += f"\n...and {len(remaining) - 5} more candidate(s)."
+
+        return {
+            "permitted": False,
+            "error": (
+                f"Premature completion rejected: {len(remaining)} of {len(candidates)} "
+                "prioritized candidate(s) in the GAP-1 queue remain uninvestigated."
+            ),
+            "actionable_instructions": (
+                f"The investigation is incomplete. You must investigate or rule out all actionable "
+                f"candidates from the GAP-1 queue before calling finish_scan.\n\n"
+                f"Unaddressed candidates:\n{sample_str}\n\n"
+                "Action items:\n"
+                "1. Dispatch a subagent to probe each unaddressed endpoint.\n"
+                "2. If an endpoint is safe or ruled out, record it via record_coverage(outcome='no_issue_found' or 'ruled_out').\n"
+                "3. If a vulnerability is found, report it via create_vulnerability_report.\n"
+                "4. If a candidate repeatedly fails verification, GAP-2 will automatically pivot and mark it exhausted."
+            ),
+            "remaining_candidates": [c.get("candidate_id") for c in remaining],
+            "investigated_count": len(candidates) - len(remaining),
+            "total_candidates": len(candidates),
+        }
+    except Exception as exc:
+        logger.warning("Completion gate evaluation warning: %s", exc)
+        return {"permitted": True}
+
+
 @function_tool(timeout=60)
 async def finish_scan(
     ctx: RunContextWrapper,
@@ -329,6 +441,22 @@ async def finish_scan(
                     "Wait for completion, send them finish instructions, or stop them first"
                 ),
                 "active_agents": active_agents,
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+
+    gate = _evaluate_completion_gate()
+    if not gate.get("permitted", True):
+        return json.dumps(
+            {
+                "success": False,
+                "scan_completed": False,
+                "error": gate.get("error", "Premature completion rejected."),
+                "actionable_instructions": gate.get("actionable_instructions", ""),
+                "remaining_candidates": gate.get("remaining_candidates", []),
+                "investigated_count": gate.get("investigated_count", 0),
+                "total_candidates": gate.get("total_candidates", 0),
             },
             ensure_ascii=False,
             default=str,

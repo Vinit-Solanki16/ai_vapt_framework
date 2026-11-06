@@ -20,6 +20,30 @@ from strix.tools.nullish import clean_optional
 from strix.tools.proxy.tools import existing_request_ids
 
 
+def _target_supports_https(target_str: str) -> bool:
+    """Check whether the given target string supports TLS/HTTPS connections."""
+    if not target_str:
+        return False
+    import socket
+    import ssl
+    import urllib.parse
+
+    parsed = urllib.parse.urlsplit(target_str if "://" in target_str else f"http://{target_str}")
+    hostname = parsed.hostname or target_str
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    probe_port = port if parsed.scheme == "https" else (parsed.port or 443)
+
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with socket.create_connection((hostname, probe_port), timeout=1.5) as sock:
+            with ctx.wrap_socket(sock, server_hostname=hostname):
+                return True
+    except Exception:
+        return False
+
+
 if TYPE_CHECKING:
     from strix.report.state import ReportState
 
@@ -786,6 +810,8 @@ def _attach_gap2(
     success: bool,
     detail: str = "",
     report_id: str = "",
+    is_tool_error: bool = False,
+    probe_status: str | None = None,
 ) -> dict[str, Any]:
     """Attach AI_VAPT GAP-2 attempt/pivot guidance when the bridge is active."""
     try:
@@ -805,6 +831,8 @@ def _attach_gap2(
             success=success,
             detail=detail,
             report_id=report_id,
+            is_tool_error=is_tool_error,
+            probe_status=probe_status,
         )
     except Exception:
         return result
@@ -832,11 +860,11 @@ async def _do_create(
     severity_change_conditions: str,
     fix_effort: str,
     cvss_breakdown: dict[str, str],
-    endpoint: str | None,
-    method: str | None,
-    cve: str | None,
-    cwe: str | None,
-    code_locations: list[dict[str, Any]] | None,
+    endpoint: str | None = None,
+    method: str | None = None,
+    cve: str | None = None,
+    cwe: str | None = None,
+    code_locations: list[dict[str, Any]] | None = None,
     http_exchange_ids: list[str] | None = None,
     confidence_rationale: str | None = None,
     fix_verification: str | None = None,
@@ -896,7 +924,68 @@ async def _do_create(
             target=target,
             success=False,
             detail="validation: " + "; ".join(errors)[:500],
+            is_tool_error=True,
+            probe_status="error",
         )
+
+    # Phase 13 Guard 1: Strict-Transport-Security (HSTS) Validation
+    is_hsts = "hsts" in title.lower() or "strict-transport-security" in title.lower()
+    if is_hsts:
+        target_check = (target or endpoint or "").strip()
+        parsed_t = PurePosixPath(target_check)
+        is_explicit_http = target_check.lower().startswith("http://")
+        if is_explicit_http and not _target_supports_https(target_check):
+            return _attach_gap2(
+                {
+                    "success": False,
+                    "error": (
+                        "Strict-Transport-Security (HSTS) is NOT_APPLICABLE on HTTP-only targets. "
+                        "RFC 6797 states HSTS is only valid over HTTPS. Do not report missing HSTS "
+                        "for HTTP localhost targets."
+                    ),
+                    "probe_status": "negative",
+                },
+                title=title,
+                endpoint=endpoint,
+                target=target,
+                success=False,
+                detail="HSTS is NOT_APPLICABLE on HTTP-only targets",
+            )
+
+    # Phase 13 Guard 2: HTTP PUT Arbitrary File Write Validation
+    is_put = "put" in title.lower() or "arbitrary file write" in title.lower() or "arbitrary file upload" in title.lower()
+    if is_put:
+        combined_ev = (str(evidence) + " " + str(poc_script_code) + " " + str(technical_analysis)).lower()
+        has_verified_readback = ("read-back" in combined_ev or "marker" in combined_ev or "get /" in combined_ev) and (
+            "matched" in combined_ev or "match" in combined_ev or "verified" in combined_ev
+        )
+        is_spa_catchall = (
+            "<!doctype html" in combined_ev
+            or "<html" in combined_ev
+            or "<!--" in combined_ev
+            or "index.html" in combined_ev
+            or "angular" in combined_ev
+            or "juice shop" in combined_ev
+        )
+        if not has_verified_readback or is_spa_catchall:
+            return _attach_gap2(
+                {
+                    "success": False,
+                    "error": (
+                        "Validation failed: HTTP 200 on PUT alone is not sufficient proof of arbitrary file write. "
+                        "Single-page application (SPA) routers serve index.html with HTTP 200 on arbitrary paths. "
+                        "To validate arbitrary file write, write a harmless unique marker, read back the resource "
+                        "via GET, verify the content matches the marker and is not an HTML fallback, and clean up. "
+                        "Without read-back verification, this result is UNVERIFIED."
+                    ),
+                    "probe_status": "negative",
+                },
+                title=title,
+                endpoint=endpoint,
+                target=target,
+                success=False,
+                detail="HTTP 200 on PUT without verified read-back is UNVERIFIED (SPA fallback)",
+            )
 
     try:
         cvss_score, severity, _vector = _calculate_cvss(cvss_breakdown)
@@ -908,7 +997,45 @@ async def _do_create(
             target=target,
             success=False,
             detail=f"cvss: {exc}"[:500],
+            is_tool_error=True,
+            probe_status="error",
         )
+
+    # Phase 13 Guard 3: CSP & Missing Security Header Validation & Calibration
+    finding_class = "dynamic"
+    is_header_finding = any(
+        k in title.lower()
+        for k in [
+            "content security policy",
+            "csp",
+            "missing-security-headers",
+            "x-frame-options",
+            "security header",
+            "x-content-type-options",
+        ]
+    )
+    if is_header_finding:
+        combined_text = (str(poc_script_code) + " " + str(evidence) + " " + str(technical_analysis)).lower()
+        demonstrates_xss = any(
+            x in combined_text
+            for x in ["<script>alert", "document.domain", "document.cookie", "javascript:alert", "xss execution confirmed"]
+        )
+        if not demonstrates_xss:
+            finding_class = "observation"
+            if severity in ("critical", "high") or cvss_score > 3.9:
+                logger.info("Calibrating missing header observation '%s' to severity=low, CVSS=3.1", title)
+                severity = "low"
+                cvss_score = 3.1
+                cvss_breakdown = {
+                    "attack_vector": "N",
+                    "attack_complexity": "L",
+                    "privileges_required": "N",
+                    "user_interaction": "N",
+                    "scope": "U",
+                    "confidentiality": "N",
+                    "integrity": "L",
+                    "availability": "N",
+                }
 
     try:
         from strix.report.state import get_global_report_state
@@ -963,6 +1090,7 @@ async def _do_create(
             "fix_verification": fix_verification,
             "fix_pr_body": fix_pr_body,
             "http_exchange_ids": normalized_http_exchange_ids,
+            "finding_class": finding_class,
         }
 
         dedupe = await check_duplicate(candidate, existing)
@@ -989,6 +1117,7 @@ async def _do_create(
                 target=target,
                 success=False,
                 detail=f"duplicate of {duplicate_id}"[:500],
+                probe_status="inconclusive",
             )
 
         report_id = report_state.add_vulnerability_report(
@@ -1011,6 +1140,8 @@ async def _do_create(
             target=target,
             success=False,
             detail=f"persistence: {e}"[:500],
+            is_tool_error=True,
+            probe_status="error",
         )
     else:
         logger.info(
@@ -1034,6 +1165,7 @@ async def _do_create(
             success=True,
             detail=f"severity={severity} cvss={cvss_score}",
             report_id=report_id,
+            probe_status="positive",
         )
 
 
@@ -2399,7 +2531,7 @@ _SEVERITY_ORDER = {
     "none": 5,
 }
 _VALID_SEVERITIES = frozenset(_SEVERITY_ORDER)
-_VALID_FINDING_CLASSES = frozenset({"dynamic", "dependency_cve"})
+_VALID_FINDING_CLASSES = frozenset({"dynamic", "dependency_cve", "observation"})
 _REPORT_DESCRIPTION_PREVIEW_CHARS = 280
 
 # Compact, listing-safe fields — no full bodies / PoC code / evidence.

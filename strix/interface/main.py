@@ -556,7 +556,14 @@ def main() -> None:
 
     if args.non_interactive:
         report_state = get_global_report_state()
-        if report_state and findings_fail_build(report_state.vulnerability_reports, args.fail_on):
+        if not report_state or report_state.run_record.get("status") != "completed":
+            logger.error(
+                "Scan did not complete successfully (status: %s, exit_reason: %s)",
+                report_state.run_record.get("status") if report_state else "none",
+                getattr(report_state, "scan_ended_exit_reason", None) if report_state else "unknown",
+            )
+            sys.exit(1)
+        if findings_fail_build(report_state.vulnerability_reports, args.fail_on):
             sys.exit(2)
 
 

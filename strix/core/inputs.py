@@ -385,4 +385,15 @@ def child_initial_input(
         "is complete.",
     )
     parts.append(task)
+    try:
+        from strix.core.gap_bridge import gap1_enabled, control_dir
+        if control_dir() is not None and gap1_enabled():
+            parts.append(
+                "AI_VAPT Outcome Protocol:\n"
+                "- If you verify a vulnerability: call `create_vulnerability_report(title=..., endpoint=..., target=...)`.\n"
+                "- If an attack surface is clean/safe/inconclusive: call `record_coverage(surface=endpoint, risk_area=title, outcome='no_issue_found' or 'needs_follow_up')`.\n"
+                "This ensures the central ledger and GAP-2 dynamic pivot engine remain updated."
+            )
+    except Exception:
+        pass
     return [{"role": "user", "content": "\n\n".join(parts)}]

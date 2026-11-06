@@ -178,8 +178,26 @@ def _is_image_rejection(exc: BaseException) -> bool:
     )
 
 
+def _is_permanent_quota_error(exc: BaseException) -> bool:
+    """Return True if an error is permanent/daily quota exhaustion rather than a transient burst limit."""
+    msg = str(exc).lower()
+    return any(
+        k in msg
+        for k in (
+            "free-models-per-day",
+            "openrouter_free_tier_daily",
+            "daily reset",
+            "daily limit",
+            "insufficient_quota",
+            "exceeded your current quota",
+        )
+    )
+
+
 def _is_transient_model_error(exc: BaseException) -> bool:
     if codex.is_content_guardrail_error(exc):
+        return False
+    if _is_permanent_quota_error(exc):
         return False
     if isinstance(
         exc, APITimeoutError | APIConnectionError | TimeoutError | ConnectionError | OSError

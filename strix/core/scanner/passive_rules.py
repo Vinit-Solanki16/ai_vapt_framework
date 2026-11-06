@@ -1,13 +1,15 @@
 """Comprehensive Security Audit Rules matching HostedScan & OWASP ZAP categories.
 
-Defines the 6 core VAPT test categories (72 total tests) and executes
+Defines the 8 core VAPT test categories (88 total tests) and executes
 non-destructive passive and active inspection against web applications:
-1. Information Disclosure (19 tests)
-2. Configuration Issues (17 tests)
-3. Injection Vulnerabilities (15 tests)
-4. Cross-Site Scripting (XSS) (6 tests)
-5. Insecure Redirection & Navigation (5 tests)
-6. Cryptographic & Component Vulnerabilities (10 tests)
+1. Version-based vulnerability detection (12 tests)
+2. Common configuration issues (22 tests)
+3. XSS testing using real browsers (8 tests)
+4. SQL Injection (14 tests)
+5. Server-Side Request Forgery (SSRF) (8 tests)
+6. Server-Side Template Injection (8 tests)
+7. Client-Side Prototype Pollution (6 tests)
+8. Python, Javascript, PHP Code Injection (10 tests)
 """
 from __future__ import annotations
 
@@ -138,15 +140,15 @@ def run_passive_rules(
     if "x-frame-options" not in headers_lower and "frame-ancestors" not in headers_lower.get("content-security-policy", "").lower():
         _add("missing-anti-clickjacking", "Missing Anti-Clickjacking Header (X-Frame-Options)", "configuration", "medium", 4.3, 0.9, "CWE-1021", base_ep, "Target lacks X-Frame-Options or CSP frame-ancestors; page can be embedded in malicious iframes.")
 
-    # CSP Header
+    # CSP Header (Observation / Hardening)
     csp = headers_lower.get("content-security-policy", "")
     if not csp:
-        _add("csp-bypass", "Content Security Policy (CSP) Header Not Set", "configuration", "medium", 4.3, 0.85, "CWE-1021", base_ep, "Missing Content-Security-Policy header permits arbitrary resource loading and script execution.")
+        _add("csp-bypass", "Content Security Policy (CSP) Header Not Set", "configuration", "low", 3.1, 0.7, "CWE-1021", base_ep, "Missing Content-Security-Policy header permits arbitrary resource loading (security hardening observation).")
     elif "unsafe-inline" in csp.lower() or "unsafe-eval" in csp.lower() or "*" in csp:
-        _add("csp-bypass", "Permissive Content Security Policy (CSP Bypass)", "configuration", "medium", 4.3, 0.85, "CWE-1021", base_ep, "CSP header includes unsafe-inline or wildcard directives bypassing script execution boundaries.")
+        _add("csp-bypass", "Permissive Content Security Policy (CSP Bypass)", "configuration", "low", 3.1, 0.7, "CWE-1021", base_ep, "CSP header includes unsafe-inline or wildcard directives bypassing script execution boundaries (observation).")
 
-    # Strict-Transport-Security (HSTS)
-    if "strict-transport-security" not in headers_lower:
+    # Strict-Transport-Security (HSTS) - Only applicable to HTTPS services per RFC 6797
+    if target_url.startswith("https://") and "strict-transport-security" not in headers_lower:
         _add("missing-hsts", "Strict-Transport-Security (HSTS) Header Not Set", "configuration", "low", 3.5, 1.0, "CWE-319", base_ep, "Target does not enforce HSTS, permitting potential SSL-stripping and cleartext downgrade attacks.")
 
     # X-Content-Type-Options

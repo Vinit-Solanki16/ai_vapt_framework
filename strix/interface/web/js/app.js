@@ -9,17 +9,12 @@
   // Standard Default Models for Providers
   const DEFAULT_PROVIDER_MODELS = {
     openrouter: [
-      { id: 'openrouter/free', name: 'Free Models Router [FREE]', free: true },
-      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct [FREE]', free: true },
-      { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 Reasoning [FREE]', free: true },
-      { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B Instruct [FREE]', free: true },
-      { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp [FREE]', free: true },
-      { id: 'google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B [FREE]', free: true },
-      { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B [FREE]', free: true },
+      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning [FREE] (Recommended)', free: true },
+      { id: 'dots-studio/dots-3-note-preview:free', name: 'Dots Studio 3 Note Preview [FREE]', free: true },
+      { id: 'recursive/flint-v1.0:free', name: 'Recursive Flint v1.0 [FREE]', free: true },
+      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'NVIDIA Nemotron 3 Ultra 550B [FREE]', free: true },
       { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code [FREE]', free: true },
-      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning [FREE]', free: true },
-      { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B [FREE]', free: true },
-      { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct [FREE]', free: true },
+      { id: 'openrouter/free', name: 'Free Models Router [FREE]', free: true },
     ],
     ollama: [
       { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B (Local Default)' },
@@ -36,6 +31,12 @@
       { id: 'gpt-4o', name: 'GPT-4o (Flagship)' },
       { id: 'o3-mini', name: 'o3-mini (Reasoning)' },
     ],
+    cloud_hosted: [
+      { id: 'meta-llama/Llama-3.3-70B-Instruct', name: 'Llama 3.3 70B Instruct (Remote/Cloud)' },
+      { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen 2.5 72B Instruct (Remote)' },
+      { id: 'mistralai/Mistral-Small-24B-Instruct-2501', name: 'Mistral Small 24B (Remote)' },
+      { id: 'custom-model', name: 'Custom Hosted Model' },
+    ],
   };
 
   // State Management
@@ -47,6 +48,8 @@
     currentView: 'new-assessment',
     latestRunData: null,
     availableModels: [...DEFAULT_PROVIDER_MODELS.openrouter],
+    cloudProfiles: [],
+    activeCloudProfileId: null,
     dagZoom: 1.0,
     dagPanX: 0,
     dagPanY: 0,
@@ -76,6 +79,7 @@
     elements.scanModeSelect = document.getElementById('scan-mode-select');
     elements.scanIntensity = document.getElementById('scan-intensity-select');
     elements.executionLimitsSelect = document.getElementById('execution-limits-select');
+    elements.customTurnsInput = document.getElementById('custom-turns-input');
     elements.chkScopeAck = document.getElementById('chk-scope-ack');
     elements.modelProviderSelect = document.getElementById('model-provider-select');
     elements.modelSelect = document.getElementById('model-select');
@@ -97,6 +101,12 @@
     elements.btnStopRun = document.getElementById('btn-stop-run');
     elements.btnViewReportNow = document.getElementById('btn-view-report-now');
     elements.btnRefreshRun = document.getElementById('btn-refresh-run');
+    elements.progressMilestoneCard = document.getElementById('progress-milestone-card');
+    elements.progressPhaseIcon = document.getElementById('progress-phase-icon');
+    elements.progressPhaseName = document.getElementById('progress-phase-name');
+    elements.progressPercentText = document.getElementById('progress-percent-text');
+    elements.progressTurnsText = document.getElementById('progress-turns-text');
+    elements.progressBarFill = document.getElementById('progress-bar-fill');
     elements.metricCandidates = document.getElementById('metric-candidates-count');
     elements.metricPivots = document.getElementById('metric-pivots-count');
     elements.metricAttempts = document.getElementById('metric-attempts-count');
@@ -129,6 +139,7 @@
     elements.btnDownloadPdf = document.getElementById('btn-download-pdf-report');
     elements.btnDownloadJson = document.getElementById('btn-download-json-report');
     elements.btnDownloadSarif = document.getElementById('btn-download-sarif-report');
+    elements.btnDownloadCsv = document.getElementById('btn-download-csv-report');
     elements.btnDownloadMd = document.getElementById('btn-download-md-report');
 
     // History
@@ -147,6 +158,41 @@
     elements.btnSaveLlmConfig = document.getElementById('btn-save-llm-config');
     elements.settingsStatusBadge = document.getElementById('settings-status-badge');
     elements.settingsKeyResult = document.getElementById('settings-key-result');
+
+    // Cloud Hosted Provider
+    elements.groupCloudHostedQuick = document.getElementById('group-cloud-hosted-quick');
+    elements.cloudQuickProfileSelect = document.getElementById('cloud-quick-profile-select');
+    elements.btnCloudQuickConfigure = document.getElementById('btn-cloud-quick-configure');
+    elements.cloudQuickBaseUrl = document.getElementById('cloud-quick-base-url');
+    elements.cardCloudHostedPanel = document.getElementById('card-cloud-hosted-panel');
+    elements.cloudProfileSelect = document.getElementById('cloud-profile-select');
+    elements.cloudProfileActiveBadge = document.getElementById('cloud-profile-active-badge');
+    elements.cloudConnectionStatusBadge = document.getElementById('cloud-connection-status-badge');
+    elements.btnCloudActivateProfile = document.getElementById('btn-cloud-activate-profile');
+    elements.btnCloudSaveProfile = document.getElementById('btn-cloud-save-profile');
+    elements.btnCloudDeleteProfile = document.getElementById('btn-cloud-delete-profile');
+    elements.cloudProfileName = document.getElementById('cloud-profile-name');
+    elements.cloudApiBase = document.getElementById('cloud-api-base');
+    elements.cloudApiKey = document.getElementById('cloud-api-key');
+    elements.cloudCurrentKeyHint = document.getElementById('cloud-current-key-hint');
+    elements.cloudModelInput = document.getElementById('cloud-model-input');
+    elements.btnCloudDiscoverModels = document.getElementById('btn-cloud-discover-models');
+    elements.cloudDiscoveredModelsSelect = document.getElementById('cloud-discovered-models-select');
+    elements.cloudModelAlias = document.getElementById('cloud-model-alias');
+    elements.cloudExtraHeaders = document.getElementById('cloud-extra-headers');
+    elements.cloudContextWindow = document.getElementById('cloud-context-window');
+    elements.cloudMaxTokens = document.getElementById('cloud-max-tokens');
+    elements.cloudTimeout = document.getElementById('cloud-timeout');
+    elements.cloudStreamingCheckbox = document.getElementById('cloud-streaming-checkbox');
+    elements.btnCloudTestConnection = document.getElementById('btn-cloud-test-connection');
+    elements.btnCloudVerifyTools = document.getElementById('btn-cloud-verify-tools');
+    elements.btnCloudWarmup = document.getElementById('btn-cloud-warmup');
+    elements.cloudDiagLatency = document.getElementById('cloud-diag-latency');
+    elements.cloudDiagTtft = document.getElementById('cloud-diag-ttft');
+    elements.cloudDiagTps = document.getElementById('cloud-diag-tps');
+    elements.cloudDiagToolsBadge = document.getElementById('cloud-diag-tools-badge');
+    elements.cloudDiagnosticsConsole = document.getElementById('cloud-diagnostics-console');
+    elements.cloudDiagClearBtn = document.getElementById('cloud-diag-clear-btn');
 
     // Toasts
     elements.toastContainer = document.getElementById('toast-container');
@@ -232,6 +278,10 @@
       elements.modelBadgeStatus.textContent = 'Google Cloud';
       elements.modelBadgeStatus.className = 'badge badge-purple';
       elements.modelHint.textContent = 'High-speed completions via Google Gemini API.';
+    } else if (provider === 'cloud_hosted') {
+      elements.modelBadgeStatus.textContent = 'Cloud Hosted';
+      elements.modelBadgeStatus.className = 'badge badge-cyan';
+      elements.modelHint.textContent = 'Custom OpenAI-compatible model with structured tool-calling support.';
     } else {
       elements.modelBadgeStatus.textContent = 'OpenAI API';
       elements.modelBadgeStatus.className = 'badge badge-amber';
@@ -253,7 +303,7 @@
   // Get Currently Chosen Model ID
   function getSelectedModelId() {
     if (elements.modelSelect.value === '__custom__') {
-      return elements.modelCustomInput.value.trim() || 'meta-llama/llama-3.2-3b-instruct:free';
+      return elements.modelCustomInput.value.trim() || 'nvidia/nemotron-3.5-lightning:free';
     }
     return elements.modelSelect.value;
   }
@@ -319,10 +369,22 @@
   // Model Provider Change Handling
   function onProviderChange() {
     const provider = elements.modelProviderSelect.value;
-    if (provider === 'ollama') {
+    if (provider === 'cloud_hosted') {
+      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'block';
+      elements.groupApiKey.style.display = 'none';
+      const activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+      if (activeProf && activeProf.model) {
+        populateModelOptions('cloud_hosted', [{ id: activeProf.model, name: activeProf.model_alias || activeProf.model }]);
+      } else {
+        populateModelOptions('cloud_hosted');
+      }
+      updateQuickProfileDisplay();
+    } else if (provider === 'ollama') {
+      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'none';
       elements.groupApiKey.style.display = 'none';
       populateModelOptions('ollama');
     } else {
+      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'none';
       elements.groupApiKey.style.display = 'block';
       populateModelOptions(provider);
       if (provider === 'openrouter') {
@@ -380,15 +442,20 @@
     }
 
     feedbackEl.innerHTML = `<span style="color:#38bdf8;">Testing connection and retrieving available models...</span>`;
-    const endpoint = provider === 'google' ? '/providers/google/validate' : '/providers/openrouter/validate';
-    const headerName = provider === 'google' ? 'X-Google-API-Key' : 'X-OpenRouter-API-Key';
+    const endpoint = provider === 'google'
+      ? '/providers/google/validate'
+      : (provider === 'openai' ? '/providers/openai/validate' : '/providers/openrouter/validate');
+    const headerName = provider === 'google'
+      ? 'X-Google-API-Key'
+      : (provider === 'openai' ? 'Authorization' : 'X-OpenRouter-API-Key');
+    const headerVal = provider === 'openai' ? `Bearer ${key}` : key;
 
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          [headerName]: key,
+          [headerName]: headerVal,
         },
         body: JSON.stringify({ api_key: key }),
       });
@@ -458,6 +525,21 @@
     elements.btnLaunch.disabled = true;
     elements.btnLaunch.innerHTML = `<span>⏳</span> Launching Assessment...`;
 
+    let maxTurns = 500;
+    if (elements.executionLimitsSelect) {
+      if (elements.executionLimitsSelect.value === '__custom__') {
+        maxTurns = elements.customTurnsInput ? parseInt(elements.customTurnsInput.value, 10) : 500;
+      } else {
+        maxTurns = parseInt(elements.executionLimitsSelect.value, 10) || 500;
+      }
+    }
+    if (isNaN(maxTurns) || maxTurns < 1 || maxTurns > 1000) {
+      showToast('Execution turn limit must be between 1 and 1000 turns', 'error');
+      elements.btnLaunch.disabled = false;
+      elements.btnLaunch.innerHTML = `<span>⚡</span> Launch Autonomous VAPT Assessment`;
+      return;
+    }
+
     try {
       const res = await fetch('/runs', {
         method: 'POST',
@@ -467,7 +549,7 @@
           target: targetUrl,
           mode: mode || 'autonomous',
           scan_mode: elements.scanIntensity ? elements.scanIntensity.value : 'deep',
-          max_turns: elements.executionLimitsSelect ? parseInt(elements.executionLimitsSelect.value, 10) : 100,
+          max_turns: maxTurns,
           scenario: 'web_assessment',
           assessor: 'llm',
           assessor_provider: provider,
@@ -504,65 +586,141 @@
       state.eventSource = null;
     }
 
+    state.activeRunId = runId;
     fetchRunState(runId);
 
-    // Attempt Server-Sent Events (SSE) for low-latency live streaming
-    try {
-      const sse = new EventSource(`/runs/${runId}/stream`);
-      state.eventSource = sse;
+    // 1. Establish Fallback Periodic Polling
+    state.pollTimer = setInterval(() => {
+      if (state.activeRunId === runId) {
+        fetchRunState(runId);
+      }
+    }, 2000);
 
-      sse.addEventListener('state', (e) => {
-        try {
-          const run = JSON.parse(e.data);
-          state.latestRunData = run;
-          renderActiveRun(run);
-        } catch (err) {}
-      });
+    // 2. Establish Low-Latency Server-Sent Events (SSE) Stream
+    function connectSse() {
+      if (state.activeRunId !== runId) return;
+      try {
+        const sse = new EventSource(`/runs/${runId}/stream`);
+        state.eventSource = sse;
 
-      sse.addEventListener('log', (e) => {
-        try {
-          const entry = JSON.parse(e.data);
-          if (state.latestRunData) {
-            state.latestRunData.decision_trace = state.latestRunData.decision_trace || [];
-            state.latestRunData.decision_trace.push(entry);
-            renderTerminalLogs(state.latestRunData.decision_trace);
+        sse.addEventListener('state', (e) => {
+          try {
+            const run = JSON.parse(e.data);
+            if (run.run_id === state.activeRunId) {
+              state.latestRunData = run;
+              renderActiveRun(run);
+            }
+          } catch (err) {}
+        });
+
+        sse.addEventListener('progress', (e) => {
+          try {
+            const prog = JSON.parse(e.data);
+            if (state.latestRunData && state.activeRunId === runId) {
+              state.latestRunData.progress = prog;
+              renderProgress(prog, state.latestRunData);
+              if (elements.metricAttempts && prog.current !== undefined) {
+                const maxTurns = prog.total || state.latestRunData.max_turns || 500;
+                elements.metricAttempts.textContent = `${prog.current} / ${maxTurns}`;
+              }
+              if (elements.metricCandidates && prog.candidates_identified !== undefined) {
+                const inv = prog.candidates_investigated || 0;
+                const idn = prog.candidates_identified || 0;
+                elements.metricCandidates.textContent = idn > 0 ? `${inv} / ${idn}` : inv;
+              }
+              if (elements.metricPivots && prog.pivots !== undefined) {
+                elements.metricPivots.textContent = prog.pivots;
+              }
+            }
+          } catch (err) {}
+        });
+
+        sse.addEventListener('findings', (e) => {
+          try {
+            const findings = JSON.parse(e.data);
+            if (state.latestRunData && state.activeRunId === runId) {
+              state.latestRunData.findings = findings;
+              renderFindingsLive(findings);
+              if (elements.metricFindings) {
+                elements.metricFindings.textContent = findings.length;
+              }
+            }
+          } catch (err) {}
+        });
+
+        sse.addEventListener('log', (e) => {
+          try {
+            const entry = JSON.parse(e.data);
+            if (state.latestRunData && state.activeRunId === runId) {
+              state.latestRunData.decision_trace = state.latestRunData.decision_trace || [];
+              state.latestRunData.decision_trace.push(entry);
+              renderTerminalLogs(state.latestRunData.decision_trace);
+            }
+          } catch (err) {}
+        });
+
+        sse.addEventListener('complete', (e) => {
+          if (state.eventSource) {
+            state.eventSource.close();
+            state.eventSource = null;
           }
-        } catch (err) {}
-      });
+          if (state.pollTimer) {
+            clearInterval(state.pollTimer);
+            state.pollTimer = null;
+          }
+          fetchRunState(runId);
+        });
 
-      sse.addEventListener('complete', (e) => {
-        sse.close();
-        state.eventSource = null;
-        fetchRunState(runId);
-      });
-
-      sse.onerror = () => {
-        // Fall back to polling if SSE disconnected
-        if (!state.pollTimer) {
-          state.pollTimer = setInterval(() => {
-            fetchRunState(runId);
-          }, 1500);
-        }
-      };
-    } catch (e) {
-      state.pollTimer = setInterval(() => {
-        fetchRunState(runId);
-      }, 1500);
+        sse.onerror = () => {
+          // Polling fallback keeps dashboard active; reconnect SSE after backoff
+          if (state.eventSource) {
+            state.eventSource.close();
+            state.eventSource = null;
+          }
+          if (state.activeRunId === runId && state.latestRunData?.status === 'running') {
+            setTimeout(connectSse, 3000);
+          }
+        };
+      } catch (e) {
+        console.debug('SSE initialization exception; continuing with polling', e);
+      }
     }
+
+    connectSse();
   }
 
   async function fetchRunState(runId) {
-    if (!runId) return;
+    if (!runId || (state.activeRunId && runId !== state.activeRunId)) return;
     try {
       const res = await fetch(`/runs/${runId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const run = await res.json();
+      if (state.activeRunId && runId !== state.activeRunId) return;
+
+      // Stale data guard: prevent older poll responses from overwriting newer SSE states
+      const cur = state.latestRunData;
+      if (cur && cur.run_id === runId && cur.status === run.status) {
+        const curTurn = cur.progress?.current || 0;
+        const newTurn = run.progress?.current || 0;
+        const curLogs = (cur.decision_trace || []).length;
+        const newLogs = (run.decision_trace || []).length;
+        if (newTurn < curTurn && newLogs < curLogs) {
+          return;
+        }
+      }
+
       state.latestRunData = run;
       renderActiveRun(run);
 
       if (run.status === 'completed' || run.status === 'failed' || run.status === 'aborted') {
-        clearInterval(state.pollTimer);
-        state.pollTimer = null;
+        if (state.pollTimer) {
+          clearInterval(state.pollTimer);
+          state.pollTimer = null;
+        }
+        if (state.eventSource) {
+          state.eventSource.close();
+          state.eventSource = null;
+        }
         if (run.status === 'completed') {
           elements.btnViewReportNow.style.display = 'inline-flex';
           showToast(`Assessment ${runId} completed!`, 'success');
@@ -573,7 +731,58 @@
         }
       }
     } catch (err) {
-      console.error('Run polling error:', err);
+      console.debug('Run polling error:', err);
+    }
+  }
+
+  const PHASE_ICONS = {
+    1: '🔍',
+    2: '🕷️',
+    3: '🎯',
+    4: '🔄',
+    5: '📑',
+  };
+
+  function renderProgress(prog, run) {
+    if (!elements.progressBarFill || !prog) return;
+    const status = (run?.status || 'running').toUpperCase();
+    const pct = typeof prog.percent === 'number' ? Math.min(100, Math.max(0, prog.percent)) : 0;
+
+    elements.progressBarFill.style.width = `${pct}%`;
+    if (status === 'FAILED') {
+      elements.progressBarFill.style.background = '#f43f5e';
+    } else if (status === 'ABORTED') {
+      elements.progressBarFill.style.background = '#f59e0b';
+    } else if (status === 'COMPLETED') {
+      elements.progressBarFill.style.background = '#10b981';
+    } else {
+      elements.progressBarFill.style.background = 'var(--primary)';
+    }
+
+    if (elements.progressPercentText) {
+      elements.progressPercentText.textContent = `${pct}%`;
+    }
+
+    if (elements.progressPhaseName && prog.phase) {
+      elements.progressPhaseName.textContent = prog.phase;
+    }
+
+    if (elements.progressPhaseIcon) {
+      if (status === 'COMPLETED') {
+        elements.progressPhaseIcon.textContent = '✅';
+      } else if (status === 'FAILED') {
+        elements.progressPhaseIcon.textContent = '❌';
+      } else if (status === 'ABORTED') {
+        elements.progressPhaseIcon.textContent = '🛑';
+      } else {
+        elements.progressPhaseIcon.textContent = PHASE_ICONS[prog.phase_index] || '⚡';
+      }
+    }
+
+    if (elements.progressTurnsText) {
+      const curTurns = prog.current !== undefined ? prog.current : 0;
+      const maxTurns = prog.total || run?.max_turns || 500;
+      elements.progressTurnsText.textContent = `${curTurns} / ${maxTurns} Turns`;
     }
   }
 
@@ -581,7 +790,9 @@
   function renderActiveRun(run) {
     elements.heroRunId.textContent = run.run_id;
     elements.heroTargetText.textContent = run.target_url || 'Target Application';
-    elements.heroModeText.textContent = `Mode: ${(run.mode || 'web').toUpperCase()}`;
+    const prov = (run.provider || 'openrouter').toUpperCase();
+    const mdl = run.model || 'nvidia/nemotron-3.5-lightning:free';
+    elements.heroModeText.textContent = `Mode: ${(run.mode || 'web').toUpperCase()} • Provider: ${prov} (${mdl})`;
 
     const errorBanner = document.getElementById('hero-error-banner');
     const errorText = document.getElementById('hero-error-text');
@@ -615,16 +826,29 @@
     // Metrics
     const candidates = run.candidates || [];
     const pivotEvents = run.pivot_events || [];
-    const findings = run.findings || [];
     const trace = run.decision_trace || [];
+    const prog = run.progress || {};
 
-    const totalAttempts = candidates.reduce((acc, c) => acc + (c.attempts || 0), 0);
-    const totalPivots = pivotEvents.filter((e) => e.type === 'REDIRECT').length;
+    const investigated = prog.candidates_investigated !== undefined
+      ? prog.candidates_investigated
+      : candidates.filter((c) => c.state === 'VALIDATED' || c.state === 'EXHAUSTED' || (c.attempts || 0) > 0).length;
+    const identified = prog.candidates_identified !== undefined
+      ? prog.candidates_identified
+      : candidates.length;
+    const totalPivots = prog.pivots !== undefined
+      ? prog.pivots
+      : pivotEvents.filter((e) => e.type === 'REDIRECT' || e.event === 'GAP2_PIVOT').length;
+    const curTurns = prog.current !== undefined
+      ? prog.current
+      : candidates.reduce((acc, c) => acc + (c.attempts || 0), 0);
+    const maxTurns = prog.total || run.max_turns || 500;
 
-    elements.metricCandidates.textContent = candidates.length;
+    elements.metricCandidates.textContent = identified > 0 ? `${investigated} / ${identified}` : investigated;
     elements.metricPivots.textContent = totalPivots;
-    elements.metricAttempts.textContent = totalAttempts;
+    elements.metricAttempts.textContent = `${curTurns} / ${maxTurns}`;
     elements.metricFindings.textContent = findings.length;
+
+    renderProgress(prog, run);
 
     renderCandidateTable(candidates);
     renderDecisionDag(candidates, pivotEvents);
@@ -734,9 +958,13 @@
           c.state === 'VALIDATED'
             ? '<span class="badge badge-emerald">VALIDATED</span>'
             : c.state === 'ABANDONED'
-            ? '<span class="badge badge-rose">ABANDONED (PIVOT)</span>'
+            ? '<span class="badge badge-rose">RULED OUT</span>'
             : c.state === 'ATTEMPTING'
             ? '<span class="badge badge-cyan">ATTEMPTING</span>'
+            : c.state === 'NOT_TESTED'
+            ? '<span class="badge" style="background:#334155;color:#94a3b8;">NOT TESTED</span>'
+            : c.state === 'BLOCKED'
+            ? '<span class="badge badge-rose">BLOCKED</span>'
             : '<span class="badge" style="background:#334155;color:#94a3b8;">PENDING</span>';
 
         const priorityScore = (c.composite_score !== undefined && c.composite_score !== null)
@@ -804,7 +1032,7 @@
     const isVal = cand.state === 'VALIDATED';
     const isAb = cand.state === 'ABANDONED';
     const statusColor = isVal ? '#34d399' : (isAb ? '#f43f5e' : '#38bdf8');
-    const statusText = isVal ? 'CONFIRMED VULNERABILITY (PoC Validated)' : (isAb ? 'PIVOT REDIRECT (k=2 Attempt Limit Hit)' : cand.state);
+    const statusText = isVal ? 'CONFIRMED VULNERABILITY (PoC Validated)' : (isAb ? 'RULED OUT / NOT EXPLOITABLE' : cand.state);
 
     detailBox.style.display = 'block';
     detailBox.innerHTML = `
@@ -885,7 +1113,17 @@
 
       // Candidate Node & Label
       const activeClass = state.selectedCandidateId === c.id ? 'active-node' : '';
-      const badgeText = isValidated ? '✓ VALIDATED' : (isAbandoned ? '✕ PIVOT HIT' : (isAttempting ? '⟳ PROBING' : (c.state || 'PENDING')));
+      const pivotEvt = (pivotEvents || []).find(
+        (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && (e.event === 'GAP2_PIVOT' || e.type === 'REDIRECT')
+      );
+      const hasPivotEvent = Boolean(pivotEvt);
+      const badgeText = isValidated
+        ? '✓ VALIDATED'
+        : (hasPivotEvent
+          ? '⚡ PIVOT'
+          : (isAbandoned
+            ? '✕ RULED OUT'
+            : (isAttempting ? '⟳ PROBING' : (c.state || 'PENDING'))));
 
       nodesHtml += `
         <g class="dag-node ${activeClass}" data-id="${c.id}" onclick="inspectDagNode('${c.id}')">
@@ -903,8 +1141,8 @@
         </g>
       `;
 
-      // If abandoned, draw dynamic pivot loop on LEFT side of candidate nodes (never overlaps labels on right)
-      if (isAbandoned && idx + 1 < count) {
+      // ONLY draw dynamic pivot loop on LEFT side of candidate nodes if an ACTUAL pivot event was recorded
+      if (hasPivotEvent && idx + 1 < count) {
         const nextCy = count === 1 ? totalHeight / 2 : startY + (idx + 1) * stepY;
         const midY = (cy + nextCy) / 2;
         edgesHtml += `
@@ -1020,6 +1258,9 @@
     const medCount = findings.filter((f) => (f.severity || '').toUpperCase() === 'MEDIUM').length;
     const lowCount = findings.filter((f) => (f.severity || '').toUpperCase() === 'LOW').length;
 
+    const rawStatus = (run.status || 'COMPLETED').toUpperCase();
+    const statusColor = rawStatus === 'COMPLETED' ? '#10b981' : (rawStatus === 'FAILED' ? '#f43f5e' : '#f59e0b');
+
     let html = `
       <!-- Engagement Verification & Integrity Notice -->
       <div style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.3); border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.75rem;">
@@ -1042,7 +1283,7 @@
         <div class="metric-card">
           <div class="metric-icon">🛡️</div>
           <div class="metric-data">
-            <div class="metric-value" style="color:#10b981;">${(run.status || 'COMPLETED').toUpperCase()}</div>
+            <div class="metric-value" style="color:${statusColor};">${rawStatus}</div>
             <div class="metric-label">Assessment Status (${escapeHtml(run.evidence_tier || 'OBSERVED_EXTERNAL')})</div>
           </div>
         </div>
@@ -1135,7 +1376,7 @@
       <!-- SECTION 2: Scan Capabilities & Vulnerability Category Matrix -->
       <h2 style="font-size: 1.25rem; color: #38bdf8; margin-bottom: 0.5rem;">2. Scan Capabilities & Vulnerability Category Matrix</h2>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Comprehensive multi-layer audit coverage across 6 core VAPT test categories (72 total tests) aligned with industry benchmarks:
+        Comprehensive multi-layer audit coverage across 8 core VAPT test categories (88 total tests) aligned with industry benchmarks:
       </p>
       <div class="data-table-container" style="margin-bottom: 2rem;">
         <table class="data-table">
@@ -1319,8 +1560,10 @@
                       const stateBadge = c.state === 'VALIDATED'
                         ? '<span class="badge badge-emerald">VALIDATED</span>'
                         : (c.state === 'ABANDONED'
-                        ? '<span class="badge badge-rose">ABANDONED (PIVOT)</span>'
-                        : '<span class="badge badge-cyan">PENDING</span>');
+                        ? '<span class="badge badge-rose">RULED OUT</span>'
+                        : (c.state === 'NOT_TESTED'
+                        ? '<span class="badge" style="background:#334155;color:#94a3b8;">NOT TESTED</span>'
+                        : '<span class="badge badge-cyan">PENDING</span>'));
                       const scoreFormatted = (c.composite_score !== undefined && c.composite_score !== null)
                         ? Number(c.composite_score).toFixed(3)
                         : (c.probability !== undefined ? Number(c.probability).toFixed(3) : '0.500');
@@ -1430,24 +1673,38 @@
       );
     });
 
-    if (elements.scanIntensity && elements.executionLimitsSelect) {
-      elements.scanIntensity.addEventListener('change', () => {
-        const mode = elements.scanIntensity.value;
-        if (mode === 'quick') {
-          elements.executionLimitsSelect.value = '50';
-        } else if (mode === 'standard') {
-          elements.executionLimitsSelect.value = '100';
-        } else if (mode === 'deep') {
-          elements.executionLimitsSelect.value = '250';
-        }
-      });
+    function syncExecutionLimits() {
+      if (!elements.scanIntensity || !elements.executionLimitsSelect) return;
+      if (elements.executionLimitsSelect.value === '__custom__') return;
+      const mode = elements.scanIntensity.value;
+      if (mode === 'quick') {
+        elements.executionLimitsSelect.value = '50';
+      } else if (mode === 'standard') {
+        elements.executionLimitsSelect.value = '100';
+      } else if (mode === 'deep') {
+        elements.executionLimitsSelect.value = '500';
+      }
+      if (elements.customTurnsInput) {
+        elements.customTurnsInput.style.display = 'none';
+      }
     }
 
-    if (elements.scanModeSelect && elements.executionLimitsSelect) {
-      elements.scanModeSelect.addEventListener('change', () => {
-        if (elements.scanModeSelect.value === 'autonomous') {
-          if (parseInt(elements.executionLimitsSelect.value, 10) < 50) {
-            elements.executionLimitsSelect.value = '100';
+    if (elements.scanIntensity && elements.executionLimitsSelect) {
+      elements.scanIntensity.addEventListener('change', syncExecutionLimits);
+      // Synchronize execution limits on initial page load
+      syncExecutionLimits();
+    }
+
+    if (elements.executionLimitsSelect) {
+      elements.executionLimitsSelect.addEventListener('change', () => {
+        if (elements.executionLimitsSelect.value === '__custom__') {
+          if (elements.customTurnsInput) {
+            elements.customTurnsInput.style.display = 'block';
+            elements.customTurnsInput.focus();
+          }
+        } else {
+          if (elements.customTurnsInput) {
+            elements.customTurnsInput.style.display = 'none';
           }
         }
       });
@@ -1505,6 +1762,12 @@
     if (elements.btnDownloadSarif) {
       elements.btnDownloadSarif.addEventListener('click', async () => {
         downloadReportArtifact('sarif', 'vapt_findings_{runId}.sarif', 'application/json', 'SARIF Report');
+      });
+    }
+
+    if (elements.btnDownloadCsv) {
+      elements.btnDownloadCsv.addEventListener('click', async () => {
+        downloadReportArtifact('csv', 'vapt_findings_{runId}.csv', 'text/csv', 'CSV Findings Export');
       });
     }
 
@@ -1603,6 +1866,86 @@
       elements.btnSaveLlmConfig.addEventListener('click', saveLlmSettings);
     }
 
+    // Cloud Hosted Provider Event Handlers
+    if (elements.btnCloudQuickConfigure) {
+      elements.btnCloudQuickConfigure.addEventListener('click', () => {
+        switchView('settings');
+        if (elements.cardCloudHostedPanel) {
+          elements.cardCloudHostedPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+
+    if (elements.cloudQuickProfileSelect) {
+      elements.cloudQuickProfileSelect.addEventListener('change', () => {
+        const val = elements.cloudQuickProfileSelect.value;
+        const prof = (state.cloudProfiles || []).find((p) => p.id === val);
+        if (prof) {
+          if (elements.cloudQuickBaseUrl) elements.cloudQuickBaseUrl.textContent = prof.api_base;
+          if (prof.model) {
+            populateModelOptions('cloud_hosted', [{ id: prof.model, name: prof.model_alias || prof.model }]);
+          }
+        }
+      });
+    }
+
+    if (elements.cloudProfileSelect) {
+      elements.cloudProfileSelect.addEventListener('change', () => {
+        const val = elements.cloudProfileSelect.value;
+        if (val === '__new__') {
+          fillCloudProfileForm('__new__');
+        } else {
+          const prof = (state.cloudProfiles || []).find((p) => p.id === val);
+          fillCloudProfileForm(prof);
+        }
+      });
+    }
+
+    if (elements.btnCloudSaveProfile) {
+      elements.btnCloudSaveProfile.addEventListener('click', saveCloudProfile);
+    }
+
+    if (elements.btnCloudDeleteProfile) {
+      elements.btnCloudDeleteProfile.addEventListener('click', deleteCloudProfile);
+    }
+
+    if (elements.btnCloudActivateProfile) {
+      elements.btnCloudActivateProfile.addEventListener('click', activateCloudProfile);
+    }
+
+    if (elements.btnCloudDiscoverModels) {
+      elements.btnCloudDiscoverModels.addEventListener('click', discoverCloudModels);
+    }
+
+    if (elements.cloudDiscoveredModelsSelect) {
+      elements.cloudDiscoveredModelsSelect.addEventListener('change', () => {
+        const selected = elements.cloudDiscoveredModelsSelect.value;
+        if (selected && elements.cloudModelInput) {
+          elements.cloudModelInput.value = selected;
+        }
+      });
+    }
+
+    if (elements.btnCloudTestConnection) {
+      elements.btnCloudTestConnection.addEventListener('click', testCloudConnection);
+    }
+
+    if (elements.btnCloudVerifyTools) {
+      elements.btnCloudVerifyTools.addEventListener('click', verifyCloudTools);
+    }
+
+    if (elements.btnCloudWarmup) {
+      elements.btnCloudWarmup.addEventListener('click', warmupCloudModel);
+    }
+
+    if (elements.cloudDiagClearBtn) {
+      elements.cloudDiagClearBtn.addEventListener('click', () => {
+        if (elements.cloudDiagnosticsConsole) {
+          elements.cloudDiagnosticsConsole.textContent = 'Diagnostic console cleared.\n';
+        }
+      });
+    }
+
     elements.btnRefreshHistory.addEventListener('click', loadHistory);
   }
 
@@ -1630,6 +1973,525 @@
       showToast(`${label} downloaded successfully!`, 'success');
     } catch (err) {
       window.location.href = `/runs/${runId}/report?format=${format}&download=1`;
+    }
+  }
+
+  // ============================================================================
+  // Cloud Hosted Provider Management & Diagnostics (OpenAI-Compatible)
+  // ============================================================================
+
+  function logCloudDiag(msg) {
+    if (!elements.cloudDiagnosticsConsole) return;
+    const ts = new Date().toLocaleTimeString();
+    elements.cloudDiagnosticsConsole.textContent += `[${ts}] ${msg}\n`;
+    elements.cloudDiagnosticsConsole.scrollTop = elements.cloudDiagnosticsConsole.scrollHeight;
+  }
+
+  function updateQuickProfileDisplay() {
+    if (!elements.cloudQuickProfileSelect) return;
+    const activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+    if (activeProf) {
+      elements.cloudQuickProfileSelect.value = activeProf.id;
+      if (elements.cloudQuickBaseUrl) elements.cloudQuickBaseUrl.textContent = activeProf.api_base;
+    }
+  }
+
+  async function loadCloudProfiles() {
+    try {
+      const res = await fetch('/providers/cloud_hosted/profiles');
+      if (!res.ok) return;
+      state.cloudProfiles = await res.json();
+
+      if (elements.cloudProfileSelect) {
+        elements.cloudProfileSelect.innerHTML = '';
+        state.cloudProfiles.forEach((p) => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} (${p.model || 'No model'})${p.is_active ? ' ⭐ [Active]' : ''}`;
+          elements.cloudProfileSelect.appendChild(opt);
+        });
+        const newOpt = document.createElement('option');
+        newOpt.value = '__new__';
+        newOpt.textContent = '➕ Create New Cloud Profile...';
+        elements.cloudProfileSelect.appendChild(newOpt);
+
+        const activeProf = state.cloudProfiles.find((p) => p.is_active) || state.cloudProfiles[0];
+        if (activeProf) {
+          elements.cloudProfileSelect.value = activeProf.id;
+          fillCloudProfileForm(activeProf);
+        } else {
+          elements.cloudProfileSelect.value = '__new__';
+          fillCloudProfileForm('__new__');
+        }
+      }
+
+      if (elements.cloudQuickProfileSelect) {
+        elements.cloudQuickProfileSelect.innerHTML = '';
+        if (state.cloudProfiles.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '__none__';
+          opt.textContent = 'No profiles configured (Click Manage Profiles)';
+          elements.cloudQuickProfileSelect.appendChild(opt);
+        } else {
+          state.cloudProfiles.forEach((p) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} - ${p.model || 'No model'}${p.is_active ? ' ⭐' : ''}`;
+            elements.cloudQuickProfileSelect.appendChild(opt);
+          });
+        }
+        updateQuickProfileDisplay();
+      }
+    } catch (e) {
+      console.debug('Failed to load cloud profiles:', e);
+    }
+  }
+
+  function fillCloudProfileForm(profile) {
+    if (!profile || profile === '__new__') {
+      if (elements.cloudProfileName) elements.cloudProfileName.value = 'Cloud Hosted Endpoint';
+      if (elements.cloudApiBase) elements.cloudApiBase.value = '';
+      if (elements.cloudApiKey) elements.cloudApiKey.value = '';
+      if (elements.cloudCurrentKeyHint) elements.cloudCurrentKeyHint.textContent = 'Current key: None';
+      if (elements.cloudModelInput) elements.cloudModelInput.value = '';
+      if (elements.cloudModelAlias) elements.cloudModelAlias.value = '';
+      if (elements.cloudExtraHeaders) elements.cloudExtraHeaders.value = '';
+      if (elements.cloudContextWindow) elements.cloudContextWindow.value = '';
+      if (elements.cloudMaxTokens) elements.cloudMaxTokens.value = '';
+      if (elements.cloudTimeout) elements.cloudTimeout.value = 300;
+      if (elements.cloudStreamingCheckbox) elements.cloudStreamingCheckbox.checked = true;
+      if (elements.cloudProfileActiveBadge) {
+        elements.cloudProfileActiveBadge.textContent = 'New Profile';
+        elements.cloudProfileActiveBadge.className = 'badge badge-amber';
+      }
+      if (elements.cloudConnectionStatusBadge) {
+        elements.cloudConnectionStatusBadge.textContent = 'Unverified';
+        elements.cloudConnectionStatusBadge.className = 'badge badge-amber';
+      }
+      if (elements.cloudDiscoveredModelsSelect) elements.cloudDiscoveredModelsSelect.style.display = 'none';
+      return;
+    }
+
+    if (elements.cloudProfileName) elements.cloudProfileName.value = profile.name || '';
+    if (elements.cloudApiBase) elements.cloudApiBase.value = profile.api_base || '';
+    if (elements.cloudApiKey) elements.cloudApiKey.value = '';
+    if (elements.cloudCurrentKeyHint) {
+      elements.cloudCurrentKeyHint.innerHTML = profile.has_api_key
+        ? `Saved key: <code style="color:#34d399;">${escapeHtml(profile.masked_api_key)}</code>`
+        : 'Current key: None (Unauthenticated)';
+    }
+    if (elements.cloudModelInput) elements.cloudModelInput.value = profile.model || '';
+    if (elements.cloudModelAlias) elements.cloudModelAlias.value = profile.model_alias || '';
+    if (elements.cloudExtraHeaders) {
+      elements.cloudExtraHeaders.value = profile.extra_headers && Object.keys(profile.extra_headers).length
+        ? JSON.stringify(profile.extra_headers)
+        : '';
+    }
+    if (elements.cloudContextWindow) elements.cloudContextWindow.value = profile.context_window || '';
+    if (elements.cloudMaxTokens) elements.cloudMaxTokens.value = profile.max_output_tokens || '';
+    if (elements.cloudTimeout) elements.cloudTimeout.value = profile.timeout || 300;
+    if (elements.cloudStreamingCheckbox) elements.cloudStreamingCheckbox.checked = profile.streaming !== false;
+    if (elements.cloudProfileActiveBadge) {
+      elements.cloudProfileActiveBadge.textContent = profile.is_active ? '⭐ Active Provider' : 'Saved Profile';
+      elements.cloudProfileActiveBadge.className = profile.is_active ? 'badge badge-emerald' : 'badge badge-cyan';
+    }
+  }
+
+  async function saveCloudProfile() {
+    const name = elements.cloudProfileName ? elements.cloudProfileName.value.trim() : '';
+    const apiBase = elements.cloudApiBase ? elements.cloudApiBase.value.trim() : '';
+    const apiKey = elements.cloudApiKey ? elements.cloudApiKey.value.trim() : '';
+    const model = elements.cloudModelInput ? elements.cloudModelInput.value.trim() : '';
+    const modelAlias = elements.cloudModelAlias ? elements.cloudModelAlias.value.trim() : '';
+    const extraHeadersRaw = elements.cloudExtraHeaders ? elements.cloudExtraHeaders.value.trim() : '';
+    const contextWindow = elements.cloudContextWindow && elements.cloudContextWindow.value ? parseInt(elements.cloudContextWindow.value, 10) : null;
+    const maxTokens = elements.cloudMaxTokens && elements.cloudMaxTokens.value ? parseInt(elements.cloudMaxTokens.value, 10) : null;
+    const timeout = elements.cloudTimeout && elements.cloudTimeout.value ? parseInt(elements.cloudTimeout.value, 10) : 300;
+    const streaming = elements.cloudStreamingCheckbox ? elements.cloudStreamingCheckbox.checked : true;
+
+    if (!name || !apiBase || !model) {
+      showToast('Please fill in required fields: Name, API Base URL, and Model Identifier', 'error');
+      return;
+    }
+
+    let extraHeaders = {};
+    if (extraHeadersRaw) {
+      try {
+        extraHeaders = JSON.parse(extraHeadersRaw);
+      } catch (e) {
+        showToast('Additional HTTP headers must be valid JSON (e.g. {"header": "value"})', 'error');
+        return;
+      }
+    }
+
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : '__new__';
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    const payload = {
+      name: name,
+      api_base: apiBase,
+      api_key: apiKey || null,
+      model: model,
+      model_alias: modelAlias || null,
+      extra_headers: extraHeaders,
+      context_window: contextWindow,
+      max_output_tokens: maxTokens,
+      timeout: timeout,
+      streaming: streaming,
+      is_active: true,
+    };
+    if (profileId) {
+      payload.id = profileId;
+    }
+
+    if (elements.btnCloudSaveProfile) {
+      elements.btnCloudSaveProfile.disabled = true;
+      elements.btnCloudSaveProfile.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        let errDetail = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.detail) {
+            if (Array.isArray(errData.detail)) {
+              errDetail = errData.detail.map((d) => `${d.loc ? d.loc.join('.') : 'field'}: ${d.msg}`).join('; ');
+            } else {
+              errDetail = String(errData.detail);
+            }
+          }
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
+      const saved = await res.json();
+      showToast(`Cloud profile '${saved.name}' saved and activated!`, 'success');
+      logCloudDiag(`Profile '${saved.name}' saved successfully (Endpoint: ${saved.api_base}, Model: ${saved.model})`);
+      await loadCloudProfiles();
+      if (elements.cloudProfileSelect) elements.cloudProfileSelect.value = saved.id;
+    } catch (err) {
+      showToast(`Failed to save profile: ${err.message}`, 'error');
+      logCloudDiag(`ERROR saving profile: ${err.message}`);
+    } finally {
+      if (elements.btnCloudSaveProfile) {
+        elements.btnCloudSaveProfile.disabled = false;
+        elements.btnCloudSaveProfile.textContent = '💾 Save Profile';
+      }
+    }
+  }
+
+  async function deleteCloudProfile() {
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : '__new__';
+    if (currentVal === '__new__') {
+      fillCloudProfileForm('__new__');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this cloud provider profile?')) return;
+
+    try {
+      const res = await fetch(`/providers/cloud_hosted/profiles/${currentVal}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('Cloud profile deleted', 'success');
+      logCloudDiag(`Profile ${currentVal} deleted.`);
+      await loadCloudProfiles();
+    } catch (err) {
+      showToast(`Failed to delete profile: ${err.message}`, 'error');
+    }
+  }
+
+  async function activateCloudProfile() {
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : '__new__';
+    if (currentVal === '__new__') {
+      showToast('Please save the profile before activating it', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/providers/cloud_hosted/profiles/${currentVal}/activate`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const prof = await res.json();
+      showToast(`'${prof.name}' is now the active Cloud Hosted provider!`, 'success');
+      logCloudDiag(`Profile '${prof.name}' activated.`);
+      await loadCloudProfiles();
+      if (elements.modelProviderSelect) {
+        elements.modelProviderSelect.value = 'cloud_hosted';
+        onProviderChange();
+      }
+    } catch (err) {
+      showToast(`Failed to activate profile: ${err.message}`, 'error');
+    }
+  }
+
+  async function discoverCloudModels() {
+    const apiBase = elements.cloudApiBase ? elements.cloudApiBase.value.trim() : '';
+    const apiKey = elements.cloudApiKey ? elements.cloudApiKey.value.trim() : '';
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase) {
+      showToast('Please enter an API Base URL first', 'error');
+      return;
+    }
+
+    let extraHeaders = {};
+    if (elements.cloudExtraHeaders && elements.cloudExtraHeaders.value.trim()) {
+      try { extraHeaders = JSON.parse(elements.cloudExtraHeaders.value.trim()); } catch (e) {}
+    }
+
+    if (elements.btnCloudDiscoverModels) {
+      elements.btnCloudDiscoverModels.disabled = true;
+      elements.btnCloudDiscoverModels.textContent = '🔍 Discovering...';
+    }
+
+    logCloudDiag(`Discovering models from GET ${apiBase}/models ...`);
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_base: apiBase,
+          api_key: apiKey || null,
+          profile_id: profileId,
+          extra_headers: extraHeaders,
+        }),
+      });
+      const data = await res.json();
+      if (data.valid && data.models && data.models.length > 0) {
+        logCloudDiag(`Discovered ${data.models.length} model(s): ${data.models.join(', ')}`);
+        showToast(`Discovered ${data.models.length} model(s)!`, 'success');
+
+        if (elements.cloudDiscoveredModelsSelect) {
+          elements.cloudDiscoveredModelsSelect.innerHTML = '<option value="">-- Choose Discovered Model --</option>';
+          data.models.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            elements.cloudDiscoveredModelsSelect.appendChild(opt);
+          });
+          elements.cloudDiscoveredModelsSelect.style.display = 'block';
+        }
+
+        if (elements.cloudModelInput && !elements.cloudModelInput.value.trim()) {
+          elements.cloudModelInput.value = data.models[0];
+        }
+      } else {
+        logCloudDiag(`Model discovery note: ${data.message || 'No models returned. You can enter model ID manually.'}`);
+        showToast(data.message || 'No models discovered; enter model ID manually', 'info');
+      }
+    } catch (err) {
+      logCloudDiag(`Discovery network error: ${err.message}`);
+      showToast(`Model discovery error: ${err.message}`, 'error');
+    } finally {
+      if (elements.btnCloudDiscoverModels) {
+        elements.btnCloudDiscoverModels.disabled = false;
+        elements.btnCloudDiscoverModels.textContent = '🔍 Discover Models';
+      }
+    }
+  }
+
+  async function testCloudConnection() {
+    const apiBase = elements.cloudApiBase ? elements.cloudApiBase.value.trim() : '';
+    const model = elements.cloudModelInput ? elements.cloudModelInput.value.trim() : '';
+    const apiKey = elements.cloudApiKey ? elements.cloudApiKey.value.trim() : '';
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase || !model) {
+      showToast('Please provide both API Base URL and Model Identifier to test connection', 'error');
+      return;
+    }
+
+    let extraHeaders = {};
+    if (elements.cloudExtraHeaders && elements.cloudExtraHeaders.value.trim()) {
+      try { extraHeaders = JSON.parse(elements.cloudExtraHeaders.value.trim()); } catch (e) {}
+    }
+
+    if (elements.btnCloudTestConnection) {
+      elements.btnCloudTestConnection.disabled = true;
+      elements.btnCloudTestConnection.textContent = 'Testing...';
+    }
+
+    logCloudDiag(`\n--- Connection Test: ${apiBase} (Model: ${model}) ---`);
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_base: apiBase,
+          model: model,
+          api_key: apiKey || null,
+          profile_id: profileId,
+          extra_headers: extraHeaders,
+        }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        logCloudDiag(`✅ ${data.message}`);
+        logCloudDiag(`Round-trip Latency: ${data.duration_ms}ms | TTFT: ${data.ttft_ms}ms | Speed: ${data.tokens_per_second ? data.tokens_per_second + ' tok/s' : 'N/A'}`);
+        if (data.diagnostics && data.diagnostics.reply_sample) {
+          logCloudDiag(`Model Reply Sample: "${data.diagnostics.reply_sample}"`);
+        }
+        showToast('Connection verified successfully!', 'success');
+
+        if (elements.cloudDiagLatency) elements.cloudDiagLatency.textContent = `${data.duration_ms}ms`;
+        if (elements.cloudDiagTtft) elements.cloudDiagTtft.textContent = `${data.ttft_ms}ms`;
+        if (elements.cloudDiagTps) elements.cloudDiagTps.textContent = data.tokens_per_second ? `${data.tokens_per_second}` : 'N/A';
+        if (elements.cloudConnectionStatusBadge) {
+          elements.cloudConnectionStatusBadge.textContent = 'Connected';
+          elements.cloudConnectionStatusBadge.className = 'badge badge-emerald';
+        }
+      } else {
+        logCloudDiag(`❌ Connection failed: ${data.message}`);
+        showToast(`Connection failed: ${data.message}`, 'error');
+        if (elements.cloudConnectionStatusBadge) {
+          elements.cloudConnectionStatusBadge.textContent = 'Failed';
+          elements.cloudConnectionStatusBadge.className = 'badge badge-amber';
+        }
+      }
+    } catch (err) {
+      logCloudDiag(`❌ Network exception: ${err.message}`);
+      showToast(`Test error: ${err.message}`, 'error');
+    } finally {
+      if (elements.btnCloudTestConnection) {
+        elements.btnCloudTestConnection.disabled = false;
+        elements.btnCloudTestConnection.textContent = '🧪 Test Connection';
+      }
+    }
+  }
+
+  async function verifyCloudTools() {
+    const apiBase = elements.cloudApiBase ? elements.cloudApiBase.value.trim() : '';
+    const model = elements.cloudModelInput ? elements.cloudModelInput.value.trim() : '';
+    const apiKey = elements.cloudApiKey ? elements.cloudApiKey.value.trim() : '';
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase || !model) {
+      showToast('Please provide both API Base URL and Model Identifier to verify tool calling', 'error');
+      return;
+    }
+
+    let extraHeaders = {};
+    if (elements.cloudExtraHeaders && elements.cloudExtraHeaders.value.trim()) {
+      try { extraHeaders = JSON.parse(elements.cloudExtraHeaders.value.trim()); } catch (e) {}
+    }
+
+    if (elements.btnCloudVerifyTools) {
+      elements.btnCloudVerifyTools.disabled = true;
+      elements.btnCloudVerifyTools.textContent = 'Verifying Tools...';
+    }
+
+    logCloudDiag(`\n--- Structured Function/Tool Calling Verification for '${model}' ---`);
+    logCloudDiag(`Testing tool schema dispatch, argument JSON parsing, multi-turn continuation, and streaming...`);
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/verify_tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_base: apiBase,
+          model: model,
+          api_key: apiKey || null,
+          profile_id: profileId,
+          extra_headers: extraHeaders,
+        }),
+      });
+      const data = await res.json();
+      const td = data.tool_diagnostics || {};
+
+      logCloudDiag(`1. Tool Call Generated: ${td.tool_call_generated ? '✅ YES (' + td.tool_name + ')' : '❌ NO'}`);
+      logCloudDiag(`2. Arguments JSON Parsed: ${td.arguments_parsed ? '✅ YES (' + JSON.stringify(td.arguments) + ')' : '❌ NO'}`);
+      logCloudDiag(`3. Multi-Turn Continuation: ${td.multi_turn_continuation ? '✅ YES' : '⚠️ INCONCLUSIVE'}`);
+      logCloudDiag(`4. Streaming Tool Output: ${td.streaming_compatible ? '✅ YES' : '⚠️ NON-STREAMING'}`);
+
+      if (data.valid) {
+        logCloudDiag(`🎉 RESULT: ${data.message}`);
+        showToast('Model is structured tool-calling compatible!', 'success');
+        if (elements.cloudDiagToolsBadge) {
+          elements.cloudDiagToolsBadge.textContent = 'PASS';
+          elements.cloudDiagToolsBadge.style.color = '#34d399';
+        }
+      } else {
+        logCloudDiag(`⚠️ RESULT: ${data.message}`);
+        if (td.error) logCloudDiag(`Diagnostic Detail: ${td.error}`);
+        showToast('Model failed tool-calling verification. See diagnostic console.', 'error');
+        if (elements.cloudDiagToolsBadge) {
+          elements.cloudDiagToolsBadge.textContent = 'FAIL';
+          elements.cloudDiagToolsBadge.style.color = '#fb7185';
+        }
+      }
+    } catch (err) {
+      logCloudDiag(`❌ Verification error: ${err.message}`);
+      showToast(`Tool verification error: ${err.message}`, 'error');
+    } finally {
+      if (elements.btnCloudVerifyTools) {
+        elements.btnCloudVerifyTools.disabled = false;
+        elements.btnCloudVerifyTools.textContent = '🛠️ Verify Tool Calling';
+      }
+    }
+  }
+
+  async function warmupCloudModel() {
+    const apiBase = elements.cloudApiBase ? elements.cloudApiBase.value.trim() : '';
+    const model = elements.cloudModelInput ? elements.cloudModelInput.value.trim() : '';
+    const apiKey = elements.cloudApiKey ? elements.cloudApiKey.value.trim() : '';
+    const currentVal = elements.cloudProfileSelect ? elements.cloudProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase || !model) {
+      showToast('Please provide API Base URL and Model Identifier for warmup', 'error');
+      return;
+    }
+
+    let extraHeaders = {};
+    if (elements.cloudExtraHeaders && elements.cloudExtraHeaders.value.trim()) {
+      try { extraHeaders = JSON.parse(elements.cloudExtraHeaders.value.trim()); } catch (e) {}
+    }
+
+    if (elements.btnCloudWarmup) {
+      elements.btnCloudWarmup.disabled = true;
+      elements.btnCloudWarmup.textContent = '⚡ Warming up...';
+    }
+
+    logCloudDiag(`\n--- Manual Model Warmup Probe for '${model}' ---`);
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/warmup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_base: apiBase,
+          model: model,
+          api_key: apiKey || null,
+          profile_id: profileId,
+          extra_headers: extraHeaders,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        logCloudDiag(`🔥 ${data.message}`);
+        showToast(data.message, 'success');
+        if (elements.cloudDiagLatency) elements.cloudDiagLatency.textContent = `${data.duration_ms}ms`;
+        if (elements.cloudDiagTps && data.tokens_per_second) elements.cloudDiagTps.textContent = `${data.tokens_per_second}`;
+      } else {
+        logCloudDiag(`Warmup response: ${data.message}`);
+        showToast(`Warmup note: ${data.message}`, 'info');
+      }
+    } catch (err) {
+      logCloudDiag(`Warmup error: ${err.message}`);
+    } finally {
+      if (elements.btnCloudWarmup) {
+        elements.btnCloudWarmup.disabled = false;
+        elements.btnCloudWarmup.textContent = '⚡ Optional Warm-up Model';
+      }
     }
   }
 
@@ -1752,6 +2614,7 @@
     populateModelOptions('openrouter');
     loadOpenRouterFreeModels();
     loadLlmSettings();
+    loadCloudProfiles();
     checkSystemHealth();
 
     const initialHash = window.location.hash.replace('#/', '');

@@ -93,11 +93,14 @@
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="execution-limits-select">Execution Limits</label>
               <select id="execution-limits-select" class="form-select">
-                <option value="50">50 Turns (Autonomous Smoke Test)</option>
-                <option value="100" selected>100 Turns (Standard Surface Exploration - Recommended)</option>
-                <option value="250">250 Turns (Deep Autonomous Pentest)</option>
-                <option value="500">500 Turns (Full Exhaustive Multi-Agent Core)</option>
+                <option value="50">50 Turns (Quick Triage Smoke Test)</option>
+                <option value="100">100 Turns (Standard Surface Exploration)</option>
+                <option value="250">250 Turns (Deep Pentest)</option>
+                <option value="500" selected>500 Turns (Full Autonomous Assessment - Strix Native Default)</option>
+                <option value="1000">1000 Turns (Thorough Exhaustive Pentest)</option>
+                <option value="__custom__">Custom Turn Budget...</option>
               </select>
+              <input type="number" id="custom-turns-input" class="form-input" style="display: none; margin-top: 0.5rem;" min="1" max="1000" placeholder="Custom turn count (1 - 1000)" value="500">
             </div>
           </div>
 
@@ -129,10 +132,23 @@
             <label class="form-label" for="model-provider-select">AI Provider</label>
             <select id="model-provider-select" class="form-select">
               <option value="openrouter" selected>🌐 OpenRouter (Free Models & Hosted Hub)</option>
+              <option value="cloud_hosted">☁️ Cloud Hosted (Custom OpenAI API / Remote)</option>
               <option value="ollama">🦙 Local Ollama (Zero Cost, Offline Safe)</option>
               <option value="google">♊ Google Gemini (Fast Cloud API)</option>
               <option value="openai">⚡ OpenAI (GPT-4o / GPT-4o-mini)</option>
             </select>
+          </div>
+
+          <!-- Cloud Hosted Quick Profile Indicator -->
+          <div class="form-group" id="group-cloud-hosted-quick" style="display: none;">
+            <label class="form-label" for="cloud-quick-profile-select">Cloud Hosted Profile</label>
+            <div class="input-with-button">
+              <select id="cloud-quick-profile-select" class="form-select">
+                <option value="__none__">Loading cloud profiles...</option>
+              </select>
+              <button type="button" class="btn btn-secondary" id="btn-cloud-quick-configure">⚙️ Manage Profiles</button>
+            </div>
+            <div id="cloud-quick-profile-hint" class="form-help">Endpoint: <span id="cloud-quick-base-url" style="font-family: var(--font-mono); color: var(--accent-cyan);">-</span></div>
           </div>
 
           <!-- In-Memory Cloud API Key Input -->
@@ -153,12 +169,12 @@
             </div>
             <select id="model-select" class="form-select">
               <!-- Dynamically populated or default options -->
-              <option value="meta-llama/llama-3.3-70b-instruct:free">meta-llama/llama-3.3-70b-instruct:free [FREE]</option>
-              <option value="deepseek/deepseek-r1:free">deepseek/deepseek-r1:free [FREE]</option>
-              <option value="meta-llama/llama-3.2-3b-instruct:free" selected>meta-llama/llama-3.2-3b-instruct:free [FREE]</option>
-              <option value="google/gemini-2.0-flash-exp:free">google/gemini-2.0-flash-exp:free [FREE]</option>
-              <option value="qwen/qwen-2.5-coder-32b-instruct:free">qwen/qwen-2.5-coder-32b-instruct:free [FREE]</option>
-              <option value="mistralai/mistral-7b-instruct:free">mistralai/mistral-7b-instruct:free [FREE]</option>
+              <option value="nvidia/nemotron-3.5-lightning:free" selected>nvidia/nemotron-3.5-lightning:free [FREE] (Recommended)</option>
+              <option value="dots-studio/dots-3-note-preview:free">dots-studio/dots-3-note-preview:free [FREE]</option>
+              <option value="recursive/flint-v1.0:free">recursive/flint-v1.0:free [FREE]</option>
+              <option value="nvidia/nemotron-3-ultra-550b-a55b:free">nvidia/nemotron-3-ultra-550b-a55b:free [FREE]</option>
+              <option value="cohere/north-mini-code:free">cohere/north-mini-code:free [FREE]</option>
+              <option value="openrouter/free">openrouter/free [FREE Router]</option>
               <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
             </select>
             <input type="text" id="model-custom-input" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. meta-llama/llama-3.3-70b-instruct">
@@ -223,6 +239,26 @@
           <button type="button" class="btn btn-secondary" id="btn-refresh-run">
             <span>🔄</span> Refresh
           </button>
+        </div>
+      </div>
+
+      <!-- Execution Milestone & Truthful Progress Card -->
+      <div class="card" id="progress-milestone-card" style="margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span id="progress-phase-icon" style="font-size: 1.3rem;">🔍</span>
+            <div>
+              <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Current Execution Phase</div>
+              <div id="progress-phase-name" style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Reconnaissance and port scanning</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div id="progress-percent-text" style="font-size: 1.25rem; font-weight: 800; color: var(--color-primary, #6366f1);">0%</div>
+            <div id="progress-turns-text" style="font-size: 0.75rem; color: var(--text-muted);">0 / 500 Turns</div>
+          </div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.08); border-radius: 999px; height: 10px; overflow: hidden; position: relative;">
+          <div id="progress-bar-fill" style="background: linear-gradient(90deg, #6366f1, #10b981); height: 100%; width: 0%; border-radius: 999px; transition: width 0.4s ease;"></div>
         </div>
       </div>
 
@@ -301,13 +337,13 @@
             </div>
           </div>
 
-          <!-- Multi-Category Scan Matrix Card (72 Rules) -->
+          <!-- Multi-Category Scan Matrix Card (88 Rules) -->
           <div class="card" id="card-scan-matrix" style="margin-top: 1.5rem;">
             <div class="card-header">
-              <div class="card-title"><span>📊</span> Multi-Category Scan Capabilities (72 Rules)</div>
+              <div class="card-title"><span>📊</span> Multi-Category Scan Capabilities (88 Rules)</div>
               <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <span class="badge badge-cyan" id="badge-spider-live" style="display: none;">🕷️ Spider: 0 routes</span>
-                <span class="badge badge-purple" id="badge-matrix-status">6 Categories Active</span>
+                <span class="badge badge-purple" id="badge-matrix-status">8 Categories Active</span>
               </div>
             </div>
             <div class="data-table-container">
@@ -445,6 +481,9 @@
             <button type="button" class="btn btn-secondary" id="btn-download-sarif-report">
               <span>🛡️</span> SARIF
             </button>
+            <button type="button" class="btn btn-secondary" id="btn-download-csv-report">
+              <span>📊</span> CSV
+            </button>
             <button type="button" class="btn btn-secondary" id="btn-download-md-report">
               <span>📝</span> Markdown
             </button>
@@ -527,6 +566,7 @@
               <label class="form-label" for="settings-provider-select">Provider:</label>
               <select id="settings-provider-select" class="form-select">
                 <option value="openrouter" selected>OpenRouter (Hosted Hub & Free Models)</option>
+                <option value="cloud_hosted">Cloud Hosted (Custom OpenAI-Compatible API)</option>
                 <option value="google">Google Gemini (Gemini 2.0 / Flash)</option>
                 <option value="ollama">Local Ollama (Self-Hosted)</option>
                 <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
@@ -534,8 +574,8 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="settings-model-input">Model Name / Identifier:</label>
-              <input type="text" id="settings-model-input" class="form-input" placeholder="e.g. meta-llama/llama-3.2-3b-instruct:free" value="meta-llama/llama-3.2-3b-instruct:free">
-              <div class="form-help">Provider model string (e.g. <code>meta-llama/llama-3.2-3b-instruct:free</code> or <code>gemini-2.0-flash-exp</code>)</div>
+              <input type="text" id="settings-model-input" class="form-input" placeholder="e.g. nvidia/nemotron-3.5-lightning:free" value="nvidia/nemotron-3.5-lightning:free">
+              <div class="form-help">Provider model string (e.g. <code>nvidia/nemotron-3.5-lightning:free</code> or <code>gemini-2.0-flash</code>)</div>
             </div>
             <div class="form-group">
               <label class="form-label" for="settings-api-key">API Key:</label>
@@ -547,6 +587,151 @@
               <button type="button" class="btn btn-primary" id="btn-save-llm-config">💾 Save Configuration</button>
             </div>
             <div id="settings-key-result" style="margin-top: 0.75rem; font-size: 0.85rem;"></div>
+          </div>
+        </div>
+
+        <!-- Dedicated Generic Cloud Hosted Provider Card -->
+        <div class="card" id="card-cloud-hosted-panel" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <div class="card-title"><span>☁️</span> Cloud Hosted AI Provider (OpenAI-Compatible API)</div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span id="cloud-profile-active-badge" class="badge badge-cyan">Custom Endpoint</span>
+              <span id="cloud-connection-status-badge" class="badge badge-amber">Unverified</span>
+            </div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Connect to any externally hosted LLM server (vLLM, TGI, Ollama-OpenAI, LMDeploy, FastChat, Kaggle notebook tunnel, RunPod, or remote GPU) through standard OpenAI-compatible endpoints with full structured tool calling support.
+          </p>
+
+          <!-- Profile Switcher & Actions -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 260px;">
+              <label class="form-label" for="cloud-profile-select" style="margin-bottom: 0; white-space: nowrap;"><strong>Active Profile:</strong></label>
+              <select id="cloud-profile-select" class="form-select" style="max-width: 320px;">
+                <option value="__new__">➕ Create New Cloud Profile...</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" id="btn-cloud-activate-profile" title="Set this profile as default active cloud provider">⭐ Set as Active Provider</button>
+              <button type="button" class="btn btn-primary" id="btn-cloud-save-profile">💾 Save Profile</button>
+              <button type="button" class="btn btn-secondary" id="btn-cloud-delete-profile" style="color: #fb7185; border-color: rgba(244,63,94,0.3);">🗑️ Delete</button>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Left Column: Endpoint & Model Configuration -->
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="cloud-profile-name">Provider Display Name <span style="color:#f43f5e;">*</span></label>
+                <input type="text" id="cloud-profile-name" class="form-input" placeholder="e.g. Remote vLLM / Kaggle GPU / RunPod" value="Cloud Hosted Endpoint">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cloud-api-base">API Base URL (OpenAI-compatible) <span style="color:#f43f5e;">*</span></label>
+                <input type="text" id="cloud-api-base" class="form-input" placeholder="e.g. https://your-tunnel.ngrok-free.app/v1 or http://192.168.1.50:8000/v1">
+                <div class="form-help">Must expose OpenAI-compatible <code>/models</code> and <code>/chat/completions</code></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cloud-api-key">API Key / Bearer Token</label>
+                <input type="password" id="cloud-api-key" class="form-input" placeholder="Leave blank if unauthenticated or paste bearer token">
+                <div id="cloud-current-key-hint" class="form-help" style="color: var(--text-muted);">Current key: None</div>
+              </div>
+
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                  <label class="form-label" for="cloud-model-input" style="margin-bottom: 0;">Model Identifier <span style="color:#f43f5e;">*</span></label>
+                  <button type="button" class="btn btn-secondary" id="btn-cloud-discover-models" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">🔍 Discover Models</button>
+                </div>
+                <input type="text" id="cloud-model-input" class="form-input" placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct or Qwen/Qwen2.5-72B-Instruct">
+                <select id="cloud-discovered-models-select" class="form-select" style="display: none; margin-top: 0.4rem;">
+                  <option value="">-- Discovered Models --</option>
+                </select>
+                <div class="form-help">Server-hosted model identifier passed to <code>/chat/completions</code></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cloud-model-alias">Model Friendly Alias (Optional)</label>
+                <input type="text" id="cloud-model-alias" class="form-input" placeholder="e.g. Llama 3.3 70B [Self-Hosted]">
+              </div>
+
+              <!-- Collapsible Advanced Settings -->
+              <details style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.6rem 0.85rem; margin-top: 0.5rem;">
+                <summary style="cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">⚙️ Optional Advanced Inference Settings</summary>
+                <div style="margin-top: 0.75rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="cloud-extra-headers">Additional HTTP Headers (JSON format)</label>
+                    <input type="text" id="cloud-extra-headers" class="form-input" placeholder='{"ngrok-skip-browser-warning": "true"}'>
+                    <div class="form-help">Custom headers sent with every inference request (e.g. for ngrok, Cloudflare, proxies).</div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="form-group">
+                      <label class="form-label" for="cloud-context-window">Context Window</label>
+                      <input type="number" id="cloud-context-window" class="form-input" placeholder="131072">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="cloud-max-tokens">Max Output Tokens</label>
+                      <input type="number" id="cloud-max-tokens" class="form-input" placeholder="4096">
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="form-group">
+                      <label class="form-label" for="cloud-timeout">Request Timeout (sec)</label>
+                      <input type="number" id="cloud-timeout" class="form-input" value="300" min="10" max="1800">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; padding-top: 1.5rem;">
+                      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                        <input type="checkbox" id="cloud-streaming-checkbox" checked>
+                        <span>Enable Streaming</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <!-- Right Column: Verification, Tool Calling & Performance Diagnostics -->
+            <div>
+              <div style="margin-bottom: 1rem;">
+                <label class="form-label">Diagnostics & Compatibility Testing</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <button type="button" class="btn btn-secondary" id="btn-cloud-test-connection">🧪 Test Connection</button>
+                  <button type="button" class="btn btn-secondary" id="btn-cloud-verify-tools">🛠️ Verify Tool Calling</button>
+                </div>
+                <button type="button" class="btn btn-secondary btn-block" id="btn-cloud-warmup">⚡ Optional Warm-up Model</button>
+              </div>
+
+              <!-- Performance Diagnostics Metrics Grid -->
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; text-align: center;">
+                  <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Latency</div>
+                  <div id="cloud-diag-latency" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--accent-cyan);">-</div>
+                </div>
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; text-align: center;">
+                  <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">TTFT</div>
+                  <div id="cloud-diag-ttft" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: #34d399;">-</div>
+                </div>
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; text-align: center;">
+                  <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Speed</div>
+                  <div id="cloud-diag-tps" style="font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: #fbbf24;">-</div>
+                </div>
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; text-align: center;">
+                  <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Tools</div>
+                  <div id="cloud-diag-tools-badge" style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Untested</div>
+                </div>
+              </div>
+
+              <!-- Diagnostic Console Output -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="display: flex; justify-content: space-between;">
+                  <span>Diagnostic Console</span>
+                  <span id="cloud-diag-clear-btn" style="cursor: pointer; font-size: 0.75rem; color: var(--text-muted);">Clear</span>
+                </label>
+                <div id="cloud-diagnostics-console" style="font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.4; color: var(--text-main); background: #0b0f19; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.75rem; height: 210px; overflow-y: auto; white-space: pre-wrap;">
+Ready. Configure Base URL and click "Test Connection" or "Verify Tool Calling" to inspect endpoint compatibility.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

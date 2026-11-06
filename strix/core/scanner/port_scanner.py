@@ -120,6 +120,7 @@ def scan_target_ports(
     scan_mode: str = "quick",
     timeout: float = 1.5,
     max_workers: int = 20,
+    target_port: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Scan ports on target host concurrently using native non-blocking sockets.
 
@@ -128,12 +129,17 @@ def scan_target_ports(
     - deep: 85+ well-known, cloud, database, messaging, and telephony ports (~4-6 sec)
     """
     host = target_host_or_url.strip()
+    explicit_port = target_port
     if host.startswith("http://") or host.startswith("https://"):
         parsed = urllib.parse.urlsplit(host)
         host = parsed.hostname or host
+        if explicit_port is None:
+            explicit_port = parsed.port or (443 if parsed.scheme == "https" else 80)
 
     if not host:
         return []
+
+    is_localhost = host in ("127.0.0.1", "localhost", "::1", "0.0.0.0", "host.docker.internal") or host.startswith("127.")
 
     # Resolve IP address
     try:
@@ -164,6 +170,7 @@ def scan_target_ports(
             res = s.connect_ex((ip, port))
             if res == 0:
                 meta = KNOWN_PORTS.get(port, {"service": f"TCP/{port}", "severity": "low", "risk": "Open network port."})
+                in_scope = (not is_localhost) or (explicit_port is None) or (port == explicit_port)
                 return {
                     "port": port,
                     "service": meta["service"],
@@ -173,6 +180,10 @@ def scan_target_ports(
                     "risk": meta["risk"],
                     "cwe_id": "CWE-200",
                     "ip": ip,
+                    "in_scope": in_scope,
+                    "scope": "target_application" if in_scope else "environmental",
+                    "target_port": explicit_port,
+                    "is_localhost": is_localhost,
                 }
         except Exception:
             pass

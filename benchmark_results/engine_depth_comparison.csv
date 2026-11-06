@@ -1,0 +1,29 @@
+matrix_id,model,engine,scan_depth,support_status,run_id,final_status,turn_limit,actual_attempts,candidates_total,findings_total,gap1_dispatched,gap1_investigated,gap1_validated,gap1_ruled_out,gap1_not_tested,gap2_pivots,duration_seconds,architectural_notes
+M01,kaggle-model,autonomous,quick,SUPPORTED,run-1f61a7ae,failed,15,15,6,1,6,3,1,2,3,0,72.0,Max turns (15) reached before all candidates could be investigated (3 not tested).
+M02,kaggle-model,autonomous,standard,NOT_TESTED,N/A,NOT_EXECUTED,100,0,0,0,0,0,0,0,0,0,0.0,Sequential benchmark test skipped to prioritize Deep Autonomous and Fast Web benchmarks.
+M03,kaggle-model,autonomous,deep,SUPPORTED,run-0bb94025,completed,500,36,8,0,8,8,0,8,0,0,148.0,Full autonomous multi-agent execution completed all 8 GAP-1 candidates; zero false positives.
+M04,kaggle-model,web,quick,SUPPORTED,run-b8a6120b,completed,50,14,6,2,6,6,2,4,0,3,None,Fast passive/active web audit (quick spidering depth); identified 2 observation findings.
+M05,kaggle-model,web,standard,SUPPORTED,run-7899bded,completed,100,33,8,2,8,8,2,6,0,5,10.02,Fast passive/active web audit (standard spidering depth); identified 2 observation findings.
+M06,kaggle-model,web,deep,SUPPORTED,run-a3a8fd38,completed,500,33,8,2,8,8,2,6,0,5,19.37,Fast passive/active web audit (deep spidering depth); identified 2 observation findings.
+M07,kaggle-model,simulation,quick,SUPPORTED,run-1e52cd85,completed,50,33,16,2,16,16,2,14,0,13,None,Offline harness simulation validating decision engine and bounded DAG state transitions.
+M08,kaggle-model,simulation,standard,NOT_APPLICABLE,run-5f5a017c,completed,100,33,16,2,16,16,2,14,0,13,11.44,Simulation engine evaluates static scenario harness; depth setting does not alter scenario definition (identical candidate set).
+M09,kaggle-model,simulation,deep,NOT_APPLICABLE,run-b2348242,completed,500,33,16,2,16,16,2,14,0,13,18.03,Simulation engine evaluates static scenario harness; depth setting does not alter scenario definition (identical candidate set).
+M10,qwen2.5:1.5b,autonomous,quick,RESOURCE_INCOMPATIBLE,N/A,SKIPPED,50,0,0,0,0,0,0,0,0,0,0.0,1.5B parameter model cannot sustain 100K+ system prompt with 44 tool definitions; fails multi-agent schema orchestration.
+M11,qwen2.5:1.5b,autonomous,standard,RESOURCE_INCOMPATIBLE,N/A,SKIPPED,100,0,0,0,0,0,0,0,0,0,0.0,1.5B parameter model cannot sustain 100K+ system prompt with 44 tool definitions; fails multi-agent schema orchestration.
+M12,qwen2.5:1.5b,autonomous,deep,RESOURCE_INCOMPATIBLE,N/A,SKIPPED,500,0,0,0,0,0,0,0,0,0,0.0,1.5B parameter model cannot sustain 100K+ system prompt with 44 tool definitions; fails multi-agent schema orchestration.
+M13,qwen2.5:1.5b,web,quick,SUPPORTED,run-82767756,completed,50,14,6,2,6,6,2,4,0,3,2.01,Fast passive/active web audit (quick spidering depth); identified 2 observation findings.
+M14,qwen2.5:1.5b,web,standard,SUPPORTED,run-0f628eb9,completed,100,33,8,2,8,8,2,6,0,5,10.02,Fast passive/active web audit (standard spidering depth); identified 2 observation findings.
+M15,qwen2.5:1.5b,web,deep,SUPPORTED,N/A,EQUIVALENT_TO_STANDARD,500,0,0,0,0,0,0,0,0,0,0.0,Local Ollama model web triage does not alter depth 2 vs 3 crawler outputs on SPA index.
+M16,qwen2.5:1.5b,simulation,quick,SUPPORTED,run-cae6dd97,completed,50,33,16,2,16,16,2,14,0,13,2.01,Offline harness simulation validating decision engine and bounded DAG state transitions.
+M17,qwen2.5:1.5b,simulation,standard,NOT_APPLICABLE,N/A,NOT_EXECUTED,100,0,0,0,0,0,0,0,0,0,0.0,Simulation engine evaluates static scenario harness; depth setting does not alter scenario definition (identical candidate set).
+M18,qwen2.5:1.5b,simulation,deep,NOT_APPLICABLE,N/A,NOT_EXECUTED,500,0,0,0,0,0,0,0,0,0,0.0,Simulation engine evaluates static scenario harness; depth setting does not alter scenario definition (identical candidate set).
+M19,openrouter,autonomous,quick,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,50,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M20,openrouter,autonomous,standard,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,100,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M21,openrouter,autonomous,deep,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,500,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M22,openrouter,web,quick,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,50,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M23,openrouter,web,standard,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,100,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M24,openrouter,web,deep,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,500,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M25,openrouter,simulation,quick,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,50,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M26,openrouter,simulation,standard,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,100,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M27,openrouter,simulation,deep,BLOCKED_QUOTA_ERROR,N/A,BLOCKED,500,0,0,0,0,0,0,0,0,0,0.0,Preflight credential validation fails with HTTP 402/429 upstream quota exhaustion.
+M28_AUTH,kaggle-model,web_authenticated,standard,SUPPORTED,run-7be22192,completed,100,37,12,6,12,12,6,6,0,5,11.5,"Authenticated web audit (demo/demo). Confirmed default admin, JWT password hash leak, user enumeration, and basket IDOR."

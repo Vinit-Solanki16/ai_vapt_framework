@@ -4,7 +4,7 @@ Orchestrates:
 1. Pure-Python Web Spidering (depth 1 in quick, 2 in standard, 3 in deep)
 2. Pure-Python TCP Port Scanner (15 ports in quick, 40 in standard, 85+ in deep)
 3. Software Component Analysis (Retire.js-style CVE mapping)
-4. Comprehensive 6-Category Passive Rule Engine (72 tests)
+4. Comprehensive 8-Category Passive Rule Engine (88 tests)
 5. Active Endpoint Prober, HTTP Verb Tampering & Parameter Fuzzing
 """
 from __future__ import annotations
@@ -138,7 +138,22 @@ class FullScanner:
             timeout=1.0,
             max_workers=20,
         )
+        environmental_observations = []
         for p_info in open_ports:
+            # Network scope enforcement:
+            # Only in-scope application ports can become attack candidates.
+            # Other host/docker infrastructure ports on localhost (e.g. port 8000 Strix console, port 9090 Prometheus)
+            # are classified as out-of-scope environmental observations and never attributed to the target application.
+            if not p_info.get("in_scope", True):
+                environmental_observations.append({
+                    "port": p_info["port"],
+                    "service": p_info["service"],
+                    "severity": p_info["severity"],
+                    "risk": p_info["risk"],
+                    "scope": "environmental",
+                })
+                continue
+
             # If non-standard port is exposed (e.g. 1720 H.323 or database port)
             if p_info["severity"] in ("medium", "high", "critical"):
                 candidates.append({
@@ -171,6 +186,7 @@ class FullScanner:
         return {
             "candidates": candidates,
             "open_ports": open_ports,
+            "environmental_observations": environmental_observations,
             "components": components,
             "scan_matrix": scan_matrix,
             "category_summary": category_summary,
