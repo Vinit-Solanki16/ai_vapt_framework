@@ -8,31 +8,30 @@ Verifies:
 5. GAP2 dynamic pivot synchronization into pivot_events and metrics.
 6. OpenRouter daily quota exhaustion fast failure (no infinite retries) and actionable error message.
 """
+
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from strix.config.settings import DEFAULT_MAX_TURNS
 from strix.core.execution import _is_permanent_quota_error, _is_transient_model_error
-from strix.interface import api
 from strix.interface.api import (
-    app,
     _RUNS,
-    _extract_clean_error,
     _execute_run_worker,
+    _extract_clean_error,
+    app,
 )
 from strix.interface.schemas import RunRequest
+
 
 client = TestClient(app)
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -134,12 +133,13 @@ def test_real_subprocess_log_tailing_turn_tracking(tmp_path: Path):
     )
 
     orig_popen = subprocess.Popen
-    with patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs), \
-         patch("strix.interface.api.PROJECT_ROOT", tmp_path), \
-         patch("strix.interface.api._is_docker_available", return_value=True), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]), \
-         patch("subprocess.Popen") as mock_popen:
-
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs),
+        patch("strix.interface.api.PROJECT_ROOT", tmp_path),
+        patch("strix.interface.api._is_docker_available", return_value=True),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+        patch("subprocess.Popen") as mock_popen,
+    ):
         real_proc = orig_popen(
             [sys.executable, "-c", script],
             stdout=subprocess.PIPE,
@@ -182,18 +182,25 @@ def test_gap1_gap2_state_progression_from_gap_state_json(tmp_path: Path):
     (control_dir / "gap_state.json").write_text(json.dumps(gap_state), encoding="utf-8")
 
     # Add a GAP-2 pivot event to decision_trace.jsonl
-    pivot_line = json.dumps({
-        "timestamp": "2026-11-06T00:01:00Z",
-        "event": "GAP2_PIVOT",
-        "candidate_id": "c3",
-        "next_candidate": "c4",
-    }) + "\n"
+    pivot_line = (
+        json.dumps(
+            {
+                "timestamp": "2026-11-06T00:01:00Z",
+                "event": "GAP2_PIVOT",
+                "candidate_id": "c3",
+                "next_candidate": "c4",
+            }
+        )
+        + "\n"
+    )
     (control_dir / "decision_trace.jsonl").write_text(pivot_line, encoding="utf-8")
 
     # Subprocess run folder
     sub_dir = fake_strix_runs / "sub-run-2"
     sub_dir.mkdir(parents=True, exist_ok=True)
-    (sub_dir / "strix.log").write_text("DEBUG - openai.agents: Starting turn 5, current_agent=Root Agent\n")
+    (sub_dir / "strix.log").write_text(
+        "DEBUG - openai.agents: Starting turn 5, current_agent=Root Agent\n"
+    )
     (sub_dir / "run.json").write_text(json.dumps({"status": "completed", "vulnerabilities": []}))
 
     candidates_list = [
@@ -227,14 +234,19 @@ def test_gap1_gap2_state_progression_from_gap_state_json(tmp_path: Path):
     )
 
     orig_popen = subprocess.Popen
-    with patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs), \
-         patch("strix.interface.api.PROJECT_ROOT", tmp_path), \
-         patch("strix.interface.api._is_docker_available", return_value=True), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=candidates_list), \
-         patch("subprocess.Popen") as mock_popen:
-
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs),
+        patch("strix.interface.api.PROJECT_ROOT", tmp_path),
+        patch("strix.interface.api._is_docker_available", return_value=True),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=candidates_list),
+        patch("subprocess.Popen") as mock_popen,
+    ):
         real_proc = orig_popen(
-            [sys.executable, "-c", "import sys; print('Output strix_runs/sub-run-2', flush=True); sys.exit(0)"],
+            [
+                sys.executable,
+                "-c",
+                "import sys; print('Output strix_runs/sub-run-2', flush=True); sys.exit(0)",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -262,7 +274,7 @@ def test_gap1_gap2_state_progression_from_gap_state_json(tmp_path: Path):
 def test_openrouter_daily_quota_429_fast_failure():
     """Verify that 429 daily quota exhaustion is treated as permanent and fails cleanly without retries."""
     daily_quota_err = Exception(
-        'litellm.RateLimitError: RateLimitError: OpenrouterException - '
+        "litellm.RateLimitError: RateLimitError: OpenrouterException - "
         '{"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day",'
         '"code":429,"metadata":{"limit_source":"openrouter_free_tier_daily"}}}'
     )
@@ -311,13 +323,22 @@ def test_csv_report_export_and_persistence(tmp_path):
     assert res.status_code == 200
     assert "text/csv" in res.headers["content-type"]
     csv_text = res.text
-    assert "id,title,severity,cvss_score,cwe_id,owasp_category,location,target,remediation_summary" in csv_text
-    assert "vuln-xss-01,Reflected XSS,HIGH,7.5,CWE-79,A03:2021 - Injection,/search?q=test,http://127.0.0.1:3000/,Encode HTML output" in csv_text
+    assert (
+        "id,title,severity,cvss_score,cwe_id,owasp_category,location,target,remediation_summary"
+        in csv_text
+    )
+    assert (
+        "vuln-xss-01,Reflected XSS,HIGH,7.5,CWE-79,A03:2021 - Injection,/search?q=test,http://127.0.0.1:3000/,Encode HTML output"
+        in csv_text
+    )
 
     # 2. Test download disposition
     res_dl = client.get(f"/runs/{run_id}/report?format=csv&download=1")
     assert res_dl.status_code == 200
-    assert res_dl.headers.get("content-disposition") == f'attachment; filename="vapt_findings_{run_id}.csv"'
+    assert (
+        res_dl.headers.get("content-disposition")
+        == f'attachment; filename="vapt_findings_{run_id}.csv"'
+    )
 
     # Cleanup
     _RUNS.pop(run_id, None)

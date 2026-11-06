@@ -11,30 +11,26 @@ Verifies:
 8. SPA crawling & component inventory (Angular routes, APIs, query parameters, and components populated).
 9. Report canonical dataset (all 8 required fields populated for confirmed findings).
 """
-import json
-import socket
-import urllib.parse
-from pathlib import Path
+
 import pytest
 
-from strix.core.scanner.active_fuzzer import ActiveFuzzer
-from strix.core.scanner.component_analyzer import analyze_page_components
-from strix.core.scanner.crawler import WebSpider
 from strix.core.scanner.full_scanner import FullScanner
 from strix.core.scanner.passive_rules import SCAN_CATEGORIES, run_passive_rules
 from strix.core.scanner.port_scanner import scan_target_ports
 from strix.report.builder import render_html_report
-from strix.tools.reporting.tool import _do_create, _target_supports_https
+from strix.tools.reporting.tool import _do_create
 
 
 # =============================================================================
 # 1. CSP Validation & Calibration
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_csp_missing_calibrated_to_observation(tmp_path, monkeypatch):
     """Missing CSP header must be calibrated to Low/Info observation, not CRITICAL CVSS 9.4."""
     from strix.report.state import ReportState, set_global_report_state
+
     state = ReportState(tmp_path)
     set_global_report_state(state)
 
@@ -80,6 +76,7 @@ async def test_csp_missing_calibrated_to_observation(tmp_path, monkeypatch):
 # =============================================================================
 # 2. HSTS Validation
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_hsts_rejected_on_http_only_localhost():
@@ -137,6 +134,7 @@ def test_passive_rules_flags_hsts_on_https():
 # 3. HTTP PUT Validation
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_put_arbitrary_file_write_rejected_without_readback():
     """PUT HTTP 200 without verified unique marker read-back must be rejected as UNVERIFIED."""
@@ -176,6 +174,7 @@ async def test_put_arbitrary_file_write_rejected_without_readback():
 # 4. Network Scope Enforcement
 # =============================================================================
 
+
 def test_port_scanner_scope_isolation_for_localhost():
     """Localhost scan of 127.0.0.1:3000 must mark other open ports (e.g. 8000, 9090) as environmental."""
     ports = scan_target_ports("http://127.0.0.1:3000/", scan_mode="quick")
@@ -200,6 +199,7 @@ def test_full_scanner_excludes_out_of_scope_ports_from_candidates():
 # 5. GAP1 Accounting
 # =============================================================================
 
+
 def test_gap1_candidate_accounting_breakdown():
     """Candidate accounting must cleanly separate dispatched, investigated, validated, abandoned, and not_tested."""
     candidates = [
@@ -212,7 +212,11 @@ def test_gap1_candidate_accounting_breakdown():
 
     accounting = {
         "dispatched": len(candidates),
-        "investigated": sum(1 for c in candidates if c.get("state") in ("VALIDATED", "ABANDONED") or c.get("attempts", 0) > 0),
+        "investigated": sum(
+            1
+            for c in candidates
+            if c.get("state") in ("VALIDATED", "ABANDONED") or c.get("attempts", 0) > 0
+        ),
         "validated": sum(1 for c in candidates if c.get("state") == "VALIDATED"),
         "abandoned": sum(1 for c in candidates if c.get("state") == "ABANDONED"),
         "not_tested": sum(1 for c in candidates if c.get("state") == "NOT_TESTED"),
@@ -233,12 +237,25 @@ def test_gap1_candidate_accounting_breakdown():
 # 6. GAP2 Pivot Consistency
 # =============================================================================
 
+
 def test_gap2_pivot_event_sync():
     """Stats and dashboard pivot count must strictly derive from actual persisted pivot events."""
     pivot_events = [
-        {"event": "GAP2_PIVOT", "candidate_id": "c2", "outcome": "ABANDON", "attempts": 2, "next_candidate": "c3"},
+        {
+            "event": "GAP2_PIVOT",
+            "candidate_id": "c2",
+            "outcome": "ABANDON",
+            "attempts": 2,
+            "next_candidate": "c3",
+        },
     ]
-    pivots_count = len([e for e in pivot_events if e.get("event") == "GAP2_PIVOT" or e.get("type") in ("REDIRECT", "GAP2_PIVOT")])
+    pivots_count = len(
+        [
+            e
+            for e in pivot_events
+            if e.get("event") == "GAP2_PIVOT" or e.get("type") in ("REDIRECT", "GAP2_PIVOT")
+        ]
+    )
     assert pivots_count == 1
 
     # Empty pivot events list must yield 0 pivots
@@ -248,6 +265,7 @@ def test_gap2_pivot_event_sync():
 # =============================================================================
 # 7. Category & Rule Count Agreement
 # =============================================================================
+
 
 def test_scan_categories_rule_count_matches_88_across_8_categories():
     """SCAN_CATEGORIES must have exactly 8 categories and 88 total tests."""
@@ -259,6 +277,7 @@ def test_scan_categories_rule_count_matches_88_across_8_categories():
 # =============================================================================
 # 8. Report Canonical Dataset (All 8 Canonical Fields)
 # =============================================================================
+
 
 def test_report_builder_renders_all_eight_canonical_fields():
     """HTML report must contain all 8 canonical fields for confirmed findings."""

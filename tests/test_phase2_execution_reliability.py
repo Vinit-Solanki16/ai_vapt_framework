@@ -12,31 +12,29 @@ Verifies:
 9. No-Docker execution completes without padding turns to max_turns.
 10. GAP completion gate blocks premature completion in subprocess execution context.
 """
+
 from __future__ import annotations
 
 import argparse
-import asyncio
+import importlib
 import json
+import sys
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from openai import RateLimitError
 
-from strix.core.agents import AgentCoordinator
-from strix.core.hooks import BudgetExceededError
 from strix.core import gap_bridge
 from strix.interface import api
 from strix.interface.api import (
+    _RUNS,
     _clean_terminal_line,
+    _execute_run_worker,
     _extract_clean_error,
     _is_decorative_line,
-    _execute_run_worker,
-    _RUNS,
 )
-import sys
-import importlib
+
+
 importlib.import_module("strix.interface.main")
 main_mod = sys.modules["strix.interface.main"]
 from strix.interface.schemas import RunRequest
@@ -50,7 +48,9 @@ def clean_global_state():
     set_global_report_state(None)
 
 
-def _patch_main_preflight(monkeypatch: pytest.MonkeyPatch, args: argparse.Namespace, tmp_path: Path):
+def _patch_main_preflight(
+    monkeypatch: pytest.MonkeyPatch, args: argparse.Namespace, tmp_path: Path
+):
     monkeypatch.setattr(main_mod, "start_import_warmup", lambda: None)
     monkeypatch.setattr(main_mod, "wait_for_import_warmup", lambda: None)
     monkeypatch.setattr(main_mod, "start_background_check", lambda: None)
@@ -64,7 +64,9 @@ def _patch_main_preflight(monkeypatch: pytest.MonkeyPatch, args: argparse.Namesp
     monkeypatch.setattr(main_mod, "parse_arguments", lambda: args)
 
 
-def test_1_subprocess_exit_code_1_without_finish_scan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_1_subprocess_exit_code_1_without_finish_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Subprocess must exit with code 1 if it terminates without calling finish_scan."""
     report_state = ReportState(tmp_path)
     set_global_report_state(report_state)
@@ -109,7 +111,6 @@ def test_2_rate_limit_error_exit_code_1(tmp_path: Path, monkeypatch: pytest.Monk
     async def mock_run_cli(_args):
         report_state.scan_ended_exit_reason = "rate_limited"
         report_state.save_run_data(status="failed")
-        return None
 
     monkeypatch.setattr("strix.interface.cli.run_cli", mock_run_cli)
     _patch_main_preflight(monkeypatch, args, tmp_path)
@@ -138,7 +139,6 @@ def test_3_budget_exceeded_error_exit_code_1(tmp_path: Path, monkeypatch: pytest
     async def mock_run_cli(_args):
         report_state.scan_ended_exit_reason = "budget_exceeded"
         report_state.save_run_data(status="stopped")
-        return None
 
     monkeypatch.setattr("strix.interface.cli.run_cli", mock_run_cli)
     _patch_main_preflight(monkeypatch, args, tmp_path)
@@ -150,7 +150,9 @@ def test_3_budget_exceeded_error_exit_code_1(tmp_path: Path, monkeypatch: pytest
     assert report_state.run_record.get("status") == "stopped"
 
 
-def test_4_valid_zero_finding_completion_exit_code_0(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_4_valid_zero_finding_completion_exit_code_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Valid completed scan with 0 findings must exit with code 0 (no exception/exit 1)."""
     report_state = ReportState(tmp_path)
     set_global_report_state(report_state)
@@ -172,7 +174,6 @@ def test_4_valid_zero_finding_completion_exit_code_0(tmp_path: Path, monkeypatch
             technical_analysis="No issues found",
             recommendations="Maintain patch cadence",
         )
-        return None
 
     monkeypatch.setattr("strix.interface.cli.run_cli", mock_run_cli)
     _patch_main_preflight(monkeypatch, args, tmp_path)
@@ -183,7 +184,9 @@ def test_4_valid_zero_finding_completion_exit_code_0(tmp_path: Path, monkeypatch
     assert len(report_state.vulnerability_reports) == 0
 
 
-def test_5_api_marks_run_failed_when_run_json_not_completed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_5_api_marks_run_failed_when_run_json_not_completed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """API marks run as failed if returncode is 0 but run.json status is 'stopped'."""
     monkeypatch.setattr("strix.core.paths.runs_base_dir", lambda: tmp_path)
     monkeypatch.setattr(api, "runs_base_dir", lambda: tmp_path)
@@ -193,10 +196,14 @@ def test_5_api_marks_run_failed_when_run_json_not_completed(tmp_path: Path, monk
     u_dir = tmp_path / "strix-underlying-01"
     u_dir.mkdir(parents=True, exist_ok=True)
     # Write underlying run.json with status="stopped" (e.g. premature exit)
-    (u_dir / "run.json").write_text(json.dumps({
-        "status": "stopped",
-        "scan_ended_exit_reason": "missing_finish_scan",
-    }))
+    (u_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "status": "stopped",
+                "scan_ended_exit_reason": "missing_finish_scan",
+            }
+        )
+    )
 
     req = RunRequest(
         scenario="autonomous_test",
@@ -242,7 +249,9 @@ def test_5_api_marks_run_failed_when_run_json_not_completed(tmp_path: Path, monk
     assert "satisfying completion requirements" in run_entry.get("error", "")
 
 
-def test_6_api_marks_run_completed_with_zero_findings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_6_api_marks_run_completed_with_zero_findings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """API marks run as completed when run.json status is 'completed' with 0 findings."""
     monkeypatch.setattr("strix.core.paths.runs_base_dir", lambda: tmp_path)
     monkeypatch.setattr(api, "runs_base_dir", lambda: tmp_path)
@@ -251,10 +260,14 @@ def test_6_api_marks_run_completed_with_zero_findings(tmp_path: Path, monkeypatc
     run_id = "run-test-zero-findings"
     u_dir = tmp_path / "strix-underlying-zero"
     u_dir.mkdir(parents=True, exist_ok=True)
-    (u_dir / "run.json").write_text(json.dumps({
-        "status": "completed",
-        "scan_results": {"executive_summary": "All secure"},
-    }))
+    (u_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "scan_results": {"executive_summary": "All secure"},
+            }
+        )
+    )
     (u_dir / "vulnerabilities.json").write_text("[]")
 
     req = RunRequest(
@@ -315,10 +328,14 @@ def test_7_error_extraction_strips_rich_box_characters():
     # Line cleaner unit checks
     assert _is_decorative_line("╭───────────────────────╮") is True
     assert _is_decorative_line("│ Hello World │") is False
-    assert _clean_terminal_line("│   SyntaxError: invalid token   │") == "SyntaxError: invalid token"
+    assert (
+        _clean_terminal_line("│   SyntaxError: invalid token   │") == "SyntaxError: invalid token"
+    )
 
 
-def test_8_subprocess_failure_preserves_partial_findings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_8_subprocess_failure_preserves_partial_findings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Partial findings in vulnerabilities.json must be preserved even if subprocess fails."""
     monkeypatch.setattr("strix.core.paths.runs_base_dir", lambda: tmp_path)
     monkeypatch.setattr(api, "runs_base_dir", lambda: tmp_path)
@@ -328,26 +345,34 @@ def test_8_subprocess_failure_preserves_partial_findings(tmp_path: Path, monkeyp
     u_dir = tmp_path / "strix-underlying-partial"
     u_dir.mkdir(parents=True, exist_ok=True)
     # Subprocess stopped due to budget or crash
-    (u_dir / "run.json").write_text(json.dumps({
-        "status": "stopped",
-        "scan_ended_exit_reason": "budget_exceeded",
-    }))
-    (u_dir / "vulnerabilities.json").write_text(json.dumps([
-        {
-            "id": "vuln-01",
-            "title": "SQL Injection in Search Form",
-            "severity": "HIGH",
-            "endpoint": "/search",
-            "detail": "' OR 1=1-- payload returned database error",
-        },
-        {
-            "id": "vuln-02",
-            "title": "Missing Security Headers",
-            "severity": "LOW",
-            "endpoint": "/",
-            "detail": "Strict-Transport-Security header absent",
-        },
-    ]))
+    (u_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "status": "stopped",
+                "scan_ended_exit_reason": "budget_exceeded",
+            }
+        )
+    )
+    (u_dir / "vulnerabilities.json").write_text(
+        json.dumps(
+            [
+                {
+                    "id": "vuln-01",
+                    "title": "SQL Injection in Search Form",
+                    "severity": "HIGH",
+                    "endpoint": "/search",
+                    "detail": "' OR 1=1-- payload returned database error",
+                },
+                {
+                    "id": "vuln-02",
+                    "title": "Missing Security Headers",
+                    "severity": "LOW",
+                    "endpoint": "/",
+                    "detail": "Strict-Transport-Security header absent",
+                },
+            ]
+        )
+    )
 
     req = RunRequest(
         scenario="autonomous_test",
@@ -438,7 +463,9 @@ def test_9_no_docker_execution_does_not_pad_turns(tmp_path: Path, monkeypatch: p
     assert run_entry["progress"]["current"] < 50
 
 
-def test_10_gap_completion_gate_in_subprocess_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_10_gap_completion_gate_in_subprocess_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Completion gate blocks finish_scan when uninvestigated candidates remain in queue."""
     control_dir = tmp_path / "control"
     control_dir.mkdir(parents=True, exist_ok=True)
@@ -446,8 +473,18 @@ def test_10_gap_completion_gate_in_subprocess_context(tmp_path: Path, monkeypatc
     # Populate candidate queue
     queue_payload = {
         "candidates": [
-            {"candidate_id": "cand-01", "title": "SQL Injection in Login", "endpoint": "/login", "target": "http://test.local"},
-            {"candidate_id": "cand-02", "title": "SSRF in Webhook", "endpoint": "/webhook", "target": "http://test.local"},
+            {
+                "candidate_id": "cand-01",
+                "title": "SQL Injection in Login",
+                "endpoint": "/login",
+                "target": "http://test.local",
+            },
+            {
+                "candidate_id": "cand-02",
+                "title": "SSRF in Webhook",
+                "endpoint": "/webhook",
+                "target": "http://test.local",
+            },
         ]
     }
     (control_dir / "gap1_queue.json").write_text(json.dumps(queue_payload))

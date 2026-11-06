@@ -1,13 +1,13 @@
 """Fail-closed target scope validator and SSRF safeguard for STRIX AI-VAPT."""
+
 from __future__ import annotations
 
 import ipaddress
 import logging
-import os
 import socket
 from dataclasses import dataclass, field
-from typing import List, Optional
 from urllib.parse import urlparse
+
 
 logger = logging.getLogger("strix.core.safety.scope")
 
@@ -22,32 +22,34 @@ class TargetValidationResult:
     preflight_status: str
     reachable: bool
     target_url: str
-    resolved_host: Optional[str] = None
-    port: Optional[int] = None
-    http_status: Optional[int] = None
+    resolved_host: str | None = None
+    port: int | None = None
+    http_status: int | None = None
     detail: str = ""
-    scheme: Optional[str] = None
-    hostname: Optional[str] = None
-    normalized_host: Optional[str] = None
-    in_scope: Optional[bool] = None
-    scope_kind: Optional[str] = None
-    external_scope: Optional[bool] = None
-    acknowledgement_required: Optional[bool] = None
-    address_validation: Optional[str] = None
-    resolved_ips: List[str] = field(default_factory=list)
+    scheme: str | None = None
+    hostname: str | None = None
+    normalized_host: str | None = None
+    in_scope: bool | None = None
+    scope_kind: str | None = None
+    external_scope: bool | None = None
+    acknowledgement_required: bool | None = None
+    address_validation: str | None = None
+    resolved_ips: list[str] = field(default_factory=list)
 
 
-def _unwrap_nat64(ip_obj: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+def _unwrap_nat64(
+    ip_obj: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """Unwrap RFC 6052 NAT64 embedded IPv4 address if present."""
     if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj in NAT64_PREFIX:
-        embedded_v4_int = ip_obj._ip & 0xFFFFFFFF
+        embedded_v4_int = int(ip_obj) & 0xFFFFFFFF
         return ipaddress.IPv4Address(embedded_v4_int)
     return ip_obj
 
 
 def validate_web_target(
     target_url: str,
-    engagement_id: Optional[str] = None,
+    engagement_id: str | None = None,
 ) -> TargetValidationResult:
     """Strict, fail-closed validation of target URL against ethical scope rules."""
     raw = (target_url or "").strip()
@@ -88,11 +90,11 @@ def validate_web_target(
     normalized_host = hostname.lower().strip()
 
     # Resolve IP addresses
-    resolved_ips: List[str] = []
+    resolved_ips: list[str] = []
     try:
         addr_info = socket.getaddrinfo(normalized_host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
         for _, _, _, _, sockaddr in addr_info:
-            ip_str = sockaddr[0]
+            ip_str = str(sockaddr[0])
             if ip_str not in resolved_ips:
                 resolved_ips.append(ip_str)
     except socket.gaierror as e:
@@ -164,4 +166,3 @@ def validate_web_target(
         resolved_ips=resolved_ips,
         detail="Target authorized under ethical scope boundary.",
     )
-

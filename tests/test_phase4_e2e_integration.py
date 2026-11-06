@@ -9,30 +9,26 @@ Implements controlled end-to-end verification workflows:
 - Test F: Concurrent assessments (Isolation of control dirs, queues, progress, reports).
 - Test G: Final report integrity (Cross-validation of run.json, vulnerabilities.json, coverage.json, decision_trace.jsonl, penetration_test_report.md).
 """
+
 from __future__ import annotations
 
-import asyncio
 import json
-import re
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from strix.core import gap_bridge
-from strix.core.decision_engine.schemas import ActionCandidate, Outcome
 from strix.interface import api
 from strix.interface.api import (
-    app,
     _RUNS,
     _execute_run_worker,
     _generate_markdown_report,
-    runs_base_dir,
-    stream_run_events,
+    app,
 )
-from strix.interface.schemas import RunRequest, RunStatus
+from strix.interface.schemas import RunRequest
+
 
 client = TestClient(app)
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -148,7 +144,9 @@ def test_workflow_standard_assessment(tmp_path: Path, monkeypatch: pytest.Monkey
 # =========================================================================
 # Test C: Deep Assessment Workflow & Completion Gate
 # =========================================================================
-def test_workflow_deep_assessment_and_completion_gate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_workflow_deep_assessment_and_completion_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test C: Launch Deep mode, verify 250-turn ceiling and completion gate enforcement."""
     monkeypatch.setattr(api, "runs_base_dir", lambda: tmp_path)
     monkeypatch.setattr("strix.core.paths.runs_base_dir", lambda: tmp_path)
@@ -212,15 +210,23 @@ def test_workflow_zero_finding_assessment(tmp_path: Path, monkeypatch: pytest.Mo
     # Subprocess runs and exits 0 with a valid run.json with 0 findings
     u_dir = tmp_path / "strix_zero_finding_run"
     u_dir.mkdir(parents=True, exist_ok=True)
-    (u_dir / "run.json").write_text(json.dumps({
-        "status": "completed",
-        "scan_ended_exit_reason": "Assessment completed legitimately with no vulnerabilities discovered",
-    }), encoding="utf-8")
+    (u_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "scan_ended_exit_reason": "Assessment completed legitimately with no vulnerabilities discovered",
+            }
+        ),
+        encoding="utf-8",
+    )
     (u_dir / "vulnerabilities.json").write_text(json.dumps([]), encoding="utf-8")
-    (u_dir / "coverage.json").write_text(json.dumps([
-        {"surface": "/", "risk_area": "Authentication", "outcome": "no_issue_found"}
-    ]), encoding="utf-8")
-    (u_dir / "penetration_test_report.md").write_text("# Pentest Report\nNo findings.", encoding="utf-8")
+    (u_dir / "coverage.json").write_text(
+        json.dumps([{"surface": "/", "risk_area": "Authentication", "outcome": "no_issue_found"}]),
+        encoding="utf-8",
+    )
+    (u_dir / "penetration_test_report.md").write_text(
+        "# Pentest Report\nNo findings.", encoding="utf-8"
+    )
 
     mock_proc = MagicMock()
     mock_proc.returncode = 0
@@ -249,8 +255,10 @@ def test_workflow_zero_finding_assessment(tmp_path: Path, monkeypatch: pytest.Mo
     }
     _RUNS[run_id] = run_entry
 
-    with patch("subprocess.Popen", return_value=mock_proc), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]):
+    with (
+        patch("subprocess.Popen", return_value=mock_proc),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+    ):
         _execute_run_worker(run_id, req, runtime_key=None)
 
     res_run = _RUNS[run_id]
@@ -264,12 +272,15 @@ def test_workflow_zero_finding_assessment(tmp_path: Path, monkeypatch: pytest.Mo
 # =========================================================================
 # Test E: Failure Handling
 # =========================================================================
-@pytest.mark.parametrize("fail_type,return_code,u_status,timed_out,expected_reason", [
-    ("rate_limit", 1, None, False, "RateLimitError"),
-    ("crash", 2, None, False, "crash error"),
-    ("timeout", 0, None, True, "wall-clock limit"),
-    ("incomplete_run_json", 0, "incomplete", False, "satisfying completion requirements"),
-])
+@pytest.mark.parametrize(
+    "fail_type,return_code,u_status,timed_out,expected_reason",
+    [
+        ("rate_limit", 1, None, False, "RateLimitError"),
+        ("crash", 2, None, False, "crash error"),
+        ("timeout", 0, None, True, "wall-clock limit"),
+        ("incomplete_run_json", 0, "incomplete", False, "satisfying completion requirements"),
+    ],
+)
 def test_workflow_failure_handling(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -295,10 +306,15 @@ def test_workflow_failure_handling(
     u_dir = tmp_path / f"strix_run_{fail_type}"
     u_dir.mkdir(parents=True, exist_ok=True)
     if u_status:
-        (u_dir / "run.json").write_text(json.dumps({
-            "status": u_status,
-            "scan_ended_exit_reason": "budget exhausted",
-        }), encoding="utf-8")
+        (u_dir / "run.json").write_text(
+            json.dumps(
+                {
+                    "status": u_status,
+                    "scan_ended_exit_reason": "budget exhausted",
+                }
+            ),
+            encoding="utf-8",
+        )
 
     mock_proc = MagicMock()
     mock_proc.returncode = return_code
@@ -341,9 +357,11 @@ def test_workflow_failure_handling(
     _RUNS[run_id] = run_entry
 
     wall_timeout = 0.001 if timed_out else 1800.0
-    with patch("subprocess.Popen", return_value=mock_proc), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]), \
-         patch("strix.interface.api.time.time", side_effect=[0, 10000] if timed_out else None):
+    with (
+        patch("subprocess.Popen", return_value=mock_proc),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+        patch("strix.interface.api.time.time", side_effect=[0, 10000] if timed_out else None),
+    ):
         _execute_run_worker(run_id, req, runtime_key=None)
 
     failed_run = _RUNS[run_id]
@@ -370,12 +388,22 @@ def test_workflow_concurrent_assessments(tmp_path: Path, monkeypatch: pytest.Mon
     ctrl_2.mkdir(parents=True, exist_ok=True)
 
     # Populate different GAP-1 queues
-    (ctrl_1 / "gap1_queue.json").write_text(json.dumps({
-        "candidates": [{"candidate_id": "cand-run1", "title": "Run 1 SQLi"}],
-    }), encoding="utf-8")
-    (ctrl_2 / "gap1_queue.json").write_text(json.dumps({
-        "candidates": [{"candidate_id": "cand-run2", "title": "Run 2 XSS"}],
-    }), encoding="utf-8")
+    (ctrl_1 / "gap1_queue.json").write_text(
+        json.dumps(
+            {
+                "candidates": [{"candidate_id": "cand-run1", "title": "Run 1 SQLi"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (ctrl_2 / "gap1_queue.json").write_text(
+        json.dumps(
+            {
+                "candidates": [{"candidate_id": "cand-run2", "title": "Run 2 XSS"}],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     # Record outcomes in each run
     gap_bridge.record_outcome(
@@ -453,4 +481,3 @@ def test_workflow_final_report_integrity(tmp_path: Path, monkeypatch: pytest.Mon
     assert run_data["findings"][0]["evidence_hash"] in report_md
     assert "' OR 1=1 --" in report_md
     assert "parameterized prepared statements" in report_md
-

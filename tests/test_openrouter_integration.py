@@ -1,23 +1,22 @@
 """Regression and integration tests for OpenRouter LLM routing, credential propagation,
 error handling, and frontend reporting in STRIX AI-VAPT.
 """
+
 from __future__ import annotations
 
-import os
-from unittest.mock import MagicMock, patch
-import pytest
+from unittest.mock import patch
 
+from strix.interface.api import _extract_clean_error, _redact_secrets
+from strix.llm.provider_validation import (
+    fetch_openrouter_free_models,
+    validate_openrouter_credential,
+)
 from strix.llm.router import (
     DEFAULT_OPENROUTER_MODEL,
     DEPRECATED_OPENROUTER_FREE_MODELS,
     format_openrouter_model,
     resolve_model_kwargs,
 )
-from strix.llm.provider_validation import (
-    fetch_openrouter_free_models,
-    validate_openrouter_credential,
-)
-from strix.interface.api import _extract_clean_error, _redact_secrets
 
 
 class TestOpenRouterModelFormatting:
@@ -85,12 +84,16 @@ class TestLiteLLMConfigurationAndRouter:
         assert ol_kwargs["model"] == "ollama/qwen2.5:1.5b"
 
         # Google Gemini
-        g_kwargs = resolve_model_kwargs(provider="google", model_name="gemini-2.0-flash", api_key="AIzaSyTest")
+        g_kwargs = resolve_model_kwargs(
+            provider="google", model_name="gemini-2.0-flash", api_key="AIzaSyTest"
+        )
         assert g_kwargs["model"] == "gemini/gemini-2.0-flash"
         assert g_kwargs["api_key"] == "AIzaSyTest"
 
         # OpenAI
-        o_kwargs = resolve_model_kwargs(provider="openai", model_name="gpt-4o-mini", api_key="sk-test")
+        o_kwargs = resolve_model_kwargs(
+            provider="openai", model_name="gpt-4o-mini", api_key="sk-test"
+        )
         assert o_kwargs["model"] == "gpt-4o-mini"
         assert o_kwargs["api_key"] == "sk-test"
 
@@ -99,6 +102,7 @@ class TestDockerEnvironmentPropagation:
     def test_docker_environment_contains_openrouter_vars(self):
         """5. Docker sandbox Environment receives propagated OpenRouter vars."""
         import inspect
+
         from strix.runtime.session_manager import create_or_reuse
 
         src = inspect.getsource(create_or_reuse)
@@ -150,10 +154,9 @@ class TestCredentialValidationAndMockResponses:
 
     def test_network_timeout(self):
         """11. Network timeout during catalogue fetch falls back gracefully to default free models."""
-        import socket
 
         with patch("urllib.request.urlopen") as mock_open:
-            mock_open.side_effect = socket.timeout("timed out")
+            mock_open.side_effect = TimeoutError("timed out")
             fallback = fetch_openrouter_free_models()
             assert len(fallback) > 0
             assert any("nemotron-3.5-lightning" in m.id for m in fallback)

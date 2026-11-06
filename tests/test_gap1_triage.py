@@ -1,7 +1,6 @@
 """Tests for GAP-1 Exploit Quality Scoring and Prioritization."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from strix.core.triage.exploit_assessor import (
     ExploitAssessment,
@@ -10,7 +9,7 @@ from strix.core.triage.exploit_assessor import (
     run_gap1_triage,
 )
 from strix.core.triage.owasp_mapping import map_finding_to_owasp
-from strix.core.triage.scoring import calculate_composite_score, rank_action_candidates
+from strix.core.triage.scoring import calculate_composite_score
 
 
 def test_owasp_mapping():
@@ -64,4 +63,3 @@ def test_run_gap1_triage_queue_order():
     assert len(candidates) > 0
     scores = [c["composite_score"] for c in candidates]
     assert scores == sorted(scores, reverse=True)
-

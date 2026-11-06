@@ -1,9 +1,10 @@
 """Base active non-destructive validator with SHA-256 cryptographic evidence capture."""
+
 from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -25,6 +26,5 @@ class BaseValidator:
             raw_content = raw_content.encode("utf-8")
         return hashlib.sha256(raw_content).hexdigest()
 
-    def validate(self, target_url: str, candidate: Dict[str, Any]) -> ValidationResult:
+    def validate(self, target_url: str, candidate: dict[str, Any]) -> ValidationResult:
         raise NotImplementedError
-

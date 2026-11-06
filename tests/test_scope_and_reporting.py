@@ -1,8 +1,8 @@
 """Tests for Scope Gatekeeper, Cryptographic Evidence, and Audit Reporting."""
+
 from __future__ import annotations
 
 import hashlib
-import pytest
 
 from strix.core.safety.scope_validator import validate_web_target
 from strix.report.builder import render_html_report
@@ -97,5 +97,3 @@ def test_report_builder_xss_payload_escaped():
     # Check print-friendly CSS is present
     assert "@media print" in html
     assert "break-inside: avoid" in html
-
-

@@ -1,14 +1,15 @@
 """Schemas and state models for the GAP-2 Decision Engine."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class CandidateState(str, Enum):
@@ -37,18 +38,18 @@ class PivotAction(BaseModel):
     candidate_id: str
     attempt: int
     max_attempts: int
-    to_candidate: Optional[str] = None
-    reason: Optional[str] = None
+    to_candidate: str | None = None
+    reason: str | None = None
 
 
 class PivotEvent(BaseModel):
     timestamp: str = Field(default_factory=_utc_now)
     type: str  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE
-    candidate_id: Optional[str] = None
-    attempt: Optional[int] = None
-    max_attempts: Optional[int] = None
-    reason: Optional[str] = None
-    to_candidate: Optional[str] = None
+    candidate_id: str | None = None
+    attempt: int | None = None
+    max_attempts: int | None = None
+    reason: str | None = None
+    to_candidate: str | None = None
 
 
 class ActionCandidate(BaseModel):
@@ -60,7 +61,6 @@ class ActionCandidate(BaseModel):
     state: CandidateState = CandidateState.PENDING
     attempts: int = 0
     max_attempts: int = 2
-    outcome: Optional[Outcome] = None
-    evidence_hash: Optional[str] = None
+    outcome: Outcome | None = None
+    evidence_hash: str | None = None
     detail: str = ""
-

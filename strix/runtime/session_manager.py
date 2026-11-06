@@ -315,7 +315,7 @@ async def create_or_reuse(
     # agent-browser CDP daemon's localhost traffic from looping back
     # through Caido.
     container_caido_url = f"http://127.0.0.1:{_CONTAINER_CAIDO_PORT}"
-    container_env: dict[str, str] = {
+    container_env: dict[str, Any] = {
         "PYTHONUNBUFFERED": "1",
         "HOST_GATEWAY": "host.docker.internal",
         **_host_identity_env(),

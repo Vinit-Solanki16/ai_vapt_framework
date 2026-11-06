@@ -98,32 +98,44 @@ def run_web(argv: list[str]) -> int:
 
         def _open() -> None:
             # Under WSL, open via Windows host cmd.exe or wslview directly
-            is_wsl = os.path.exists("/proc/sys/fs/binfmt_misc/WSLInterop") or "microsoft" in platform.uname().release.lower()
+            is_wsl = (
+                os.path.exists("/proc/sys/fs/binfmt_misc/WSLInterop")
+                or "microsoft" in platform.uname().release.lower()
+            )
             if is_wsl:
                 for cmd in ["/mnt/c/Windows/system32/cmd.exe", "cmd.exe"]:
                     if shutil.which(cmd):
                         try:
-                            subprocess.run([cmd, "/c", "start", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                            subprocess.run(
+                                [cmd, "/c", "start", url],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                check=False,
+                            )
                             return
                         except Exception:
                             pass
                 if shutil.which("wslview"):
                     try:
-                        subprocess.run(["wslview", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                        subprocess.run(
+                            ["wslview", url],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=False,
+                        )
                         return
                     except Exception:
                         pass
 
             # Native desktop browser: suppress stderr to prevent gio noise on headless systems
-            with contextlib.suppress(Exception):
-                with open(os.devnull, "w") as devnull:
-                    old_stderr = os.dup(2)
-                    try:
-                        os.dup2(devnull.fileno(), 2)
-                        webbrowser.open(url)
-                    finally:
-                        os.dup2(old_stderr, 2)
-                        os.close(old_stderr)
+            with contextlib.suppress(Exception), open(os.devnull, "w") as devnull:
+                old_stderr = os.dup(2)
+                try:
+                    os.dup2(devnull.fileno(), 2)
+                    webbrowser.open(url)
+                finally:
+                    os.dup2(old_stderr, 2)
+                    os.close(old_stderr)
 
         threading.Timer(1.0, _open).start()
 

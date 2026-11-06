@@ -19,11 +19,11 @@ Validates:
    - Records executed turns in stats.attempts, not max_turns.
    - Marks unaddressed candidates as NOT_TESTED and sets run status to "partial".
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
 
 import pytest
 
@@ -238,7 +238,9 @@ def test_partial_status_when_candidates_untested():
 
     untested_count = 0
     for cand in candidates:
-        if cand.get("state") in ("PENDING", None) or (cand.get("attempts", 0) == 0 and cand.get("state") not in ("VALIDATED", "ABANDONED")):
+        if cand.get("state") in ("PENDING", None) or (
+            cand.get("attempts", 0) == 0 and cand.get("state") not in ("VALIDATED", "ABANDONED")
+        ):
             cand["state"] = "NOT_TESTED"
             cand["status"] = "NOT_TESTED"
             untested_count += 1

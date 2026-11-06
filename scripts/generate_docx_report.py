@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Generate the complete, professionally formatted AI-VAPT Research Report DOCX."""
+
 import os
 import re
-import docx
+
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import Inches, Pt, RGBColor
+
 
 def build_docx():
     doc = Document()
@@ -19,7 +21,7 @@ def build_docx():
         section.bottom_margin = Inches(1.0)
         section.left_margin = Inches(1.0)
         section.right_margin = Inches(1.0)
-        
+
         # Header
         header = section.header
         hp = header.paragraphs[0]
@@ -121,7 +123,11 @@ def build_docx():
         return p
 
     def add_fig(img_path, caption):
-        full_path = os.path.join("docs/research/final_report", img_path) if not os.path.exists(img_path) else img_path
+        full_path = (
+            os.path.join("docs/research/final_report", img_path)
+            if not os.path.exists(img_path)
+            else img_path
+        )
         if os.path.exists(full_path):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -129,7 +135,7 @@ def build_docx():
             p.paragraph_format.space_after = Pt(4)
             run = p.add_run()
             run.add_picture(full_path, width=Inches(5.8))
-            
+
             cap = doc.add_paragraph()
             cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
             cap.paragraph_format.space_after = Pt(12)
@@ -145,7 +151,7 @@ def build_docx():
         t = doc.add_table(rows=len(rows) + 1, cols=num_cols)
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         t.autofit = True
-        
+
         hdr_cells = t.rows[0].cells
         for i, title in enumerate(headers):
             hdr_cells[i].text = title
@@ -156,10 +162,10 @@ def build_docx():
                 r.font.size = Pt(9)
                 r.font.color.rgb = RGBColor(255, 255, 255)
             tcPr = hdr_cells[i]._tc.get_or_add_tcPr()
-            shd = OxmlElement('w:shd')
-            shd.set(qn('w:val'), 'clear')
-            shd.set(qn('w:color'), 'auto')
-            shd.set(qn('w:fill'), '1F4E79')
+            shd = OxmlElement("w:shd")
+            shd.set(qn("w:val"), "clear")
+            shd.set(qn("w:color"), "auto")
+            shd.set(qn("w:fill"), "1F4E79")
             tcPr.append(shd)
 
         for r_idx, row in enumerate(rows):
@@ -175,17 +181,17 @@ def build_docx():
                     r.font.color.rgb = DARK_GRAY
                 if r_idx % 2 == 1:
                     tcPr = row_cells[c_idx]._tc.get_or_add_tcPr()
-                    shd = OxmlElement('w:shd')
-                    shd.set(qn('w:val'), 'clear')
-                    shd.set(qn('w:color'), 'auto')
-                    shd.set(qn('w:fill'), 'F2F4F7')
+                    shd = OxmlElement("w:shd")
+                    shd.set(qn("w:val"), "clear")
+                    shd.set(qn("w:color"), "auto")
+                    shd.set(qn("w:fill"), "F2F4F7")
                     tcPr.append(shd)
 
         doc.add_paragraph().paragraph_format.space_after = Pt(6)
 
     # Read the markdown source
     md_path = "docs/research/final_report/AI_VAPT_Comprehensive_Research_Report.md"
-    with open(md_path, "r", encoding="utf-8") as f:
+    with open(md_path, encoding="utf-8") as f:
         md_text = f.read()
 
     lines = md_text.splitlines()
@@ -279,13 +285,13 @@ def build_docx():
             in_table = False
 
         if line.startswith("- "):
-            p = doc.add_paragraph(style='List Bullet')
+            p = doc.add_paragraph(style="List Bullet")
             p.paragraph_format.space_after = Pt(3)
             run = p.add_run(line[2:])
             run.font.size = Pt(10)
             run.font.color.rgb = DARK_GRAY
         elif re.match(r"^\d+\.\s", line):
-            p = doc.add_paragraph(style='List Number')
+            p = doc.add_paragraph(style="List Number")
             p.paragraph_format.space_after = Pt(3)
             run = p.add_run(re.sub(r"^\d+\.\s", "", line))
             run.font.size = Pt(10)
@@ -300,6 +306,7 @@ def build_docx():
     doc.save(out_docx)
     size_kb = os.path.getsize(out_docx) / 1024
     print(f"Generated DOCX report successfully: {out_docx} ({size_kb:.1f} KB)")
+
 
 if __name__ == "__main__":
     build_docx()

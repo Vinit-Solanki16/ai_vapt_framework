@@ -560,7 +560,9 @@ def main() -> None:
             logger.error(
                 "Scan did not complete successfully (status: %s, exit_reason: %s)",
                 report_state.run_record.get("status") if report_state else "none",
-                getattr(report_state, "scan_ended_exit_reason", None) if report_state else "unknown",
+                getattr(report_state, "scan_ended_exit_reason", None)
+                if report_state
+                else "unknown",
             )
             sys.exit(1)
         if findings_fail_build(report_state.vulnerability_reports, args.fail_on):

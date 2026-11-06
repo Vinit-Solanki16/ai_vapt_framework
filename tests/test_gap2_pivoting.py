@@ -1,7 +1,6 @@
 """Tests for GAP-2 Bounded Dynamic Decision-Pivoting Engine."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from strix.core.decision_engine.engine import DecisionEngine
 from strix.core.decision_engine.schemas import (
@@ -67,4 +66,3 @@ def test_exhaustion_completes():
     action = engine.record_outcome("c1", Outcome.FAIL_TIMEOUT)
     assert action.action == PivotActionType.COMPLETE
     assert engine.candidates["c1"].state == CandidateState.ABANDONED
-

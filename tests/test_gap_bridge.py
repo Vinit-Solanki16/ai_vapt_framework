@@ -1,4 +1,5 @@
 """GAP-1 queue injection and GAP-2 pivot bridge tests."""
+
 from __future__ import annotations
 
 import json
@@ -91,11 +92,7 @@ def test_build_root_task_injects_gap1_block(tmp_path, monkeypatch):
 
 def test_build_root_task_without_control_dir_is_unchanged():
     task = build_root_task(
-        {
-            "targets": [
-                {"type": "web_application", "details": {"target_url": "http://example.test"}}
-            ]
-        }
+        {"targets": [{"type": "web_application", "details": {"target_url": "http://example.test"}}]}
     )
     assert "AI_VAPT GAP-1" not in task
 

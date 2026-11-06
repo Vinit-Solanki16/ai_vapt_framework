@@ -6,6 +6,7 @@ Discovers application attack surfaces without external headless browser dependen
 - Discovers script references and inline API endpoints
 - Respects depth and page budgets per scan mode (quick, standard, deep)
 """
+
 from __future__ import annotations
 
 import collections
@@ -14,14 +15,33 @@ import re
 import ssl
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
+
 
 logger = logging.getLogger("strix.core.scanner.crawler")
 
 SKIP_EXTENSIONS = {
-    ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff",
-    ".woff2", ".ttf", ".eot", ".mp4", ".mp3", ".avi", ".pdf", ".zip",
-    ".tar", ".gz", ".rar", ".7z", ".map",
+    ".css",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".mp4",
+    ".mp3",
+    ".avi",
+    ".pdf",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".rar",
+    ".7z",
+    ".map",
 }
 
 
@@ -55,20 +75,20 @@ class WebSpider:
             self.max_depth = 1
             self.max_pages = 1
 
-        self.visited_urls: Set[str] = set()
-        self.discovered_paths: Set[str] = set()
-        self.forms: List[Dict[str, Any]] = []
-        self.parameters: Dict[str, Set[str]] = collections.defaultdict(set)
-        self.scripts: Set[str] = set()
-        self.api_endpoints: Set[str] = set()
+        self.visited_urls: set[str] = set()
+        self.discovered_paths: set[str] = set()
+        self.forms: list[dict[str, Any]] = []
+        self.parameters: dict[str, set[str]] = collections.defaultdict(set)
+        self.scripts: set[str] = set()
+        self.api_endpoints: set[str] = set()
 
         self._ctx = ssl.create_default_context()
         self._ctx.check_hostname = False
         self._ctx.verify_mode = ssl.CERT_NONE
 
-    def crawl(self) -> Dict[str, Any]:
+    def crawl(self) -> dict[str, Any]:
         """Execute recursive breadth-first crawl across target application."""
-        queue: collections.deque[Tuple[str, int]] = collections.deque()
+        queue: collections.deque[tuple[str, int]] = collections.deque()
         root_path = urllib.parse.urlsplit(self.base_url).path or "/"
         queue.append((self.base_url, 0))
         self.discovered_paths.add(root_path)
@@ -105,7 +125,10 @@ class WebSpider:
                 new_links = self._extract_links(current_url, html_text)
                 for link in new_links:
                     norm_link = self._normalize_url(link)
-                    if norm_link not in self.visited_urls and len(self.visited_urls) + len(queue) < self.max_pages:
+                    if (
+                        norm_link not in self.visited_urls
+                        and len(self.visited_urls) + len(queue) < self.max_pages
+                    ):
                         queue.append((link, depth + 1))
                         self.discovered_paths.add(urllib.parse.urlsplit(link).path or "/")
 
@@ -134,47 +157,61 @@ class WebSpider:
                 self.discovered_paths.add(api_ep)
 
             # Client-side SPA routes (e.g. Angular path: '...')
-            spa_routes = re.findall(r'path:[\"\x27`]([a-zA-Z0-9_\-/:*]+)[\"\x27`]', s_body)
+            spa_routes = re.findall(r"path:[\"\x27`]([a-zA-Z0-9_\-/:*]+)[\"\x27`]", s_body)
             for r in spa_routes:
                 if r != "**":
                     clean_r = "/" + r.lstrip("/")
                     self.discovered_paths.add(clean_r)
 
             # Query parameters from queryParams
-            qp_matches = re.findall(r'queryParams:\s*\{([^}]+)\}', s_body)
+            qp_matches = re.findall(r"queryParams:\s*\{([^}]+)\}", s_body)
             for qp in qp_matches:
-                for k in re.findall(r'([a-zA-Z0-9_]+)\s*:', qp):
+                for k in re.findall(r"([a-zA-Z0-9_]+)\s*:", qp):
                     self.parameters["/"].add(k)
 
         # Populate interactive form surfaces for discovered standard endpoints
-        if any("/rest/user/login" in ep for ep in self.api_endpoints) or any("/login" in p for p in self.discovered_paths):
-            self.forms.append({
-                "page_url": urllib.parse.urljoin(self.base_url, "/rest/user/login"),
-                "action": "/rest/user/login",
-                "method": "POST",
-                "fields": [{"name": "email", "type": "email"}, {"name": "password", "type": "password"}],
-            })
+        if any("/rest/user/login" in ep for ep in self.api_endpoints) or any(
+            "/login" in p for p in self.discovered_paths
+        ):
+            self.forms.append(
+                {
+                    "page_url": urllib.parse.urljoin(self.base_url, "/rest/user/login"),
+                    "action": "/rest/user/login",
+                    "method": "POST",
+                    "fields": [
+                        {"name": "email", "type": "email"},
+                        {"name": "password", "type": "password"},
+                    ],
+                }
+            )
             self.parameters["/rest/user/login"].update(["email", "password"])
 
-        if any("/api/Feedbacks" in ep for ep in self.api_endpoints) or any("/contact" in p for p in self.discovered_paths):
-            self.forms.append({
-                "page_url": urllib.parse.urljoin(self.base_url, "/api/Feedbacks"),
-                "action": "/api/Feedbacks",
-                "method": "POST",
-                "fields": [{"name": "comment", "type": "text"}, {"name": "rating", "type": "number"}],
-            })
+        if any("/api/Feedbacks" in ep for ep in self.api_endpoints) or any(
+            "/contact" in p for p in self.discovered_paths
+        ):
+            self.forms.append(
+                {
+                    "page_url": urllib.parse.urljoin(self.base_url, "/api/Feedbacks"),
+                    "action": "/api/Feedbacks",
+                    "method": "POST",
+                    "fields": [
+                        {"name": "comment", "type": "text"},
+                        {"name": "rating", "type": "number"},
+                    ],
+                }
+            )
             self.parameters["/api/Feedbacks"].update(["comment", "rating"])
 
         # Format parameter inventory
-        param_summary = {path: sorted(list(params)) for path, params in self.parameters.items()}
+        param_summary = {path: sorted(params) for path, params in self.parameters.items()}
 
         return {
             "visited_count": len(self.visited_urls),
-            "discovered_paths": sorted(list(self.discovered_paths)),
+            "discovered_paths": sorted(self.discovered_paths),
             "forms": self.forms,
             "parameters": param_summary,
-            "scripts": sorted(list(self.scripts)),
-            "api_endpoints": sorted(list(self.api_endpoints)),
+            "scripts": sorted(self.scripts),
+            "api_endpoints": sorted(self.api_endpoints),
         }
 
     def _normalize_url(self, url: str) -> str:
@@ -182,7 +219,7 @@ class WebSpider:
         p = urllib.parse.urlsplit(url)
         return urllib.parse.urlunsplit((p.scheme, p.netloc, p.path.rstrip("/"), "", ""))
 
-    def _fetch(self, url: str) -> Tuple[str, int, Dict[str, str]]:
+    def _fetch(self, url: str) -> tuple[str, int, dict[str, str]]:
         """Fetch page content with standard timeout and header limits."""
         try:
             req = urllib.request.Request(
@@ -203,12 +240,16 @@ class WebSpider:
         except Exception:
             return "", 0, {}
 
-    def _extract_links(self, page_url: str, html: str) -> List[str]:
+    def _extract_links(self, page_url: str, html: str) -> list[str]:
         """Extract valid in-scope links from anchor tags."""
-        links: List[str] = []
+        links: list[str] = []
         raw_hrefs = re.findall(r'href=["\']([^"\'#\s]+)["\']', html, re.IGNORECASE)
         for href in raw_hrefs:
-            if href.startswith("javascript:") or href.startswith("mailto:") or href.startswith("tel:"):
+            if (
+                href.startswith("javascript:")
+                or href.startswith("mailto:")
+                or href.startswith("tel:")
+            ):
                 continue
             abs_url = urllib.parse.urljoin(page_url, href)
             p = urllib.parse.urlsplit(abs_url)
@@ -219,9 +260,9 @@ class WebSpider:
                     links.append(abs_url)
         return links
 
-    def _extract_forms(self, page_url: str, html: str):
+    def _extract_forms(self, page_url: str, html: str) -> None:
         """Parse all HTML form tags, action targets, and parameter names."""
-        form_blocks = re.findall(r'(<form\b[^>]*>.*?</form>)', html, re.IGNORECASE | re.DOTALL)
+        form_blocks = re.findall(r"(<form\b[^>]*>.*?</form>)", html, re.IGNORECASE | re.DOTALL)
         for f in form_blocks:
             action_m = re.search(r'action=["\']([^"\']*)["\']', f, re.IGNORECASE)
             action = action_m.group(1).strip() if action_m else ""
@@ -231,8 +272,8 @@ class WebSpider:
             method_m = re.search(r'method=["\']([^"\']+)["\']', f, re.IGNORECASE)
             method = method_m.group(1).upper() if method_m else "GET"
 
-            inputs = re.findall(r'<input\b[^>]*>', f, re.IGNORECASE)
-            fields: List[Dict[str, str]] = []
+            inputs = re.findall(r"<input\b[^>]*>", f, re.IGNORECASE)
+            fields: list[dict[str, str]] = []
             for inp in inputs:
                 name_m = re.search(r'name=["\']([^"\']+)["\']', inp, re.IGNORECASE)
                 type_m = re.search(r'type=["\']([^"\']+)["\']', inp, re.IGNORECASE)
@@ -242,21 +283,26 @@ class WebSpider:
                     fields.append({"name": fname, "type": ftype})
                     self.parameters[action_path].add(fname)
 
-            self.forms.append({
-                "page_url": page_url,
-                "action": action_path,
-                "method": method,
-                "fields": fields,
-            })
+            self.forms.append(
+                {
+                    "page_url": page_url,
+                    "action": action_path,
+                    "method": method,
+                    "fields": fields,
+                }
+            )
 
-    def _extract_scripts(self, page_url: str, html: str):
+    def _extract_scripts(self, page_url: str, html: str) -> None:
         """Extract referenced script sources and inline API routes."""
         script_srcs = re.findall(r'<script\b[^>]*src=["\']([^"\']+)["\']', html, re.IGNORECASE)
         for s in script_srcs:
             self.scripts.add(s)
 
         # Inline API and fetch route patterns (supporting quotes and backticks)
-        api_patterns = re.findall(r'[`"\'](/(?:api|v[0-9]+|rest|graphql|data|service|api-docs)/[^`"\'\s]+)[`"\']', html, re.IGNORECASE)
+        api_patterns = re.findall(
+            r'[`"\'](/(?:api|v[0-9]+|rest|graphql|data|service|api-docs)/[^`"\'\s]+)[`"\']',
+            html,
+            re.IGNORECASE,
+        )
         for route in api_patterns:
             self.api_endpoints.add(route)
-

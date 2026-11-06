@@ -1,9 +1,9 @@
 """Tests for Phase 1: GAP-1/GAP-2 Architecture and Completion Gate."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -24,7 +24,9 @@ def _clean_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     gap_bridge.reset_state()
 
 
-def _create_control_dir(tmp_path: Path, run_name: str, candidates: list[dict] | None = None) -> Path:
+def _create_control_dir(
+    tmp_path: Path, run_name: str, candidates: list[dict] | None = None
+) -> Path:
     control = tmp_path / run_name / "control"
     control.mkdir(parents=True, exist_ok=True)
     if candidates is None:
@@ -132,7 +134,9 @@ def test_negative_probe_results_reach_gap2(tmp_path: Path):
     assert "c1" in trace
 
 
-def test_coverage_records_sync_negative_outcomes_to_gap2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_coverage_records_sync_negative_outcomes_to_gap2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 2b: Verify record_coverage with no_issue_found synchronizes to GAP-2."""
     ctrl = _create_control_dir(tmp_path, "run_cov")
     monkeypatch.setenv(gap_bridge.CONTROL_DIR_ENV, str(ctrl))
@@ -175,7 +179,9 @@ def test_tool_errors_not_recorded_as_negative_security_findings(tmp_path: Path):
     assert "GAP2_TOOL_ERROR" in trace
 
 
-def test_attach_gap2_tool_error_preserves_error_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_attach_gap2_tool_error_preserves_error_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 3b: _attach_gap2 with is_tool_error preserves error semantic."""
     ctrl = _create_control_dir(tmp_path, "run_attach_err")
     monkeypatch.setenv(gap_bridge.CONTROL_DIR_ENV, str(ctrl))
@@ -211,7 +217,9 @@ def test_premature_finish_scan_rejected(tmp_path: Path, monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
-async def test_finish_scan_tool_call_rejected_when_uninvestigated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+async def test_finish_scan_tool_call_rejected_when_uninvestigated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 4b: Calling finish_scan directly via tool interface fails when gate blocks it."""
     from agents.tool_context import ToolContext
 
@@ -238,7 +246,9 @@ async def test_finish_scan_tool_call_rejected_when_uninvestigated(tmp_path: Path
     assert "c1" in res["remaining_candidates"]
 
 
-def test_valid_early_completion_accepted_when_candidates_investigated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_valid_early_completion_accepted_when_candidates_investigated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 5: Legitimate early completion is accepted when all candidates are resolved or exhausted."""
     ctrl = _create_control_dir(tmp_path, "run_valid")
     monkeypatch.setenv(gap_bridge.CONTROL_DIR_ENV, str(ctrl))
