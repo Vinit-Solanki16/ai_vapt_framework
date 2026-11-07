@@ -1,14 +1,14 @@
 ---
 title: "Configuration"
-description: "Environment variables for Strix"
+description: "Environment variables for AI-VAPT"
 ---
 
-Configure Strix using environment variables or a config file.
+Configure AI-VAPT using environment variables or a config file.
 
 ## LLM Configuration
 
-<ParamField path="STRIX_LLM" type="string" required>
-  Model name in LiteLLM format (e.g., `openrouter/z-ai/glm-5.3`, `openai/gpt-6.1-sol`).
+<ParamField path="AI_VAPT_LLM" type="string" required>
+  Model identifier in LiteLLM or provider format (e.g., `cloud_hosted/kaggle-model`, `openrouter/z-ai/glm-5.3`, `openai/gpt-4o`). The legacy alias `STRIX_LLM` is also supported.
 </ParamField>
 
 <ParamField path="LLM_API_KEY" type="string">

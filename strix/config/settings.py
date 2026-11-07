@@ -29,7 +29,10 @@ _BASE_CONFIG = SettingsConfigDict(
 class LlmSettings(BaseSettings):
     model_config = _BASE_CONFIG
 
-    model: str | None = Field(default=None, alias="STRIX_LLM")
+    model: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AI_VAPT_LLM", "STRIX_LLM"),
+    )
     api_type: ApiType | None = Field(
         default=None,
         validation_alias=AliasChoices("STRIX_API_TYPE", "STRIX_FORCE_API"),

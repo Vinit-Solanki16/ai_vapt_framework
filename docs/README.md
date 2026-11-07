@@ -1,6 +1,6 @@
-# Strix Documentation
+# AI-VAPT Documentation
 
-Documentation source files for Strix, powered by [Mintlify](https://mintlify.com).
+Documentation source files for AI-VAPT, powered by [Mintlify](https://mintlify.com).
 
 ## Local Preview
 

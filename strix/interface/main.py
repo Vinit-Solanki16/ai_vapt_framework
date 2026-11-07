@@ -59,14 +59,20 @@ from strix.telemetry.logging import setup_console_logging
 
 logger = logging.getLogger(__name__)
 
-_ROOT_SUBCOMMAND_HELP = """
+
+def _get_root_subcommand_help() -> str:
+    prog = "strix" if (sys.argv and "strix" in Path(sys.argv[0]).stem) else "ai-vapt"
+    return f"""
 Additional commands:
-  strix web                Serve the interactive AI-VAPT operations console
-  strix cloud ...          Use the managed Strix platform
-  strix auth ...           Manage model-subscription sign-in
-  strix view [RUN]         View a completed or running scan
-  strix completions SHELL  Generate zsh, bash, or fish tab completion
+  {prog} web                Serve the interactive AI-VAPT operations console
+  {prog} cloud ...          Use the cloud platform
+  {prog} auth ...           Manage model-subscription sign-in
+  {prog} view [RUN]         View a completed or running scan
+  {prog} completions SHELL  Generate zsh, bash, or fish tab completion
 """
+
+
+_ROOT_SUBCOMMAND_HELP = _get_root_subcommand_help()
 
 
 def _exception_messages(exc: BaseException) -> tuple[str, ...]:
@@ -147,7 +153,7 @@ async def warm_up_llm() -> None:
             console.print(
                 Panel(
                     warn_text,
-                    title="[bold white]STRIX",
+                    title="[bold white]AI-VAPT",
                     title_align="left",
                     border_style="yellow",
                     padding=(1, 2),
@@ -230,7 +236,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     view_text.append("\n")
     view_text.append("View", style="dim")
     view_text.append("    ")
-    view_text.append(f"strix view {args.run_name}", style="#22c55e")
+    view_text.append(f"ai-vapt view {args.run_name}", style="#22c55e")
     panel_parts.extend(["\n", view_text])
 
     if not scan_completed:
@@ -238,7 +244,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
         resume_text.append("\n")
         resume_text.append("Resume", style="dim")
         resume_text.append("  ")
-        resume_text.append(f"strix --resume {args.run_name}", style="#22c55e")
+        resume_text.append(f"ai-vapt --resume {args.run_name}", style="#22c55e")
         panel_parts.extend(["\n", resume_text])
 
     panel_content = Text.assemble(*panel_parts)
@@ -247,7 +253,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
 
     panel = Panel(
         panel_content,
-        title="[bold white]STRIX",
+        title="[bold white]AI-VAPT",
         title_align="left",
         border_style=border_style,
         padding=(1, 2),
@@ -257,15 +263,9 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print(panel)
     console.print()
     console.print(
-        "[#60a5fa]strix.ai[/]  [dim]·[/]  "
-        "[#60a5fa]docs.strix.ai[/]  [dim]·[/]  "
-        "[#60a5fa]discord.gg/strix-ai[/]"
+        "[#60a5fa]AI-VAPT Framework[/]  [dim]·[/]  "
+        "[#60a5fa]Autonomous Security Assessment Platform[/]"
     )
-    if not args.non_interactive:
-        console.print(
-            "[dim]Run a pentest in Strix Cloud[/]  [#60a5fa]app.strix.ai[/]  [dim]·[/]  "
-            "[dim]Enterprise[/]  [#60a5fa]strix.ai/demo[/]"
-        )
     console.print()
     if not args.non_interactive:
         notify_update(console)
@@ -303,7 +303,7 @@ def _print_error_panel(title: str, message: str) -> None:
     error_text.append(message, style="white")
     panel = Panel(
         error_text,
-        title="[bold white]STRIX",
+        title="[bold white]AI-VAPT",
         title_align="left",
         border_style="red",
         padding=(1, 2),
@@ -333,7 +333,7 @@ def _print_model_connection_error(exc: BaseException) -> None:
 
     panel = Panel(
         error_text,
-        title="[bold white]STRIX",
+        title="[bold white]AI-VAPT",
         title_align="left",
         border_style=border_style,
         padding=(1, 2),
@@ -345,11 +345,11 @@ def _print_model_connection_error(exc: BaseException) -> None:
 
 def _print_cli_error(message: str) -> None:
     Console(stderr=True, soft_wrap=True).print(
-        f"strix: error: {message}", markup=False, highlight=False
+        f"ai-vapt: error: {message}", markup=False, highlight=False
     )
 
 
-HEADLESS_HINT = "If Strix runs without a terminal (CI, nohup, pipes), pass -n to run headless."
+HEADLESS_HINT = "If AI-VAPT runs without a terminal (CI, nohup, pipes), pass -n to run headless."
 
 
 def _fall_back_to_headless(args: argparse.Namespace) -> None:
@@ -439,7 +439,7 @@ def main() -> None:
         try:
             parse_arguments()
         except SystemExit as exc:
-            Console().print(_ROOT_SUBCOMMAND_HELP.strip(), markup=False)
+            Console().print(_get_root_subcommand_help().strip(), markup=False)
             raise SystemExit(exc.code) from None
 
     # `strix web` serves the AI-VAPT operations console and exits; it needs no

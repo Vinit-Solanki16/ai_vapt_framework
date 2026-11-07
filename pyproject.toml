@@ -58,6 +58,7 @@ dependencies = [
 
 [project.scripts]
 strix = "strix.interface.main:main"
+ai-vapt = "strix.interface.main:main"
 
 [dependency-groups]
 dev = [

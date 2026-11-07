@@ -1,4 +1,4 @@
-"""``strix web`` command: serve the STRIX AI-VAPT operations console."""
+"""``ai-vapt web`` command: serve the AI-VAPT operations console."""
 
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ def _is_loopback(host: str) -> bool:
 
 def run_web(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="strix web",
+        prog="ai-vapt web",
         description=(
-            "Start the STRIX AI-VAPT operations console: a local FastAPI gateway "
+            "Start the AI-VAPT operations console: a local FastAPI gateway "
             "serving the interactive web SPA."
         ),
     )

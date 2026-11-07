@@ -73,7 +73,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             results_text,
             note_text,
         ),
-        title="[bold white]STRIX",
+        title="[bold white]AI-VAPT",
         title_align="left",
         border_style="#22c55e",
         padding=(1, 2),
@@ -181,7 +181,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
         return Panel(
             status_text,
-            title="[bold white]STRIX",
+            title="[bold white]AI-VAPT",
             title_align="left",
             border_style="#22c55e",
             padding=(1, 2),
@@ -249,7 +249,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                 "\n\n",
                 report_state.final_scan_result,
             ),
-            title="[bold white]STRIX",
+            title="[bold white]AI-VAPT",
             title_align="left",
             border_style="#60a5fa",
             padding=(1, 2),
@@ -260,14 +260,14 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
 
 def run_web(args: list[str] | None = None) -> int:
-    """Launch the STRIX AI-VAPT Web Operations Console."""
+    """Launch the AI-VAPT Web Operations Console."""
     import argparse
 
     import uvicorn
 
     parser = argparse.ArgumentParser(
-        prog="strix web",
-        description="Launch STRIX AI-VAPT Web Operations Console",
+        prog="ai-vapt web",
+        description="Launch AI-VAPT Web Operations Console",
     )
     parser.add_argument(
         "--host",
@@ -289,7 +289,7 @@ def run_web(args: list[str] | None = None) -> int:
 
     console = Console()
     console.print(
-        f"[bold #22c55e]Launching STRIX AI-VAPT Console on[/] [cyan]http://{parsed.host}:{parsed.port}/[/]"
+        f"[bold #22c55e]Launching AI-VAPT Console on[/] [cyan]http://{parsed.host}:{parsed.port}/[/]"
     )
     uvicorn.run(
         "strix.interface.api:app",

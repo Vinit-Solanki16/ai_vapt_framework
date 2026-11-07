@@ -58,59 +58,24 @@ def _positive_int(value: str) -> int:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Strix Multi-Agent Cybersecurity Penetration Testing Tool",
+        description="AI-VAPT Autonomous Multi-Agent Cybersecurity Penetration Testing Platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Web application penetration test
-  strix --target https://example.com
+  # Launch the interactive Web Operations Console
+  ai-vapt web --port 8000
 
-  # GitHub repository analysis
-  strix --target https://github.com/user/repo
-  strix --target git@github.com:user/repo.git
+  # Autonomous web application penetration test
+  ai-vapt --target https://example.com -m deep --max-turns 500
 
-  # Local code analysis
-  strix --target ./my-project
+  # API specification penetration test
+  ai-vapt --target ./openapi.yaml --target https://api.example.com
 
-  # API spec test (OpenAPI/Swagger file or Postman collection export)
-  strix --target ./openapi.yaml --target https://api.example.com
-  strix --target ./collection.postman_collection.json
+  # Targeted security assessment with custom instructions
+  ai-vapt --target https://example.com --instruction "Focus on authentication and IDOR vulnerabilities"
 
-  # Postman collection pulled live by id (needs POSTMAN_API_KEY); optional environment
-  strix --target postman://<collection-uuid> --target https://api.example.com
-  strix --target "postman://<collection-uuid>?env=<environment-uuid>"
-
-  # Domain penetration test
-  strix --target example.com
-
-  # IP address penetration test
-  strix --target 192.168.1.42
-
-  # Multiple targets (e.g., white-box testing with source and deployed app)
-  strix --target https://github.com/user/repo --target https://example.com
-  strix --target ./my-project --target https://staging.example.com --target https://prod.example.com
-
-  # Targets from a file, one target per non-empty, non-comment line
-  strix --target-list ./targets.txt
-
-  # Custom instructions (inline)
-  strix --target example.com --instruction "Focus on authentication vulnerabilities"
-
-  # Custom instructions (from file)
-  strix --target example.com --instruction-file ./instructions.txt
-  strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
-
-  # Extra files placed in the sandbox workspace
-  strix --target ./my-project --workspace-file ./wordlist.txt
-  strix --target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
-
-Strix Cloud:
-  strix cloud login
-  strix cloud scans start --source . --yes --wait
-  strix cloud                      # list every cloud resource
-
-  Run a pentest in Strix Cloud     https://app.strix.ai
-  Try Strix Enterprise             https://strix.ai/demo
+  # View assessment results and audit logs
+  ai-vapt view
         """,
     )
 
@@ -118,7 +83,7 @@ Strix Cloud:
         "-v",
         "--version",
         action="version",
-        version=f"strix {get_version()}",
+        version=f"AI-VAPT {get_version()}",
     )
 
     parser.add_argument(
