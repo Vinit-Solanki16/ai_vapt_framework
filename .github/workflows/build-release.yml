@@ -89,21 +89,23 @@ jobs:
           mkdir -p dist/release
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            cp dist/strix.exe "dist/release/strix-${VERSION}-${{ matrix.target }}.exe"
-            (cd dist/release && 7z a "strix-${VERSION}-${{ matrix.target }}.zip" "strix-${VERSION}-${{ matrix.target }}.exe")
+            cp dist/strix.exe "dist/release/ai-vapt-${VERSION}-${{ matrix.target }}.exe"
+            cp dist/strix.exe "dist/release/ai-vapt.exe"
+            (cd dist/release && 7z a "ai-vapt-${VERSION}-${{ matrix.target }}.zip" "ai-vapt-${VERSION}-${{ matrix.target }}.exe" "ai-vapt.exe")
           else
-            cp dist/strix "dist/release/strix-${VERSION}-${{ matrix.target }}"
-            chmod +x "dist/release/strix-${VERSION}-${{ matrix.target }}"
-            tar -C dist/release -czvf "dist/release/strix-${VERSION}-${{ matrix.target }}.tar.gz" "strix-${VERSION}-${{ matrix.target }}"
+            cp dist/strix "dist/release/ai-vapt-${VERSION}-${{ matrix.target }}"
+            chmod +x "dist/release/ai-vapt-${VERSION}-${{ matrix.target }}"
+            cp dist/strix "dist/release/ai-vapt"
+            chmod +x "dist/release/ai-vapt"
+            tar -C dist/release -czvf "dist/release/ai-vapt-${VERSION}-${{ matrix.target }}.tar.gz" "ai-vapt-${VERSION}-${{ matrix.target }}" "ai-vapt"
           fi
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: strix-${{ matrix.target }}
+          name: ai-vapt-${{ matrix.target }}
           path: |
             dist/release/*.tar.gz
             dist/release/*.zip
-            dist/*.whl
           if-no-files-found: error
 
   release:

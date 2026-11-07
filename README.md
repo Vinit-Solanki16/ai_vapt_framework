@@ -59,8 +59,6 @@ uv run ai-vapt --target https://example.com --instruction "Focus on authenticati
 uv run ai-vapt view
 ```
 
-*(Note: The legacy command `strix` is fully preserved as an alias for backwards compatibility).*
-
 ### 3. Verification Test Suite
 
 Run the full local test suite:
