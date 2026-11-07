@@ -8,17 +8,17 @@ Builds structured audit reports containing:
 - GAP-1 Candidate Triage Prioritization Queue
 - GAP-2 Bounded Dynamic Pivoting State & Audit Trail
 """
+
 from __future__ import annotations
 
 import html
-import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 from strix.core.triage.owasp_mapping import map_finding_to_owasp
 
 
-def render_html_report(run_data: Dict[str, Any]) -> str:
+def render_html_report(run_data: dict[str, Any]) -> str:
     """Render a standalone, executive-grade, printable styled HTML assessment report."""
     run_id = html.escape(str(run_data.get("run_id", "unknown")))
     status = html.escape(str(run_data.get("status", "completed")))
@@ -27,7 +27,12 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
     target = html.escape(str(raw_target))
     target_ip = html.escape(str(run_data.get("target_ip") or "Resolved via DNS"))
     evidence_tier = html.escape(str(run_data.get("evidence_tier") or "OBSERVED_EXTERNAL"))
-    safety_notice = html.escape(str(run_data.get("safety_notice") or "LIVE ACTIVE VAPT — Non-destructive active verification with cryptographic SHA-256 evidence."))
+    safety_notice = html.escape(
+        str(
+            run_data.get("safety_notice")
+            or "LIVE ACTIVE VAPT — Non-destructive active verification with cryptographic SHA-256 evidence."
+        )
+    )
 
     # Format created_at to local timezone with abbreviation
     raw_created = run_data.get("created_at")
@@ -96,14 +101,31 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
 
         # Fallback to catalog profile if metadata was incomplete
         if not raw_cve or raw_cve == "CVE-2022-XXXX" or not raw_remed:
-            mapped = map_finding_to_owasp(raw_title, f.get("id"), endpoint=location, tech_stack=tech_stack)
+            mapped = map_finding_to_owasp(
+                raw_title, f.get("id"), endpoint=location, tech_stack=tech_stack
+            )
             raw_cve = raw_cve if raw_cve and raw_cve != "CVE-2022-XXXX" else mapped.get("cve_id")
-            raw_cwe = raw_cwe if raw_cwe and raw_cwe != "CWE-200" else mapped.get("cwe_id", "CWE-200")
-            raw_impact = raw_impact or mapped.get("impact", "Potential security exposure requiring defensive hardening.")
-            raw_remed = raw_remed or mapped.get("remediation_technical", "# Apply input validation, sanitization, and least-privilege permissions.")
-            raw_retest = raw_retest or mapped.get("retest_procedure", f"curl -s -k \"https://{target_clean}{'/' + location.lstrip('/') if location else '/'}\"")
+            raw_cwe = (
+                raw_cwe if raw_cwe and raw_cwe != "CWE-200" else mapped.get("cwe_id", "CWE-200")
+            )
+            raw_impact = raw_impact or mapped.get(
+                "impact", "Potential security exposure requiring defensive hardening."
+            )
+            raw_remed = raw_remed or mapped.get(
+                "remediation_technical",
+                "# Apply input validation, sanitization, and least-privilege permissions.",
+            )
+            raw_retest = raw_retest or mapped.get(
+                "retest_procedure",
+                f'curl -s -k "https://{target_clean}{"/" + location.lstrip("/") if location else "/"}"',
+            )
 
-        has_real_cve = bool(raw_cve and str(raw_cve).upper().startswith("CVE-") and "XXXX" not in str(raw_cve).upper() and "N/A" not in str(raw_cve).upper())
+        has_real_cve = bool(
+            raw_cve
+            and str(raw_cve).upper().startswith("CVE-")
+            and "XXXX" not in str(raw_cve).upper()
+            and "N/A" not in str(raw_cve).upper()
+        )
         if has_real_cve:
             cve_badge = f'<span class="badge-cve">{html.escape(str(raw_cve))}</span>'
             mit_cve_badge = f'<span class="badge-cve">{html.escape(str(raw_cve))}</span>'
@@ -116,13 +138,22 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
         impact = html.escape(str(raw_impact))
         remed_tech = html.escape(str(raw_remed))
         clean_ep = "/" + location.lstrip("/") if location else "/"
-        retest_cmd = html.escape(str(raw_retest.replace("<target>", target_clean).replace("<endpoint>", clean_ep)))
+        retest_cmd = html.escape(
+            str(raw_retest.replace("<target>", target_clean).replace("<endpoint>", clean_ep))
+        )
 
         sev_badge = (
-            '<span class="badge badge-crit">CRITICAL</span>' if sev == "CRITICAL"
-            else ('<span class="badge badge-high">HIGH</span>' if sev == "HIGH"
-            else ('<span class="badge badge-med">MEDIUM</span>' if sev == "MEDIUM"
-            else '<span class="badge badge-low">LOW</span>'))
+            '<span class="badge badge-crit">CRITICAL</span>'
+            if sev == "CRITICAL"
+            else (
+                '<span class="badge badge-high">HIGH</span>'
+                if sev == "HIGH"
+                else (
+                    '<span class="badge badge-med">MEDIUM</span>'
+                    if sev == "MEDIUM"
+                    else '<span class="badge badge-low">LOW</span>'
+                )
+            )
         )
 
         finding_rows.append(
@@ -133,16 +164,42 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                 <td>{cve_badge}</td>
                 <td><span class="badge-cwe">{cwe}</span></td>
                 <td>{owasp_cat}</td>
-                <td><code class="hash-code">{hash_val[:12]}...{hash_val[-6:] if len(hash_val) > 18 else ''}</code></td>
+                <td><code class="hash-code">{hash_val[:12]}...{hash_val[-6:] if len(hash_val) > 18 else ""}</code></td>
             </tr>"""
         )
 
-        color_border = "#ef4444" if sev == "CRITICAL" else ("#f97316" if sev == "HIGH" else ("#f59e0b" if sev == "MEDIUM" else "#3b82f6"))
+        color_border = (
+            "#ef4444"
+            if sev == "CRITICAL"
+            else ("#f97316" if sev == "HIGH" else ("#f59e0b" if sev == "MEDIUM" else "#3b82f6"))
+        )
 
-        val_method = html.escape(str(f.get("validation_method") or "Active HTTP verification probe & response payload matching"))
-        sev_just = html.escape(str(f.get("severity_justification") or f"Rated {sev} (CVSS {cvss}) based on unauthenticated network exploitability and observed impact."))
-        rep_req = html.escape(str(f.get("poc_script_code") or f.get("reproducible_request") or f"GET {location} HTTP/1.1\nHost: {target_clean}"))
-        resp_ev = html.escape(str(f.get("evidence_snippet") or f.get("evidence") or "Response confirmed vulnerable behavior."))
+        val_method = html.escape(
+            str(
+                f.get("validation_method")
+                or "Active HTTP verification probe & response payload matching"
+            )
+        )
+        sev_just = html.escape(
+            str(
+                f.get("severity_justification")
+                or f"Rated {sev} (CVSS {cvss}) based on unauthenticated network exploitability and observed impact."
+            )
+        )
+        rep_req = html.escape(
+            str(
+                f.get("poc_script_code")
+                or f.get("reproducible_request")
+                or f"GET {location} HTTP/1.1\nHost: {target_clean}"
+            )
+        )
+        resp_ev = html.escape(
+            str(
+                f.get("evidence_snippet")
+                or f.get("evidence")
+                or "Response confirmed vulnerable behavior."
+            )
+        )
 
         mitigation_sections.append(
             f"""<div class="mitigation-card" style="border-left-color: {color_border};" id="mitigation-{idx}">
@@ -170,11 +227,17 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
             </div>"""
         )
 
-    findings_table = "\n".join(finding_rows) if finding_rows else "<tr><td colspan='7'>No confirmed vulnerabilities identified.</td></tr>"
+    findings_table = (
+        "\n".join(finding_rows)
+        if finding_rows
+        else "<tr><td colspan='7'>No confirmed vulnerabilities identified.</td></tr>"
+    )
 
     if not mitigation_sections:
         # Provide proactive hardening guidelines for high-priority attack vectors evaluated
-        top_candidates = [c for c in candidates if str(c.get("severity", "")).upper() in ("CRITICAL", "HIGH")][:3]
+        top_candidates = [
+            c for c in candidates if str(c.get("severity", "")).upper() in ("CRITICAL", "HIGH")
+        ][:3]
         if not top_candidates and candidates:
             top_candidates = candidates[:3]
 
@@ -183,13 +246,33 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
             mapped = map_finding_to_owasp(tc.get("name", tc.get("id")), tc.get("id"))
             tc_title = html.escape(str(mapped.get("title", tc.get("name", tc.get("id")))))
             tc_cve = mapped.get("cve_id")
-            has_tc_cve = bool(tc_cve and str(tc_cve).upper().startswith("CVE-") and "XXXX" not in str(tc_cve).upper() and "N/A" not in str(tc_cve).upper())
-            tc_cve_badge = f'<span class="badge-cve">{html.escape(str(tc_cve))}</span>' if has_tc_cve else '<span class="badge" style="background:rgba(148, 163, 184, 0.1); color:#94a3b8; border:1px solid #334155; font-size:0.75rem;">CWE-based Weakness</span>'
+            has_tc_cve = bool(
+                tc_cve
+                and str(tc_cve).upper().startswith("CVE-")
+                and "XXXX" not in str(tc_cve).upper()
+                and "N/A" not in str(tc_cve).upper()
+            )
+            tc_cve_badge = (
+                f'<span class="badge-cve">{html.escape(str(tc_cve))}</span>'
+                if has_tc_cve
+                else '<span class="badge" style="background:rgba(148, 163, 184, 0.1); color:#94a3b8; border:1px solid #334155; font-size:0.75rem;">CWE-based Weakness</span>'
+            )
             tc_cwe = html.escape(str(mapped.get("cwe_id", "CWE-200")))
-            tc_owasp = html.escape(f"{mapped.get('owasp_id', 'A01:2021')} - {mapped.get('category_name', 'Security Configuration')}")
+            tc_owasp = html.escape(
+                f"{mapped.get('owasp_id', 'A01:2021')} - {mapped.get('category_name', 'Security Configuration')}"
+            )
             tc_impact = html.escape(str(mapped.get("impact", "Baseline security hygiene defense.")))
-            tc_remed = html.escape(str(mapped.get("remediation_technical", "# Ensure defensive controls and hardening policies are active.")))
-            tc_retest = html.escape(str(mapped.get("retest_procedure", f"curl -s -k \"https://{target_clean}/\"")))
+            tc_remed = html.escape(
+                str(
+                    mapped.get(
+                        "remediation_technical",
+                        "# Ensure defensive controls and hardening policies are active.",
+                    )
+                )
+            )
+            tc_retest = html.escape(
+                str(mapped.get("retest_procedure", f'curl -s -k "https://{target_clean}/"'))
+            )
 
             fallback_mitigations.append(
                 f"""<div class="mitigation-card" style="border-left-color: #38bdf8;" id="mitigation-recom-{f_idx}">
@@ -209,7 +292,11 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                     <code class="cmd-block">{tc_retest}</code>
                 </div>"""
             )
-        mitigations_html = "\n".join(fallback_mitigations) if fallback_mitigations else "<p>No immediate remediation actions required. All evaluated vectors conformed to baseline controls.</p>"
+        mitigations_html = (
+            "\n".join(fallback_mitigations)
+            if fallback_mitigations
+            else "<p>No immediate remediation actions required. All evaluated vectors conformed to baseline controls.</p>"
+        )
     else:
         mitigations_html = "\n".join(mitigation_sections)
 
@@ -223,20 +310,30 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
         c_cvss = html.escape(str(c.get("cvss_score", 5.0)))
         c_usab = html.escape(str(c.get("usability_rank", "MEDIUM")))
         comp_val = c.get("composite_score", c.get("probability", 0.5))
-        c_comp = html.escape(f"{comp_val:.4f}" if isinstance(comp_val, (int, float)) else str(comp_val))
+        c_comp = html.escape(
+            f"{comp_val:.4f}" if isinstance(comp_val, (int, float)) else str(comp_val)
+        )
         c_reason = html.escape(str(c.get("reasoning", "")))
         c_state = str(c.get("state", "PENDING")).upper()
 
         usab_badge = (
-            '<span class="badge badge-emerald">HIGH</span>' if c_usab == "HIGH"
-            else ('<span class="badge badge-amber">MEDIUM</span>' if c_usab == "MEDIUM"
-            else '<span class="badge badge-purple">LOW</span>')
+            '<span class="badge badge-emerald">HIGH</span>'
+            if c_usab == "HIGH"
+            else (
+                '<span class="badge badge-amber">MEDIUM</span>'
+                if c_usab == "MEDIUM"
+                else '<span class="badge badge-purple">LOW</span>'
+            )
         )
 
         state_badge = (
-            '<span class="badge badge-emerald">VALIDATED</span>' if c_state == "VALIDATED"
-            else ('<span class="badge badge-rose">ABANDONED (PIVOT)</span>' if c_state == "ABANDONED"
-            else '<span class="badge badge-cyan">PENDING</span>')
+            '<span class="badge badge-emerald">VALIDATED</span>'
+            if c_state == "VALIDATED"
+            else (
+                '<span class="badge badge-rose">ABANDONED (PIVOT)</span>'
+                if c_state == "ABANDONED"
+                else '<span class="badge badge-cyan">PENDING</span>'
+            )
         )
 
         gap1_rows.append(
@@ -250,14 +347,27 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                 <td class="reason-cell">{c_reason}</td>
             </tr>"""
         )
-    gap1_table = "\n".join(gap1_rows) if gap1_rows else "<tr><td colspan='7'>No candidate queue available.</td></tr>"
+    gap1_table = (
+        "\n".join(gap1_rows)
+        if gap1_rows
+        else "<tr><td colspan='7'>No candidate queue available.</td></tr>"
+    )
 
     # 3. Scan Matrix Category Table
     scan_matrix = run_data.get("scan_matrix", [])
     if not scan_matrix:
         from strix.core.scanner.passive_rules import SCAN_CATEGORIES
+
         scan_matrix = [
-            {"category_key": k, "title": v["title"], "description": v["description"], "test_count": v["test_count"], "capability": v["capability"], "findings_count": 0, "status": "PASSED"}
+            {
+                "category_key": k,
+                "title": v["title"],
+                "description": v["description"],
+                "test_count": v["test_count"],
+                "capability": v["capability"],
+                "findings_count": 0,
+                "status": "PASSED",
+            }
             for k, v in SCAN_CATEGORIES.items()
         ]
     matrix_rows = []
@@ -267,7 +377,8 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
         m_cap = html.escape(str(m.get("capability", "Passive & Active Probes")))
         m_count = int(m.get("findings_count", 0))
         m_status = (
-            '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>' if m_count > 0
+            '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>'
+            if m_count > 0
             else '<span class="badge badge-emerald">PASSED (BASELINE SECURE)</span>'
         )
         matrix_rows.append(
@@ -275,7 +386,7 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                 <td><strong>{m_title}</strong></td>
                 <td>{m_tests} tests</td>
                 <td><span style="font-size:0.8rem; color:#94a3b8;">{m_cap}</span></td>
-                <td><strong style="color:{'#f59e0b' if m_count > 0 else '#10b981'};">{m_count} finding(s)</strong></td>
+                <td><strong style="color:{"#f59e0b" if m_count > 0 else "#10b981"};">{m_count} finding(s)</strong></td>
                 <td>{m_status}</td>
             </tr>"""
         )
@@ -291,9 +402,13 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
         p_state = html.escape(str(p.get("state", "OPEN")).upper())
         p_sev = str(p.get("severity", "low")).upper()
         p_sev_badge = (
-            '<span class="badge badge-high">HIGH</span>' if p_sev == "HIGH"
-            else ('<span class="badge badge-med">MEDIUM</span>' if p_sev == "MEDIUM"
-            else '<span class="badge badge-low">LOW (INFO)</span>')
+            '<span class="badge badge-high">HIGH</span>'
+            if p_sev == "HIGH"
+            else (
+                '<span class="badge badge-med">MEDIUM</span>'
+                if p_sev == "MEDIUM"
+                else '<span class="badge badge-low">LOW (INFO)</span>'
+            )
         )
         p_risk = html.escape(str(p.get("risk", "Exposed network listener.")))
         port_rows.append(
@@ -305,7 +420,11 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                 <td style="font-size:0.85rem; color:#cbd5e1;">{p_risk}</td>
             </tr>"""
         )
-    ports_table = "\n".join(port_rows) if port_rows else "<tr><td colspan='5'>Standard web ports inspected. No anomalous non-standard ports exposed.</td></tr>"
+    ports_table = (
+        "\n".join(port_rows)
+        if port_rows
+        else "<tr><td colspan='5'>Standard web ports inspected. No anomalous non-standard ports exposed.</td></tr>"
+    )
 
     # 5. Software Components (SCA) Table
     components = run_data.get("components", [])
@@ -316,9 +435,19 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
         c_file = html.escape(str(comp.get("source_file", "/")))
         c_vuln = comp.get("vulnerable", False)
         c_cves = comp.get("cves", [])
-        cve_badges = " ".join(f'<span class="badge-cve">{html.escape(cve)}</span>' for cve in c_cves) if c_cves else '<span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155;">N/A (No Known CVEs)</span>'
-        c_stat = '<span class="badge badge-amber">OUTDATED / VULNERABLE</span>' if c_vuln else '<span class="badge badge-emerald">SECURE VERSION</span>'
-        c_remed = html.escape(str(comp.get("remediation", "Keep component updated to supported version.")))
+        cve_badges = (
+            " ".join(f'<span class="badge-cve">{html.escape(cve)}</span>' for cve in c_cves)
+            if c_cves
+            else '<span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155;">N/A (No Known CVEs)</span>'
+        )
+        c_stat = (
+            '<span class="badge badge-amber">OUTDATED / VULNERABLE</span>'
+            if c_vuln
+            else '<span class="badge badge-emerald">SECURE VERSION</span>'
+        )
+        c_remed = html.escape(
+            str(comp.get("remediation", "Keep component updated to supported version."))
+        )
         comp_rows.append(
             f"""<tr>
                 <td><strong>{c_lib}</strong></td>
@@ -329,10 +458,20 @@ def render_html_report(run_data: Dict[str, Any]) -> str:
                 <td style="font-size:0.85rem; color:#cbd5e1;">{c_remed}</td>
             </tr>"""
         )
-    components_table = "\n".join(comp_rows) if comp_rows else "<tr><td colspan='6'>No outdated or vulnerable client-side JavaScript components identified.</td></tr>"
+    components_table = (
+        "\n".join(comp_rows)
+        if comp_rows
+        else "<tr><td colspan='6'>No outdated or vulnerable client-side JavaScript components identified.</td></tr>"
+    )
 
     # 6. Decision trace list
-    trace_items = "\n".join(f'<div class="trace-row">{html.escape(str(line))}</div>' for line in decision_trace) if decision_trace else "<div class='trace-row'>No trace recorded.</div>"
+    trace_items = (
+        "\n".join(
+            f'<div class="trace-row">{html.escape(str(line))}</div>' for line in decision_trace
+        )
+        if decision_trace
+        else "<div class='trace-row'>No trace recorded.</div>"
+    )
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="en">

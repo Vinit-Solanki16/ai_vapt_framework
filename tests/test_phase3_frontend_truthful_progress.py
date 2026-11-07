@@ -12,26 +12,25 @@ Verifies:
 9. SSE events expose the correct run ID and milestone.
 10. Concurrent runs maintain separate progress.
 """
+
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from strix.interface import api
 from strix.interface.api import (
-    app,
     _RUNS,
     _execute_run_worker,
+    app,
     stream_run_events,
 )
 from strix.interface.schemas import RunRequest
+
 
 client = TestClient(app)
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -166,8 +165,10 @@ def test_progress_increases_only_when_actual_milestones_complete(tmp_path: Path)
         max_turns=250,
     )
 
-    with patch("strix.interface.api.runs_base_dir", return_value=tmp_path), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]):
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=tmp_path),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+    ):
         _execute_run_worker(run_id, req, runtime_key=None)
 
     final_run = _RUNS[run_id]
@@ -213,16 +214,20 @@ def test_failed_runs_never_show_successful_100_percent_completion(tmp_path: Path
     mock_proc.poll.return_value = 1
     mock_proc.wait.return_value = 1
 
-    with patch("strix.interface.api.runs_base_dir", return_value=tmp_path), \
-         patch("strix.interface.api._is_docker_available", return_value=True), \
-         patch("subprocess.Popen", return_value=mock_proc), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]):
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=tmp_path),
+        patch("strix.interface.api._is_docker_available", return_value=True),
+        patch("subprocess.Popen", return_value=mock_proc),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+    ):
         _execute_run_worker(run_id, req, runtime_key=None)
 
     failed_run = _RUNS[run_id]
     assert failed_run["status"] == "failed"
     prog = failed_run["progress"]
-    assert prog["percent"] <= 90, f"Failed run progress percent must be <= 90, got {prog['percent']}"
+    assert prog["percent"] <= 90, (
+        f"Failed run progress percent must be <= 90, got {prog['percent']}"
+    )
     assert prog["percent"] != 100
     assert "Assessment Complete" not in prog["phase"]
     assert "Failed" in prog["phase"]
@@ -258,10 +263,15 @@ def test_valid_early_completion_reaches_100_percent(tmp_path: Path):
     # Create underlying run directory with run.json marked completed
     u_dir = tmp_path / "strix_run_mock"
     u_dir.mkdir(parents=True, exist_ok=True)
-    (u_dir / "run.json").write_text(json.dumps({
-        "status": "completed",
-        "scan_ended_exit_reason": "All actionable candidates evaluated and coverage satisfied",
-    }), encoding="utf-8")
+    (u_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "scan_ended_exit_reason": "All actionable candidates evaluated and coverage satisfied",
+            }
+        ),
+        encoding="utf-8",
+    )
     (u_dir / "vulnerabilities.json").write_text(json.dumps([]), encoding="utf-8")
 
     mock_proc = MagicMock()
@@ -274,10 +284,12 @@ def test_valid_early_completion_reaches_100_percent(tmp_path: Path):
     mock_proc.poll.return_value = 0
     mock_proc.wait.return_value = 0
 
-    with patch("strix.interface.api.runs_base_dir", return_value=tmp_path), \
-         patch("strix.interface.api._is_docker_available", return_value=True), \
-         patch("subprocess.Popen", return_value=mock_proc), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]):
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=tmp_path),
+        patch("strix.interface.api._is_docker_available", return_value=True),
+        patch("subprocess.Popen", return_value=mock_proc),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=[]),
+    ):
         _execute_run_worker(run_id, req, runtime_key=None)
 
     comp_run = _RUNS[run_id]
@@ -313,6 +325,7 @@ async def test_sse_events_expose_correct_run_id_and_milestone():
     mock_request = MagicMock()
     # Let generator yield initial events and then signal disconnect
     call_count = 0
+
     async def mock_is_disconnected():
         nonlocal call_count
         call_count += 1
@@ -381,4 +394,3 @@ def test_concurrent_runs_maintain_separate_progress():
     # Verify mutating run A does not affect run B
     _RUNS[run_a]["progress"]["percent"] = 40
     assert _RUNS[run_b]["progress"]["percent"] == 85
-

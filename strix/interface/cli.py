@@ -262,6 +262,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 def run_web(args: list[str] | None = None) -> int:
     """Launch the STRIX AI-VAPT Web Operations Console."""
     import argparse
+
     import uvicorn
 
     parser = argparse.ArgumentParser(
@@ -298,4 +299,3 @@ def run_web(args: list[str] | None = None) -> int:
         log_level="info",
     )
     return 0
-

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -40,7 +41,7 @@ def args() -> argparse.Namespace:
 
 
 @pytest.fixture(autouse=True)
-def isolated_config(tmp_path: Path) -> None:
+def isolated_config(tmp_path: Path) -> Iterator[None]:
     for key in (
         "STRIX_LLM",
         "OPENAI_API_KEY",
@@ -53,6 +54,11 @@ def isolated_config(tmp_path: Path) -> None:
     ):
         os.environ.pop(key, None)
     apply_config_override(tmp_path / "config.json")
+    try:
+        yield
+    finally:
+        loader._override = None
+        loader._cached = None
 
 
 @pytest.mark.asyncio
@@ -66,7 +72,7 @@ async def test_setup_state_is_serializable() -> None:
     assert snapshot["scan_state"] == "setup"
     assert snapshot["scan_mode"] == "deep"
     assert snapshot["max_budget_usd"] is None
-    assert snapshot["max_turns"] == 250
+    assert snapshot["max_turns"] == 500
     assert snapshot["scope_mode"] == "auto"
     assert snapshot["diff_base"] is None
 

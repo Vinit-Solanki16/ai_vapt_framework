@@ -6,15 +6,14 @@
 - Finding Handoff, Classification and Precision/Recall Metrics
 """
 
-import pytest
 import base64
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from strix.core.scanner.auth_manager import AuthManager, AuthSession, redact_credential, redact_dict
-from strix.core.scanner.jwt_inspector import JWTInspector, JWTInspectionResult
-from strix.core.scanner.idor_validator import IDORValidator, IDORValidationResult
-from strix.core.scanner.credential_validator import CredentialValidator, CredentialValidationResult
+from strix.core.scanner.auth_manager import AuthSession, redact_credential, redact_dict
+from strix.core.scanner.credential_validator import CredentialValidator
+from strix.core.scanner.idor_validator import IDORValidator
+from strix.core.scanner.jwt_inspector import JWTInspector
 from strix.core.triage.exploit_assessor import run_gap1_triage
 
 
@@ -36,9 +35,9 @@ def test_redact_dict():
         "password": "supersecretpassword123",
         "auth": {
             "token": "eyJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7fX0.signature",
-            "api_key": "sk-1234567890abcdef"
+            "api_key": "sk-1234567890abcdef",
         },
-        "safe_field": 42
+        "safe_field": 42,
     }
     redacted = redact_dict(data)
     assert redacted["username"] == "admin@juice-sh.op"
@@ -70,8 +69,8 @@ def test_jwt_inspector_sensitive_md5_hash_leak():
             "username": "demo",
             "email": "demo",
             "password": "fe01ce2a7fbac8fafaed7c982a04e229",
-            "role": "customer"
-        }
+            "role": "customer",
+        },
     }
     sig = "simulated_signature_blob"
     h_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
@@ -114,15 +113,9 @@ def test_idor_validator_detection():
     mock_response = MagicMock()
     mock_response.__enter__.return_value = mock_response
     mock_response.status = 200
-    mock_response.read.return_value = json.dumps({
-        "status": "success",
-        "data": {
-            "id": 1,
-            "ProductId": 1,
-            "BasketId": 1,
-            "quantity": 2
-        }
-    }).encode("utf-8")
+    mock_response.read.return_value = json.dumps(
+        {"status": "success", "data": {"id": 1, "ProductId": 1, "BasketId": 1, "quantity": 2}}
+    ).encode("utf-8")
 
     with patch("urllib.request.urlopen", return_value=mock_response):
         res = IDORValidator.test_idor(
@@ -130,7 +123,7 @@ def test_idor_validator_detection():
             auth_token="test_token",
             endpoint_template="/api/BasketItems/{id}",
             user_own_id=6,
-            foreign_id=1
+            foreign_id=1,
         )
         assert res.is_idor
         assert res.http_status == 200
@@ -142,6 +135,7 @@ def test_idor_validator_access_denied():
     """Test that HTTP 401/403 is correctly evaluated as enforced authorization (not IDOR)."""
     target_url = "http://127.0.0.1:3000"
     from urllib.error import HTTPError
+
     err = HTTPError(f"{target_url}/api/BasketItems/1", 403, "Forbidden", {}, None)
 
     with patch("urllib.request.urlopen", side_effect=err):
@@ -150,7 +144,7 @@ def test_idor_validator_access_denied():
             auth_token="test_token",
             endpoint_template="/api/BasketItems/{id}",
             user_own_id=6,
-            foreign_id=1
+            foreign_id=1,
         )
         assert not res.is_idor
         assert res.http_status == 403
@@ -165,19 +159,21 @@ def test_credential_validator_default_admin():
     mock_resp.status = 200
     # Simulate Juice Shop admin login payload
     token_header = base64.urlsafe_b64encode(b'{"alg":"RS256"}').decode().rstrip("=")
-    token_payload = base64.urlsafe_b64encode(b'{"data":{"role":"admin","email":"admin@juice-sh.op"}}').decode().rstrip("=")
+    token_payload = (
+        base64.urlsafe_b64encode(b'{"data":{"role":"admin","email":"admin@juice-sh.op"}}')
+        .decode()
+        .rstrip("=")
+    )
     fake_token = f"{token_header}.{token_payload}.sig"
 
-    mock_resp.read.return_value = json.dumps({
-        "authentication": {
-            "token": fake_token,
-            "bid": 1,
-            "umail": "admin@juice-sh.op"
-        }
-    }).encode("utf-8")
+    mock_resp.read.return_value = json.dumps(
+        {"authentication": {"token": fake_token, "bid": 1, "umail": "admin@juice-sh.op"}}
+    ).encode("utf-8")
 
     with patch("urllib.request.urlopen", return_value=mock_resp):
-        res = CredentialValidator.test_single_credential(target_url, "admin@juice-sh.op", "admin123")
+        res = CredentialValidator.test_single_credential(
+            target_url, "admin@juice-sh.op", "admin123"
+        )
         assert res.authenticated
         assert res.is_admin
         assert res.role == "admin"
@@ -192,7 +188,7 @@ def test_auth_manager_session_propagation():
         token="test_secret_token_12345",
         username="demo",
         role="customer",
-        basket_id=6
+        basket_id=6,
     )
     headers = session.get_auth_header()
     assert headers["Authorization"] == "Bearer test_secret_token_12345"
@@ -205,12 +201,14 @@ def test_auth_manager_session_propagation():
 
 def test_gap1_triage_with_auth_session():
     """Test that authenticated session injects high-priority authenticated attack vectors."""
-    auth_session = AuthSession(authenticated=True, token="valid_jwt", username="demo", role="customer")
+    auth_session = AuthSession(
+        authenticated=True, token="valid_jwt", username="demo", role="customer"
+    )
     candidates = run_gap1_triage(
         scenario="default",
         target_url="http://127.0.0.1:3000/",
         scan_mode="deep",
-        auth_session=auth_session
+        auth_session=auth_session,
     )
     c_ids = [c["id"] for c in candidates]
     assert "user-enumeration" in c_ids

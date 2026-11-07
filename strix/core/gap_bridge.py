@@ -6,12 +6,13 @@ root task, records attempt outcomes, and returns pivot guidance after the
 configured failure threshold. It never changes scan scope: authorization is
 enforced by the AI_VAPT adapter before Strix is launched.
 """
+
 from __future__ import annotations
 
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,7 @@ STATE_FILENAME = "gap_state.json"
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def control_dir() -> Path | None:
@@ -59,7 +60,9 @@ def threshold() -> int:
 class GapRunState:
     """Run-isolated state manager for GAP-1 queue processing and GAP-2 bounded pivots."""
 
-    def __init__(self, directory: Path | str | None = None, *, threshold_override: int | None = None) -> None:
+    def __init__(
+        self, directory: Path | str | None = None, *, threshold_override: int | None = None
+    ) -> None:
         self.directory: Path | None = Path(directory) if directory else None
         self._threshold_override: int | None = threshold_override
         self.attempts: dict[str, int] = {}
@@ -199,9 +202,11 @@ def queue_order(directory: Path | None = None) -> tuple[list[str], list[str]]:
         return [], []
     if not isinstance(payload, dict):
         return [], []
-    original = payload.get("original_order") if isinstance(payload.get("original_order"), list) else []
-    ranked = payload.get("ranked_order") if isinstance(payload.get("ranked_order"), list) else []
-    return [str(item) for item in original], [str(item) for item in ranked]
+    orig_raw = payload.get("original_order")
+    rank_raw = payload.get("ranked_order")
+    orig_list = orig_raw if isinstance(orig_raw, list) else []
+    rank_list = rank_raw if isinstance(rank_raw, list) else []
+    return [str(item) for item in orig_list], [str(item) for item in rank_list]
 
 
 def note_event(event: str, *, directory: Path | None = None, **fields: Any) -> dict[str, Any]:
@@ -283,7 +288,9 @@ def _slug(value: str) -> str:
     return cleaned[:80] or "candidate"
 
 
-def candidate_for(title: str, endpoint: str, target: str, directory: Path | None = None) -> dict[str, Any] | None:
+def candidate_for(
+    title: str, endpoint: str, target: str, directory: Path | None = None
+) -> dict[str, Any] | None:
     candidates = load_queue(directory)
     if not candidates:
         return None
@@ -337,7 +344,11 @@ def candidate_for(title: str, endpoint: str, target: str, directory: Path | None
         for entry in candidates:
             entry_endpoint = str(entry.get("endpoint") or "").strip().lower()
             if entry_endpoint and entry_endpoint != "/":
-                if endpoint_key == entry_endpoint or endpoint_key in entry_endpoint or entry_endpoint in endpoint_key:
+                if (
+                    endpoint_key == entry_endpoint
+                    or endpoint_key in entry_endpoint
+                    or entry_endpoint in endpoint_key
+                ):
                     return entry
 
     # 4. Exact endpoint match (when non-ambiguous)
@@ -358,7 +369,9 @@ def candidate_id_for(title: str, endpoint: str, target: str, directory: Path | N
     return f"strix-{_slug(raw)}"
 
 
-def next_candidate(directory: Path | None = None, state: GapRunState | None = None) -> dict[str, Any] | None:
+def next_candidate(
+    directory: Path | None = None, state: GapRunState | None = None
+) -> dict[str, Any] | None:
     st = state or get_run_state(directory)
     for entry in load_queue(directory or st.directory):
         candidate_id = str(entry.get("candidate_id") or "")
@@ -390,7 +403,9 @@ def record_outcome(
     the agent. Tool errors are recorded without being treated as safety proof.
     """
     st = state or get_run_state(directory)
-    cid = candidate_id or candidate_id_for(title, endpoint, target, directory=directory or st.directory)
+    cid = candidate_id or candidate_id_for(
+        title, endpoint, target, directory=directory or st.directory
+    )
     candidate_id = cid
 
     # Determine semantic status
@@ -428,13 +443,15 @@ def record_outcome(
             detail=detail,
             directory=st.directory,
         )
-        st.probe_outcomes.append({
-            "candidate_id": candidate_id,
-            "status": "positive",
-            "detail": detail,
-            "report_id": report_id,
-            "timestamp": _utc_now(),
-        })
+        st.probe_outcomes.append(
+            {
+                "candidate_id": candidate_id,
+                "status": "positive",
+                "detail": detail,
+                "report_id": report_id,
+                "timestamp": _utc_now(),
+            }
+        )
         nxt = next_candidate(directory=st.directory, state=st)
         st.save()
         return {
@@ -458,12 +475,14 @@ def record_outcome(
             detail=detail,
             directory=st.directory,
         )
-        st.probe_outcomes.append({
-            "candidate_id": candidate_id,
-            "status": "negative",
-            "detail": detail,
-            "timestamp": _utc_now(),
-        })
+        st.probe_outcomes.append(
+            {
+                "candidate_id": candidate_id,
+                "status": "negative",
+                "detail": detail,
+                "timestamp": _utc_now(),
+            }
+        )
         nxt = next_candidate(directory=st.directory, state=st)
         st.save()
         return {
@@ -485,12 +504,14 @@ def record_outcome(
             detail=detail,
             directory=st.directory,
         )
-        st.probe_outcomes.append({
-            "candidate_id": candidate_id,
-            "status": "error",
-            "detail": detail,
-            "timestamp": _utc_now(),
-        })
+        st.probe_outcomes.append(
+            {
+                "candidate_id": candidate_id,
+                "status": "error",
+                "detail": detail,
+                "timestamp": _utc_now(),
+            }
+        )
         st.save()
         return {
             "candidate_id": candidate_id,
@@ -505,7 +526,11 @@ def record_outcome(
     # Check for rapid duplicate inconclusive calls
     if st.probe_outcomes:
         last = st.probe_outcomes[-1]
-        if last.get("candidate_id") == candidate_id and last.get("status") == "inconclusive" and last.get("detail") == detail:
+        if (
+            last.get("candidate_id") == candidate_id
+            and last.get("status") == "inconclusive"
+            and last.get("detail") == detail
+        ):
             attempts = st.attempts.get(candidate_id, 1)
             pivot = attempts >= st.threshold() and candidate_id not in st.exhausted
             return {
@@ -547,14 +572,16 @@ def record_outcome(
             ),
             directory=st.directory,
         )
-    st.probe_outcomes.append({
-        "candidate_id": candidate_id,
-        "status": "inconclusive",
-        "attempt": attempts,
-        "pivot": pivot,
-        "detail": detail,
-        "timestamp": _utc_now(),
-    })
+    st.probe_outcomes.append(
+        {
+            "candidate_id": candidate_id,
+            "status": "inconclusive",
+            "attempt": attempts,
+            "pivot": pivot,
+            "detail": detail,
+            "timestamp": _utc_now(),
+        }
+    )
     st.save()
     return {
         "candidate_id": candidate_id,
@@ -599,7 +626,12 @@ def guidance_text(outcome: dict[str, Any]) -> str:
     if not outcome.get("pivot"):
         return ""
     nxt = outcome.get("next_candidate") or {}
-    label = nxt.get("title") or nxt.get("endpoint") or nxt.get("candidate_id") or "the next ranked candidate"
+    label = (
+        nxt.get("title")
+        or nxt.get("endpoint")
+        or nxt.get("candidate_id")
+        or "the next ranked candidate"
+    )
     return (
         f"GAP-2 PIVOT: candidate {outcome.get('candidate_id')} reached the failure "
         f"threshold ({outcome.get('attempts')}/{outcome.get('threshold')}). "
@@ -625,17 +657,17 @@ __all__ = [
     "DEFAULT_THRESHOLD",
     "GAP1_ENABLED_ENV",
     "GAP2_ENABLED_ENV",
-    "GapRunState",
     "QUEUE_ENV",
     "QUEUE_FILENAME",
     "STATE_FILENAME",
     "THRESHOLD_ENV",
     "TRACE_FILENAME",
+    "GapRunState",
     "candidate_for",
     "candidate_id_for",
     "control_dir",
-    "gap1_instruction_block",
     "gap1_enabled",
+    "gap1_instruction_block",
     "gap2_enabled",
     "get_run_state",
     "guidance_text",

@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+def _disabled_copilot_poll(*args: object, **kwargs: object) -> str:
+    raise RuntimeError("Copilot device polling disabled in tests")
 
 
 @pytest.fixture(autouse=True)
@@ -51,3 +61,35 @@ def _isolate_wallet_config(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     for name in ("MPPX_ACCOUNT", "MPPX_STRIPE_SECRET_KEY", "MPPX_STRIPE_PAYMENT_METHOD"):
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_litellm_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LITELLM_TELEMETRY", "False")
+    monkeypatch.setenv("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+    try:
+        import litellm
+
+        litellm.telemetry = False
+    except Exception:
+        pass
+    try:
+        from litellm.llms.github_copilot.authenticator import Authenticator
+
+        monkeypatch.setattr(Authenticator, "_poll_for_access_token", _disabled_copilot_poll)
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_config_loader_after_test() -> Iterator[None]:
+    try:
+        yield
+    finally:
+        try:
+            from strix.config import loader
+
+            loader._override = None
+            loader._cached = None
+        except Exception:
+            pass

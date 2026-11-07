@@ -11,10 +11,11 @@ import json
 import logging
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from strix.core.scanner.auth_manager import redact_credential
 from strix.core.scanner.jwt_inspector import JWTInspector
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +29,11 @@ class CredentialValidationResult:
         password_masked: str,
         login_url: str,
         authenticated: bool,
-        role: Optional[str] = None,
+        role: str | None = None,
         is_admin: bool = False,
         summary: str = "",
         evidence_snippet: str = "",
-        jwt_findings: Optional[Dict[str, Any]] = None,
+        jwt_findings: dict[str, Any] | None = None,
     ):
         self.username = username
         self.password_masked = password_masked
@@ -44,7 +45,7 @@ class CredentialValidationResult:
         self.evidence_snippet = evidence_snippet
         self.jwt_findings = jwt_findings
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "username": self.username,
             "password_masked": self.password_masked,
@@ -100,11 +101,15 @@ class CredentialValidator:
                     summary = (
                         f"Default credential validation confirmed for '{username}': "
                         f"authenticates successfully with role '{role}'."
-                        + (" (HIGH SEVERITY: Grants full administrative privileges)" if is_admin else "")
+                        + (
+                            " (HIGH SEVERITY: Grants full administrative privileges)"
+                            if is_admin
+                            else ""
+                        )
                     )
                     evidence = (
                         f"POST {login_path} HTTP/1.1\n"
-                        f"Payload: {{\"email\":\"{username}\",\"password\":\"{masked_pwd}\"}}\n"
+                        f'Payload: {{"email":"{username}","password":"{masked_pwd}"}}\n'
                         f"Response: HTTP 200 OK\n"
                         f"Assigned Role: {role}\n"
                         f"Token Issued: Yes (Redacted)"
@@ -147,4 +152,3 @@ class CredentialValidator:
             summary="Credential probe inconclusive",
             evidence_snippet="",
         )
-

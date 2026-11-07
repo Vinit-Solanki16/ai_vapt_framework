@@ -1205,9 +1205,13 @@ def _estimate_response_cost(kwargs: Any, completion_response: Any) -> float | No
     if "/" in model:
         candidates.append(model.rsplit("/", 1)[-1])
 
+    _EXCLUDED_PREFIXES = ("github_copilot/", "microsoft_365_copilot/")
+
     for candidate in candidates:
+        if candidate.startswith(_EXCLUDED_PREFIXES):
+            continue
         resolved = resolve_litellm_model(candidate)
-        if not resolved:
+        if not resolved or resolved.startswith(_EXCLUDED_PREFIXES):
             continue
         try:
             value = completion_cost(

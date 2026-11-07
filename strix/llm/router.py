@@ -3,12 +3,14 @@
 Maps Web Console provider and model selections directly to LiteLLM parameters
 with in-memory credential safety (zero .env pollution).
 """
+
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from strix.llm.ollama_service import get_ollama_base_url
+
 
 DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3.5-lightning:free"
 
@@ -23,7 +25,7 @@ DEPRECATED_OPENROUTER_FREE_MODELS = {
 }
 
 
-def format_openrouter_model(model_name: Optional[str] = None) -> str:
+def format_openrouter_model(model_name: str | None = None) -> str:
     """Format and normalize an OpenRouter model identifier for LiteLLM routing.
 
     Handles:
@@ -39,7 +41,7 @@ def format_openrouter_model(model_name: Optional[str] = None) -> str:
     # Extract bare model slug without leading openrouter/ prefix for inspection
     slug = raw
     if slug.startswith("openrouter/"):
-        slug = slug[len("openrouter/"):]
+        slug = slug[len("openrouter/") :]
 
     # Auto-migrate deprecated models that now return HTTP 404
     if slug in DEPRECATED_OPENROUTER_FREE_MODELS:
@@ -51,7 +53,7 @@ def format_openrouter_model(model_name: Optional[str] = None) -> str:
     # To send slug 'openrouter/free' to OpenRouter, LiteLLM must receive 'openrouter/openrouter/free'.
     if slug == "free" or slug == "openrouter/free":
         return "openrouter/openrouter/free"
-    elif slug.startswith("openrouter/openrouter/"):
+    if slug.startswith("openrouter/openrouter/"):
         return slug
 
     if raw.startswith("openrouter/"):
@@ -62,11 +64,11 @@ def format_openrouter_model(model_name: Optional[str] = None) -> str:
 
 def resolve_model_kwargs(
     provider: str,
-    model_name: Optional[str] = None,
-    api_key: Optional[str] = None,
-    api_base: Optional[str] = None,
-    extra_headers: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    model_name: str | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Resolve provider, model, and credentials into LiteLLM call arguments."""
     prov = (provider or "ollama").strip().lower()
     model = (model_name or "").strip()
@@ -74,19 +76,25 @@ def resolve_model_kwargs(
     if prov == "ollama":
         target_model = model or "qwen2.5:1.5b"
         return {
-            "model": f"ollama/{target_model}" if not target_model.startswith("ollama/") else target_model,
+            "model": f"ollama/{target_model}"
+            if not target_model.startswith("ollama/")
+            else target_model,
             "api_base": get_ollama_base_url(),
         }
 
-    elif prov == "google":
+    if prov == "google":
         target_model = model or "gemini-2.0-flash"
-        resolved_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        resolved_key = (
+            api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        )
         return {
-            "model": f"gemini/{target_model}" if not target_model.startswith("gemini/") else target_model,
+            "model": f"gemini/{target_model}"
+            if not target_model.startswith("gemini/")
+            else target_model,
             "api_key": resolved_key,
         }
 
-    elif prov == "openrouter":
+    if prov == "openrouter":
         target_model = format_openrouter_model(model)
         resolved_key = (
             api_key
@@ -100,7 +108,7 @@ def resolve_model_kwargs(
             "api_base": os.environ.get("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
         }
 
-    elif prov == "openai":
+    if prov == "openai":
         target_model = model or "gpt-4o-mini"
         resolved_key = api_key or os.environ.get("OPENAI_API_KEY")
         return {
@@ -108,15 +116,12 @@ def resolve_model_kwargs(
             "api_key": resolved_key,
         }
 
-    elif prov in ("cloud_hosted", "custom_cloud", "custom"):
+    if prov in ("cloud_hosted", "custom_cloud", "custom"):
         target_model = model or "custom-model"
         if not target_model.startswith("openai/"):
             target_model = f"openai/{target_model}"
         resolved_key = (
-            api_key
-            or os.environ.get("OPENAI_API_KEY")
-            or os.environ.get("LLM_API_KEY")
-            or "none"
+            api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY") or "none"
         )
         resolved_base = (
             api_base
@@ -124,7 +129,7 @@ def resolve_model_kwargs(
             or os.environ.get("LLM_API_BASE")
             or "https://api.openai.com/v1"
         )
-        out_kwargs: Dict[str, Any] = {
+        out_kwargs: dict[str, Any] = {
             "model": target_model,
             "api_key": resolved_key,
             "api_base": resolved_base,
@@ -134,6 +139,7 @@ def resolve_model_kwargs(
         elif os.environ.get("LLM_EXTRA_HEADERS"):
             try:
                 import json
+
                 out_kwargs["extra_headers"] = json.loads(os.environ["LLM_EXTRA_HEADERS"])
             except Exception:
                 pass
@@ -144,4 +150,3 @@ def resolve_model_kwargs(
         "model": model or "ollama/qwen2.5:1.5b",
         "api_base": get_ollama_base_url(),
     }
-

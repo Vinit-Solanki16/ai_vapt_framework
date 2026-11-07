@@ -12,7 +12,7 @@ import asyncio
 import json
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -54,10 +54,12 @@ class _StallingHandler(BaseHTTPRequestHandler):
         pass
 
     def do_POST(self) -> None:
+        self.close_connection = True
         length = int(self.headers.get("Content-Length", 0))
         self.rfile.read(length)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(_chunk("Now"))
         self.wfile.write(_chunk(" spawning"))
@@ -68,15 +70,19 @@ class _StallingHandler(BaseHTTPRequestHandler):
 @pytest.fixture
 def stalling_gateway() -> Iterator[str]:
     _StallingHandler.stop.clear()
-    server = HTTPServer(("127.0.0.1", 0), _StallingHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _StallingHandler)
+    server.daemon_threads = True
+    thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
         _StallingHandler.stop.set()
         server.shutdown()
-        server.server_close()
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 class _ServedByRelace(OpenAIChatCompletionsModel):

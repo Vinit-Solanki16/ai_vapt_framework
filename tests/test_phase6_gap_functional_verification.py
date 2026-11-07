@@ -14,34 +14,33 @@ Verifies:
 11. Telemetry and milestone synchronization in API runner.
 12. Strict per-run state isolation across concurrent assessments.
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
+
 import pytest
 
 from strix.core import gap_bridge
 from strix.core.gap_bridge import (
     GapRunState,
-    candidate_for,
     candidate_id_for,
     gap1_instruction_block,
-    guidance_text,
     load_queue,
     next_candidate,
     record_outcome,
     record_probe_result,
     reset_state,
 )
+from strix.core.inputs import child_initial_input
 from strix.tools.coverage.tools import (
     _record_impl,
     _update_impl,
-    get_coverage_entries,
     reset_coverage_state,
 )
 from strix.tools.finish.tool import _evaluate_completion_gate
-from strix.core.inputs import child_initial_input, build_root_task
 
 
 def _create_sample_queue(control_dir: Path) -> list[dict[str, Any]]:
@@ -135,16 +134,40 @@ def test_candidate_matching_resilience(tmp_path: Path, monkeypatch: pytest.Monke
     assert candidate_id_for(title="", endpoint="c2", target="", directory=control_dir) == "c2"
 
     # Match by bracketed tag in title
-    assert candidate_id_for(title="[c1] Testing SQL Injection", endpoint="", target="", directory=control_dir) == "c1"
-    assert candidate_id_for(title="c3 in profile view", endpoint="", target="", directory=control_dir) == "c3"
+    assert (
+        candidate_id_for(
+            title="[c1] Testing SQL Injection", endpoint="", target="", directory=control_dir
+        )
+        == "c1"
+    )
+    assert (
+        candidate_id_for(title="c3 in profile view", endpoint="", target="", directory=control_dir)
+        == "c3"
+    )
 
     # Match by endpoint
-    assert candidate_id_for(title="", endpoint="/rest/products/search", target="", directory=control_dir) == "c1"
-    assert candidate_id_for(title="", endpoint="/api/feedbacks", target="", directory=control_dir) == "c2"
+    assert (
+        candidate_id_for(
+            title="", endpoint="/rest/products/search", target="", directory=control_dir
+        )
+        == "c1"
+    )
+    assert (
+        candidate_id_for(title="", endpoint="/api/feedbacks", target="", directory=control_dir)
+        == "c2"
+    )
 
     # Match by title substring
-    assert candidate_id_for(title="SQL Injection in Search", endpoint="", target="", directory=control_dir) == "c1"
-    assert candidate_id_for(title="Customer Feedback", endpoint="", target="", directory=control_dir) == "c2"
+    assert (
+        candidate_id_for(
+            title="SQL Injection in Search", endpoint="", target="", directory=control_dir
+        )
+        == "c1"
+    )
+    assert (
+        candidate_id_for(title="Customer Feedback", endpoint="", target="", directory=control_dir)
+        == "c2"
+    )
 
 
 def test_positive_outcome_completes_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -221,7 +244,9 @@ def test_negative_outcome_completes_candidate(tmp_path: Path, monkeypatch: pytes
     assert next_candidate(control_dir)["candidate_id"] == "c2"
 
 
-def test_inconclusive_outcome_and_dynamic_pivot_at_threshold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_inconclusive_outcome_and_dynamic_pivot_at_threshold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 5 & 6: Inconclusive attempts increment until threshold k=2 triggers GAP2_PIVOT with guidance."""
     control_dir = tmp_path / "run_test5"
     monkeypatch.setenv("STRIX_GAP_CONTROL_DIR", str(control_dir))
@@ -287,7 +312,9 @@ def test_inconclusive_outcome_and_dynamic_pivot_at_threshold(tmp_path: Path, mon
     assert nxt["candidate_id"] == "c2"
 
 
-def test_tool_error_does_not_cause_false_completion_or_exhaustion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_tool_error_does_not_cause_false_completion_or_exhaustion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 7: Tool errors are logged as GAP2_TOOL_ERROR without counting as safety or failure exhaustion."""
     control_dir = tmp_path / "run_test7"
     monkeypatch.setenv("STRIX_GAP_CONTROL_DIR", str(control_dir))
@@ -317,7 +344,9 @@ def test_tool_error_does_not_cause_false_completion_or_exhaustion(tmp_path: Path
     assert error_events[0]["candidate_id"] == "c1"
 
 
-def test_completion_gate_enforcement_with_gap1_and_gap2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_completion_gate_enforcement_with_gap1_and_gap2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test 8: Completion gate rejects finish_scan while unaddressed candidates exist, permits when all are resolved."""
     control_dir = tmp_path / "run_test8"
     monkeypatch.setenv("STRIX_GAP_CONTROL_DIR", str(control_dir))
@@ -386,7 +415,10 @@ def test_child_agent_outcome_protocol_injection(tmp_path: Path, monkeypatch: pyt
     assert "You are agent SQLi Specialist (agent_sqli_1); your parent is root_agent." in content
     assert "Test SQL injection on candidate [c1] /rest/products/search" in content
     assert "AI_VAPT Outcome Protocol:" in content
-    assert "record_coverage(surface=endpoint, risk_area=title, outcome='no_issue_found' or 'needs_follow_up')" in content
+    assert (
+        "record_coverage(surface=endpoint, risk_area=title, outcome='no_issue_found' or 'needs_follow_up')"
+        in content
+    )
 
 
 def test_per_run_state_isolation_concurrent(tmp_path: Path):
@@ -401,9 +433,16 @@ def test_per_run_state_isolation_concurrent(tmp_path: Path):
     state_b = gap_bridge.get_run_state(dir_b)
 
     # Run A records 1 attempt on c1
-    record_outcome(candidate_id="c1", endpoint="/rest/products/search", probe_status="inconclusive", state=state_a)
+    record_outcome(
+        candidate_id="c1",
+        endpoint="/rest/products/search",
+        probe_status="inconclusive",
+        state=state_a,
+    )
     # Run B records positive on c1
-    record_outcome(candidate_id="c1", endpoint="/rest/products/search", probe_status="positive", state=state_b)
+    record_outcome(
+        candidate_id="c1", endpoint="/rest/products/search", probe_status="positive", state=state_b
+    )
 
     assert state_a.attempts.get("c1") == 1
     assert "c1" not in state_a.completed
@@ -425,6 +464,7 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
     import sys
     import time
     from unittest.mock import patch
+
     from strix.interface.api import _RUNS, _execute_run_worker
     from strix.interface.schemas import RunRequest
 
@@ -435,11 +475,36 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
     control_dir.mkdir(parents=True, exist_ok=True)
 
     candidates_list = [
-        {"id": "c1", "candidate_id": "c1", "name": "SQL Injection", "title": "SQL Injection", "endpoint": "/rest/products/search", "priority_score": 90.0},
-        {"id": "c2", "candidate_id": "c2", "name": "XSS Feedback", "title": "XSS Feedback", "endpoint": "/api/feedbacks", "priority_score": 80.0},
-        {"id": "c3", "candidate_id": "c3", "name": "IDOR Profile", "title": "IDOR Profile", "endpoint": "/rest/user/profile", "priority_score": 70.0},
+        {
+            "id": "c1",
+            "candidate_id": "c1",
+            "name": "SQL Injection",
+            "title": "SQL Injection",
+            "endpoint": "/rest/products/search",
+            "priority_score": 90.0,
+        },
+        {
+            "id": "c2",
+            "candidate_id": "c2",
+            "name": "XSS Feedback",
+            "title": "XSS Feedback",
+            "endpoint": "/api/feedbacks",
+            "priority_score": 80.0,
+        },
+        {
+            "id": "c3",
+            "candidate_id": "c3",
+            "name": "IDOR Profile",
+            "title": "IDOR Profile",
+            "endpoint": "/rest/user/profile",
+            "priority_score": 70.0,
+        },
     ]
-    queue_payload = {"original_order": ["c1", "c2", "c3"], "ranked_order": ["c1", "c2", "c3"], "candidates": candidates_list}
+    queue_payload = {
+        "original_order": ["c1", "c2", "c3"],
+        "ranked_order": ["c1", "c2", "c3"],
+        "candidates": candidates_list,
+    }
     (control_dir / "gap1_queue.json").write_text(json.dumps(queue_payload), encoding="utf-8")
 
     # Mock subprocess that writes:
@@ -499,9 +564,19 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
         "decision_trace": [],
         "pivot_events": [],
         "candidates": [
-            {"id": "c1", "name": "SQL Injection", "endpoint": "/rest/products/search", "state": "PENDING"},
+            {
+                "id": "c1",
+                "name": "SQL Injection",
+                "endpoint": "/rest/products/search",
+                "state": "PENDING",
+            },
             {"id": "c2", "name": "XSS Feedback", "endpoint": "/api/feedbacks", "state": "PENDING"},
-            {"id": "c3", "name": "IDOR Profile", "endpoint": "/rest/user/profile", "state": "PENDING"},
+            {
+                "id": "c3",
+                "name": "IDOR Profile",
+                "endpoint": "/rest/user/profile",
+                "state": "PENDING",
+            },
         ],
         "findings": [],
         "stats": {"attempts": 0, "pivots": 0, "findings": 0},
@@ -516,12 +591,13 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
     )
 
     orig_popen = subprocess.Popen
-    with patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs), \
-         patch("strix.interface.api.PROJECT_ROOT", tmp_path), \
-         patch("strix.interface.api._is_docker_available", return_value=True), \
-         patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=candidates_list), \
-         patch("subprocess.Popen") as mock_popen:
-
+    with (
+        patch("strix.interface.api.runs_base_dir", return_value=fake_strix_runs),
+        patch("strix.interface.api.PROJECT_ROOT", tmp_path),
+        patch("strix.interface.api._is_docker_available", return_value=True),
+        patch("strix.core.triage.exploit_assessor.run_gap1_triage", return_value=candidates_list),
+        patch("subprocess.Popen") as mock_popen,
+    ):
         real_proc = orig_popen(
             [sys.executable, "-c", script],
             stdout=subprocess.PIPE,
@@ -553,4 +629,3 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
     assert len(final_entry.get("pivot_events", [])) == 1
     assert final_entry["pivot_events"][0]["candidate_id"] == "c2"
     assert final_entry["pivot_events"][0]["next_candidate"] == "c3"
-

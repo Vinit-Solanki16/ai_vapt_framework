@@ -4,18 +4,18 @@ Supports any standard OpenAI-compatible API endpoint (e.g., vLLM, Ollama-OpenAI,
 TGI, LMDeploy, FastChat, remote notebook/cloud GPU hosts, RunPod, etc.)
 with zero hardcoded host assumptions and strict credential privacy.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import re
-import socket
 import ssl
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from strix.interface.schemas import (
     CloudTestConnectionResponse,
@@ -24,10 +24,11 @@ from strix.interface.schemas import (
     CloudWarmupResponse,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
-def _redact_secrets(text: str, custom_secrets: Optional[List[str]] = None) -> str:
+def _redact_secrets(text: str, custom_secrets: list[str] | None = None) -> str:
     """Sanitize API keys and bearer tokens from error strings."""
     if not text:
         return text
@@ -36,7 +37,9 @@ def _redact_secrets(text: str, custom_secrets: Optional[List[str]] = None) -> st
             if secret and len(secret) > 3:
                 text = text.replace(secret, "[REDACTED]")
     text = re.sub(r"sk-[a-zA-Z0-9_\-]{10,}", "sk-***[REDACTED]***", text)
-    text = re.sub(r"Bearer\s+[a-zA-Z0-9_\-\.]{10,}", "Bearer ***[REDACTED]***", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"Bearer\s+[a-zA-Z0-9_\-\.]{10,}", "Bearer ***[REDACTED]***", text, flags=re.IGNORECASE
+    )
     text = re.sub(r"AIza[a-zA-Z0-9_\-]{25,}", "AIza***[REDACTED]***", text)
     return text
 
@@ -51,9 +54,11 @@ def _normalize_base_url(api_base: str) -> str:
     return base
 
 
-def _build_headers(api_key: Optional[str] = None, extra_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+def _build_headers(
+    api_key: str | None = None, extra_headers: dict[str, str] | None = None
+) -> dict[str, str]:
     """Construct HTTP headers including authentication and optional user headers."""
-    headers: Dict[str, str] = {
+    headers: dict[str, str] = {
         "User-Agent": "STRIX-AI-VAPT/1.0",
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -77,10 +82,10 @@ def _create_ssl_context() -> ssl.SSLContext:
 
 def discover_cloud_models(
     api_base: str,
-    api_key: Optional[str] = None,
-    extra_headers: Optional[Dict[str, str]] = None,
+    api_key: str | None = None,
+    extra_headers: dict[str, str] | None = None,
     timeout: float = 6.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Dynamically discover models exposed on the OpenAI-compatible endpoint."""
     base = _normalize_base_url(api_base)
     models_url = f"{base}/models"
@@ -102,7 +107,7 @@ def discover_cloud_models(
                         "models": [],
                     }
 
-                models_list: List[str] = []
+                models_list: list[str] = []
                 data = body.get("data") or body.get("models")
                 if isinstance(data, list):
                     for item in data:
@@ -173,7 +178,7 @@ def discover_cloud_models(
             "message": _redact_secrets(f"Network error: {reason}"),
             "models": [],
         }
-    except socket.timeout:
+    except TimeoutError:
         return {
             "valid": False,
             "status": "unreachable",
@@ -192,8 +197,8 @@ def discover_cloud_models(
 def test_cloud_connection(
     api_base: str,
     model: str,
-    api_key: Optional[str] = None,
-    extra_headers: Optional[Dict[str, str]] = None,
+    api_key: str | None = None,
+    extra_headers: dict[str, str] | None = None,
     timeout: float = 12.0,
 ) -> CloudTestConnectionResponse:
     """Test reachability, model availability, and basic chat completion with latency diagnostics."""
@@ -209,9 +214,7 @@ def test_cloud_connection(
     # Step 2: Minimal chat completion probe
     payload = {
         "model": model,
-        "messages": [
-            {"role": "user", "content": "respond with the single word pong"}
-        ],
+        "messages": [{"role": "user", "content": "respond with the single word pong"}],
         "max_tokens": 15,
         "temperature": 0.0,
     }
@@ -260,15 +263,14 @@ def test_cloud_connection(
                         "completion_tokens": completion_tokens,
                     },
                 )
-            else:
-                return CloudTestConnectionResponse(
-                    status="error",
-                    message=f"Endpoint returned HTTP {resp.status} on /chat/completions",
-                    valid=False,
-                    models=discovered_models,
-                    chat_completion_ok=False,
-                    duration_ms=round((time.perf_counter() - start_time) * 1000.0, 2),
-                )
+            return CloudTestConnectionResponse(
+                status="error",
+                message=f"Endpoint returned HTTP {resp.status} on /chat/completions",
+                valid=False,
+                models=discovered_models,
+                chat_completion_ok=False,
+                duration_ms=round((time.perf_counter() - start_time) * 1000.0, 2),
+            )
     except urllib.error.HTTPError as err:
         err_body = ""
         try:
@@ -302,7 +304,7 @@ def test_cloud_connection(
             valid=False,
             models=discovered_models,
         )
-    except socket.timeout:
+    except TimeoutError:
         return CloudTestConnectionResponse(
             status="unreachable",
             message=f"Inference request timed out after {timeout}s",
@@ -318,14 +320,14 @@ def test_cloud_connection(
         )
 
 
-test_cloud_connection.__test__ = False
+test_cloud_connection.__test__ = False  # type: ignore[attr-defined]
 
 
 def verify_cloud_structured_tools(
     api_base: str,
     model: str,
-    api_key: Optional[str] = None,
-    extra_headers: Optional[Dict[str, str]] = None,
+    api_key: str | None = None,
+    extra_headers: dict[str, str] | None = None,
     timeout: float = 16.0,
 ) -> CloudVerifyToolsResponse:
     """Verify structured function/tool calling compatibility for autonomous Strix execution.
@@ -474,12 +476,14 @@ def verify_cloud_structured_tools(
     # --- Step 2: Multi-turn tool execution continuation ---
     call_id = first_call.get("id") or "call_test_123"
     messages.append(assistant_msg)
-    messages.append({
-        "role": "tool",
-        "tool_call_id": call_id,
-        "name": diag.tool_name or "check_service_port",
-        "content": json.dumps({"status": "open", "service": "http", "banner": "Apache/2.4.41"}),
-    })
+    messages.append(
+        {
+            "role": "tool",
+            "tool_call_id": call_id,
+            "name": diag.tool_name or "check_service_port",
+            "content": json.dumps({"status": "open", "service": "http", "banner": "Apache/2.4.41"}),
+        }
+    )
 
     cont_req_body = {
         "model": model,
@@ -547,8 +551,8 @@ def verify_cloud_structured_tools(
 def warmup_cloud_model(
     api_base: str,
     model: str,
-    api_key: Optional[str] = None,
-    extra_headers: Optional[Dict[str, str]] = None,
+    api_key: str | None = None,
+    extra_headers: dict[str, str] | None = None,
     timeout: float = 12.0,
 ) -> CloudWarmupResponse:
     """Send a lightweight, harmless warmup request to trigger GPU shader / weights cache prefill."""

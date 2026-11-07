@@ -1,7 +1,6 @@
 """Unit and integration tests for STRIX Multi-Category Vulnerability Scanner."""
-import pytest
+
 from strix.core.scanner import (
-    FullScanner,
     SCAN_CATEGORIES,
     analyze_page_components,
     run_passive_rules,
@@ -119,6 +118,7 @@ def test_portable_port_scanner_localhost():
 def test_web_spider_form_and_link_extraction():
     """Verify WebSpider discovers forms, inputs, and internal links without browser binary."""
     from strix.core.scanner.crawler import WebSpider
+
     spider = WebSpider("https://example.com/app", scan_mode="quick")
     mock_html = """
     <html>
@@ -150,11 +150,10 @@ def test_web_spider_form_and_link_extraction():
 
 def test_active_fuzzer_scan_modes():
     """Verify active fuzzer path depth corresponds to scan_mode."""
-    from strix.core.scanner.active_fuzzer import ActiveFuzzer, SENSITIVE_PATHS
+    from strix.core.scanner.active_fuzzer import SENSITIVE_PATHS, ActiveFuzzer
+
     f_quick = ActiveFuzzer("https://example.com", scan_mode="quick")
     f_std = ActiveFuzzer("https://example.com", scan_mode="standard")
     f_deep = ActiveFuzzer("https://example.com", scan_mode="deep")
 
     assert len(SENSITIVE_PATHS) >= 40
-
-

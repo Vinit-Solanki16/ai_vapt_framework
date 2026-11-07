@@ -1,8 +1,9 @@
 """Active non-destructive validator for exposed phpinfo / diagnostic pages."""
+
 from __future__ import annotations
 
 import urllib.request
-from typing import Any, Dict
+from typing import Any
 from urllib.parse import urljoin
 
 from .base import BaseValidator, ValidationResult
@@ -13,7 +14,7 @@ class PhpInfoValidator(BaseValidator):
 
     COMMON_PATHS = ["/phpinfo.php", "/info.php", "/test.php", "/php_info.php"]
 
-    def validate(self, target_url: str, candidate: Dict[str, Any]) -> ValidationResult:
+    def validate(self, target_url: str, candidate: dict[str, Any]) -> ValidationResult:
         base = target_url.rstrip("/")
         for path in self.COMMON_PATHS:
             test_url = urljoin(base, path)
@@ -27,7 +28,11 @@ class PhpInfoValidator(BaseValidator):
                     if resp.status == 200:
                         content = resp.read(4096)
                         text = content.decode("utf-8", errors="replace")
-                        if "PHP Version" in text or "phpinfo()" in text or "<title>phpinfo()</title>" in text:
+                        if (
+                            "PHP Version" in text
+                            or "phpinfo()" in text
+                            or "<title>phpinfo()</title>" in text
+                        ):
                             ev_hash = self.compute_evidence_hash(content)
                             return ValidationResult(
                                 confirmed=True,
@@ -48,4 +53,3 @@ class PhpInfoValidator(BaseValidator):
             reproduction_command=f"curl -s -I {target_url}/phpinfo.php",
             detail="No exposed phpinfo() diagnostic page detected.",
         )
-

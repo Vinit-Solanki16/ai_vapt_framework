@@ -953,12 +953,18 @@ async def _do_create(
             )
 
     # Phase 13 Guard 2: HTTP PUT Arbitrary File Write Validation
-    is_put = "put" in title.lower() or "arbitrary file write" in title.lower() or "arbitrary file upload" in title.lower()
+    is_put = (
+        "put" in title.lower()
+        or "arbitrary file write" in title.lower()
+        or "arbitrary file upload" in title.lower()
+    )
     if is_put:
-        combined_ev = (str(evidence) + " " + str(poc_script_code) + " " + str(technical_analysis)).lower()
-        has_verified_readback = ("read-back" in combined_ev or "marker" in combined_ev or "get /" in combined_ev) and (
-            "matched" in combined_ev or "match" in combined_ev or "verified" in combined_ev
-        )
+        combined_ev = (
+            str(evidence) + " " + str(poc_script_code) + " " + str(technical_analysis)
+        ).lower()
+        has_verified_readback = (
+            "read-back" in combined_ev or "marker" in combined_ev or "get /" in combined_ev
+        ) and ("matched" in combined_ev or "match" in combined_ev or "verified" in combined_ev)
         is_spa_catchall = (
             "<!doctype html" in combined_ev
             or "<html" in combined_ev
@@ -1015,15 +1021,25 @@ async def _do_create(
         ]
     )
     if is_header_finding:
-        combined_text = (str(poc_script_code) + " " + str(evidence) + " " + str(technical_analysis)).lower()
+        combined_text = (
+            str(poc_script_code) + " " + str(evidence) + " " + str(technical_analysis)
+        ).lower()
         demonstrates_xss = any(
             x in combined_text
-            for x in ["<script>alert", "document.domain", "document.cookie", "javascript:alert", "xss execution confirmed"]
+            for x in [
+                "<script>alert",
+                "document.domain",
+                "document.cookie",
+                "javascript:alert",
+                "xss execution confirmed",
+            ]
         )
         if not demonstrates_xss:
             finding_class = "observation"
             if severity in ("critical", "high") or cvss_score > 3.9:
-                logger.info("Calibrating missing header observation '%s' to severity=low, CVSS=3.1", title)
+                logger.info(
+                    "Calibrating missing header observation '%s' to severity=low, CVSS=3.1", title
+                )
                 severity = "low"
                 cvss_score = 3.1
                 cvss_breakdown = {

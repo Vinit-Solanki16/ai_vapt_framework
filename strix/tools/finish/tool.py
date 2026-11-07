@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from agents import RunContextWrapper, function_tool
@@ -184,7 +185,9 @@ def _evaluate_completion_gate(*, control_dir: Path | None = None) -> dict[str, A
 
                 # If outcome is needs_follow_up, it is unresolved (open proof gap)
                 if cov_outcome in ("reported", "no_issue_found", "ruled_out", "not_applicable"):
-                    matched = gap_bridge.candidate_for(cov_risk, cov_surface, "", directory=ctrl_dir)
+                    matched = gap_bridge.candidate_for(
+                        cov_risk, cov_surface, "", directory=ctrl_dir
+                    )
                     if matched and str(matched.get("candidate_id")) == cand_id:
                         covered = True
                         break

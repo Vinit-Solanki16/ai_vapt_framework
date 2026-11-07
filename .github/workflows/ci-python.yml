@@ -47,6 +47,7 @@ jobs:
   pytest:
     name: pytest (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -58,4 +59,6 @@ jobs:
       - uses: ./.github/actions/setup-python-env
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv run --frozen pytest -q
+      - run: uv run --frozen pytest -v
+        env:
+          PYTHONUNBUFFERED: "1"

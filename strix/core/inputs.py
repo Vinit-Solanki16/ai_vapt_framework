@@ -386,7 +386,8 @@ def child_initial_input(
     )
     parts.append(task)
     try:
-        from strix.core.gap_bridge import gap1_enabled, control_dir
+        from strix.core.gap_bridge import control_dir, gap1_enabled
+
         if control_dir() is not None and gap1_enabled():
             parts.append(
                 "AI_VAPT Outcome Protocol:\n"

@@ -11,9 +11,10 @@ import base64
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, cast
 
 from strix.core.scanner.auth_manager import redact_credential
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,10 @@ class JWTInspectionResult:
     def __init__(
         self,
         is_jwt: bool,
-        algorithm: Optional[str] = None,
-        header: Optional[Dict[str, Any]] = None,
-        payload: Optional[Dict[str, Any]] = None,
-        sensitive_claims: Optional[List[Dict[str, Any]]] = None,
+        algorithm: str | None = None,
+        header: dict[str, Any] | None = None,
+        payload: dict[str, Any] | None = None,
+        sensitive_claims: list[dict[str, Any]] | None = None,
         vulnerable: bool = False,
         summary: str = "",
         evidence_snippet: str = "",
@@ -41,7 +42,7 @@ class JWTInspectionResult:
         self.summary = summary
         self.evidence_snippet = evidence_snippet
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "is_jwt": self.is_jwt,
             "algorithm": self.algorithm,
@@ -59,8 +60,15 @@ class JWTInspector:
     """Performs safe, non-destructive JWT analysis."""
 
     SENSITIVE_CLAIM_NAMES = {
-        "password", "pwd", "hash", "secret", "private_key",
-        "ssn", "credit_card", "pin", "auth_secret"
+        "password",
+        "pwd",
+        "hash",
+        "secret",
+        "private_key",
+        "ssn",
+        "credit_card",
+        "pin",
+        "auth_secret",
     }
 
     @staticmethod
@@ -72,12 +80,13 @@ class JWTInspector:
         return len(parts) == 3
 
     @staticmethod
-    def _b64url_decode(s: str) -> Optional[Dict[str, Any]]:
+    def _b64url_decode(s: str) -> dict[str, Any] | None:
         """Decode base64url JSON segment safely."""
         try:
             padded = s + "=" * (-len(s) % 4)
             raw = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8", errors="ignore")
-            return json.loads(raw)
+            parsed: Any = json.loads(raw)
+            return cast("dict[str, Any]", parsed) if isinstance(parsed, dict) else None
         except Exception:
             return None
 
@@ -102,10 +111,10 @@ class JWTInspector:
         payload = cls._b64url_decode(parts[1]) or {}
         algo = header.get("alg", "unknown")
 
-        sensitive_claims: List[Dict[str, Any]] = []
+        sensitive_claims: list[dict[str, Any]] = []
 
         # Recursively search payload for sensitive keys
-        def search_claims(data: Any, path: str = ""):
+        def search_claims(data: Any, path: str = "") -> None:
             if isinstance(data, dict):
                 for k, v in data.items():
                     current_path = f"{path}.{k}" if path else k
@@ -121,12 +130,14 @@ class JWTInspector:
                         else:
                             claim_type = "Plaintext credential or secret token"
 
-                        sensitive_claims.append({
-                            "claim_path": current_path,
-                            "type": claim_type,
-                            "masked_value": redact_credential(val_str),
-                            "length": len(val_str),
-                        })
+                        sensitive_claims.append(
+                            {
+                                "claim_path": current_path,
+                                "type": claim_type,
+                                "masked_value": redact_credential(val_str),
+                                "length": len(val_str),
+                            }
+                        )
                     else:
                         search_claims(v, current_path)
             elif isinstance(data, list):
@@ -150,7 +161,9 @@ class JWTInspector:
             )
         else:
             summary = "JWT payload contains standard non-sensitive claims (no credential/hash leakage detected)."
-            evidence_snippet = f"Decoded JWT (Algorithm: {algo}); zero password or secret claims exposed."
+            evidence_snippet = (
+                f"Decoded JWT (Algorithm: {algo}); zero password or secret claims exposed."
+            )
 
         return JWTInspectionResult(
             is_jwt=True,
@@ -162,4 +175,3 @@ class JWTInspector:
             summary=summary,
             evidence_snippet=evidence_snippet,
         )
-

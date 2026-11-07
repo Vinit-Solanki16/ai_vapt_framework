@@ -7,19 +7,21 @@ Orchestrates:
 4. Comprehensive 8-Category Passive Rule Engine (88 tests)
 5. Active Endpoint Prober, HTTP Verb Tampering & Parameter Fuzzing
 """
+
 from __future__ import annotations
 
 import logging
 import ssl
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from .active_fuzzer import ActiveFuzzer
 from .component_analyzer import analyze_page_components
 from .crawler import WebSpider
 from .passive_rules import SCAN_CATEGORIES, run_passive_rules
 from .port_scanner import scan_target_ports
+
 
 logger = logging.getLogger("strix.core.scanner")
 
@@ -33,14 +35,14 @@ class FullScanner:
         target_url: str,
         scan_mode: str = "quick",
         timeout: float = 7.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform full multi-category assessment against target URL."""
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
-        headers_dict: Dict[str, str] = {}
-        cookies_list: List[str] = []
+        headers_dict: dict[str, str] = {}
+        cookies_list: list[str] = []
         body_text = ""
         status_code = 200
 
@@ -85,25 +87,27 @@ class FullScanner:
                 cve_list = comp["cves"]
                 cve_str = ", ".join(cve_list)
                 cve_primary = cve_list[0] if cve_list else None
-                candidates.append({
-                    "id": f"vuln-lib-{comp['library']}",
-                    "name": f"Vulnerable JS Library: {comp['library']} {comp['version']}",
-                    "category": "version_sca",
-                    "severity": comp["severity"],
-                    "cvss": comp["cvss"],
-                    "exposure": 0.9,
-                    "cve_id": cve_primary,
-                    "cve_list": cve_list,
-                    "cwe_id": "CWE-1104",  # Use of Unmaintained/Vulnerable Third-Party Component
-                    "endpoint": comp["source_file"],
-                    "detail": f"Identified library {comp['library']} v{comp['version']} contains known public vulnerabilities: {cve_str}.",
-                })
+                candidates.append(
+                    {
+                        "id": f"vuln-lib-{comp['library']}",
+                        "name": f"Vulnerable JS Library: {comp['library']} {comp['version']}",
+                        "category": "version_sca",
+                        "severity": comp["severity"],
+                        "cvss": comp["cvss"],
+                        "exposure": 0.9,
+                        "cve_id": cve_primary,
+                        "cve_list": cve_list,
+                        "cwe_id": "CWE-1104",  # Use of Unmaintained/Vulnerable Third-Party Component
+                        "endpoint": comp["source_file"],
+                        "detail": f"Identified library {comp['library']} v{comp['version']} contains known public vulnerabilities: {cve_str}.",
+                    }
+                )
                 if "version_sca" in category_summary:
                     category_summary["version_sca"]["found"] += 1
 
         # 5. Active Probing, Directory Enumeration & Parameter Fuzzing
         fuzzer = ActiveFuzzer(base_url=target_url, scan_mode=scan_mode, timeout=2.0)
-        
+
         # 5a. Sensitive path enumeration
         path_findings = fuzzer.probe_paths()
         for pf in path_findings:
@@ -145,43 +149,49 @@ class FullScanner:
             # Other host/docker infrastructure ports on localhost (e.g. port 8000 Strix console, port 9090 Prometheus)
             # are classified as out-of-scope environmental observations and never attributed to the target application.
             if not p_info.get("in_scope", True):
-                environmental_observations.append({
-                    "port": p_info["port"],
-                    "service": p_info["service"],
-                    "severity": p_info["severity"],
-                    "risk": p_info["risk"],
-                    "scope": "environmental",
-                })
+                environmental_observations.append(
+                    {
+                        "port": p_info["port"],
+                        "service": p_info["service"],
+                        "severity": p_info["severity"],
+                        "risk": p_info["risk"],
+                        "scope": "environmental",
+                    }
+                )
                 continue
 
             # If non-standard port is exposed (e.g. 1720 H.323 or database port)
             if p_info["severity"] in ("medium", "high", "critical"):
-                candidates.append({
-                    "id": f"open-port-{p_info['port']}",
-                    "name": f"Open TCP Port: {p_info['port']} ({p_info['service']})",
-                    "category": "configuration",
-                    "severity": p_info["severity"],
-                    "cvss": 5.3 if p_info["severity"] == "medium" else 7.5,
-                    "exposure": 0.9,
-                    "cwe_id": "CWE-200",
-                    "endpoint": f"tcp://{p_info['ip']}:{p_info['port']}",
-                    "detail": f"Port {p_info['port']} is open running {p_info['service']}. {p_info['risk']}",
-                })
+                candidates.append(
+                    {
+                        "id": f"open-port-{p_info['port']}",
+                        "name": f"Open TCP Port: {p_info['port']} ({p_info['service']})",
+                        "category": "configuration",
+                        "severity": p_info["severity"],
+                        "cvss": 5.3 if p_info["severity"] == "medium" else 7.5,
+                        "exposure": 0.9,
+                        "cwe_id": "CWE-200",
+                        "endpoint": f"tcp://{p_info['ip']}:{p_info['port']}",
+                        "detail": f"Port {p_info['port']} is open running {p_info['service']}. {p_info['risk']}",
+                    }
+                )
                 category_summary["configuration"]["found"] += 1
 
         # 7. Build Category Scan Matrix
         scan_matrix = []
         for cat_key, cat_meta in SCAN_CATEGORIES.items():
             found_count = category_summary.get(cat_key, {}).get("found", 0)
-            scan_matrix.append({
-                "category_key": cat_key,
-                "title": cat_meta["title"],
-                "description": cat_meta["description"],
-                "test_count": cat_meta["test_count"],
-                "capability": cat_meta["capability"],
-                "findings_count": found_count,
-                "status": "VULNERABILITIES_IDENTIFIED" if found_count > 0 else "PASSED",
-            })
+            scan_matrix.append(
+                {
+                    "category_key": cat_key,
+                    "title": cat_meta["title"],
+                    "description": cat_meta["description"],
+                    "test_count": cat_meta["test_count"],
+                    "capability": cat_meta["capability"],
+                    "findings_count": found_count,
+                    "status": "VULNERABILITIES_IDENTIFIED" if found_count > 0 else "PASSED",
+                }
+            )
 
         return {
             "candidates": candidates,
@@ -194,6 +204,8 @@ class FullScanner:
                 "visited_count": spider_results.get("visited_count", 1),
                 "discovered_paths": spider_results.get("discovered_paths", [base_endpoint]),
                 "forms_count": len(spider_results.get("forms", [])),
-                "parameters_count": sum(len(p) for p in spider_results.get("parameters", {}).values()),
+                "parameters_count": sum(
+                    len(p) for p in spider_results.get("parameters", {}).values()
+                ),
             },
         }

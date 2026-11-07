@@ -10,6 +10,7 @@ Verifies:
 7. Truthful failure presentation (no fabricated 90% progress, accurate turn counts).
 8. Preservation of provider and model metadata in run details.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,13 +20,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from strix.config.settings import DEFAULT_MAX_TURNS
-from strix.interface import api
 from strix.interface.api import _RUNS, app
 from strix.interface.schemas import RunRequest
 from strix.llm.provider_validation import (
     validate_openai_compatible_endpoint,
     validate_openrouter_credential,
 )
+
 
 client = TestClient(app)
 
@@ -128,7 +129,9 @@ def test_openai_compatible_endpoint_validation():
 
     # 2. Endpoint validation API endpoint
     with patch("urllib.request.urlopen", return_value=mock_resp):
-        api_res = client.post("/providers/openai/validate", json={"api_base": "http://127.0.0.1:8765/v1"})
+        api_res = client.post(
+            "/providers/openai/validate", json={"api_base": "http://127.0.0.1:8765/v1"}
+        )
         assert api_res.status_code == 200
         assert api_res.json()["valid"] is True
 

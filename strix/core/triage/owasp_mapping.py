@@ -3,20 +3,22 @@
 Enriches vulnerability observations and candidates with authoritative OWASP Top-10
 categories, CWE identifiers, CVE references, and specialized remediation instructions.
 """
+
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
 class OWASPProfile:
     """OWASP Top 10 Category Definition with Technical Remediation Standards."""
+
     category_id: str
     name: str
     title: str
-    default_cwes: List[str]
+    default_cwes: list[str]
     default_cve: str
     impact: str
     remediation_summary: str
@@ -25,7 +27,7 @@ class OWASPProfile:
 
 
 # Granular catalog of tailored vulnerability remediation profiles
-VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
+VULN_SPECIFIC_CATALOG: dict[str, dict[str, Any]] = {
     "command-injection": {
         "title": "Command Injection (Remote Code Execution)",
         "owasp_id": "A03:2021",
@@ -38,20 +40,20 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Disallow direct shell command invocation and enforce strict character whitelist regex validation.",
         "remediation_technical": (
             "# Nginx WAF / Rule: Block common shell metacharacters in query parameters\n"
-            "if ($query_string ~* \"[;|`$&<>\\(\\)]\") {\n"
+            'if ($query_string ~* "[;|`$&<>\\(\\)]") {\n'
             "    return 403;\n"
             "}\n\n"
             "// Application Code Patch (PHP):\n"
-            "// AVOID: system(\"ping -c 4 \" . $ip);\n"
+            '// AVOID: system("ping -c 4 " . $ip);\n'
             "// SECURE: Strict input validation and non-shell API\n"
             "if (!filter_var($ip, FILTER_VALIDATE_IP)) {\n"
             "    http_response_code(400);\n"
             "    die('Invalid target IP address');\n"
             "}\n"
             "$escaped_ip = escapeshellarg($ip);\n"
-            "exec(\"/bin/ping -c 2 {$escaped_ip}\", $output, $return_var);"
+            'exec("/bin/ping -c 2 {$escaped_ip}", $output, $return_var);'
         ),
-        "retest_procedure": "curl -s -k -X POST \"https://<target>/vulnerabilities/exec/\" --data-urlencode \"ip=127.0.0.1;id\" -o /dev/null -w \"HTTP %{http_code}\"",
+        "retest_procedure": 'curl -s -k -X POST "https://<target>/vulnerabilities/exec/" --data-urlencode "ip=127.0.0.1;id" -o /dev/null -w "HTTP %{http_code}"',
     },
     "sql-injection": {
         "title": "SQL Injection (Error-Based & Blind)",
@@ -74,7 +76,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "$stmt->execute(['id' => $id]);\n"
             "$user = $stmt->fetch();"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/vulnerabilities/sqli/?id=1'&Submit=Submit\" | grep -i \"error in your SQL syntax\"",
+        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/sqli/?id=1\'&Submit=Submit" | grep -i "error in your SQL syntax"',
     },
     "reflected-xss": {
         "title": "Reflected Cross-Site Scripting (XSS)",
@@ -95,7 +97,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "$safe_name = htmlspecialchars($_GET['name'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');\n"
             "echo '<pre>Hello ' . $safe_name . '</pre>';"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscript%3E&Submit=Submit\" | grep -i \"<script>alert(1)</script>\"",
+        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscript%3E&Submit=Submit" | grep -i "<script>alert(1)</script>"',
     },
     "file-upload": {
         "title": "Unrestricted Arbitrary File Upload",
@@ -122,7 +124,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "$safe_name = bin2hex(random_bytes(16)) . '.jpg';\n"
             "move_uploaded_file($_FILES['uploaded']['tmp_name'], '/var/storage/uploads/' . $safe_name);"
         ),
-        "retest_procedure": "curl -s -k -F \"uploaded=@shell.php\" https://<target>/vulnerabilities/upload/ -o /dev/null -w \"HTTP %{http_code}\"",
+        "retest_procedure": 'curl -s -k -F "uploaded=@shell.php" https://<target>/vulnerabilities/upload/ -o /dev/null -w "HTTP %{http_code}"',
     },
     "file-inclusion": {
         "title": "Local File Inclusion (LFI) & Path Traversal",
@@ -153,7 +155,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "}\n"
             "include($allowed_pages[$page]);"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/vulnerabilities/fi/?page=../../../../etc/passwd\" | grep \"root:x:0:0\"",
+        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/fi/?page=../../../../etc/passwd" | grep "root:x:0:0"',
     },
     "weak-session": {
         "title": "Weak Session ID Generation & Fixation",
@@ -176,7 +178,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "// On successful login:\n"
             "session_regenerate_id(true);"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/vulnerabilities/weak_id/\" | grep -i \"Set-Cookie\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/vulnerabilities/weak_id/" | grep -i "Set-Cookie"',
     },
     "csrf": {
         "title": "Cross-Site Request Forgery (CSRF)",
@@ -190,7 +192,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Enforce cryptographically random anti-CSRF synchronization tokens and SameSite cookie attributes.",
         "remediation_technical": (
             "# Nginx Cookie Policy:\n"
-            "proxy_cookie_path / \"/; SameSite=Strict; Secure\";\n\n"
+            'proxy_cookie_path / "/; SameSite=Strict; Secure";\n\n'
             "// Application Code Patch (PHP Synchronizer Token Pattern):\n"
             "if ($_SERVER['REQUEST_METHOD'] === 'POST') {\n"
             "    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['user_token'] ?? '')) {\n"
@@ -199,7 +201,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "    }\n"
             "}"
         ),
-        "retest_procedure": "curl -s -k -X POST \"https://<target>/vulnerabilities/csrf/\" --data \"password_new=test&password_conf=test&Change=Change\" | grep \"Password has been changed\"",
+        "retest_procedure": 'curl -s -k -X POST "https://<target>/vulnerabilities/csrf/" --data "password_new=test&password_conf=test&Change=Change" | grep "Password has been changed"',
     },
     "open-redirect": {
         "title": "Open HTTP Redirection",
@@ -221,7 +223,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "header('Location: ' . $redirect, true, 302);\n"
             "exit();"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/vulnerabilities/open_redirect/?redirect_url=https://evil.com\" | grep -i \"Location: https://evil.com\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/vulnerabilities/open_redirect/?redirect_url=https://evil.com" | grep -i "Location: https://evil.com"',
     },
     "cookie-flags": {
         "title": "Insecure Session Cookie Configuration",
@@ -235,7 +237,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Add HttpOnly, Secure, and SameSite=Strict/Lax flags to all authentication cookies.",
         "remediation_technical": (
             "# Nginx Cookie Enforcement:\n"
-            "proxy_cookie_path / \"/; HttpOnly; Secure; SameSite=Strict\";\n\n"
+            'proxy_cookie_path / "/; HttpOnly; Secure; SameSite=Strict";\n\n'
             "// PHP Configuration (php.ini or session setup):\n"
             "session_set_cookie_params([\n"
             "    'lifetime' => 1800,\n"
@@ -245,7 +247,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "    'samesite' => 'Strict'\n"
             "]);"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/\" | grep -i \"Set-Cookie\" | grep -E \"(HttpOnly|Secure|SameSite)\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/" | grep -i "Set-Cookie" | grep -E "(HttpOnly|Secure|SameSite)"',
     },
     "insecure-captcha": {
         "title": "Insecure / Missing CAPTCHA Verification",
@@ -268,7 +270,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "$data = json_decode($resp, true);\n"
             "if (!$data['success']) { die('CAPTCHA failed'); }"
         ),
-        "retest_procedure": "curl -s -k -X POST \"https://<target>/vulnerabilities/captcha/\" --data \"step=1\" | grep -i \"reCAPTCHA key: Missing\"",
+        "retest_procedure": 'curl -s -k -X POST "https://<target>/vulnerabilities/captcha/" --data "step=1" | grep -i "reCAPTCHA key: Missing"',
     },
     "csp-bypass": {
         "title": "Permissive Content Security Policy (CSP Bypass)",
@@ -284,7 +286,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "# Nginx Hardening Header:\n"
             "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self';\" always;"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/vulnerabilities/csp/\" | grep -i \"Content-Security-Policy\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/vulnerabilities/csp/" | grep -i "Content-Security-Policy"',
     },
     "client-js": {
         "title": "Client-Side Insecure JavaScript Processing",
@@ -302,7 +304,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "// SECURE: Use element.textContent\n"
             "document.getElementById('result').textContent = sanitizedInput;"
         ),
-        "retest_procedure": "curl -s -k -X POST \"https://<target>/vulnerabilities/javascript/\" --data \"phrase=success\" -o /dev/null -w \"HTTP %{http_code}\"",
+        "retest_procedure": 'curl -s -k -X POST "https://<target>/vulnerabilities/javascript/" --data "phrase=success" -o /dev/null -w "HTTP %{http_code}"',
     },
     "dom-xss": {
         "title": "DOM-Based Cross-Site Scripting (DOM XSS)",
@@ -321,7 +323,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "// SECURE: Use safe assignment\n"
             "document.getElementById('select-menu').value = encodeURIComponent(defaultVal || '');"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/vulnerabilities/xss_d/?default=English\" | grep -i \"document.location.href\"",
+        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/xss_d/?default=English" | grep -i "document.location.href"',
     },
     "stored-xss": {
         "title": "Stored Cross-Site Scripting (Persistent XSS)",
@@ -341,7 +343,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "$stmt = $pdo->prepare('INSERT INTO guestbook (comment, name) VALUES (:comment, :name)');\n"
             "$stmt->execute(['comment' => $msg, 'name' => $name]);"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/vulnerabilities/xss_s/\" | grep -i \"guestbook\"",
+        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/xss_s/" | grep -i "guestbook"',
     },
     "phpinfo": {
         "title": "PHPInfo Diagnostic Configuration Disclosure",
@@ -362,7 +364,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "# Shell cleanup command:\n"
             "rm -f /var/www/html/phpinfo.php"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/phpinfo.php\" | grep -E \"(HTTP/.* 404|HTTP/.* 403)\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/phpinfo.php" | grep -E "(HTTP/.* 404|HTTP/.* 403)"',
     },
     "hsts": {
         "title": "Missing HTTP Strict Transport Security (HSTS)",
@@ -374,8 +376,8 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "severity": "LOW",
         "impact": "Unencrypted transport or missing HSTS header allows interception over insecure communication channels.",
         "remediation_summary": "Enforce HTTP Strict Transport Security with max-age=31536000.",
-        "remediation_technical": "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\" always;",
-        "retest_procedure": "curl -s -k -I \"https://<target>/\" | grep -i \"Strict-Transport-Security\"",
+        "remediation_technical": 'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;',
+        "retest_procedure": 'curl -s -k -I "https://<target>/" | grep -i "Strict-Transport-Security"',
         "default_cwes": ["CWE-319", "CWE-310", "CWE-326"],
     },
     "missing-headers": {
@@ -392,11 +394,11 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "# Nginx Defensive Header Block:\n"
             "add_header X-Frame-Options SAMEORIGIN always;\n"
             "add_header X-Content-Type-Options nosniff always;\n"
-            "add_header X-XSS-Protection \"1; mode=block\" always;\n"
-            "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;\n"
-            "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\" always;"
+            'add_header X-XSS-Protection "1; mode=block" always;\n'
+            'add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n'
+            'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;'
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/\" | grep -E \"(X-Frame-Options|X-Content-Type-Options|Strict-Transport-Security)\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/" | grep -E "(X-Frame-Options|X-Content-Type-Options|Strict-Transport-Security)"',
     },
     "cors-misconfiguration": {
         "title": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
@@ -411,14 +413,14 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_technical": (
             "# Nginx Strict CORS Configuration:\n"
             "map $http_origin $cors_origin {\n"
-            "    default \"\";\n"
-            "    \"~^https://(www\\.)?yourdomain\\.com$\" \"$http_origin\";\n"
+            '    default "";\n'
+            '    "~^https://(www\\.)?yourdomain\\.com$" "$http_origin";\n'
             "}\n"
             "add_header Access-Control-Allow-Origin $cors_origin always;\n"
-            "add_header Access-Control-Allow-Credentials \"true\" always;\n"
-            "add_header Access-Control-Allow-Methods \"GET, POST, OPTIONS\" always;"
+            'add_header Access-Control-Allow-Credentials "true" always;\n'
+            'add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;'
         ),
-        "retest_procedure": "curl -s -k -I -H \"Origin: https://evil.com\" \"https://<target><endpoint>\" | grep -i \"Access-Control-Allow-Origin\"",
+        "retest_procedure": 'curl -s -k -I -H "Origin: https://evil.com" "https://<target><endpoint>" | grep -i "Access-Control-Allow-Origin"',
     },
     "banner-disclosure": {
         "title": "Server Diagnostic Banner Information Disclosure",
@@ -437,7 +439,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "ServerTokens Prod\n"
             "ServerSignature Off"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target><endpoint>\" | grep -E -i \"(Server|X-Powered-By)\"",
+        "retest_procedure": 'curl -s -k -I "https://<target><endpoint>" | grep -E -i "(Server|X-Powered-By)"',
     },
     "robots-exposure": {
         "title": "Sensitive Directory Information Disclosure (robots.txt)",
@@ -454,11 +456,11 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "location ~* ^/(admin|staging|private)/ {\n"
             "    allow 10.0.0.0/8;\n"
             "    deny all;\n"
-            "    auth_basic \"Restricted Area\";\n"
+            '    auth_basic "Restricted Area";\n'
             "    auth_basic_user_file /etc/nginx/.htpasswd;\n"
             "}"
         ),
-        "retest_procedure": "curl -s -k \"https://<target>/robots.txt\"",
+        "retest_procedure": 'curl -s -k "https://<target>/robots.txt"',
     },
     "git-exposure": {
         "title": "Exposed Git Source Code Repository Metadata",
@@ -481,13 +483,13 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "  <security>\n"
             "    <requestFiltering>\n"
             "      <hiddenSegments>\n"
-            "        <add segment=\".git\" />\n"
+            '        <add segment=".git" />\n'
             "      </hiddenSegments>\n"
             "    </requestFiltering>\n"
             "  </security>\n"
             "</system.webServer>"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/.git/HEAD\" | grep \"HTTP\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/.git/HEAD" | grep "HTTP"',
     },
     "web-config-exposure": {
         "title": "Sensitive Server Configuration Exposure (web.config)",
@@ -505,13 +507,13 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "  <security>\n"
             "    <requestFiltering>\n"
             "      <fileExtensions>\n"
-            "        <add fileExtension=\".config\" allowed=\"false\" />\n"
+            '        <add fileExtension=".config" allowed="false" />\n'
             "      </fileExtensions>\n"
             "    </requestFiltering>\n"
             "  </security>\n"
             "</system.webServer>"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/web.config\" | grep \"HTTP\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/web.config" | grep "HTTP"',
     },
     "trace-exposure": {
         "title": "ASP.NET Diagnostic Tracing & Error Log Exposure",
@@ -527,11 +529,11 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "<!-- web.config (Disable Trace Handler in Production) -->\n"
             "<configuration>\n"
             "  <system.web>\n"
-            "    <trace enabled=\"false\" localOnly=\"true\" pageOutput=\"false\" />\n"
+            '    <trace enabled="false" localOnly="true" pageOutput="false" />\n'
             "  </system.web>\n"
             "</configuration>"
         ),
-        "retest_procedure": "curl -s -k -I \"https://<target>/trace.axd\" | grep \"HTTP\"",
+        "retest_procedure": 'curl -s -k -I "https://<target>/trace.axd" | grep "HTTP"',
     },
     "vuln-component": {
         "title": "Vulnerable Third-Party JavaScript Library (SCA)",
@@ -545,16 +547,16 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Upgrade the vulnerable library to the latest patched stable version or replace with supported alternative.",
         "remediation_technical": (
             "<!-- Upgrade Script Inclusions to Modern Patched Releases -->\n"
-            "<!-- AVOID: <script src=\"js/jquery-2.1.3.js\"></script> -->\n"
-            "<script src=\"https://code.jquery.com/jquery-3.7.1.min.js\"\n"
-            "        integrity=\"sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=\"\n"
-            "        crossorigin=\"anonymous\"></script>\n\n"
-            "<!-- AVOID: <script src=\"js/bootstrap-3.3.7.min.js\"></script> -->\n"
-            "<script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js\"\n"
-            "        integrity=\"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz\"\n"
-            "        crossorigin=\"anonymous\"></script>"
+            '<!-- AVOID: <script src="js/jquery-2.1.3.js"></script> -->\n'
+            '<script src="https://code.jquery.com/jquery-3.7.1.min.js"\n'
+            '        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="\n'
+            '        crossorigin="anonymous"></script>\n\n'
+            '<!-- AVOID: <script src="js/bootstrap-3.3.7.min.js"></script> -->\n'
+            '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"\n'
+            '        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"\n'
+            '        crossorigin="anonymous"></script>'
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>\" | grep -Ei \"(jquery|bootstrap)[.-][0-9]\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>" | grep -Ei "(jquery|bootstrap)[.-][0-9]"',
     },
     "open-port": {
         "title": "Exposed Non-Standard TCP Network Port",
@@ -571,7 +573,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "sudo ufw deny 1720/tcp\n"
             "sudo iptables -A INPUT -p tcp --dport 1720 -j DROP\n\n"
             "# Windows Server Advanced Firewall PowerShell command:\n"
-            "New-NetFirewallRule -DisplayName \"Block Port 1720 Inbound\" -Direction Inbound -LocalPort 1720 -Protocol TCP -Action Block"
+            'New-NetFirewallRule -DisplayName "Block Port 1720 Inbound" -Direction Inbound -LocalPort 1720 -Protocol TCP -Action Block'
         ),
         "retest_procedure": "nc -zv -w 2 <target_host> <port>",
     },
@@ -587,11 +589,11 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Add cryptographic sha384 or sha512 integrity hashes and crossorigin='anonymous' attributes to all externally loaded scripts.",
         "remediation_technical": (
             "<!-- Enforce Subresource Integrity on External CDN Resources -->\n"
-            "<script src=\"https://example-cdn.com/lib.js\"\n"
-            "        integrity=\"sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC\"\n"
-            "        crossorigin=\"anonymous\"></script>"
+            '<script src="https://example-cdn.com/lib.js"\n'
+            '        integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"\n'
+            '        crossorigin="anonymous"></script>'
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>\" | grep -E \"<script.*src=.*http\" | grep -v \"integrity=\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>" | grep -E "<script.*src=.*http" | grep -v "integrity="',
     },
     "cross-domain-js": {
         "title": "Cross-Domain JavaScript Source File Inclusion",
@@ -605,9 +607,9 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Host external script dependencies locally on first-party domains or enforce strict CSP script-src whitelists.",
         "remediation_technical": (
             "<!-- Host vendor scripts locally within the application asset tree -->\n"
-            "<script src=\"/static/js/vendor/library.min.js\"></script>"
+            '<script src="/static/js/vendor/library.min.js"></script>'
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>\" | grep -E \"<script.*src=.*https?://\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>" | grep -E "<script.*src=.*https?://"',
     },
     "aspnet-viewstate": {
         "title": "ASP.NET ViewState Cryptographic Integrity Validation",
@@ -623,11 +625,11 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "<!-- web.config (Enforce ViewState Cryptographic Integrity) -->\n"
             "<configuration>\n"
             "  <system.web>\n"
-            "    <pages enableViewStateMac=\"true\" viewStateEncryptionMode=\"Always\" />\n"
+            '    <pages enableViewStateMac="true" viewStateEncryptionMode="Always" />\n'
             "  </system.web>\n"
             "</configuration>"
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>\" | grep -i \"__VIEWSTATE\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>" | grep -i "__VIEWSTATE"',
     },
     "reverse-tabnabbing": {
         "title": "Reverse Tabnabbing (Insecure Target Blank)",
@@ -641,10 +643,10 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
         "remediation_summary": "Ensure all anchor tags with target='_blank' specify rel='noopener noreferrer'.",
         "remediation_technical": (
             "<!-- Secure External Links -->\n"
-            "<!-- AVOID: <a href=\"https://external.test\" target=\"_blank\">Link</a> -->\n"
-            "<a href=\"https://external.test\" target=\"_blank\" rel=\"noopener noreferrer\">Link</a>"
+            '<!-- AVOID: <a href="https://external.test" target="_blank">Link</a> -->\n'
+            '<a href="https://external.test" target="_blank" rel="noopener noreferrer">Link</a>'
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>\" | grep -i 'target=\"_blank\"' | grep -v 'rel=\"noopener'",
+        "retest_procedure": 'curl -s "https://<target><endpoint>" | grep -i \'target="_blank"\' | grep -v \'rel="noopener\'',
     },
     "ssrf": {
         "title": "Server-Side Request Forgery (SSRF)",
@@ -667,7 +669,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "        raise ValueError('Access to internal/private network is restricted')\n"
             "    # Proceed with outbound request"
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>?dest=http://127.0.0.1:80\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>?dest=http://127.0.0.1:80"',
     },
     "ssti": {
         "title": "Server-Side Template Injection (SSTI)",
@@ -685,7 +687,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "# SECURE:\n"
             "jinja2.Template('Hello {{ name }}').render(name=user_input)"
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>?q=%7B%7B7*7%7D%7D\" | grep \"49\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>?q=%7B%7B7*7%7D%7D" | grep "49"',
     },
     "prototype-pollution": {
         "title": "Client-Side Prototype Pollution",
@@ -707,7 +709,7 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "    return target;\n"
             "}"
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>#__proto__[polluted]=true\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>#__proto__[polluted]=true"',
     },
     "code-injection": {
         "title": "Server-Side Code Injection (PHP, Python, JS eval)",
@@ -724,18 +726,18 @@ VULN_SPECIFIC_CATALOG: Dict[str, Dict[str, Any]] = {
             "// AVOID: eval($_POST['code']);\n"
             "// SECURE: Use strict mapping dictionaries or state machines without dynamic evaluation"
         ),
-        "retest_procedure": "curl -s \"https://<target><endpoint>?code=phpinfo()\"",
+        "retest_procedure": 'curl -s "https://<target><endpoint>?code=phpinfo()"',
     },
 }
 
 
 def map_finding_to_owasp(
     title: str,
-    rule_id: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    endpoint: Optional[str] = None,
-    tech_stack: Optional[str] = None,
-) -> Dict[str, Any]:
+    rule_id: str | None = None,
+    tags: list[str] | None = None,
+    endpoint: str | None = None,
+    tech_stack: str | None = None,
+) -> dict[str, Any]:
     """Map a vulnerability finding or candidate to its authoritative profile with tailored remediation."""
     text = f"{title} {rule_id or ''} {' '.join(tags or [])}".lower()
 
@@ -750,7 +752,10 @@ def map_finding_to_owasp(
         found = VULN_SPECIFIC_CATALOG["command-injection"]
     elif any(k in text for k in ["upload", "webshell"]):
         found = VULN_SPECIFIC_CATALOG["file-upload"]
-    elif any(k in text for k in ["lfi", "file-inclusion", "path traversal", "directory traversal", "inclusion"]):
+    elif any(
+        k in text
+        for k in ["lfi", "file-inclusion", "path traversal", "directory traversal", "inclusion"]
+    ):
         found = VULN_SPECIFIC_CATALOG["file-inclusion"]
     elif any(k in text for k in ["sqli", "sql injection", "mysql", "syntax error"]):
         found = VULN_SPECIFIC_CATALOG["sql-injection"]
@@ -772,7 +777,9 @@ def map_finding_to_owasp(
         found = VULN_SPECIFIC_CATALOG["csrf"]
     elif any(k in text for k in ["redirect", "open_redirect"]):
         found = VULN_SPECIFIC_CATALOG["open-redirect"]
-    elif any(k in text for k in ["weak_id", "weak-session", "session fixation", "predictable session"]):
+    elif any(
+        k in text for k in ["weak_id", "weak-session", "session fixation", "predictable session"]
+    ):
         found = VULN_SPECIFIC_CATALOG["weak-session"]
     elif any(k in text for k in ["cookie", "httponly", "samesite"]):
         found = VULN_SPECIFIC_CATALOG["cookie-flags"]
@@ -821,10 +828,10 @@ def map_finding_to_owasp(
                 "  <system.webServer>\n"
                 "    <httpProtocol>\n"
                 "      <customHeaders>\n"
-                "        <add name=\"X-Frame-Options\" value=\"SAMEORIGIN\" />\n"
-                "        <add name=\"X-Content-Type-Options\" value=\"nosniff\" />\n"
-                "        <add name=\"Strict-Transport-Security\" value=\"max-age=31536000; includeSubDomains\" />\n"
-                "        <add name=\"Referrer-Policy\" value=\"strict-origin-when-cross-origin\" />\n"
+                '        <add name="X-Frame-Options" value="SAMEORIGIN" />\n'
+                '        <add name="X-Content-Type-Options" value="nosniff" />\n'
+                '        <add name="Strict-Transport-Security" value="max-age=31536000; includeSubDomains" />\n'
+                '        <add name="Referrer-Policy" value="strict-origin-when-cross-origin" />\n'
                 "        <add name=\"Content-Security-Policy\" value=\"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';\" />\n"
                 "      </customHeaders>\n"
                 "    </httpProtocol>\n"
@@ -837,8 +844,8 @@ def map_finding_to_owasp(
                 "<configuration>\n"
                 "  <system.web>\n"
                 "    <!-- Enforce HttpOnly, RequireSSL, and SameSite across all issued session cookies -->\n"
-                "    <httpCookies httpOnlyCookies=\"true\" requireSSL=\"true\" sameSite=\"Lax\" />\n"
-                "    <sessionState cookieSameSite=\"Lax\" />\n"
+                '    <httpCookies httpOnlyCookies="true" requireSSL="true" sameSite="Lax" />\n'
+                '    <sessionState cookieSameSite="Lax" />\n'
                 "  </system.web>\n"
                 "</configuration>"
             )

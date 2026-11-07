@@ -4,20 +4,27 @@ Inspects HTML documents and JavaScript bundles (Retire.js-style analysis)
 to detect client-side libraries, extract versions, and correlate against
 known authoritative NVD CVEs.
 """
+
 from __future__ import annotations
 
 import re
 import ssl
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-KNOWN_VULNERABILITIES: Dict[str, List[Dict[str, Any]]] = {
+KNOWN_VULNERABILITIES: dict[str, list[dict[str, Any]]] = {
     "bootstrap": [
         {
             "max_version": "3.4.1",
-            "cves": ["CVE-2019-8331", "CVE-2018-14040", "CVE-2018-20677", "CVE-2018-20676", "CVE-2024-6485"],
+            "cves": [
+                "CVE-2019-8331",
+                "CVE-2018-14040",
+                "CVE-2018-20677",
+                "CVE-2018-20676",
+                "CVE-2024-6485",
+            ],
             "severity": "medium",
             "cvss": 6.1,
             "cwe_id": "CWE-79",
@@ -70,7 +77,7 @@ KNOWN_VULNERABILITIES: Dict[str, List[Dict[str, Any]]] = {
 }
 
 
-def _parse_version(v_str: str) -> tuple:
+def _parse_version(v_str: str) -> tuple[int, ...]:
     parts = []
     for seg in re.split(r"[.-]", v_str):
         if seg.isdigit():
@@ -91,9 +98,9 @@ def analyze_page_components(
     base_url: str,
     html_body: str,
     timeout: float = 3.0,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Scan HTML page for third-party scripts, identify library versions, and find known CVEs."""
-    components: List[Dict[str, Any]] = []
+    components: list[dict[str, Any]] = []
     seen = set()
 
     ctx = ssl.create_default_context()
@@ -111,22 +118,30 @@ def analyze_page_components(
         src_clean = src.lower()
         if "jquery" in src_clean:
             lib_name = "jquery"
-            m = re.search(r"jquery[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*jquery", src_clean)
+            m = re.search(r"jquery[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(
+                r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*jquery", src_clean
+            )
             if m:
                 version = m.group(1)
         elif "bootstrap" in src_clean:
             lib_name = "bootstrap"
-            m = re.search(r"bootstrap[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*bootstrap", src_clean)
+            m = re.search(r"bootstrap[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(
+                r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*bootstrap", src_clean
+            )
             if m:
                 version = m.group(1)
         elif "lodash" in src_clean:
             lib_name = "lodash"
-            m = re.search(r"lodash[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*lodash", src_clean)
+            m = re.search(r"lodash[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(
+                r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*lodash", src_clean
+            )
             if m:
                 version = m.group(1)
         elif "angular" in src_clean:
             lib_name = "angularjs"
-            m = re.search(r"angular[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*angular", src_clean)
+            m = re.search(r"angular[./\-]([0-9]+\.[0-9]+(?:\.[0-9]+)?)", src_clean) or re.search(
+                r"/([0-9]+\.[0-9]+(?:\.[0-9]+)?)/.*angular", src_clean
+            )
             if m:
                 version = m.group(1)
 
@@ -145,7 +160,11 @@ def analyze_page_components(
                     if bm:
                         version = bm.group(1)
                 elif lib_name == "jquery":
-                    jm = re.search(r"jQuery\s+(?:JavaScript\s+Library\s+)?v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)", snippet, re.I)
+                    jm = re.search(
+                        r"jQuery\s+(?:JavaScript\s+Library\s+)?v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)",
+                        snippet,
+                        re.I,
+                    )
                     if jm:
                         version = jm.group(1)
         except Exception:
@@ -156,7 +175,12 @@ def analyze_page_components(
             if "cookieconsent" in snippet or "hasInitialised" in snippet:
                 lib_name = "cookieconsent"
                 version = "3.1.0"
-            elif "runOutsideAngular" in snippet or "Zone" in snippet or "ng-version" in snippet or "angular" in snippet.lower():
+            elif (
+                "runOutsideAngular" in snippet
+                or "Zone" in snippet
+                or "ng-version" in snippet
+                or "angular" in snippet.lower()
+            ):
                 lib_name = "angular"
                 version = "17.0.0"
             elif "socket.io" in snippet.lower():
@@ -186,31 +210,36 @@ def analyze_page_components(
                         summary = v["summary"]
                         remediation = v["remediation"]
 
-            components.append({
-                "library": lib_name,
-                "version": version,
-                "source_file": src,
-                "vulnerable": bool(matched_cves),
-                "cves": matched_cves,
-                "severity": max_sev if matched_cves else "low",
-                "cvss": max_cvss if matched_cves else 3.5,
-                "summary": summary,
-                "remediation": remediation,
-            })
+            components.append(
+                {
+                    "library": lib_name,
+                    "version": version,
+                    "source_file": src,
+                    "vulnerable": bool(matched_cves),
+                    "cves": matched_cves,
+                    "severity": max_sev if matched_cves else "low",
+                    "cvss": max_cvss if matched_cves else 3.5,
+                    "summary": summary,
+                    "remediation": remediation,
+                }
+            )
 
-    if "express" not in seen and any(k in html_body.lower() for k in ["express", "juice", "node", "angular"]):
+    if "express" not in seen and any(
+        k in html_body.lower() for k in ["express", "juice", "node", "angular"]
+    ):
         seen.add("express")
-        components.append({
-            "library": "express",
-            "version": "4.19.2",
-            "source_file": "HTTP Backend Infrastructure (Node.js/Express)",
-            "vulnerable": False,
-            "cves": [],
-            "severity": "low",
-            "cvss": 0.0,
-            "summary": "Node.js Express backend web application framework.",
-            "remediation": "Disable X-Powered-By header and apply standard framework security updates.",
-        })
+        components.append(
+            {
+                "library": "express",
+                "version": "4.19.2",
+                "source_file": "HTTP Backend Infrastructure (Node.js/Express)",
+                "vulnerable": False,
+                "cves": [],
+                "severity": "low",
+                "cvss": 0.0,
+                "summary": "Node.js Express backend web application framework.",
+                "remediation": "Disable X-Powered-By header and apply standard framework security updates.",
+            }
+        )
 
     return components
-

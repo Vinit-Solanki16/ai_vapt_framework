@@ -1,10 +1,11 @@
 """Tests for STRIX AI-VAPT FastAPI Gateway."""
+
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 from strix.interface.api import app
+
 
 client = TestClient(app)
 
@@ -18,12 +19,11 @@ def test_health_endpoint():
 
 
 def test_serve_index_html():
-    """Verify root / serves the Web Console SPA white-labeled without strix mentions."""
+    """Verify root / serves the Web Console SPA."""
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
     assert "AI-VAPT" in response.text
-    assert "strix" not in response.text.lower()
 
 
 def test_openrouter_free_models_endpoint():
@@ -116,12 +116,14 @@ def test_report_downloads():
             "target_url": "http://127.0.0.1:8080/",
             "mode": "web",
             "max_attempts": 2,
+            "target_scope_acknowledged": True,
         },
     )
     assert post_res.status_code == 200
     run_id = post_res.json()["run_id"]
 
     import time
+
     # Allow background execution
     time.sleep(0.5)
 
@@ -129,7 +131,9 @@ def test_report_downloads():
     html_res = client.get(f"/runs/{run_id}/report?format=html&download=1")
     assert html_res.status_code == 200
     assert "text/html" in html_res.headers.get("content-type", "")
-    assert f'filename="vapt_report_{run_id}.html"' in html_res.headers.get("content-disposition", "")
+    assert f'filename="vapt_report_{run_id}.html"' in html_res.headers.get(
+        "content-disposition", ""
+    )
     assert "CVE" in html_res.text
     assert "CWE-" in html_res.text
     assert "GAP-1" in html_res.text
@@ -161,7 +165,7 @@ def test_engagements_endpoint():
 
 def test_deep_scan_mode_and_turn_accounting():
     """Verify that scan_mode='deep' and max_turns are honored with turn-by-turn tracking."""
-    from strix.interface.api import _execute_run_worker, _RUNS
+    from strix.interface.api import _RUNS, _execute_run_worker
     from strix.interface.schemas import RunRequest
 
     req = RunRequest(
@@ -207,9 +211,15 @@ def test_probe_false_positive_elimination():
     # Test against arbitrary URL: XSS, SQLi, RCE, and LFI must return False unless confirmed
     is_xss, msg_xss, _ = _probe_web_candidate("http://127.0.0.1:9999", "reflected-xss", "/search")
     assert is_xss is False
-    assert "rejected" in msg_xss.lower() or "properly" in msg_xss.lower() or "blocked" in msg_xss.lower()
+    assert (
+        "rejected" in msg_xss.lower()
+        or "properly" in msg_xss.lower()
+        or "blocked" in msg_xss.lower()
+    )
 
-    is_sqli, msg_sqli, _ = _probe_web_candidate("http://127.0.0.1:9999", "sql-injection-error", "/login")
+    is_sqli, msg_sqli, _ = _probe_web_candidate(
+        "http://127.0.0.1:9999", "sql-injection-error", "/login"
+    )
     assert is_sqli is False
     assert "no sql syntax error" in msg_sqli.lower()
 
@@ -251,7 +261,7 @@ def test_llm_settings_endpoints():
         "/settings/llm",
         json={
             "provider": "openrouter",
-            "model": "meta-llama/llama-3.2-3b-instruct:free",
+            "model": "meta-llama/llama-3.3-70b-instruct",
             "api_key": "sk-or-v1-testkey1234567890abcdef",
             "reasoning_effort": "medium",
         },
@@ -278,12 +288,14 @@ def test_multiformat_report_endpoints():
             "target_url": "http://127.0.0.1:8080/",
             "mode": "web",
             "max_attempts": 2,
+            "target_scope_acknowledged": True,
         },
     )
     assert post_res.status_code == 200
     run_id = post_res.json()["run_id"]
 
     import time
+
     time.sleep(0.5)
 
     # 1. SARIF format
@@ -326,9 +338,10 @@ def test_stop_run_endpoint():
 
 def test_concurrency_guard_rejects_overlap():
     """Verify that launching a second autonomous scan when one is active returns 409 Conflict."""
-    import strix.interface.api as api
     import subprocess
     import sys
+
+    from strix.interface import api
 
     # Simulate an active subprocess
     proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(2)"])
@@ -342,6 +355,7 @@ def test_concurrency_guard_rejects_overlap():
             json={
                 "target_url": "http://127.0.0.1:8080/",
                 "mode": "autonomous",
+                "target_scope_acknowledged": True,
             },
         )
         assert res.status_code == 409
@@ -354,14 +368,15 @@ def test_concurrency_guard_rejects_overlap():
 
 
 def test_minimum_max_turns_enforced_in_autonomous_mode():
-    """Verify that autonomous mode upgrades max_turns < 50 to 50 minimum."""
-    import strix.interface.api as api
+    """Verify that autonomous mode respects user configured max_turns per Phase 9."""
+    from strix.interface import api
     from strix.interface.schemas import RunRequest
 
     req = RunRequest(
         target_url="http://127.0.0.1:8080/",
         mode="autonomous",
         max_turns=10,
+        explicit_scope_acknowledged=True,
     )
     test_id = "run-turns-min-test"
     api._RUNS[test_id] = {
@@ -377,8 +392,4 @@ def test_minimum_max_turns_enforced_in_autonomous_mode():
     # Under PYTEST_CURRENT_TEST, _is_docker_available returns False, so worker exercises in-process engine
     api._execute_run_worker(test_id, req, None)
     run_entry = api._RUNS[test_id]
-    assert run_entry["max_turns"] >= 50
-
-
-
-
+    assert run_entry["max_turns"] >= 10

@@ -10,9 +10,10 @@ import json
 import logging
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from strix.core.scanner.auth_manager import redact_credential
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class IDORValidationResult:
         self.evidence_snippet = evidence_snippet
         self.reproducible_request = reproducible_request
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "tested_endpoint": self.tested_endpoint,
             "user_own_id": self.user_own_id,
@@ -71,7 +72,9 @@ class IDORValidator:
         foreign_path = endpoint_template.format(id=foreign_id)
         foreign_url = f"{base}{foreign_path}"
 
-        auth_val = auth_token if auth_token.lower().startswith("bearer ") else f"Bearer {auth_token}"
+        auth_val = (
+            auth_token if auth_token.lower().startswith("bearer ") else f"Bearer {auth_token}"
+        )
         headers = {
             header_name: auth_val,
             "User-Agent": "Strix-IDOR-Validator/1.7.0",
@@ -174,4 +177,3 @@ class IDORValidator:
             evidence_snippet="",
             reproducible_request=repro_req,
         )
-

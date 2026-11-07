@@ -1,12 +1,14 @@
 """Mathematical priority formulation and candidate ranking for GAP-1."""
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from strix.core.triage.exploit_assessor import ExploitAssessment, UsabilityRank
 
 
 def calculate_composite_score(
-    candidate: Dict[str, Any],
+    candidate: dict[str, Any],
     assessment: ExploitAssessment,
 ) -> float:
     """Calculate the composite priority score for an action candidate.
@@ -39,9 +41,9 @@ def calculate_composite_score(
 
 
 def rank_action_candidates(
-    candidates: List[Dict[str, Any]],
-    assessments: Optional[Dict[str, ExploitAssessment]] = None,
-) -> List[Dict[str, Any]]:
+    candidates: list[dict[str, Any]],
+    assessments: dict[str, ExploitAssessment] | None = None,
+) -> list[dict[str, Any]]:
     """Sort a list of candidates in descending order of composite priority score."""
     assessments = assessments or {}
     scored_candidates = []
@@ -52,6 +54,7 @@ def rank_action_candidates(
         if not assess:
             # Generate default assessment if not provided
             from strix.core.triage.exploit_assessor import assess_exploit_quality
+
             assess = assess_exploit_quality(candidate_id=cid)
 
         score = calculate_composite_score(c, assess)
@@ -62,4 +65,3 @@ def rank_action_candidates(
 
     scored_candidates.sort(key=lambda x: x["composite_score"], reverse=True)
     return scored_candidates
-

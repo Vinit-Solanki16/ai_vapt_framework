@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -90,6 +90,8 @@ _PAYLOAD: dict[str, dict[str, Any]] = {"value": _tool_call_completion()}
 class _Handler(BaseHTTPRequestHandler):
     """A gateway that only speaks non-streaming Chat Completions."""
 
+    protocol_version = "HTTP/1.0"
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -99,19 +101,23 @@ class _Handler(BaseHTTPRequestHandler):
         _CAPTURED.clear()
         _CAPTURED.update(body)
         if body.get("stream"):
+            self.close_connection = True
             payload = json.dumps(
                 {"error": {"message": "streaming is not supported by this endpoint"}}
             ).encode()
             self.send_response(400)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(payload)
             return
+        self.close_connection = True
         payload = json.dumps(_PAYLOAD["value"]).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(payload)
 
@@ -119,14 +125,18 @@ class _Handler(BaseHTTPRequestHandler):
 @pytest.fixture
 def gateway_url() -> Iterator[str]:
     _PAYLOAD["value"] = _tool_call_completion()
-    server = HTTPServer(("127.0.0.1", 0), _Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    server.daemon_threads = True
+    thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
         server.shutdown()
-        server.server_close()
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 def _model(base_url: str) -> OpenAIChatCompletionsModel:
@@ -214,6 +224,8 @@ _TURN_STREAM_FLAGS: list[bool] = []
 class _MultiTurnHandler(BaseHTTPRequestHandler):
     """Non-streaming gateway: a tool call on turn 1, a final answer on turn 2."""
 
+    protocol_version = "HTTP/1.0"
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -225,9 +237,11 @@ class _MultiTurnHandler(BaseHTTPRequestHandler):
         if len(_TURN_STREAM_FLAGS) > 1:
             completion["choices"][0]["message"]["content"] = "all done"
         payload = json.dumps(completion).encode()
+        self.close_connection = True
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(payload)
 
@@ -235,14 +249,18 @@ class _MultiTurnHandler(BaseHTTPRequestHandler):
 @pytest.fixture
 def multiturn_url() -> Iterator[str]:
     _TURN_STREAM_FLAGS.clear()
-    server = HTTPServer(("127.0.0.1", 0), _MultiTurnHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _MultiTurnHandler)
+    server.daemon_threads = True
+    thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
         server.shutdown()
-        server.server_close()
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 @pytest.mark.asyncio

@@ -9,6 +9,7 @@ separately in EVALUATION_REPORT.md.
 Usage:
     .venv/bin/python scripts/strix_gap_evaluation.py
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -17,6 +18,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Any
+
 
 ROOT = Path(__file__).resolve().parent.parent
 STRIX_ROOT = Path(os.environ.get("STRIX_ROOT", "/home/vinit/STRIX/strix"))
@@ -92,17 +94,14 @@ def _queue_payload(bridge, ranked: dict[str, Any], *, gap1: bool) -> dict[str, A
     return {
         "original_order": [c["id"] for c in CANDIDATES],
         "ranked_order": [c["candidate_id"] for c in ordered],
-        "ranking_changed": [c["candidate_id"] for c in ordered]
-        != [c["id"] for c in CANDIDATES],
+        "ranking_changed": [c["candidate_id"] for c in ordered] != [c["id"] for c in CANDIDATES],
         "candidates": ordered,
     }
 
 
 def _write_queue(control: Path, payload: dict[str, Any]) -> None:
     control.mkdir(parents=True, exist_ok=True)
-    (control / "gap1_queue.json").write_text(
-        json.dumps(payload, indent=2), encoding="utf-8"
-    )
+    (control / "gap1_queue.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _simulate(bridge, config: str, *, gap1: bool, gap2: bool) -> dict[str, Any]:

@@ -1,8 +1,9 @@
 """Active validator for missing HTTP security hardening headers."""
+
 from __future__ import annotations
 
 import urllib.request
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseValidator, ValidationResult
 
@@ -17,7 +18,7 @@ class SecurityHeadersValidator(BaseValidator):
         "Content-Security-Policy",
     ]
 
-    def validate(self, target_url: str, candidate: Dict[str, Any]) -> ValidationResult:
+    def validate(self, target_url: str, candidate: dict[str, Any]) -> ValidationResult:
         try:
             req = urllib.request.Request(
                 target_url,
@@ -26,7 +27,11 @@ class SecurityHeadersValidator(BaseValidator):
             )
             with urllib.request.urlopen(req, timeout=4.0) as resp:
                 headers = dict(resp.headers)
-                missing = [h for h in self.RECOMMENDED_HEADERS if h.lower() not in [k.lower() for k in headers.keys()]]
+                missing = [
+                    h
+                    for h in self.RECOMMENDED_HEADERS
+                    if h.lower() not in [k.lower() for k in headers]
+                ]
 
                 header_dump = "\n".join(f"{k}: {v}" for k, v in headers.items())
                 ev_hash = self.compute_evidence_hash(header_dump)
@@ -57,4 +62,3 @@ class SecurityHeadersValidator(BaseValidator):
                 reproduction_command=f"curl -s -I {target_url}",
                 detail=f"Target unreachable: {e}",
             )
-

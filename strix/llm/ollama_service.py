@@ -1,4 +1,5 @@
 """Local Ollama service prober and query utility for STRIX AI-VAPT."""
+
 from __future__ import annotations
 
 import json
@@ -6,7 +7,8 @@ import logging
 import os
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 logger = logging.getLogger("strix.llm.ollama")
 
@@ -16,7 +18,12 @@ DEFAULT_PROBE_TIMEOUT = 2.0
 
 def get_ollama_base_url() -> str:
     """Resolve Ollama base URL from environment or default."""
-    raw = (os.getenv("OLLAMA_API_BASE") or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_HOST") or "").strip()
+    raw = (
+        os.getenv("OLLAMA_API_BASE")
+        or os.getenv("OLLAMA_BASE_URL")
+        or os.getenv("OLLAMA_HOST")
+        or ""
+    ).strip()
     if not raw:
         return DEFAULT_OLLAMA_URL
     if not (raw.startswith("http://") or raw.startswith("https://")):
@@ -25,10 +32,10 @@ def get_ollama_base_url() -> str:
 
 
 def probe_ollama(
-    model_name: Optional[str] = None,
-    base_url: Optional[str] = None,
+    model_name: str | None = None,
+    base_url: str | None = None,
     timeout: float = DEFAULT_PROBE_TIMEOUT,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Probe live Ollama service reachability and installed models list."""
     url = (base_url or get_ollama_base_url()).rstrip("/")
     tags_url = f"{url}/api/tags"
@@ -53,8 +60,10 @@ def probe_ollama(
             raw = resp.read()
             data = json.loads(raw.decode("utf-8"))
 
-        installed_models: List[str] = [
-            m.get("name", "") for m in data.get("models", []) if isinstance(m, dict) and m.get("name")
+        installed_models: list[str] = [
+            m.get("name", "")
+            for m in data.get("models", [])
+            if isinstance(m, dict) and m.get("name")
         ]
 
         target = (model_name or "qwen2.5:1.5b").strip()
@@ -85,4 +94,3 @@ def probe_ollama(
             "error": str(exc),
             "message": "Local Ollama service unreachable at 127.0.0.1:11434",
         }
-

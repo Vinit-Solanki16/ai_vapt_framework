@@ -257,6 +257,7 @@ def _record_impl(
     gap_outcome = None
     try:
         from strix.core import gap_bridge
+
         if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
             if normalized == "reported":
                 p_status = "positive"
@@ -289,10 +290,12 @@ def _record_impl(
         ret["gap2"] = gap_outcome
         try:
             from strix.core.gap_bridge import guidance_text
+
             guidance = guidance_text(gap_outcome)
             if guidance:
                 ret["pivot_guidance"] = guidance
-                ret["message"] += f" | {guidance}"
+                msg = str(ret.get("message") or "")
+                ret["message"] = f"{msg} | {guidance}"
         except Exception:
             pass
     return ret
@@ -356,6 +359,7 @@ def _update_impl(
     gap_outcome = None
     try:
         from strix.core import gap_bridge
+
         if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
             if normalized == "reported":
                 p_status = "positive"
@@ -373,7 +377,8 @@ def _update_impl(
                 title=risk_area,
                 endpoint=surface,
                 success=succ,
-                detail=evidence.strip() or f"Coverage updated from {previous_outcome} to {normalized}",
+                detail=evidence.strip()
+                or f"Coverage updated from {previous_outcome} to {normalized}",
                 probe_status=p_status,
             )
     except Exception:
@@ -392,10 +397,12 @@ def _update_impl(
         ret["gap2"] = gap_outcome
         try:
             from strix.core.gap_bridge import guidance_text
+
             guidance = guidance_text(gap_outcome)
             if guidance:
                 ret["pivot_guidance"] = guidance
-                ret["message"] += f" | {guidance}"
+                msg = str(ret.get("message") or "")
+                ret["message"] = f"{msg} | {guidance}"
         except Exception:
             pass
     return ret

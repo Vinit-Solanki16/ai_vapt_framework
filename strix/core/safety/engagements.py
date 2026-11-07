@@ -1,21 +1,21 @@
 """Engagement profile management for authorized assessment scopes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime
 
 
 @dataclass
 class EngagementProfile:
     id: str
     name: str
-    authorized_hosts: List[str]
-    allowed_ports: List[int]
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    authorized_hosts: list[str]
+    allowed_ports: list[int]
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
-_PROFILES: Dict[str, EngagementProfile] = {
+_PROFILES: dict[str, EngagementProfile] = {
     "default-local": EngagementProfile(
         id="default-local",
         name="Local Development & Lab",
@@ -25,10 +25,9 @@ _PROFILES: Dict[str, EngagementProfile] = {
 }
 
 
-def list_engagements() -> List[EngagementProfile]:
+def list_engagements() -> list[EngagementProfile]:
     return list(_PROFILES.values())
 
 
-def load_engagement(engagement_id: str) -> Optional[EngagementProfile]:
+def load_engagement(engagement_id: str) -> EngagementProfile | None:
     return _PROFILES.get(engagement_id)
-

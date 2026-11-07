@@ -6,14 +6,13 @@ and token/session context propagation for root and child agents.
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
-import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +27,19 @@ def redact_credential(val: Any) -> str:
     return f"{s[:4]}...[REDACTED]...{s[-4:]}"
 
 
-def redact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively redact sensitive keys in a dictionary."""
-    redacted = {}
-    sensitive_keys = {"password", "token", "secret", "key", "api_key", "authorization", "hash", "jwt"}
+    redacted: dict[str, Any] = {}
+    sensitive_keys = {
+        "password",
+        "token",
+        "secret",
+        "key",
+        "api_key",
+        "authorization",
+        "hash",
+        "jwt",
+    }
     for k, v in data.items():
         if any(sk in k.lower() for sk in sensitive_keys):
             if isinstance(v, str):
@@ -54,13 +62,13 @@ class AuthSession:
         self,
         authenticated: bool = False,
         auth_type: str = "none",
-        token: Optional[str] = None,
-        username: Optional[str] = None,
-        role: Optional[str] = None,
-        user_id: Optional[int] = None,
-        basket_id: Optional[int] = None,
+        token: str | None = None,
+        username: str | None = None,
+        role: str | None = None,
+        user_id: int | None = None,
+        basket_id: int | None = None,
         header_name: str = "Authorization",
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         self.authenticated = authenticated
         self.auth_type = auth_type
@@ -72,7 +80,7 @@ class AuthSession:
         self.header_name = header_name
         self.error_message = error_message
 
-    def get_auth_header(self) -> Dict[str, str]:
+    def get_auth_header(self) -> dict[str, str]:
         """Return HTTP header dict for authenticated requests."""
         if not self.authenticated or not self.token:
             return {}
@@ -80,7 +88,7 @@ class AuthSession:
             return {self.header_name: self.token}
         return {self.header_name: f"Bearer {self.token}"}
 
-    def to_safe_dict(self) -> Dict[str, Any]:
+    def to_safe_dict(self) -> dict[str, Any]:
         """Safe serialized representation without secrets."""
         return {
             "authenticated": self.authenticated,
@@ -101,7 +109,7 @@ class AuthManager:
     @staticmethod
     def establish_session(
         target_url: str,
-        auth_config: Optional[Dict[str, Any]] = None,
+        auth_config: dict[str, Any] | None = None,
     ) -> AuthSession:
         """Establish and verify a session using explicitly provided credentials."""
         if not auth_config or not auth_config.get("enabled"):
@@ -124,7 +132,9 @@ class AuthManager:
                 session.user_id = user_info.get("user_id")
                 session.basket_id = user_info.get("basket_id")
                 return session
-            return AuthSession(authenticated=False, error_message="Pre-supplied bearer token failed verification")
+            return AuthSession(
+                authenticated=False, error_message="Pre-supplied bearer token failed verification"
+            )
 
         # 2. Login credentials (JSON POST)
         creds = auth_config.get("credentials") or {}
@@ -133,7 +143,10 @@ class AuthManager:
         login_path = auth_config.get("login_path") or "/rest/user/login"
 
         if not email or not password:
-            return AuthSession(authenticated=False, error_message="Missing username/email or password in credentials")
+            return AuthSession(
+                authenticated=False,
+                error_message="Missing username/email or password in credentials",
+            )
 
         login_url = f"{base}{login_path if login_path.startswith('/') else '/' + login_path}"
         payload = {"email": email, "password": password}
@@ -166,16 +179,20 @@ class AuthManager:
                             session.role = user_info.get("role", "customer")
                             session.user_id = user_info.get("user_id")
                         return session
-                    return AuthSession(authenticated=False, error_message="Login 200 but token missing in response")
+                    return AuthSession(
+                        authenticated=False, error_message="Login 200 but token missing in response"
+                    )
         except urllib.error.HTTPError as he:
             return AuthSession(authenticated=False, error_message=f"Login failed HTTP {he.code}")
         except Exception as exc:
             return AuthSession(authenticated=False, error_message=f"Login connection error: {exc}")
 
-        return AuthSession(authenticated=False, error_message="Unable to establish authenticated session")
+        return AuthSession(
+            authenticated=False, error_message="Unable to establish authenticated session"
+        )
 
     @staticmethod
-    def verify_session(target_base: str, session: AuthSession) -> Tuple[bool, Dict[str, Any]]:
+    def verify_session(target_base: str, session: AuthSession) -> tuple[bool, dict[str, Any]]:
         """Verify that authenticated requests reach protected endpoints and determine role."""
         if not session.token:
             return False, {}
@@ -214,4 +231,3 @@ class AuthManager:
             pass
 
         return session.authenticated, user_info
-
