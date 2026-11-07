@@ -49,7 +49,7 @@ import { ProInlineCta } from "@/components/ProCta";
 export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback";
 
 const TRUST_BANNER =
-  "Your findings stay on your machine. They're rendered here locally in your browser and never uploaded or stored by Strix.";
+  "Your findings stay on your machine. They're rendered here locally in your browser and never uploaded or stored by AI-VAPT.";
 
 const SEVERITY_ORDER: VulnerabilitySeverity[] = ["critical", "high", "medium", "low"];
 const POLL_MS = 500;
@@ -290,15 +290,15 @@ export default function App() {
         <div className="border-b border-[#222]">
           <div className="max-w-[88rem] mx-auto px-3 sm:px-6 py-4 flex items-center gap-1.5">
             <a
-              href={ctaUrl("https://app.strix.ai", "logo")}
+              href={ctaUrl("https://github.com/Vinit-Solanki16/ai_vapt_framework", "logo")}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackCta("logo", "topbar")}
               className="flex items-center gap-1.5 opacity-90 transition-opacity hover:opacity-100 lg:hidden"
-              title="Open Strix Cloud"
+              title="AI-VAPT Platform"
             >
-              <img src="./logo.png" alt="Strix" className="w-10 h-8 object-cover" />
-              <div className="text-base text-white font-medium tracking-tight">Strix</div>
+              <img src="./logo.png" alt="AI-VAPT" className="w-10 h-8 object-cover" />
+              <div className="text-base text-white font-medium tracking-tight">AI-VAPT</div>
             </a>
             {run && <LiveIndicator finished={run.finished} />}
             <div className="ml-auto flex items-center gap-3">
@@ -709,20 +709,20 @@ function OverviewTab({
 
       {finished && (
         <div className="animate-card-in rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
-          <p className="text-sm font-semibold text-white">Strix Cloud</p>
-          <p className="mt-0.5 text-xs text-[#666]">Run your next pentest in Strix Cloud.</p>
+          <p className="text-sm font-semibold text-white">AI-VAPT Platform</p>
+          <p className="mt-0.5 text-xs text-[#666]">Autonomous AI Penetration Testing & Vulnerability Assessment.</p>
           <div className="mt-3 flex flex-wrap gap-2.5">
             <ProInlineCta
-              label="Run a pentest in Strix Cloud"
-              desc="Validated findings, autofix, and PR reviews."
+              label="Run Assessment in AI-VAPT"
+              desc="Validated findings, autofix, and cryptographic PoCs."
               slug="overview_cloud"
               surface="overview"
               icon={Rocket}
               primary
             />
             <ProInlineCta
-              label="Try Strix Enterprise"
-              desc="SSO, compliance-ready reports, VPC or self-hosted deployment."
+              label="AI-VAPT Architecture & Findings"
+              desc="Comprehensive compliance-ready audit reports."
               slug="book_demo"
               surface="overview"
               icon={Building2}
@@ -815,19 +815,19 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
       {/* Re-run always routes to Strix Cloud. */}
       <div className="rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
         <p className="text-sm font-semibold text-white">Run this pentest with more depth</p>
-        <p className="mt-0.5 text-xs text-[#666]">Run this pentest again in Strix Cloud.</p>
+        <p className="mt-0.5 text-xs text-[#666]">Run an autonomous assessment with deep scanning.</p>
         <div className="mt-3 flex flex-wrap gap-2.5">
           <ProInlineCta
-            label="Re-run in Strix Pro with more depth"
-            desc="More depth, validated findings, and autofix."
+            label="Re-run in AI-VAPT Autonomous Deep"
+            desc="Maximum depth, validated findings, and autofix."
             slug="live_scan"
             surface="agents"
             icon={Rocket}
             primary
           />
           <ProInlineCta
-            label="Try Strix Enterprise"
-            desc="SSO, compliance-ready reports, VPC or self-hosted deployment."
+            label="AI-VAPT Architecture & Findings"
+            desc="Comprehensive compliance-ready audit reports."
             slug="book_demo"
             surface="agents"
             icon={Building2}

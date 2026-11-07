@@ -1,10 +1,10 @@
-"""FastAPI Gateway for STRIX AI-VAPT Platform.
+"""FastAPI Gateway for AI-VAPT Platform.
 
 Serves the Web Operations Console SPA and exposes REST endpoints for:
 - System & model provider health checks
-- In-memory credential validation (Gemini, OpenRouter)
+- In-memory credential validation (Gemini, OpenRouter, Cloud-Hosted, Ollama)
 - Fail-closed target scope verification
-- Assessment lifecycle management (GAP-1 triage, GAP-2 pivoting, Strix execution)
+- Assessment lifecycle management (GAP-1 triage, GAP-2 pivoting, autonomous execution)
 - Live decision traces, real-time DAG state, and audit reporting
 """
 
@@ -243,7 +243,7 @@ def _generate_markdown_report(run_data: dict[str, Any]) -> str:
         "",
         f"- **Target URL:** {target}",
         f"- **Run Reference:** `{run_id}`",
-        "- **Execution Engine:** STRIX Autonomous Multi-Agent Core",
+        "- **Execution Engine:** AI-VAPT Autonomous Multi-Agent Core",
         f"- **Assessment Mode:** {(run_data.get('mode') or 'autonomous').upper()}",
         f"- **Scan Depth:** {(run_data.get('scan_mode') or 'deep').upper()}",
         f"- **Generated:** {run_data.get('completed_at') or _utc_now()}",
@@ -253,7 +253,7 @@ def _generate_markdown_report(run_data: dict[str, Any]) -> str:
         "",
         "## 1. Executive Summary",
         "",
-        f"An autonomous vulnerability assessment and penetration test was conducted against `{target}` using the STRIX multi-agent engine coupled with GAP-1 dynamic exploit quality triage and GAP-2 bounded failure pivoting.",
+        f"An autonomous vulnerability assessment and penetration test was conducted against `{target}` using the AI-VAPT multi-agent engine coupled with GAP-1 dynamic exploit quality triage and GAP-2 bounded failure pivoting.",
         "",
         "## 2. Confirmed Vulnerability Findings",
         "",
@@ -531,20 +531,21 @@ async def serve_index():
 @app.get("/health")
 async def health_check():
     """Basic service health check."""
-    return {"status": "ok", "service": "strix-ai-vapt-gateway"}
+    return {"status": "ok", "service": "ai-vapt-gateway"}
 
 
 @app.get("/system/health", response_model=SystemHealthResponse)
 async def system_health():
-    """Comprehensive readiness probe for Strix core, Docker, Ollama, and LiteLLM."""
+    """Comprehensive readiness probe for AI-VAPT core, Docker, Ollama, and LiteLLM."""
     components: dict[str, Any] = {}
 
-    # 1. Strix Core
-    components["strix_core"] = {
+    # 1. AI-VAPT Core
+    components["ai_vapt_core"] = {
         "status": "READY",
-        "version": "1.7.0",
+        "version": "2.0.0",
         "engine": "autonomous_multi_agent",
     }
+    components["strix_core"] = components["ai_vapt_core"]
 
     # 2. Docker Execution Sandbox
     try:
@@ -2446,7 +2447,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
         if req.mode == "autonomous" and is_live_target and docker_available:
             engine.log(
                 "AUTONOMOUS",
-                f"[TURN 1/{max_turns}] Spawning Strix Multi-Agent Autonomous Pentest Engine against {target_url} (Limit: {max_turns} turns, Depth: {scan_mode.upper()})",
+                f"[TURN 1/{max_turns}] Spawning AI-VAPT Multi-Agent Autonomous Pentest Engine against {target_url} (Limit: {max_turns} turns, Depth: {scan_mode.upper()})",
             )
             run_entry["events"].append(
                 {
@@ -3175,7 +3176,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                     )
                                     findings.append(
                                         {
-                                            "id": sv.get("id", f"strix-{uuid.uuid4().hex[:6]}"),
+                                            "id": sv.get("id", f"vapt-{uuid.uuid4().hex[:6]}"),
                                             "title": sv.get(
                                                 "title", sv.get("name", "Vulnerability")
                                             ),

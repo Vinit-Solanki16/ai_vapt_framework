@@ -119,7 +119,7 @@ export default function PastRunsView({
         <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#555]">
           <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
           Or open one from the CLI with{" "}
-          <code className="font-mono text-[#888]">strix view &lt;name&gt;</code>
+          <code className="font-mono text-[#888]">ai-vapt view &lt;name&gt;</code>
         </p>
       </div>
     );

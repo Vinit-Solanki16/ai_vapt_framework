@@ -1,22 +1,22 @@
 ---
 title: "CI/CD Integration"
-description: "Run Strix in any CI/CD pipeline"
+description: "Run AI-VAPT in any CI/CD pipeline"
 ---
 
-Strix runs in headless mode for automated pipelines.
+AI-VAPT runs in headless mode for automated pipelines.
 
 ## Headless Mode
 
 Use the `-n` or `--non-interactive` flag:
 
 ```bash
-strix -n --target ./app --scan-mode quick
+ai-vapt -n --target ./app --scan-mode quick
 ```
 
-For pull-request style CI runs, Strix automatically scopes quick scans to changed files. You can force this behavior and set a base ref explicitly:
+For pull-request style CI runs, AI-VAPT automatically scopes quick scans to changed files. You can force this behavior and set a base ref explicitly:
 
 ```bash
-strix -n --target ./app --scan-mode quick --scope-mode diff --diff-base origin/main
+ai-vapt -n --target ./app --scan-mode quick --scope-mode diff --diff-base origin/main
 ```
 
 ## Exit Codes
@@ -30,22 +30,22 @@ strix -n --target ./app --scan-mode quick --scope-mode diff --diff-base origin/m
 To fail only on serious findings, pass `--fail-on` with a minimum severity. Lower findings are still reported but exit `0`, so a passing job does not mean the report is empty.:
 
 ```bash
-strix -n --target ./app --scan-mode quick --fail-on high
+ai-vapt -n --target ./app --scan-mode quick --fail-on high
 ```
 
 ## GitLab CI
 
 ```yaml .gitlab-ci.yml
 security-scan:
-  image: docker:latest
+  image: python:3.12
   services:
     - docker:dind
   variables:
-    STRIX_LLM: $STRIX_LLM
+    AI_VAPT_LLM: $AI_VAPT_LLM
     LLM_API_KEY: $LLM_API_KEY
   script:
-    - curl -sSL https://strix.ai/install | bash
-    - strix -n -t ./ --scan-mode quick
+    - pip install -e .
+    - ai-vapt -n -t ./ --scan-mode quick
 ```
 
 ## Jenkins
@@ -54,14 +54,14 @@ security-scan:
 pipeline {
     agent any
     environment {
-        STRIX_LLM = credentials('strix-llm')
+        AI_VAPT_LLM = credentials('ai-vapt-llm')
         LLM_API_KEY = credentials('llm-api-key')
     }
     stages {
         stage('Security Scan') {
             steps {
-                sh 'curl -sSL https://strix.ai/install | bash'
-                sh 'strix -n -t ./ --scan-mode quick'
+                sh 'pip install -e .'
+                sh 'ai-vapt -n -t ./ --scan-mode quick'
             }
         }
     }
@@ -75,16 +75,16 @@ version: 2.1
 jobs:
   security-scan:
     docker:
-      - image: cimg/base:current
+      - image: cimg/python:3.12
     steps:
       - checkout
       - setup_remote_docker
       - run:
-          name: Install Strix
-          command: curl -sSL https://strix.ai/install | bash
+          name: Install AI-VAPT
+          command: pip install -e .
       - run:
           name: Run Scan
-          command: strix -n -t ./ --scan-mode quick
+          command: ai-vapt -n -t ./ --scan-mode quick
 ```
 
 <Note>

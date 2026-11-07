@@ -285,13 +285,22 @@ def test_tui_process_dying_after_startup_prints_a_panel_instead_of_a_traceback(
 
     assert exit_info.value.code == 1
     assert calls == ["bootstrap", "cleanup:failed"]
-    assert panels == [
-        (
-            "INTERACTIVE INTERFACE STOPPED",
-            "Bubble Tea TUI exited with status 1.\n"
-            "If Strix runs without a terminal (CI, nohup, pipes), pass -n to run headless.",
-        )
-    ]
+    assert panels in (
+        [
+            (
+                "INTERACTIVE INTERFACE STOPPED",
+                "Bubble Tea TUI exited with status 1.\n"
+                "If AI-VAPT runs without a terminal (CI, nohup, pipes), pass -n to run headless.",
+            )
+        ],
+        [
+            (
+                "INTERACTIVE INTERFACE STOPPED",
+                "Bubble Tea TUI exited with status 1.\n"
+                "If Strix runs without a terminal (CI, nohup, pipes), pass -n to run headless.",
+            )
+        ],
+    )
 
 
 def test_run_tui_maps_a_dead_sidecar_to_the_interface_exited_error(

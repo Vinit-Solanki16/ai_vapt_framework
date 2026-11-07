@@ -1,34 +1,41 @@
 ---
 title: "GitHub Actions"
-description: "Run Strix security scans on every pull request"
+description: "Run AI-VAPT security assessments on every pull request"
 ---
 
-Integrate Strix into your GitHub workflow to catch vulnerabilities before they reach production.
+Integrate AI-VAPT into your GitHub workflow to catch vulnerabilities before they reach production.
 
 ## Basic Workflow
 
 ```yaml .github/workflows/security.yml
-name: Security Scan
+name: Security Assessment
 
 on:
   pull_request:
 
 jobs:
-  strix-scan:
+  ai-vapt-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Strix
-        run: curl -sSL https://strix.ai/install | bash
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Run Security Scan
+      - name: Install AI-VAPT
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run Security Assessment
         env:
-          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          AI_VAPT_LLM: ${{ secrets.AI_VAPT_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-        run: strix -n -t ./ --scan-mode quick
+        run: ai-vapt -n -t ./ --scan-mode quick
 ```
 
 ## Required Secrets
@@ -37,7 +44,7 @@ Add these secrets to your repository:
 
 | Secret | Description |
 |--------|-------------|
-| `STRIX_LLM` | Model name (e.g., `openrouter/z-ai/glm-5.3`) |
+| `AI_VAPT_LLM` (or `STRIX_LLM`) | Model identifier (e.g., `cloud_hosted/kaggle-model` or `openrouter/z-ai/glm-5.3`) |
 | `LLM_API_KEY` | API key for your LLM provider |
 
 ## Exit Codes

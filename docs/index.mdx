@@ -1,17 +1,17 @@
 ---
 title: "Introduction"
-description: "Open-source AI hackers to secure your apps"
+description: "AI-VAPT: Autonomous Multi-Agent Cybersecurity Assessment Platform"
 ---
 
-Strix are autonomous AI agents that act like real hackers—they run your code dynamically, find vulnerabilities, and validate them with proof-of-concepts. Built for developers and security teams who need fast, accurate security testing without the overhead of manual pentesting or the false positives of static analysis tools.
+AI-VAPT is an autonomous multi-agent penetration testing platform that dynamically analyzes target applications, identifies real security vulnerabilities, and validates them with reproducible proof-of-concepts. Built with adaptive triage and bounded execution pivoting, AI-VAPT eliminates false positives through concrete dynamic exploit verification.
 
 <Frame>
-  <img src="/images/screenshot.png" alt="Strix Demo" />
+  <img src="/images/screenshot.png" alt="AI-VAPT Demo" />
 </Frame>
 
 <CardGroup cols={2}>
   <Card title="Quick Start" icon="rocket" href="/quickstart">
-    Install and run your first scan in minutes.
+    Install and run your first assessment in minutes.
   </Card>
   <Card title="CLI Reference" icon="terminal" href="/usage/cli">
     Learn all command-line options.
@@ -40,7 +40,7 @@ Strix are autonomous AI agents that act like real hackers—they run your code d
 
 ## Security Tools
 
-Strix agents come equipped with a comprehensive toolkit:
+AI-VAPT agents come equipped with a comprehensive toolkit:
 
 | Tool | Purpose |
 |------|---------|
@@ -65,7 +65,7 @@ Strix agents come equipped with a comprehensive toolkit:
 
 ## Multi-Agent Architecture
 
-Strix uses a graph of specialized agents for comprehensive security testing:
+AI-VAPT uses a graph of specialized agents for comprehensive security testing:
 
 - **Distributed Workflows** — Specialized agents for different attacks and assets
 - **Scalable Testing** — Parallel execution for fast comprehensive coverage
@@ -74,39 +74,31 @@ Strix uses a graph of specialized agents for comprehensive security testing:
 ## Quick Example
 
 <CodeGroup>
-```bash Vercel AI Gateway
-# Install
-curl -sSL https://strix.ai/install | bash
-
+```bash Cloud-Hosted / Custom OpenAI-Compatible
 # Configure
-export STRIX_LLM="vercel_ai_gateway/zai/glm-5.3"
+export AI_VAPT_LLM="cloud_hosted/kaggle-model"
+export OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
 export LLM_API_KEY="your-api-key"
 
 # Scan
-strix --target ./your-app
+ai-vapt --target ./your-app
 ```
 
 ```bash OpenRouter
-# Install
-curl -sSL https://strix.ai/install | bash
-
 # Configure
-export STRIX_LLM="openrouter/z-ai/glm-5.3"
+export AI_VAPT_LLM="openrouter/z-ai/glm-5.3"
 export LLM_API_KEY="your-api-key"
 
 # Scan
-strix --target ./your-app
+ai-vapt --target ./your-app
 ```
 </CodeGroup>
 
-## Community
+## Community & Source
 
-<CardGroup cols={2}>
-  <Card title="Discord" icon="discord" href="https://discord.gg/strix-ai">
-    Join the community for help and discussion.
-  </Card>
-  <Card title="GitHub" icon="github" href="https://github.com/usestrix/strix">
-    Star the repo and contribute.
+<CardGroup cols={1}>
+  <Card title="GitHub" icon="github" href="https://github.com/Vinit-Solanki16/ai_vapt_framework">
+    Explore the codebase, track issues, and contribute.
   </Card>
 </CardGroup>
 

@@ -1,77 +1,81 @@
 ---
 title: "Quick Start"
-description: "Install Strix and run your first security scan"
+description: "Install AI-VAPT and run your first security assessment"
 ---
 
 ## Prerequisites
 
 - Docker (running)
-- An LLM API key from any [supported provider](/llm-providers/overview) (OpenAI, Anthropic, Google, etc.)
+- Python 3.11+
+- An LLM API key or local model endpoint (OpenAI, Anthropic, Google, Ollama, Cloud-Hosted, etc.)
 
 ## Installation
 
 <Tabs>
-  <Tab title="curl">
+  <Tab title="Clone & Run (Recommended)">
     ```bash
-    curl -sSL https://strix.ai/install | bash
+    git clone https://github.com/Vinit-Solanki16/ai_vapt_framework.git
+    cd ai_vapt_framework
+    uv pip install -e .
     ```
   </Tab>
-  <Tab title="pipx">
+  <Tab title="Pip / Virtualenv">
     ```bash
-    pipx install strix-agent
+    pip install -e .
     ```
   </Tab>
 </Tabs>
 
 ## Configuration
 
-Set your LLM provider. We recommend GLM-5.3 through [Vercel AI Gateway](/llm-providers/vercel-ai-gateway) or [OpenRouter](/llm-providers/openrouter):
+Set your LLM provider endpoint and model:
 
 <CodeGroup>
-```bash Vercel AI Gateway
-export STRIX_LLM="vercel_ai_gateway/zai/glm-5.3"
+```bash Cloud-Hosted / Custom OpenAI-Compatible
+export AI_VAPT_LLM="cloud_hosted/kaggle-model"
+export OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
 export LLM_API_KEY="your-api-key"
 ```
 
 ```bash OpenRouter
-export STRIX_LLM="openrouter/z-ai/glm-5.3"
+export AI_VAPT_LLM="openrouter/z-ai/glm-5.3"
 export LLM_API_KEY="your-api-key"
 ```
 </CodeGroup>
 
 <Tip>
-For best results, use `zai/glm-5.3`, `deepseek/deepseek-v4.1-flash-1017`, `anthropic/claude-opus-5-5` (needs [CVP](https://support.claude.com/en/articles/14604842-cyber-verification-program) access), or `openai/gpt-6.1-sol` (needs [Daybreak](https://openai.com/daybreak/) access).
+AI-VAPT also provides an interactive Web Operations Console at `ai-vapt web` for browser-based configuration and multi-engine assessment tracking.
 </Tip>
 
-## Run Your First Scan
+## Run Your First Assessment
 
 ```bash
-strix --target ./your-app
+ai-vapt --target ./your-app
 ```
 
 <Note>
-First run pulls the Docker sandbox image automatically. Results are saved to `strix_runs/<run-name>`.
+First run initializes the autonomous sandbox environment. Assessment runs are stored in the local run directory.
 </Note>
 
 ## Target Types
 
-Strix accepts multiple target types:
+AI-VAPT accepts multiple target types:
 
 ```bash
 # Local codebase
-strix --target ./app-directory
+ai-vapt --target ./app-directory
 
 # GitHub repository
-strix --target https://github.com/org/repo
+ai-vapt --target https://github.com/org/repo
 
 # Live web application
-strix --target https://your-app.com
+ai-vapt --target https://your-app.com
 
 # Multiple targets (white-box testing)
-strix -t https://github.com/org/repo -t https://your-app.com
+ai-vapt -t https://github.com/org/repo -t https://your-app.com
 
 # Targets from a file, one target per non-empty, non-comment line
-strix --target-list ./targets.txt
+ai-vapt --target-list ./targets.txt
 ```
 
 ## Next Steps
@@ -81,6 +85,6 @@ strix --target-list ./targets.txt
     Explore all command-line options.
   </Card>
   <Card title="Scan Modes" icon="gauge" href="/usage/scan-modes">
-    Choose the right scan depth.
+    Choose the right assessment depth.
   </Card>
 </CardGroup>

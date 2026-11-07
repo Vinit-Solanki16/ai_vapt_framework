@@ -62,8 +62,8 @@ logger = logging.getLogger(__name__)
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
-TOOL_NAME = "Strix"
-TOOL_INFORMATION_URI = "https://strix.ai"
+TOOL_NAME = "AI-VAPT"
+TOOL_INFORMATION_URI = "https://github.com/Vinit-Solanki16/ai_vapt_framework"
 
 # Synthetic anchor for findings that have no safe code location. SARIF
 # requires every result to carry at least one location, and GitHub

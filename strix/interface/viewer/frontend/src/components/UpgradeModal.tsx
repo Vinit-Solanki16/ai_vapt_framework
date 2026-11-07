@@ -97,7 +97,7 @@ export function UpgradeModal({
         </button>
 
         <div>
-          <h2 className="text-lg text-white">Available in Strix Cloud</h2>
+          <h2 className="text-lg text-white">Available in AI-VAPT Platform</h2>
           {description && (
             <p className="mt-2 text-base leading-relaxed text-[#e5e5e5]">{description}</p>
           )}
@@ -107,7 +107,7 @@ export function UpgradeModal({
           <div className="rounded-xl border border-[#333] bg-[#0a0a0a] p-4 sm:rounded-lg">
             <div className="mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-medium text-white">Strix Cloud also includes</span>
+              <span className="text-sm font-medium text-white">AI-VAPT Capabilities</span>
             </div>
             <ul className="space-y-2 text-sm text-[#888]">
               {CLOUD_HIGHLIGHTS.map((f) => (
@@ -127,7 +127,7 @@ export function UpgradeModal({
               onClick={() => trackCta("upgrade_try_free", source)}
               className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-neutral-200"
             >
-              Open Strix Cloud
+              Explore AI-VAPT Platform
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
             <a
@@ -143,7 +143,7 @@ export function UpgradeModal({
           </div>
 
           <p className="text-center text-xs text-[#666]">
-            SSO, compliance reports, or a private deployment?{" "}
+            SSO, compliance reports, or private deployment?{" "}
             <a
               href={ctaUrl(DEMO_URL, "upgrade_book_demo")}
               target="_blank"
@@ -151,7 +151,7 @@ export function UpgradeModal({
               onClick={() => trackCta("upgrade_book_demo", source)}
               className="whitespace-nowrap text-[#aaa] underline underline-offset-2 transition-colors hover:text-white"
             >
-              Try Strix Enterprise
+              AI-VAPT Architecture & Findings
             </a>
           </p>
         </div>

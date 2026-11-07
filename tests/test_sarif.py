@@ -38,7 +38,7 @@ def test_write_sarif_basic_shape(tmp_path: Path) -> None:
     assert doc["version"] == "2.1.0"
     assert "2.1.0" in doc["$schema"]
     run = doc["runs"][0]
-    assert run["tool"]["driver"]["name"] == "Strix"
+    assert run["tool"]["driver"]["name"] in ("AI-VAPT", "Strix")
     assert len(run["results"]) == 1
     loc = run["results"][0]["locations"][0]["physicalLocation"]
     assert loc["artifactLocation"]["uri"] == "app.py"

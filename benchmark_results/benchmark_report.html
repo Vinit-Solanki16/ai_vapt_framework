@@ -78,9 +78,9 @@
 </head>
 <body>
   <div class="container">
-    <h1>⚔️ Strix AI-VAPT Benchmark Report — Phase 14</h1>
+    <h1>⚔️ AI-VAPT Benchmark Report — Phase 14</h1>
     <p style="color: var(--text-muted);">
-      Target: <code>http://127.0.0.1:3000/</code> (OWASP Juice Shop v20.3.0) &bull; Engine: Strix v1.7.0 &bull; Generated: 2026-11-06 16:14:55 UTC
+      Target: <code>http://127.0.0.1:3000/</code> (OWASP Juice Shop v20.3.0) &bull; Engine: AI-VAPT Autonomous Deep v2.0 &bull; Generated: 2026-11-06 16:14:55 UTC
     </p>
 
     <div class="card">
@@ -214,7 +214,7 @@
             <th>Finding</th>
             <th>Severity</th>
             <th>Hermes Status</th>
-            <th>Strix Autonomous Deep</th>
+            <th>AI-VAPT Autonomous Deep</th>
             <th>Root Cause Difference</th>
           </tr>
         </thead>
@@ -225,7 +225,7 @@
             <td><span class="badge badge-danger">High</span></td>
             <td>CONFIRMED</td>
             <td>RULED_OUT_UNAUTH</td>
-            <td>Hermes used authenticated customer token; Strix blackbox assessment operates unauthenticated.</td>
+            <td>Hermes used authenticated customer token; AI-VAPT blackbox assessment operates unauthenticated.</td>
           </tr>
           <tr>
             <td><strong>F-02</strong></td>
@@ -233,7 +233,7 @@
             <td><span class="badge badge-danger">High</span></td>
             <td>CONFIRMED</td>
             <td>RULED_OUT_UNAUTH</td>
-            <td>Hermes decoded application JWT payload; Strix evaluates HTTP transport headers.</td>
+            <td>Hermes decoded application JWT payload; AI-VAPT evaluates HTTP transport headers.</td>
           </tr>
           <tr>
             <td><strong>F-03</strong></td>
@@ -241,7 +241,7 @@
             <td><span class="badge badge-warning">Medium</span></td>
             <td>CONFIRMED</td>
             <td>EXPLORED_NO_ISSUE</td>
-            <td>Strix classifies public schema endpoints as benign unless secret keys leak.</td>
+            <td>AI-VAPT classifies public schema endpoints as benign unless secret keys leak.</td>
           </tr>
           <tr>
             <td><strong>F-04</strong></td>
@@ -265,7 +265,7 @@
             <td><span class="badge badge-danger">High</span></td>
             <td>CONFIRMED</td>
             <td>NOT_TESTED</td>
-            <td>Strix default safety policy excludes unprompted credential brute forcing.</td>
+            <td>AI-VAPT default safety policy excludes unprompted credential brute forcing.</td>
           </tr>
           <tr>
             <td><strong>F-07</strong></td>
@@ -273,7 +273,7 @@
             <td><span class="badge badge-info">Low</span></td>
             <td>CONFIRMED</td>
             <td>RULED_OUT</td>
-            <td>Strix active scanner evaluates HTTP 500 error as non-exploitable server failure.</td>
+            <td>AI-VAPT active scanner evaluates HTTP 500 error as non-exploitable server failure.</td>
           </tr>
         </tbody>
       </table>

@@ -2515,7 +2515,7 @@
             elements.settingsStatusBadge.className = 'badge badge-emerald';
           }
         } else {
-          elements.settingsCurrentKeyHint.textContent = 'No API key configured in ~/.strix/cli-config.json';
+          elements.settingsCurrentKeyHint.textContent = 'No API key configured in AI-VAPT profile storage';
           if (elements.settingsStatusBadge) {
             elements.settingsStatusBadge.textContent = 'Not Configured';
             elements.settingsStatusBadge.className = 'badge badge-amber';
@@ -2576,7 +2576,7 @@
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      showToast('LLM Configuration saved to ~/.strix/cli-config.json!', 'success');
+      showToast('LLM Configuration saved successfully!', 'success');
       if (elements.settingsKeyResult) {
         elements.settingsKeyResult.innerHTML = `<span style="color:#10b981;">✅ Saved successfully! Active model: <strong>${escapeHtml(model)}</strong></span>`;
       }

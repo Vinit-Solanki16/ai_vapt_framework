@@ -1,8 +1,8 @@
 // All upsell / sign-up CTAs route anonymous local-viewer users to the public
 // cloud sign-up. Open in a new tab so the local results stay put.
-export const SIGNUP_URL = "https://app.strix.ai/api/auth/signup";
-export const DEMO_URL = "https://strix.ai/demo";
-export const PRICING_URL = "https://strix.ai/pricing";
+export const SIGNUP_URL = "https://github.com/Vinit-Solanki16/ai_vapt_framework";
+export const DEMO_URL = "https://github.com/Vinit-Solanki16/ai_vapt_framework";
+export const PRICING_URL = "https://github.com/Vinit-Solanki16/ai_vapt_framework";
 
 // Attribution params appended to every outbound CTA link so the destination
 // analytics can see the local viewer drove the click, with utm_content carrying
