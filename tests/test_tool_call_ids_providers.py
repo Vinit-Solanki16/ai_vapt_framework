@@ -19,7 +19,7 @@ import json
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import litellm
@@ -144,16 +144,20 @@ class _Gateway(BaseHTTPRequestHandler):
             )
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
+        self.close_connection = True
         encoded = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(encoded)
 
     def _send_stream(self, message: dict[str, Any], finish: str) -> None:
+        self.close_connection = True
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Connection", "close")
         self.end_headers()
 
         def chunk(delta: dict[str, Any], finish_reason: str | None = None) -> None:
@@ -228,15 +232,15 @@ def _history_error(messages: list[dict[str, Any]]) -> str | None:
     return None
 
 
-def _serve(scenario: _Scenario) -> tuple[HTTPServer, type[_Gateway]]:
+def _serve(scenario: _Scenario) -> tuple[ThreadingHTTPServer, type[_Gateway]]:
     handler = type(
         "_ScenarioGateway",
         (_Gateway,),
         {"scenario": scenario, "requests": [], "lock": threading.Lock()},
     )
-    server = HTTPServer(("127.0.0.1", 0), handler)
-    server.timeout = 0.5
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server.daemon_threads = True
+    threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True).start()
     return server, handler
 
 
@@ -257,16 +261,7 @@ def _gateway(scenario: _Scenario) -> Iterator[tuple[str, type[_Gateway]]]:
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1", handler
     finally:
-
-        def _safe_shutdown() -> None:
-            try:
-                server.shutdown()
-            except Exception:
-                pass
-
-        t = threading.Thread(target=_safe_shutdown, daemon=True)
-        t.start()
-        t.join(timeout=2.0)
+        server.shutdown()
         try:
             server.server_close()
         except Exception:

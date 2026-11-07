@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import urllib.error
 import urllib.request
 from unittest.mock import MagicMock, patch
@@ -64,7 +65,10 @@ def test_cloud_profile_crud_and_masking(tmp_path):
     """Verify that cloud profiles can be created, retrieved with masked keys, activated, and deleted."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         # 1. Initially empty
         profiles = _get_cloud_profiles()
         assert len(profiles) == 0
@@ -435,7 +439,10 @@ def test_create_run_preflight_cloud_hosted_validation(tmp_path):
     """Verify create_run validates cloud hosted provider configuration before accepting."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         # 1. No active profile and missing base URL -> preflight fails with 400
         bad_req = {
             "mode": "simulation",
@@ -488,7 +495,10 @@ def test_cloud_profile_creation_with_null_and_empty_id(tmp_path):
     """Verify that profiles with id=None, id='', or omitted id are assigned unique IDs without HTTP 422."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         # 1. id: null (The exact manual test failure case)
         res1 = client.post(
             "/providers/cloud_hosted/profiles",
@@ -546,7 +556,10 @@ def test_cloud_profile_update_and_api_key_persistence(tmp_path):
     """Verify updating a profile preserves existing API key when key field is null or empty."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         # Step 1: Create profile with credentials
         res_create = client.post(
             "/providers/cloud_hosted/profiles",
@@ -590,7 +603,10 @@ def test_cloud_profile_empty_optional_fields_coercion(tmp_path):
     """Verify optional fields with empty strings or null are coerced cleanly to valid defaults."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         res = client.post(
             "/providers/cloud_hosted/profiles",
             json={
@@ -665,7 +681,10 @@ def test_cloud_profile_active_switching_and_deletion(tmp_path):
     """Verify switching active profile updates both profiles and deletion removes target."""
     test_cli_config = tmp_path / "cli-config.json"
 
-    with patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config):
+    with (
+        patch("strix.interface.api.CLI_CONFIG_FILE", test_cli_config),
+        patch.dict(os.environ, {"OPENAI_BASE_URL": ""}, clear=False),
+    ):
         # Create Profile A
         client.post(
             "/providers/cloud_hosted/profiles",

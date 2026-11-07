@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -132,10 +132,12 @@ class _StrictHandler(BaseHTTPRequestHandler):
             self._respond(200, _text_completion("all done"))
 
     def _respond(self, status: int, payload: dict[str, Any]) -> None:
+        self.close_connection = True
         encoded = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(encoded)
 
@@ -143,23 +145,14 @@ class _StrictHandler(BaseHTTPRequestHandler):
 @pytest.fixture
 def strict_gateway() -> Iterator[str]:
     _REQUESTS.clear()
-    server = HTTPServer(("127.0.0.1", 0), _StrictHandler)
-    server.timeout = 0.5
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _StrictHandler)
+    server.daemon_threads = True
+    thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.05), daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
-
-        def _safe_shutdown() -> None:
-            try:
-                server.shutdown()
-            except Exception:
-                pass
-
-        t = threading.Thread(target=_safe_shutdown, daemon=True)
-        t.start()
-        t.join(timeout=2.0)
+        server.shutdown()
         try:
             server.server_close()
         except Exception:
