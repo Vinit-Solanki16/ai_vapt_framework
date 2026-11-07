@@ -75,8 +75,20 @@ def stalling_gateway() -> Iterator[str]:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
         _StallingHandler.stop.set()
-        server.shutdown()
-        server.server_close()
+
+        def _safe_shutdown() -> None:
+            try:
+                server.shutdown()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_safe_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=2.0)
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 class _ServedByRelace(OpenAIChatCompletionsModel):

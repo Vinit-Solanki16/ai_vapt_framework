@@ -90,6 +90,8 @@ _PAYLOAD: dict[str, dict[str, Any]] = {"value": _tool_call_completion()}
 class _Handler(BaseHTTPRequestHandler):
     """A gateway that only speaks non-streaming Chat Completions."""
 
+    protocol_version = "HTTP/1.0"
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -120,13 +122,26 @@ class _Handler(BaseHTTPRequestHandler):
 def gateway_url() -> Iterator[str]:
     _PAYLOAD["value"] = _tool_call_completion()
     server = HTTPServer(("127.0.0.1", 0), _Handler)
+    server.timeout = 0.5
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
-        server.shutdown()
-        server.server_close()
+
+        def _safe_shutdown() -> None:
+            try:
+                server.shutdown()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_safe_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=2.0)
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 def _model(base_url: str) -> OpenAIChatCompletionsModel:
@@ -214,6 +229,8 @@ _TURN_STREAM_FLAGS: list[bool] = []
 class _MultiTurnHandler(BaseHTTPRequestHandler):
     """Non-streaming gateway: a tool call on turn 1, a final answer on turn 2."""
 
+    protocol_version = "HTTP/1.0"
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -236,13 +253,26 @@ class _MultiTurnHandler(BaseHTTPRequestHandler):
 def multiturn_url() -> Iterator[str]:
     _TURN_STREAM_FLAGS.clear()
     server = HTTPServer(("127.0.0.1", 0), _MultiTurnHandler)
+    server.timeout = 0.5
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
-        server.shutdown()
-        server.server_close()
+
+        def _safe_shutdown() -> None:
+            try:
+                server.shutdown()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_safe_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=2.0)
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 @pytest.mark.asyncio

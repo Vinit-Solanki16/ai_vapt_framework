@@ -556,10 +556,11 @@ def main() -> None:
 
     if args.non_interactive:
         report_state = get_global_report_state()
-        if not report_state or report_state.run_record.get("status") != "completed":
+        run_rec = getattr(report_state, "run_record", None) if report_state else None
+        if not report_state or (run_rec is not None and run_rec.get("status") != "completed"):
             logger.error(
                 "Scan did not complete successfully (status: %s, exit_reason: %s)",
-                report_state.run_record.get("status") if report_state else "none",
+                run_rec.get("status") if run_rec else "none",
                 getattr(report_state, "scan_ended_exit_reason", None)
                 if report_state
                 else "unknown",

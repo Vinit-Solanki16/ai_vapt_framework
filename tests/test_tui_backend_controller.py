@@ -66,7 +66,7 @@ async def test_setup_state_is_serializable() -> None:
     assert snapshot["scan_state"] == "setup"
     assert snapshot["scan_mode"] == "deep"
     assert snapshot["max_budget_usd"] is None
-    assert snapshot["max_turns"] == 250
+    assert snapshot["max_turns"] == 500
     assert snapshot["scope_mode"] == "auto"
     assert snapshot["diff_base"] is None
 

@@ -99,6 +99,8 @@ def _tool_results(messages: list[dict[str, Any]]) -> list[str]:
 class _StrictHandler(BaseHTTPRequestHandler):
     """Gateway that rejects malformed assistant tool-call arguments, like vLLM/SGLang do."""
 
+    protocol_version = "HTTP/1.0"
+
     def log_message(self, *args: Any) -> None:
         pass
 
@@ -142,13 +144,26 @@ class _StrictHandler(BaseHTTPRequestHandler):
 def strict_gateway() -> Iterator[str]:
     _REQUESTS.clear()
     server = HTTPServer(("127.0.0.1", 0), _StrictHandler)
+    server.timeout = 0.5
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1"
     finally:
-        server.shutdown()
-        server.server_close()
+
+        def _safe_shutdown() -> None:
+            try:
+                server.shutdown()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_safe_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=2.0)
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 def _model(base_url: str) -> Model:

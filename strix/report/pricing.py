@@ -39,6 +39,10 @@ def resolve_litellm_model(model: str) -> str | None:
             matches = sorted(key for key in model_cost if key.endswith(f"/{name}"))
             if not matches:
                 continue
+            for prefix in ("xai/", "openai/", "anthropic/", "google/", "deepseek/", "mistral/"):
+                candidate = f"{prefix}{name}"
+                if candidate in matches:
+                    return candidate
             prices = {
                 (
                     model_cost[key].get("input_cost_per_token"),

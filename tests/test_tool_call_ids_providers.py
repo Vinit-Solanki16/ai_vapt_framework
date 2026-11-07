@@ -99,6 +99,7 @@ MODELS = [
 
 
 class _Gateway(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.0"
     scenario: ClassVar[_Scenario]
     requests: ClassVar[list[dict[str, Any]]]
     lock: ClassVar[threading.Lock]
@@ -234,6 +235,7 @@ def _serve(scenario: _Scenario) -> tuple[HTTPServer, type[_Gateway]]:
         {"scenario": scenario, "requests": [], "lock": threading.Lock()},
     )
     server = HTTPServer(("127.0.0.1", 0), handler)
+    server.timeout = 0.5
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, handler
 
@@ -255,8 +257,20 @@ def _gateway(scenario: _Scenario) -> Iterator[tuple[str, type[_Gateway]]]:
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}/v1", handler
     finally:
-        server.shutdown()
-        server.server_close()
+
+        def _safe_shutdown() -> None:
+            try:
+                server.shutdown()
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_safe_shutdown, daemon=True)
+        t.start()
+        t.join(timeout=2.0)
+        try:
+            server.server_close()
+        except Exception:
+            pass
 
 
 async def _run(
