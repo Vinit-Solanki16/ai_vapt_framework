@@ -11,6 +11,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
+def _disabled_copilot_poll(*args: object, **kwargs: object) -> str:
+    raise RuntimeError("Copilot device polling disabled in tests")
+
+
 @pytest.fixture(autouse=True)
 def _isolate_mcp_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
@@ -67,6 +71,12 @@ def _isolate_litellm_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
         import litellm
 
         litellm.telemetry = False
+    except Exception:
+        pass
+    try:
+        from litellm.llms.github_copilot.authenticator import Authenticator
+
+        monkeypatch.setattr(Authenticator, "_poll_for_access_token", _disabled_copilot_poll)
     except Exception:
         pass
 
