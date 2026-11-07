@@ -1,12 +1,12 @@
 [project]
 name = "strix-agent"
 version = "1.7.0"
-description = "Open-source AI Hackers for your apps"
+description = "Autonomous Multi-Agent Cybersecurity Penetration Testing & Vulnerability Assessment Platform"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 authors = [
-  { name = "Strix", email = "hi@usestrix.com" },
+  { name = "Vinit Solanki", email = "vinit.sict21@sot.pdpu.ac.in" },
 ]
 keywords = [
   "cybersecurity",
