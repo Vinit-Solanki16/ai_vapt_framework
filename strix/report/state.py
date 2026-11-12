@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -7,7 +9,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
 from strix.config import codex
@@ -16,6 +18,11 @@ from strix.core.paths import run_dir_for, runtime_state_dir
 from strix.report.coverage import write_coverage
 from strix.report.pricing import resolve_litellm_model
 from strix.report.sarif import write_sarif
+from strix.report.verification import (
+    CategoryTest,
+    VerificationBlock,
+    VerificationState,
+)
 from strix.report.writer import (
     read_run_record,
     write_executive_report,
@@ -28,12 +35,13 @@ from strix.telemetry import posthog, scarf
 if TYPE_CHECKING:
     from agents.usage import Usage
 
+    from strix.core.gap_run import GapRun
     from strix.llm.request_log import LlmRequestEvent
 
 
 logger = logging.getLogger(__name__)
 
-_global_report_state: Optional["ReportState"] = None
+_global_report_state: ReportState | None = None
 
 _CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
 
@@ -183,15 +191,53 @@ def _git_head(repo_path: str) -> tuple[str | None, str | None]:
     return commit, branch
 
 
-def get_global_report_state() -> Optional["ReportState"]:
+def get_global_report_state() -> ReportState | None:
     return _global_report_state
 
 
-def set_global_report_state(report_state: Optional["ReportState"]) -> None:
+_active_report_states: dict[str, ReportState] = {}
+_active_gap_runs: dict[str, GapRun] = {}
+
+
+def get_report_state_for_run(run_id: str) -> ReportState | None:
+    """Retrieve the run-isolated ReportState for a specific scan ID."""
+    return _active_report_states.get(run_id)
+
+
+def get_gap_run_for_run(run_id: str) -> GapRun | None:
+    """Retrieve the run-isolated GapRun for a specific scan ID."""
+    return _active_gap_runs.get(run_id)
+
+
+def set_global_report_state(report_state: ReportState | None) -> None:
     global _global_report_state  # noqa: PLW0603
     _global_report_state = report_state
+    if report_state is not None:
+        run_id = getattr(report_state, "run_id", None)
+        if run_id:
+            _active_report_states[run_id] = report_state
+            if getattr(report_state, "gap_run", None) is None and _global_gap_run is not None:
+                if _global_gap_run.run_id == run_id:
+                    report_state.gap_run = _global_gap_run
     # New run: drop any streamed-cost entries a prior run left unconsumed.
     streamed_openrouter_costs.clear()
+
+
+# Per-scan GAP state: the Strix-native GAP-1/GAP-2 service (gap_run.py).
+# Bound by the scan driver when a run starts; consumed by the report renderer.
+_global_gap_run: GapRun | None = None
+
+
+def get_global_gap_run() -> GapRun | None:
+    return _global_gap_run
+
+
+def set_global_gap_run(gap_run: GapRun) -> None:
+    global _global_gap_run  # noqa: PLW0603
+    _global_gap_run = gap_run
+    _active_gap_runs[gap_run.run_id] = gap_run
+    if _global_report_state is not None and _global_report_state.run_id == gap_run.run_id:
+        _global_report_state.gap_run = gap_run
 
 
 class ReportState:
@@ -216,6 +262,10 @@ class ReportState:
 
         self.scan_results: dict[str, Any] | None = None
         self.scan_config: dict[str, Any] | None = None
+
+        # Category test ledger: {category_name: CategoryTest} from strix.report.verification.
+        self.findings_status: dict[str, CategoryTest] = {}
+
         # Imported here so importing this module never enters the agents SDK
         # package (which the warm-up thread may be initializing concurrently).
         from strix.report.usage import LLMUsageLedger
@@ -236,6 +286,10 @@ class ReportState:
         }
         self._run_dir: Path | None = None
         self._saved_vuln_ids: set[str] = set()
+        self.gap_run: GapRun | None = None
+        self.gap1_candidates_identified: int = 0
+        self.gap1_candidates_investigated: int = 0
+        self.gap2_pivots: int = 0
 
         self.caido_url: str | None = None
         self.vulnerability_found_callback: Callable[[dict[str, Any]], None] | None = None
@@ -361,6 +415,7 @@ class ReportState:
         dependency_metadata: dict[str, str] | None = None,
         agent_id: str | None = None,
         agent_name: str | None = None,
+        verification: VerificationBlock | None = None,
     ) -> str:
         report_id = self._next_report_id()
 
@@ -426,7 +481,22 @@ class ReportState:
             report["agent_id"] = agent_id
         if agent_name:
             report["agent_name"] = agent_name
-
+        if verification is not None:
+            if verification.verification_state == VerificationState.VERIFIED.value:
+                if not verification.satisfies_verification_contract():
+                    verification.verification_state = VerificationState.UNCONFIRMED.value
+            report["verification"] = verification.to_dict()
+            report["verification_state"] = verification.verification_state
+        else:
+            default_vb = VerificationBlock(
+                verification_state=VerificationState.CANDIDATE.value,
+                confidence=confidence or "",
+                confidence_rationale=confidence_rationale or "",
+                severity=severity or "",
+                remediation=remediation_steps or "",
+            )
+            report["verification"] = default_vb.to_dict()
+            report["verification_state"] = VerificationState.CANDIDATE.value
         if self.vulnerability_found_callback:
             self.vulnerability_found_callback(report)
 
@@ -554,6 +624,137 @@ class ReportState:
         self.save_run_data()
         return report
 
+    def update_verification(
+        self,
+        report_id: str,
+        *,
+        verification_state: str | None = None,
+        verification_block: VerificationBlock | None = None,
+        coverage_outcome: str | None = None,
+        category_evidence: str = "",
+    ) -> dict[str, Any] | None:
+        """Update the verification block of an existing finding without touching its id.
+
+        ``verification_state`` is the current verification lifecycle stage, and
+        ``verification_block`` carries the reproducible request, procedure,
+        demonstrated impact, evidence timestamp and confidence/severity. Refusing
+        to confirm without evidence is the central contract of this module.
+
+        Returns the revised report, or None when the report is unknown.
+        """
+        report = next((r for r in self.vulnerability_reports if r.get("id") == report_id), None)
+        if report is None:
+            logger.warning(
+                "cannot update verification of unknown vulnerability report %s", report_id
+            )
+            return None
+
+        changed: dict[str, Any] = {}
+        if verification_state is not None:
+            requested = verification_state.strip().lower()
+            canonical = (
+                requested
+                if requested in VerificationState.__members__.values()
+                else VerificationState.DISCOVERED.value
+            )
+            changed["verification_state"] = canonical
+
+        if verification_block is not None:
+            changed["verification"] = verification_block.to_dict()
+
+        if coverage_outcome is not None:
+            changed["verification_state"] = (
+                changed.get("verification_state") or VerificationState.DISCOVERED.value
+            )
+            # The coverage outcome is informational on the finding; we attach it
+            # as counterevidence so a finding cannot silently disappear from the
+            # ledger as it is verified.
+            changed["counterevidence"] = changed.get("counterevidence") or ""
+            # The category evidence reaches the findings_status ledger through the
+            # outcome tool directly; here we just record the alignment on the finding.
+            changed["counterevidence"] += f" | coverage_aligned={coverage_outcome}"
+
+        if not changed:
+            return report
+
+        if "verification" in changed:
+            # If the caller explicitly clears a reproducible block it no longer
+            # holds, downgrade the state to something honest.
+            if not changed["verification"]:
+                changed["verification_state"] = VerificationState.UNCONFIRMED.value
+            elif isinstance(changed["verification"], dict):
+                v_block_obj = VerificationBlock.from_dict(changed["verification"])
+                if not v_block_obj.satisfies_verification_contract():
+                    if changed.get("verification_state") == VerificationState.VERIFIED.value:
+                        changed["verification_state"] = VerificationState.UNCONFIRMED.value
+                    changed["verification"]["verification_state"] = changed.get(
+                        "verification_state", VerificationState.UNCONFIRMED.value
+                    )
+
+        if changed.get("verification_state") == VerificationState.VERIFIED.value:
+            existing_vb = changed.get("verification") or report.get("verification")
+            if (
+                not isinstance(existing_vb, dict)
+                or not VerificationBlock.from_dict(existing_vb).satisfies_verification_contract()
+            ):
+                changed["verification_state"] = VerificationState.UNCONFIRMED.value
+
+        # Lowercase the verification_state and canonical severity.
+        if "verification_state" in changed:
+            changed["verification_state"] = (
+                (changed["verification_state"] or VerificationState.DISCOVERED.value)
+                .strip()
+                .lower()
+            )
+        if "verification" in changed:
+            vb = changed["verification"]
+            if isinstance(vb, dict):
+                vb["verification_state"] = (
+                    (vb.get("verification_state") or VerificationState.DISCOVERED.value)
+                    .strip()
+                    .lower()
+                )
+                vb["confidence"] = (vb.get("confidence") or "").strip().lower()
+                vb["severity"] = (vb.get("severity") or "").strip().lower()
+
+        superseded = set()
+        if report.get("verification_state") != changed.get("verification_state"):
+            superseded.add("confidence")
+            superseded.add("cvss")
+            superseded.add("confidence_rationale")
+        for dependent in superseded:
+            if dependent not in changed and report.get(dependent) not in (None, "", [], {}):
+                superseded.add(dependent)
+
+        if not changed and not superseded:
+            return report
+
+        entry = {
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "fields": sorted(k for k, v in changed.items() if v not in (None, "", [], {})),
+        }
+        if superseded:
+            entry["dropped_fields"] = sorted(superseded)
+
+        history = report.get("update_history")
+        history_list = (
+            [e for e in history if isinstance(e, dict)] if isinstance(history, list) else []
+        )
+        history_list.append(entry)
+        revised = dict(report)
+        revised["update_history"] = history_list
+        revised["updated_at"] = entry["timestamp"]
+        revised.update(changed)
+
+        if self.vulnerability_updated_callback:
+            self.vulnerability_updated_callback(revised)
+        report.clear()
+        report.update(revised)
+        self._saved_vuln_ids.discard(report_id)
+        logger.info("Updated verification on %s", report_id)
+        self.save_run_data()
+        return report
+
     def delete_vulnerability_report(
         self,
         report_id: str,
@@ -643,7 +844,7 @@ class ReportState:
         self,
         *,
         agent_id: str,
-        usage: "Usage | None",
+        usage: Usage | None,
         agent_name: str | None = None,
         model: str | None = None,
     ) -> None:
@@ -892,6 +1093,22 @@ class ReportState:
         except Exception:
             logger.exception("SARIF emit failed (non-fatal; CSV/MD unaffected)")
 
+        if self.gap_run is not None:
+            summary = self.gap_run.summary
+            self.run_record["gap1_candidates_identified"] = summary["candidates_identified"]
+            self.run_record["gap1_candidates_investigated"] = summary["candidates_investigated"]
+            self.run_record["gap2_pivots"] = summary["pivots_executed"]
+            self.run_record["candidate_accounting"] = {
+                "dispatched": summary["candidates_dispatched"],
+                "investigated": summary["candidates_investigated"],
+                "validated": summary["candidates_validated"],
+                "abandoned": summary["candidates_abandoned"],
+                "not_tested": summary["candidates_not_tested"],
+                "blocked": summary["candidates_blocked"],
+            }
+            self.run_record["candidates"] = [c.to_dict() for c in self.gap_run.candidates.values()]
+            self.run_record["decision_trace"] = list(self.gap_run.decision_trace)
+
         write_run_record(run_dir, self.run_record)
 
         logger.info("Essential scan data saved to: %s", run_dir)
@@ -1021,7 +1238,7 @@ class StreamedOpenRouterCosts:
 streamed_openrouter_costs = StreamedOpenRouterCosts()
 
 
-def record_llm_request(event: "LlmRequestEvent") -> None:
+def record_llm_request(event: LlmRequestEvent) -> None:
     """Request-log sink: each provider attempt's timing, kept in run.json's ``llm_requests``."""
     report_state = get_global_report_state()
     if report_state is None:

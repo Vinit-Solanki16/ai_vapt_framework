@@ -278,6 +278,16 @@ Examples:
         ),
     )
 
+    parser.add_argument(
+        "--run-name",
+        "--name",
+        type=str,
+        dest="run_name",
+        default=None,
+        metavar="RUN_NAME",
+        help="Custom run name / output directory identifier under strix_runs/.",
+    )
+
     args = parser.parse_args()
     # Startup-resolved state lives alongside the parsed flags. The full schema
     # is established here so downstream code reads attributes directly.
@@ -286,7 +296,8 @@ Examples:
     args.targets_info = []
     args.local_sources = []
     args.diff_scope = {"active": False}
-    args.run_name = None
+    if not getattr(args, "run_name", None):
+        args.run_name = os.environ.get("STRIX_RUN_NAME")
 
     if args.config:
         apply_config_override(validate_config_file(args.config))

@@ -9,11 +9,11 @@
   // Standard Default Models for Providers
   const DEFAULT_PROVIDER_MODELS = {
     openrouter: [
-      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning [FREE] (Recommended)', free: true },
-      { id: 'dots-studio/dots-3-note-preview:free', name: 'Dots Studio 3 Note Preview [FREE]', free: true },
+      { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'NVIDIA Nemotron 3.5 Super VL [FREE] (Recommended Primary — 1M Context)', free: true },
+      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning [FREE] (Recommended Backup — 1M Context)', free: true },
+      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code [FREE] (256K Context)', free: true },
       { id: 'recursive/flint-v1.0:free', name: 'Recursive Flint v1.0 [FREE]', free: true },
-      { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'NVIDIA Nemotron 3 Ultra 550B [FREE]', free: true },
-      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code [FREE]', free: true },
+      { id: 'dots-studio/dots-3-note-preview:free', name: 'Dots Studio 3 Note Preview [FREE]', free: true },
       { id: 'openrouter/free', name: 'Free Models Router [FREE]', free: true },
     ],
     ollama: [
@@ -336,6 +336,26 @@
             : 'No models found in Ollama tags.';
         }
       }
+
+      // Preflight runtime readiness check
+      try {
+        const rRes = await fetch('/system/readiness');
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          state.readiness = rData;
+          const scanModeEl = document.getElementById('scan-mode-select');
+          if (scanModeEl) {
+            const helpEl = scanModeEl.parentElement ? scanModeEl.parentElement.querySelector('.form-help') : null;
+            if (helpEl) {
+              if (rData.autonomous_ready) {
+                helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready:</strong> Full autonomous multi-agent pentest available.`;
+              } else {
+                helpEl.innerHTML = `⚠️ <strong style="color:#f59e0b;">Docker unavailable on host:</strong> Autonomous multi-agent mode requires Docker. Select <em>Lightweight In-Process Scanner</em> or view <a href="/diagnostics/readiness" target="_blank" style="color:#38bdf8; text-decoration:underline;">diagnostics</a>.`;
+              }
+            }
+          }
+        }
+      } catch (_) {}
     } catch (err) {
       if (elements.sysDot && elements.sysText) {
         elements.sysDot.style.background = '#ef4444';
@@ -792,7 +812,12 @@
     elements.heroTargetText.textContent = run.target_url || 'Target Application';
     const prov = (run.provider || 'openrouter').toUpperCase();
     const mdl = run.model || 'nvidia/nemotron-3.5-lightning:free';
-    elements.heroModeText.textContent = `Mode: ${(run.mode || 'web').toUpperCase()} • Provider: ${prov} (${mdl})`;
+    const execModeLabel = run.execution_mode === 'autonomous_multi_agent'
+      ? 'Autonomous Multi-Agent Core (Docker)'
+      : (run.execution_mode === 'lightweight_active_scanner'
+        ? 'Lightweight Active Scanner (In-Process)'
+        : (run.execution_mode === 'blocked' ? 'Blocked' : (run.mode || 'web').toUpperCase()));
+    elements.heroModeText.textContent = `Engine: ${execModeLabel} • Provider: ${prov} (${mdl})`;
 
     const errorBanner = document.getElementById('hero-error-banner');
     const errorText = document.getElementById('hero-error-text');
@@ -806,12 +831,12 @@
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
       if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'inline-flex';
       if (errorBanner) errorBanner.style.display = 'none';
-    } else if (status === 'FAILED' || status === 'ABORTED') {
+    } else if (status === 'FAILED' || status === 'ABORTED' || status === 'BLOCKED') {
       elements.heroRunStatus.className = 'badge badge-rose';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
       if (errorBanner && errorText) {
         errorBanner.style.display = 'block';
-        errorText.textContent = run.error || (status === 'ABORTED' ? 'Assessment stopped by operator.' : 'Scanner exited unexpectedly. Check terminal logs.');
+        errorText.textContent = run.error || (status === 'ABORTED' ? 'Assessment stopped by operator.' : (status === 'BLOCKED' ? 'Execution blocked: Docker runtime required.' : 'Scanner exited unexpectedly. Check terminal logs.'));
       }
       if (findings.length > 0 && elements.btnViewReportNow) {
         elements.btnViewReportNow.style.display = 'inline-flex';

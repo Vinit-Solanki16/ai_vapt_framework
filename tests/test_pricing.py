@@ -131,8 +131,8 @@ def test_resolver_does_not_guess_between_differently_priced_providers() -> None:
 
 def test_resolver_excludes_copilot_device_polling_providers() -> None:
     resolve_litellm_model.cache_clear()
-    assert resolve_litellm_model("claude-sonnet-4.6") is None
-    assert resolve_litellm_model("openrouter/anthropic/claude-sonnet-4.6") is None
+    assert resolve_litellm_model("claude-opus-4.8") is None
+    assert resolve_litellm_model("openrouter/anthropic/claude-opus-4.8") is None
     assert resolve_litellm_model("github_copilot/gpt-4o") is None
     assert resolve_litellm_model("microsoft_365_copilot/chat") is None
     resolve_litellm_model.cache_clear()

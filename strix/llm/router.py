@@ -56,9 +56,7 @@ def format_openrouter_model(model_name: str | None = None) -> str:
     if slug.startswith("openrouter/openrouter/"):
         return slug
 
-    if raw.startswith("openrouter/"):
-        # Re-check if migration changed the slug
-        return f"openrouter/{slug}"
+    # Ensure LiteLLM routes all OpenRouter models through the openrouter provider
     return f"openrouter/{slug}"
 
 

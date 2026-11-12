@@ -32,44 +32,57 @@ Autonomous AI security agents that discover, investigate, and validate applicati
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (One-Command Experience)
 
-### 1. Launch the AI-VAPT Web Operations Console
+AI-VAPT is designed for complete portability. Get the entire system running with one command:
 
-Start the local web gateway and Single Page Application console:
-
+### 1. First-Time Setup
 ```bash
-uv run ai-vapt web --port 8000
+./setup.sh
 ```
+This automated setup script:
+- Detects OS (Linux, macOS, WSL2, GitHub Codespaces) and resources.
+- Verifies Python 3.12+ and sets up the `.venv` virtual environment.
+- Installs all dependencies with `uv` or `pip`.
+- Generates `.env` from `.env.example` safely without overwriting user configs.
+- Verifies local and remote Docker daemon connectivity and checks the sandbox image (`ghcr.io/usestrix/strix-sandbox:1.3.0`).
+- Validates configured AI providers without exposing credentials.
+- Runs application preflight readiness checks.
 
-Open `http://localhost:8000` in your browser to access the complete dashboard, configure AI providers, launch assessments, and track live turn-by-turn DAG traces.
-
-### 2. Autonomous CLI Assessment
-
-Execute an autonomous security assessment directly from your terminal:
-
+### 2. Everyday Startup
 ```bash
-# Autonomous deep assessment (500 turns, crawler, active fuzzer, SCA)
-uv run ai-vapt --target http://127.0.0.1:3000/ -m deep --max-turns 500
-
-# Targeted assessment with explicit focus
-uv run ai-vapt --target https://example.com --instruction "Focus on authentication, JWT handling, and IDOR"
-
-# Open local web viewer to inspect results
-uv run ai-vapt view
+./start.sh
 ```
+Starts the AI-VAPT Web Operations Console in the background (default port 8000).  
+To run in interactive foreground mode: `./start.sh --foreground`  
+To specify a custom port: `./start.sh --port 8080`
 
-### 3. Verification Test Suite
+Open your browser to: **`http://localhost:8000`**
 
-Run the full local test suite:
-
+### 3. Clean Shutdown
 ```bash
-# Run core test suites
-uv run pytest tests/test_full_scanner.py tests/test_gap1_triage.py tests/test_gap2_pivoting.py tests/test_interface_api.py
-
-# Run all 2,672 test cases
-uv run pytest
+./stop.sh
 ```
+Gracefully terminates application services, frees network ports, and clears locks while **strictly preserving** all scan artifacts, logs, findings, configurations, and Docker images.
+
+---
+
+## 📖 Complete Documentation & Guides
+
+| Document | Purpose |
+|---|---|
+| [**`AI_VAPT_SETUP_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_SETUP_GUIDE.md) | Step-by-step setup walkthrough for Linux, Codespaces, WSL2, and macOS |
+| [**`AI_VAPT_DEVELOPMENT_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DEVELOPMENT_GUIDE.md) | Developer guide, codebase architecture, testing, and contribution standards |
+| [**`AI_VAPT_DOCKER_RUNTIME_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DOCKER_RUNTIME_GUIDE.md) | Local and remote TLS Docker runtime architecture and sandbox container lifecycle |
+| [**`AI_VAPT_REMOTE_DOCKER_VM_SETUP.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_REMOTE_DOCKER_VM_SETUP.md) | Hardened remote Ubuntu Docker VM provisioning guide for Codespaces |
+| [**`AI_VAPT_DEPLOYMENT_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DEPLOYMENT_GUIDE.md) | Production server sizing, systemd service setup, and Nginx reverse proxy |
+| [**`AI_VAPT_OPENROUTER_MODEL_BENCHMARK.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_OPENROUTER_MODEL_BENCHMARK.md) | Live empirical benchmark results across OpenRouter free models |
+| [**`AI_VAPT_FINAL_MODEL_SELECTION.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_FINAL_MODEL_SELECTION.md) | Final primary and backup model selection with live tool-calling proof |
+| [**`AI_VAPT_GAP1_GAP2_INTEGRATION_AUDIT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_GAP1_GAP2_INTEGRATION_AUDIT.md) | Verification audit of GAP-1 triage, GAP-2 dynamic pivots, and accounting math |
+| [**`AI_VAPT_MASTER_IMPLEMENTATION_REPORT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_MASTER_IMPLEMENTATION_REPORT.md) | Master audit report and implementation ledger |
+| [**`AI_VAPT_FINAL_COMPLETION_REPORT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_FINAL_COMPLETION_REPORT.md) | Consolidated phase completion verdict and manual verification roadmap |
+
+---
 
 ---
 
@@ -80,7 +93,7 @@ AI-VAPT features a flexible provider architecture supporting both cloud and loca
 | Provider | Supported Models | Configuration |
 |---|---|---|
 | **Cloud Hosted (OpenAI-compatible)** | Qwen 2.5/3 Coder, DeepSeek V3, Llama 3.3 | Configure via Web Settings: custom `api_base`, `model`, optional `api_key` |
-| **OpenRouter** | Anthropic Claude 3.5/3.7, OpenAI GPT-4o, DeepSeek V3 | Set `OPENROUTER_API_KEY` or configure in Web Settings |
+| **OpenRouter (Multi-Model Hub)** | NVIDIA Nemotron 3.5 Super VL (Primary Free — 1M Context), NVIDIA Nemotron 3.5 Lightning (Backup Free — 1M Context), Claude 3.5/3.7, GPT-4o, DeepSeek V3 | Set `OPENROUTER_API_KEY` in `.env` or configure in Web Settings |
 | **Google Gemini** | Gemini 2.0 Flash, Gemini 1.5 Pro | Set `GEMINI_API_KEY` or configure in Web Settings |
 | **Local Ollama** | Qwen 2.5 Coder, Llama 3.1 | Connects to local Ollama instance at `http://127.0.0.1:11434` |
 

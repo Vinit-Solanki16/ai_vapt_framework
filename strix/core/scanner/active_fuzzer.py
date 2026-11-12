@@ -499,52 +499,60 @@ class ActiveFuzzer:
         forms: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Execute benign non-destructive parameter injection verification."""
+        import re
+
         findings: list[dict[str, Any]] = []
-        if self.scan_mode == "quick":
-            return findings
+        max_paths = 2 if self.scan_mode == "quick" else (6 if self.scan_mode == "standard" else 15)
+        max_params = 2 if self.scan_mode == "quick" else 4
 
-        # Check discovered query parameters
-        for path, params in list(parameters.items())[: 5 if self.scan_mode == "standard" else 15]:
-            for param in list(params)[:4]:
-                # 1. SQL Injection Error Probe
-                test_sql_url = urllib.parse.urljoin(self.base_url, f"{path}?{param}=1'%22")
-                try:
-                    req = urllib.request.Request(
-                        test_sql_url, headers={"User-Agent": "STRIX-VAPT/2.0"}
+        # 1. Check discovered query parameters
+        for path, params in list(parameters.items())[:max_paths]:
+            for param in list(params)[:max_params]:
+                # 1a. SQL Injection Error Probe
+                for sql_probe in ("1'%22", "1'", "1' OR '1'='1"):
+                    test_sql_url = urllib.parse.urljoin(
+                        self.base_url, f"{path}?{param}={urllib.parse.quote(sql_probe)}"
                     )
-                    with urllib.request.urlopen(
-                        req, timeout=self.timeout, context=self._ctx
-                    ) as resp:
-                        body = resp.read(20000).decode("utf-8", errors="ignore")
-                        sql_errors = [
-                            "sql syntax",
-                            "mysql_fetch",
-                            "ora-01756",
-                            "pg_query",
-                            "sqlite3::sql",
-                            "unclosed quotation mark",
-                            "microsoft ole db provider for sql server",
-                        ]
-                        for err in sql_errors:
-                            if err in body.lower():
-                                findings.append(
-                                    {
-                                        "id": f"sqli-error-{param}",
-                                        "name": f"SQL Injection Syntax Leakage ({param})",
-                                        "category": "injection",
-                                        "severity": "high",
-                                        "cvss": 8.1,
-                                        "exposure": 0.95,
-                                        "cwe_id": "CWE-89",
-                                        "endpoint": path,
-                                        "detail": f"Database syntax error disclosed on parameter '{param}': {err}",
-                                    }
-                                )
+                    try:
+                        req = urllib.request.Request(
+                            test_sql_url, headers={"User-Agent": "STRIX-VAPT/2.0"}
+                        )
+                        with urllib.request.urlopen(
+                            req, timeout=self.timeout, context=self._ctx
+                        ) as resp:
+                            body = resp.read(20000).decode("utf-8", errors="ignore")
+                            sql_errors = [
+                                "sql syntax",
+                                "mysqli_sql_exception",
+                                "mysql_fetch",
+                                "ora-01756",
+                                "pg_query",
+                                "sqlite3::sql",
+                                "unclosed quotation mark",
+                                "microsoft ole db provider for sql server",
+                            ]
+                            for err in sql_errors:
+                                if err in body.lower():
+                                    findings.append(
+                                        {
+                                            "id": f"sqli-error-{param}",
+                                            "name": f"SQL Injection Syntax Leakage ({param})",
+                                            "category": "sqli",
+                                            "severity": "high",
+                                            "cvss": 8.1,
+                                            "exposure": 0.95,
+                                            "cwe_id": "CWE-89",
+                                            "endpoint": path,
+                                            "detail": f"Database syntax error disclosed on parameter '{param}': {err}",
+                                        }
+                                    )
+                                    break
+                            if any(f.get("id") == f"sqli-error-{param}" for f in findings):
                                 break
-                except Exception:
-                    pass
+                    except Exception:
+                        pass
 
-                # 2. Reflected XSS Probe
+                # 1b. Reflected XSS Probe
                 probe_tok = '"><strix_xss_probe>'
                 test_xss_url = urllib.parse.urljoin(
                     self.base_url, f"{path}?{param}={urllib.parse.quote(probe_tok)}"
@@ -564,7 +572,7 @@ class ActiveFuzzer:
                                         "id": f"reflected-xss-{param}",
                                         "name": f"Reflected Cross-Site Scripting ({param})",
                                         "category": "xss",
-                                        "severity": "high",
+                                        "severity": "medium",
                                         "cvss": 6.1,
                                         "exposure": 0.9,
                                         "cwe_id": "CWE-79",
@@ -574,5 +582,114 @@ class ActiveFuzzer:
                                 )
                 except Exception:
                     pass
+
+                # 1c. Command Injection Probe
+                for cmd_probe in ("127.0.0.1; id", "; id"):
+                    test_cmd_url = urllib.parse.urljoin(
+                        self.base_url, f"{path}?{param}={urllib.parse.quote(cmd_probe)}"
+                    )
+                    try:
+                        req = urllib.request.Request(
+                            test_cmd_url, headers={"User-Agent": "STRIX-VAPT/2.0"}
+                        )
+                        with urllib.request.urlopen(
+                            req, timeout=self.timeout, context=self._ctx
+                        ) as resp:
+                            body = resp.read(20000).decode("utf-8", errors="ignore")
+                            if re.search(r"uid=\d+.*gid=\d+", body):
+                                findings.append(
+                                    {
+                                        "id": f"cmd-injection-{param}",
+                                        "name": f"Command Injection Execution ({param})",
+                                        "category": "rce",
+                                        "severity": "critical",
+                                        "cvss": 9.8,
+                                        "exposure": 0.98,
+                                        "cwe_id": "CWE-78",
+                                        "endpoint": path,
+                                        "detail": f"Command execution confirmed on parameter '{param}' via system ID reflection.",
+                                    }
+                                )
+                                break
+                    except Exception:
+                        pass
+
+                # 1d. Path Traversal / LFI Probe
+                for lfi_probe in ("../../../../../../etc/passwd", "../../../../etc/passwd"):
+                    test_lfi_url = urllib.parse.urljoin(
+                        self.base_url, f"{path}?{param}={urllib.parse.quote(lfi_probe)}"
+                    )
+                    try:
+                        req = urllib.request.Request(
+                            test_lfi_url, headers={"User-Agent": "STRIX-VAPT/2.0"}
+                        )
+                        with urllib.request.urlopen(
+                            req, timeout=self.timeout, context=self._ctx
+                        ) as resp:
+                            body = resp.read(20000).decode("utf-8", errors="ignore")
+                            if "root:x:0:0:" in body or "root:*:0:0:" in body:
+                                findings.append(
+                                    {
+                                        "id": f"lfi-traversal-{param}",
+                                        "name": f"Path Traversal / Local File Inclusion ({param})",
+                                        "category": "lfi",
+                                        "severity": "high",
+                                        "cvss": 7.5,
+                                        "exposure": 0.95,
+                                        "cwe_id": "CWE-22",
+                                        "endpoint": path,
+                                        "detail": f"Arbitrary system file disclosure via path traversal on parameter '{param}'.",
+                                    }
+                                )
+                                break
+                    except Exception:
+                        pass
+
+        # 2. Check discovered forms (e.g. POST ping or login forms)
+        for form in (forms or [])[:max_paths]:
+            action = form.get("action") or "/"
+            method = (form.get("method") or "get").lower()
+            inputs = form.get("inputs") or []
+            target_form_url = urllib.parse.urljoin(self.base_url, action)
+
+            for inp in inputs[:max_params]:
+                inp_name = inp.get("name") if isinstance(inp, dict) else str(inp)
+                if not inp_name:
+                    continue
+
+                # Test command injection on form inputs
+                if method == "post":
+                    post_data = urllib.parse.urlencode(
+                        {inp_name: "127.0.0.1; id", "Submit": "Submit"}
+                    ).encode("utf-8")
+                    try:
+                        req = urllib.request.Request(
+                            target_form_url,
+                            data=post_data,
+                            headers={
+                                "User-Agent": "STRIX-VAPT/2.0",
+                                "Content-Type": "application/x-www-form-urlencoded",
+                            },
+                        )
+                        with urllib.request.urlopen(
+                            req, timeout=self.timeout, context=self._ctx
+                        ) as resp:
+                            body = resp.read(20000).decode("utf-8", errors="ignore")
+                            if re.search(r"uid=\d+.*gid=\d+", body):
+                                findings.append(
+                                    {
+                                        "id": f"cmd-injection-form-{inp_name}",
+                                        "name": f"Command Injection Execution ({inp_name})",
+                                        "category": "rce",
+                                        "severity": "critical",
+                                        "cvss": 9.8,
+                                        "exposure": 0.98,
+                                        "cwe_id": "CWE-78",
+                                        "endpoint": action,
+                                        "detail": f"Command execution confirmed via form POST on parameter '{inp_name}'.",
+                                    }
+                                )
+                    except Exception:
+                        pass
 
         return findings

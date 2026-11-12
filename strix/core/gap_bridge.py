@@ -394,6 +394,7 @@ def record_outcome(
     is_tool_error: bool = False,
     probe_status: str | None = None,
     source: str = "",
+    reason: str | None = None,
 ) -> dict[str, Any]:
     """Record one candidate outcome and return GAP-2 guidance.
 
@@ -559,17 +560,24 @@ def record_outcome(
     if pivot:
         st.exhausted.add(candidate_id)
         next_entry = next_candidate(directory=st.directory, state=st)
+        next_cid = (next_entry or {}).get("candidate_id")
+        pivot_reason = (
+            reason
+            or f"GAP-2 threshold reached for {candidate_id} after {attempts} failed attempts; abandon it and pivot"
+        )
         note_event(
             "GAP2_PIVOT",
             candidate_id=candidate_id,
             outcome="ABANDON",
             attempts=attempts,
             threshold=st.threshold(),
-            next_candidate=(next_entry or {}).get("candidate_id"),
-            message=(
-                f"GAP-2 threshold reached for {candidate_id} after {attempts} "
-                "failed attempts; abandon it and pivot"
-            ),
+            next_candidate=next_cid,
+            to_candidate=next_cid,
+            reason=pivot_reason,
+            probe_outcome=status_norm,
+            pivot_executed=bool(next_entry),
+            result=f"Pivoted to {next_cid}" if next_cid else "Queue exhausted",
+            message=pivot_reason,
             directory=st.directory,
         )
     st.probe_outcomes.append(
@@ -579,6 +587,8 @@ def record_outcome(
             "attempt": attempts,
             "pivot": pivot,
             "detail": detail,
+            "reason": reason or detail,
+            "next_candidate": (next_entry or {}).get("candidate_id") if pivot else None,
             "timestamp": _utc_now(),
         }
     )

@@ -351,6 +351,30 @@ def render_vulnerability_md(report: dict[str, Any]) -> str:  # noqa: PLR0912, PL
         lines.append(str(report["fix_verification"]))
         lines.append("")
 
+    v_block = report.get("verification")
+    if isinstance(v_block, dict):
+        lines.append("## Verification Details\n")
+        lines.append(
+            f"- **Verification State:** `{v_block.get('verification_state', 'discovered')}`"
+        )
+        if v_block.get("verification_procedure"):
+            lines.append(f"- **Verification Procedure:** {v_block.get('verification_procedure')}")
+        if v_block.get("demonstrated_impact"):
+            lines.append(f"- **Demonstrated Impact:** {v_block.get('demonstrated_impact')}")
+        if v_block.get("evidence_timestamp"):
+            lines.append(f"- **Evidence Timestamp:** {v_block.get('evidence_timestamp')}")
+        if v_block.get("reproducible_request"):
+            lines.append("\n### Reproducible Request")
+            lines.append("```http")
+            lines.append(str(v_block.get("reproducible_request")))
+            lines.append("```")
+        if v_block.get("verification_response"):
+            lines.append("\n### Verification Response")
+            lines.append("```")
+            lines.append(str(v_block.get("verification_response")))
+            lines.append("```")
+        lines.append("")
+
     if report.get("assumptions"):
         lines.append("## Assumptions\n")
         lines.append(str(report["assumptions"]))

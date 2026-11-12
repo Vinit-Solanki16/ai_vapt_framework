@@ -55,6 +55,10 @@ from strix.tools.proxy.tools import (
     view_request,
     view_sitemap_entry,
 )
+from strix.tools.reporting.outcome_tool import (
+    record_probe_outcome,
+    record_vulnerability_outcome,
+)
 from strix.tools.reporting.tool import (
     create_dependency_report,
     create_vulnerability_report,
@@ -656,6 +660,8 @@ _BASE_TOOLS: tuple[Tool, ...] = (
     create_dependency_report,
     update_vulnerability_report,
     delete_vulnerability_report,
+    record_vulnerability_outcome,
+    record_probe_outcome,
     list_reports,
     get_report,
     list_requests,

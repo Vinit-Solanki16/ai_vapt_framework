@@ -75,6 +75,7 @@
             <label class="form-label" for="scan-mode-select">Execution & Assessment Engine</label>
             <select id="scan-mode-select" class="form-select">
               <option value="autonomous" selected>⚔️ Full Autonomous Pentest (Autonomous Multi-Agent Core + GAP-1/GAP-2)</option>
+              <option value="lightweight">⚡ Lightweight In-Process Scanner (Direct Active Probing, No Docker)</option>
               <option value="web">🛡️ Fast Web Audit (Passive Discovery & Header/Cookie Scan)</option>
               <option value="simulation">🧪 Simulation Benchmark (Harness Offline Validation)</option>
             </select>
@@ -169,11 +170,11 @@
             </div>
             <select id="model-select" class="form-select">
               <!-- Dynamically populated or default options -->
-              <option value="nvidia/nemotron-3.5-lightning:free" selected>nvidia/nemotron-3.5-lightning:free [FREE] (Recommended)</option>
-              <option value="dots-studio/dots-3-note-preview:free">dots-studio/dots-3-note-preview:free [FREE]</option>
+              <option value="nvidia/nemotron-3.5-super-vl:free" selected>nvidia/nemotron-3.5-super-vl:free [FREE] (Recommended Primary — 1M Context)</option>
+              <option value="nvidia/nemotron-3.5-lightning:free">nvidia/nemotron-3.5-lightning:free [FREE] (Recommended Backup — 1M Context)</option>
+              <option value="cohere/north-mini-code:free">cohere/north-mini-code:free [FREE] (256K Context)</option>
               <option value="recursive/flint-v1.0:free">recursive/flint-v1.0:free [FREE]</option>
-              <option value="nvidia/nemotron-3-ultra-550b-a55b:free">nvidia/nemotron-3-ultra-550b-a55b:free [FREE]</option>
-              <option value="cohere/north-mini-code:free">cohere/north-mini-code:free [FREE]</option>
+              <option value="dots-studio/dots-3-note-preview:free">dots-studio/dots-3-note-preview:free [FREE]</option>
               <option value="openrouter/free">openrouter/free [FREE Router]</option>
               <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
             </select>
@@ -293,6 +294,93 @@
           <div class="metric-data">
             <div class="metric-value" style="color: #f43f5e;" id="metric-findings-count">0</div>
             <div class="metric-label">Confirmed Vulnerabilities</div>
+          </div>
+        </div>
+      </div>
+      <!-- Run Facts & Live Details Card (assessment start, elapsed timer, active agent/task, findings by verification state) -->
+      <div class="card" id="run-facts-card" style="margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+              <div class="metric-icon">🕐</div>
+              <div class="metric-data">
+                <div class="metric-value" id="metric-started">—</div>
+                <div class="metric-label">Assessment Started (UTC)</div>
+              </div>
+            </div>
+            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+              <div class="metric-icon">⏱️</div>
+              <div class="metric-data">
+                <div class="metric-value" id="metric-elapsed" style="font-size: 1.2rem;">00:00:00</div>
+                <div class="metric-label">Elapsed</div>
+              </div>
+            </div>
+            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+              <div class="metric-icon">👤</div>
+              <div class="metric-data">
+                <div class="metric-value" id="metric-active-agent">—</div>
+                <div class="metric-label">Active Agent</div>
+              </div>
+            </div>
+            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+              <div class="metric-icon">📋</div>
+              <div class="metric-data">
+                <div class="metric-value" id="metric-active-task">—</div>
+                <div class="metric-label">Active Task</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card findings-breakdown-card" style="flex: 1 1 260px;">
+            <div class="metric-icon">📊</div>
+            <div class="metric-data">
+              <div class="metric-label" style="font-size: 0.7rem;">FINDINGS BY VERIFICATION STATE (Live)</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.4rem;">
+                <span class="metric-value" id="fe-discovered" style="color: #60a5fa;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Discovered</span>
+                <span class="metric-value" id="fe-candidate" style="color: #fbbf24;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Candidate</span>
+                <span class="metric-value" id="fe-under-investigation" style="color: #fbbf24;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Under Investigation</span>
+                <span class="metric-value" id="fe-exploitation" style="color: #f59e0b;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Exploitation Attempted</span>
+                <span class="metric-value" id="fe-verified" style="color: #34d399;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Verified</span>
+                <span class="metric-value" id="fe-unconfirmed" style="color: #6b7280;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Unconfirmed</span>
+                <span class="metric-value" id="fe-fp" style="color: #f87171;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">False Positive</span>
+                <span class="metric-value" id="fe-blocked" style="color: #fbbf24;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Blocked</span>
+                <span class="metric-value" id="fe-inc" style="color: #6b7280;">0</span>
+                <span class="metric-label" style="font-size: 0.6rem;">Inconclusive</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provider Quota Blocked / Actionable Resume Card -->
+      <div class="card" id="provider-resume-card" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #f59e0b; font-weight: 700; font-size: 1rem;">
+              <span>⚠️</span> Assessment Interrupted: Provider Quota Blocked
+            </div>
+            <div id="provider-resume-message" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; max-width: 650px;">
+              Provider daily quota or rate limit exhausted. Completed reconnaissance, candidate investigations, and verified findings have been preserved. You can resume this assessment with an alternative model or provider below.
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <select id="resume-model-select" class="form-control" style="width: auto; min-width: 180px; padding: 0.4rem 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);">
+              <option value="openrouter/z-ai/glm-5.3">GLM-5.3 (OpenRouter)</option>
+              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+              <option value="openai/gpt-4o-mini">GPT-4o-mini</option>
+              <option value="ollama/llama3">Ollama Local</option>
+            </select>
+            <button id="btn-resume-assessment" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 0.4rem 1rem; cursor: pointer;">
+              ▶️ Resume Assessment
+            </button>
           </div>
         </div>
       </div>
@@ -732,6 +820,32 @@ Ready. Configure Base URL and click "Test Connection" or "Verify Tool Calling" t
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provider Quota Blocked / Actionable Resume Card -->
+      <div class="card" id="provider-resume-card" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #f59e0b; font-weight: 700; font-size: 1rem;">
+              <span>⚠️</span> Assessment Interrupted: Provider Quota Blocked
+            </div>
+            <div id="provider-resume-message" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; max-width: 650px;">
+              Provider daily quota or rate limit exhausted. Completed reconnaissance, candidate investigations, and verified findings have been preserved. You can resume this assessment with an alternative model or provider below.
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <select id="resume-model-select" class="form-control" style="width: auto; min-width: 180px; padding: 0.4rem 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);">
+              <option value="openrouter/z-ai/glm-5.3">GLM-5.3 (OpenRouter)</option>
+              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+              <option value="openai/gpt-4o-mini">GPT-4o-mini</option>
+              <option value="ollama/llama3">Ollama Local</option>
+            </select>
+            <button id="btn-resume-assessment" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 0.4rem 1rem; cursor: pointer;">
+              ▶️ Resume Assessment
+            </button>
           </div>
         </div>
       </div>

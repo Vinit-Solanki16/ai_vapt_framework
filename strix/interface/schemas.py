@@ -20,9 +20,15 @@ class RunRequest(BaseModel):
     max_attempts: int = Field(
         2, ge=1, le=10, description="Max attempts per candidate before pivot (GAP-2)"
     )
-    mode: Literal["simulation", "lab", "web", "web_controlled", "autonomous"] = Field(
-        "simulation", description="Execution mode"
-    )
+    mode: Literal[
+        "simulation",
+        "lab",
+        "web",
+        "web_controlled",
+        "autonomous",
+        "lightweight",
+        "in_process",
+    ] = Field("simulation", description="Execution mode")
     target: str | None = Field(None, description="Target host or IP")
     port: int = Field(8080, ge=1, le=65535, description="Target port")
     path: str = Field("/", description="Target path")
@@ -75,9 +81,11 @@ class RunResponse(BaseModel):
     """Immediate response when a run is dispatched."""
 
     run_id: str
-    status: Literal["queued", "running", "completed", "failed", "aborted"] = "running"
+    status: Literal["queued", "running", "completed", "failed", "aborted", "blocked"] = "running"
     message: str = "Assessment initialized"
     created_at: str = Field(default_factory=_utc_now)
+    execution_mode: str | None = None
+    mode: str | None = None
 
 
 class PivotEventSchema(BaseModel):
@@ -116,13 +124,30 @@ class RunStatus(BaseModel):
     """Observable asynchronous run state and real-time outputs."""
 
     run_id: str
-    status: Literal["queued", "running", "completed", "failed", "aborted"]
+    status: Literal[
+        "queued",
+        "running",
+        "completed",
+        "failed",
+        "aborted",
+        "provider_blocked",
+        "interrupted",
+        "partial",
+        "blocked",
+    ]
     scenario: str | None = None
     mode: str | None = None
+    execution_mode: str | None = None
     target_url: str | None = None
     created_at: str | None = None
     completed_at: str | None = None
-    duration_seconds: float | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    duration_seconds: float | int | None = None
+    active_task: str | None = None
+    candidate_accounting: dict[str, Any] | None = None
+    findings_summary: dict[str, Any] | None = None
+    auth_context: dict[str, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
     decision_trace: list[str] = Field(default_factory=list)
     pivot_events: list[dict[str, Any]] = Field(default_factory=list)

@@ -14,8 +14,13 @@ from rich.text import Text
 
 from strix.config import load_settings
 from strix.config.settings import DEFAULT_MAX_TURNS
+from strix.core.gap_run import GapRun
 from strix.core.runner import run_strix_scan
-from strix.report.state import ReportState, set_global_report_state
+from strix.report.state import (
+    ReportState,
+    set_global_gap_run,
+    set_global_report_state,
+)
 from strix.runtime import session_manager
 
 from .utils import (
@@ -163,6 +168,12 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         signal.signal(signal.SIGHUP, signal_handler)
 
     set_global_report_state(report_state)
+
+    # Bind the per-scan GAP-1/GAP-2 state service so GAP1/GAP2 progress is
+    # scoped to this run and (re)read from the report artifacts. This is the
+    # Strix-native state service (strix.core.gap_run), separate from the
+    # legacy file-based GAP adapter.
+    set_global_gap_run(GapRun(report_state.run_id, report_state.get_run_dir()))
 
     startup_phase: list[str] = ["Starting up"]
 

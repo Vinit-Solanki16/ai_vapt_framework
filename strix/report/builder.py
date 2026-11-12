@@ -18,11 +18,37 @@ from typing import Any
 from strix.core.triage.owasp_mapping import map_finding_to_owasp
 
 
-def render_html_report(run_data: dict[str, Any]) -> str:
+def render_html_report(run_data: Any) -> str:
     """Render a standalone, executive-grade, printable styled HTML assessment report."""
+    if hasattr(run_data, "vulnerability_reports") and not isinstance(run_data, dict):
+        run_data = {
+            "run_id": getattr(run_data, "run_id", getattr(run_data, "run_name", "unknown")),
+            "status": "completed",
+            "mode": getattr(run_data, "execution_mode", "web"),
+            "execution_mode": getattr(run_data, "execution_mode", None),
+            "findings": getattr(run_data, "vulnerability_reports", []),
+            "start_time": getattr(run_data, "start_time", None),
+            "end_time": getattr(run_data, "end_time", None),
+        }
+
     run_id = html.escape(str(run_data.get("run_id", "unknown")))
     status = html.escape(str(run_data.get("status", "completed")))
     mode = html.escape(str(run_data.get("mode", "web")))
+    raw_exec_mode = str(run_data.get("execution_mode") or run_data.get("mode") or "web").lower()
+    if raw_exec_mode in ("autonomous", "autonomous_multi_agent"):
+        exec_mode_display = "Autonomous Multi-Agent Core (Docker)"
+    elif raw_exec_mode in (
+        "lightweight",
+        "lightweight_active_scanner",
+        "in_process",
+        "web",
+        "web_controlled",
+    ):
+        exec_mode_display = "Lightweight Active Scanner (In-Process)"
+    elif raw_exec_mode == "blocked":
+        exec_mode_display = "Blocked (Runtime Dependencies Unavailable)"
+    else:
+        exec_mode_display = html.escape(raw_exec_mode.replace("_", " ").title())
     raw_target = run_data.get("target_url", run_data.get("target", "Target Scope"))
     target = html.escape(str(raw_target))
     target_ip = html.escape(str(run_data.get("target_ip") or "Resolved via DNS"))
@@ -51,6 +77,56 @@ def render_html_report(run_data: dict[str, Any]) -> str:
     decision_trace = run_data.get("decision_trace", [])
     pivot_events = run_data.get("pivot_events", [])
     tech_stack = run_data.get("tech_stack", "generic_web")
+
+    dur_secs = run_data.get("duration_seconds")
+    if dur_secs is not None:
+        try:
+            total_sec = max(0, int(float(dur_secs)))
+            dur_display = (
+                f"{total_sec // 3600:02d}:{(total_sec % 3600) // 60:02d}:{total_sec % 60:02d}"
+            )
+        except Exception:
+            dur_display = str(dur_secs)
+    else:
+        dur_display = "—"
+
+    raw_started = run_data.get("start_time") or run_data.get("created_at")
+    if raw_started:
+        try:
+            dt_s = datetime.fromisoformat(str(raw_started).replace("Z", "+00:00"))
+            started_at = dt_s.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except Exception:
+            started_at = str(raw_started)
+    else:
+        started_at = "—"
+    started_at = html.escape(started_at)
+
+    raw_ended = run_data.get("end_time") or run_data.get("completed_at")
+    if raw_ended:
+        try:
+            dt_e = datetime.fromisoformat(str(raw_ended).replace("Z", "+00:00"))
+            ended_at = dt_e.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except Exception:
+            ended_at = str(raw_ended)
+    else:
+        ended_at = "Running" if status.lower() == "running" else "—"
+    ended_at = html.escape(ended_at)
+
+    candidate_acct = run_data.get("candidate_accounting") or {}
+    dispatched_cnt = candidate_acct.get("dispatched", len(candidates))
+    investigated_cnt = candidate_acct.get(
+        "investigated",
+        sum(
+            1
+            for c in candidates
+            if c.get("state") in ("VALIDATED", "ABANDONED") or c.get("attempts", 0) > 0
+        ),
+    )
+    verified_findings_cnt = sum(
+        1
+        for f in findings
+        if f.get("verified") or str(f.get("verification_state", "")).lower() == "verified"
+    )
 
     # Severity counters
     crit_count = sum(1 for f in findings if f.get("severity", "").upper() == "CRITICAL")
@@ -156,9 +232,31 @@ def render_html_report(run_data: dict[str, Any]) -> str:
             )
         )
 
+        v_state = f.get("verification_state") or ("Verified" if f.get("verified") else "Candidate")
+        v_state_str = str(v_state).upper()
+        if "VERIF" in v_state_str:
+            v_badge = '<span class="badge badge-emerald">VERIFIED</span>'
+        elif "INVESTIGAT" in v_state_str or "ATTEMPT" in v_state_str:
+            v_badge = '<span class="badge badge-amber">UNDER INVESTIGATION</span>'
+        elif "BLOCKED" in v_state_str:
+            v_badge = '<span class="badge badge-rose">BLOCKED</span>'
+        elif "FALSE" in v_state_str:
+            v_badge = '<span class="badge badge-rose">FALSE POSITIVE</span>'
+        else:
+            v_badge = f'<span class="badge badge-cyan">{html.escape(v_state_str)}</span>'
+
+        v_proc = html.escape(
+            str(
+                f.get("verification_procedure")
+                or f.get("validation_method")
+                or "Active HTTP verification probe & response pattern analysis"
+            )
+        )
+        param_str = html.escape(str(f.get("parameter") or "N/A"))
+
         finding_rows.append(
             f"""<tr>
-                <td><strong>{title}</strong><br><small class="mono-sub">{location}</small></td>
+                <td><strong>{title}</strong><br><small class="mono-sub">{location}</small><div style="margin-top:0.25rem;">{v_badge}</div></td>
                 <td>{sev_badge}</td>
                 <td><strong class="cvss-val">{cvss}</strong></td>
                 <td>{cve_badge}</td>
@@ -206,16 +304,19 @@ def render_html_report(run_data: dict[str, Any]) -> str:
                 <div class="mitigation-header">
                     <h3>{idx}. Mitigations for: {title}</h3>
                     <div class="badge-cluster">
+                        {v_badge}
                         {sev_badge}
                         {mit_cve_badge}
                         <span class="badge-cwe">{cwe}</span>
                     </div>
                 </div>
-                <p><strong>Affected Endpoint:</strong> <code>{location}</code></p>
-                <p><strong>OWASP Taxonomy:</strong> {owasp_cat}</p>
+                <p><strong>Affected Endpoint:</strong> <code>{location}</code> (Parameter: <code>{param_str}</code>)</p>
                 <p><strong>Validation Method:</strong> {val_method}</p>
+                <p><strong>Verification Procedure:</strong> {v_proc}</p>
+                <p><strong>OWASP Taxonomy:</strong> {owasp_cat}</p>
                 <p><strong>Severity Justification:</strong> {sev_just}</p>
                 <p><strong>Vulnerability Impact:</strong> {impact}</p>
+                <p><strong>Demonstrated Impact:</strong> {impact}</p>
                 <div class="code-title">Reproducible Request / Proof-of-Concept:</div>
                 <pre class="code-block"><code>{rep_req}</code></pre>
                 <div class="code-title">Relevant Response Evidence:</div>
@@ -876,20 +977,36 @@ def render_html_report(run_data: dict[str, Any]) -> str:
             <div class="meta-value" style="font-family:monospace; font-size:1.1rem; color:#38bdf8;">{run_id}</div>
         </div>
         <div class="meta-card">
-            <div class="meta-label">Target Scope & IP</div>
-            <div class="meta-value" style="font-size:1rem; word-break:break-all;">{target}<br><small style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">({target_ip})</small></div>
+            <div class="meta-label">Assessment Started</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">{started_at}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Total Duration</div>
+            <div class="meta-value" style="font-size:1.1rem; font-family:monospace; color:#38bdf8;">{dur_display}</div>
         </div>
         <div class="meta-card">
             <div class="meta-label">Assessment Status</div>
             <div class="meta-value" style="color:#10b981;">{status.upper()}</div>
         </div>
         <div class="meta-card">
-            <div class="meta-label">Evidence Tier</div>
-            <div class="meta-value" style="color:#10b981; font-size:1.1rem;">{evidence_tier}</div>
+            <div class="meta-label">Target Scope & IP</div>
+            <div class="meta-value" style="font-size:0.95rem; word-break:break-all;">{target}<br><small style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">({target_ip})</small></div>
         </div>
         <div class="meta-card">
-            <div class="meta-label">Total Findings</div>
-            <div class="meta-value" style="color:#ef4444;">{len(findings)}</div>
+            <div class="meta-label">Verified Findings</div>
+            <div class="meta-value" style="color:#ef4444;">{verified_findings_cnt} <small style="font-size:0.75rem; color:#94a3b8;">({len(findings)} total)</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Evidence Tier</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">{evidence_tier}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">GAP-1 Triage</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">{investigated_cnt}/{dispatched_cnt} <small style="font-size:0.75rem; color:#94a3b8;">investigated</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Execution Mode</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#38bdf8;">{exec_mode_display}</div>
         </div>
         <div class="meta-card">
             <div class="meta-label">GAP-2 Dynamic Pivots</div>

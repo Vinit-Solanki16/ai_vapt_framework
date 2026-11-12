@@ -98,3 +98,6 @@ schema.graphql
 /.benchmarks/
 /references/
 /strix_runs_main/
+.ai_vapt.pid
+ai_vapt_server.log
+.docker/

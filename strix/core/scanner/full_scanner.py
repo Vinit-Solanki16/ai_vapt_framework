@@ -173,9 +173,10 @@ class FullScanner:
                         "cwe_id": "CWE-200",
                         "endpoint": f"tcp://{p_info['ip']}:{p_info['port']}",
                         "detail": f"Port {p_info['port']} is open running {p_info['service']}. {p_info['risk']}",
+                        "is_recon_only": True,
+                        "finding_class": "reconnaissance",
                     }
                 )
-                category_summary["configuration"]["found"] += 1
 
         # 7. Build Category Scan Matrix
         scan_matrix = []

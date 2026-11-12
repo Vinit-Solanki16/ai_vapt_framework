@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import unicodedata
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -243,7 +244,12 @@ def prepare_run(args: argparse.Namespace) -> None:
     user has supplied a target via ``/target``). Mutates *args* in place and
     raises :class:`ValueError` on any preparation failure.
     """
-    args.run_name = args.resume or generate_run_name(args.targets_info)
+    args.run_name = (
+        args.resume
+        or getattr(args, "run_name", None)
+        or os.environ.get("STRIX_RUN_NAME")
+        or generate_run_name(args.targets_info)
+    )
 
     if args.resume:
         return

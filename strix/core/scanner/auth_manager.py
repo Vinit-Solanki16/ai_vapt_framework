@@ -11,7 +11,7 @@ import logging
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,7 @@ class AuthSession:
         basket_id: int | None = None,
         header_name: str = "Authorization",
         error_message: str | None = None,
+        cookies: dict[str, str] | None = None,
     ):
         self.authenticated = authenticated
         self.auth_type = auth_type
@@ -79,17 +80,28 @@ class AuthSession:
         self.basket_id = basket_id
         self.header_name = header_name
         self.error_message = error_message
+        self.cookies: dict[str, str] = cookies or {}
 
     def get_auth_header(self) -> dict[str, str]:
         """Return HTTP header dict for authenticated requests."""
-        if not self.authenticated or not self.token:
+        if not self.authenticated:
             return {}
-        if self.token.lower().startswith("bearer "):
-            return {self.header_name: self.token}
-        return {self.header_name: f"Bearer {self.token}"}
+        headers: dict[str, str] = {}
+        if self.token:
+            if self.token.lower().startswith("bearer "):
+                headers[self.header_name] = self.token
+            else:
+                headers[self.header_name] = f"Bearer {self.token}"
+        if self.cookies:
+            cookie_parts = [f"{k}={v}" for k, v in self.cookies.items()]
+            headers["Cookie"] = "; ".join(cookie_parts)
+        return headers
 
     def to_safe_dict(self) -> dict[str, Any]:
         """Safe serialized representation without secrets."""
+        safe_cookies = (
+            {k: redact_credential(v) for k, v in self.cookies.items()} if self.cookies else {}
+        )
         return {
             "authenticated": self.authenticated,
             "auth_type": self.auth_type,
@@ -98,6 +110,7 @@ class AuthSession:
             "user_id": self.user_id,
             "basket_id": self.basket_id,
             "masked_token": redact_credential(self.token) if self.token else None,
+            "masked_cookies": safe_cookies,
             "header_name": self.header_name,
             "error_message": self.error_message,
         }
@@ -112,7 +125,7 @@ class AuthManager:
         auth_config: dict[str, Any] | None = None,
     ) -> AuthSession:
         """Establish and verify a session using explicitly provided credentials."""
-        if not auth_config or not auth_config.get("enabled"):
+        if not auth_config or auth_config.get("enabled") is False:
             return AuthSession(authenticated=False, auth_type="none")
 
         auth_type = (auth_config.get("auth_type") or "login").lower()
@@ -183,9 +196,105 @@ class AuthManager:
                         authenticated=False, error_message="Login 200 but token missing in response"
                     )
         except urllib.error.HTTPError as he:
-            return AuthSession(authenticated=False, error_message=f"Login failed HTTP {he.code}")
+            logger.debug(
+                "JSON login returned HTTP %s, attempting HTML form login fallback", he.code
+            )
         except Exception as exc:
-            return AuthSession(authenticated=False, error_message=f"Login connection error: {exc}")
+            logger.debug(
+                "JSON login connection error: %s, attempting HTML form login fallback", exc
+            )
+
+        # 3. HTML Form Login fallback (e.g., DVWA, PHP, standard session cookies)
+        import http.cookiejar
+        import re
+        import ssl
+
+        try:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            cj = http.cookiejar.CookieJar()
+            opener = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(cj),
+                urllib.request.HTTPSHandler(context=ctx),
+            )
+            form_paths = [login_path]
+            if login_path not in ("/login.php", "login.php"):
+                form_paths.append("/login.php")
+
+            for f_path in form_paths:
+                f_url = f"{base}{f_path if f_path.startswith('/') else '/' + f_path}"
+                get_req = urllib.request.Request(f_url, headers={"User-Agent": "Strix-Auth/1.7.0"})
+                with opener.open(get_req, timeout=4.0) as get_resp:
+                    html_content = get_resp.read().decode("utf-8", errors="ignore")
+
+                csrf_token = None
+                for pat in [
+                    r'name=[\'"](?:user_token|csrf_token|csrf|_token|authenticity_token)[\'"]\s+value=[\'"]([^\'"]+)[\'"]',
+                    r'value=[\'"]([^\'"]+)[\'"]\s+name=[\'"](?:user_token|csrf_token|csrf|_token|authenticity_token)[\'"]',
+                ]:
+                    m = re.search(pat, html_content, re.I)
+                    if m:
+                        csrf_token = m.group(1)
+                        break
+
+                form_data = {
+                    "username": email,
+                    "password": password,
+                    "Login": "Login",
+                    "submit": "Login",
+                }
+                if csrf_token:
+                    form_data["user_token"] = csrf_token
+                    form_data["csrf_token"] = csrf_token
+                    form_data["_token"] = csrf_token
+
+                encoded_data = urllib.parse.urlencode(form_data).encode("utf-8")
+                post_req = urllib.request.Request(
+                    f_url,
+                    data=encoded_data,
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "User-Agent": "Strix-Auth/1.7.0",
+                    },
+                )
+                with opener.open(post_req, timeout=5.0) as post_resp:
+                    post_body = post_resp.read().decode("utf-8", errors="ignore")
+                    cookies_dict = {c.name: c.value for c in cj}
+                    if (
+                        "dvwa" in f_url.lower()
+                        or "dvwa" in post_body.lower()
+                        or "security" in cookies_dict
+                    ):
+                        cookies_dict["security"] = "low"
+
+                    is_logged_in = (
+                        any(
+                            term in post_body.lower()
+                            for term in (
+                                "welcome",
+                                "logout",
+                                "logged in",
+                                "admin",
+                                "dashboard",
+                                "home",
+                                "setup.php",
+                                "vulnerabilities",
+                            )
+                        )
+                        or len(cookies_dict) > 0
+                    )
+                    if is_logged_in and cookies_dict:
+                        return AuthSession(
+                            authenticated=True,
+                            auth_type="form_cookie",
+                            username=email,
+                            role="admin" if "admin" in email.lower() else "user",
+                            cookies=cast("dict[str, str] | None", cookies_dict),
+                            token="cookie_session",  # nosec B106 - cookie session identifier, not a credential
+                        )
+        except Exception as form_err:
+            logger.debug("Form login fallback error: %s", form_err)
 
         return AuthSession(
             authenticated=False, error_message="Unable to establish authenticated session"

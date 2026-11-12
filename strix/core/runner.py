@@ -50,7 +50,12 @@ from strix.core.inputs import (
 )
 from strix.core.paths import run_dir_for, runtime_state_dir
 from strix.core.sessions import open_agent_session
-from strix.report.state import get_global_report_state
+from strix.report.state import (
+    ReportState,
+    get_global_report_state,
+    set_global_gap_run,
+    set_global_report_state,
+)
 from strix.runtime import session_manager
 from strix.telemetry import set_scan_phase
 from strix.telemetry.logging import set_scan_id, setup_scan_logging
@@ -337,6 +342,66 @@ async def run_strix_scan(
     hydrate_coverage_from_disk(state_dir)
     hydrate_threat_models_from_disk(state_dir)
 
+    report_state = get_global_report_state()
+    if report_state is None or report_state.run_id != scan_id:
+        report_state = ReportState(scan_id)
+        set_global_report_state(report_state)
+
+    from strix.core.gap_run import GapRun
+
+    gap_run = GapRun.load(scan_id, state_dir)
+    report_state.gap_run = gap_run
+    set_global_gap_run(gap_run)
+
+    # Populate candidates if not already present
+    if not gap_run.candidates:
+        c_list = scan_config.get("candidates") or []
+        if isinstance(c_list, list) and c_list:
+            for idx, c in enumerate(c_list):
+                if isinstance(c, dict):
+                    gap_run.attach_candidate(
+                        candidate_id=str(c.get("id") or f"cand-{idx + 1}"),
+                        title=str(c.get("name") or c.get("title") or f"Candidate {idx + 1}"),
+                        endpoint=str(c.get("endpoint") or "/"),
+                        category=str(c.get("category") or "general"),
+                        score=float(c.get("score") or c.get("composite_score") or 0.5),
+                        rank=int(c.get("rank") or c.get("priority_rank") or (idx + 1)),
+                        target=str(c.get("target") or ""),
+                    )
+        else:
+            q_file = state_dir / "gap1_queue.json"
+            if not q_file.is_file():
+                import os
+
+                raw_q = os.environ.get("STRIX_GAP1_QUEUE", "")
+                if raw_q and Path(raw_q).is_file():
+                    q_file = Path(raw_q)
+            if q_file.is_file():
+                try:
+                    q_data = json.loads(q_file.read_text(encoding="utf-8"))
+                    c_items = q_data.get("candidates", [])
+                    if isinstance(c_items, list):
+                        for idx, c in enumerate(c_items):
+                            if isinstance(c, dict):
+                                gap_run.attach_candidate(
+                                    candidate_id=str(
+                                        c.get("candidate_id") or c.get("id") or f"cand-{idx + 1}"
+                                    ),
+                                    title=str(
+                                        c.get("title") or c.get("name") or f"Candidate {idx + 1}"
+                                    ),
+                                    endpoint=str(c.get("endpoint") or "/"),
+                                    category=str(c.get("category") or "general"),
+                                    score=float(c.get("priority_score") or c.get("score") or 0.5),
+                                    rank=int(c.get("gap1_rank") or c.get("rank") or (idx + 1)),
+                                    target=str(c.get("target") or ""),
+                                )
+                except Exception:
+                    pass
+
+    scan_targets_list = build_scan_targets(scan_config)
+    decision_engine = gap_run.sync_decision_engine(authorized_targets=scan_targets_list)
+
     root_id: str | None = None
     if is_resume:
         try:
@@ -516,9 +581,42 @@ async def run_strix_scan(
         except Exception:
             logger.exception("Failed to configure user MCP servers; continuing without them")
 
+        if gap_run.candidates:
+            scope_context["gap_candidates"] = [c.to_dict() for c in gap_run.candidates.values()]
+
+        cand_block = ""
+        if gap_run.candidates:
+            cand_lines = [
+                "### AI-VAPT GAP-1 Prioritized Candidate Queue",
+                "The following prioritized vulnerability candidates have been discovered and ranked for investigation:",
+            ]
+            for c in gap_run.candidates.values():
+                cand_lines.append(
+                    f"- **[{c.id}]** #{c.rank} {c.title} (Endpoint: `{c.endpoint}`, Category: `{c.category}`, Score: {c.score:.2f}) [Status: {c.status.upper()}]"
+                )
+            cand_lines.extend(
+                [
+                    "",
+                    "Investigation Protocol:",
+                    "1. Investigate candidates in prioritized rank order.",
+                    "2. For each probe, record the exact outcome using `record_probe_outcome`.",
+                    "3. If a probe fails up to the failure threshold (k), evaluate the recommended alternative candidate and execute an actual pivot.",
+                    "4. If a vulnerability is confirmed with reproducible request/response, file it using `create_vulnerability_report` and verify it using `record_vulnerability_outcome`.",
+                ]
+            )
+            cand_block = "\n".join(cand_lines)
+
         root_context = _merge_root_prompt_context(scope_context, extra_system_prompt_context)
+        effective_override = root_instructions_override
+        if cand_block:
+            effective_override = (
+                f"{root_instructions_override}\n\n{cand_block}"
+                if root_instructions_override
+                else cand_block
+            )
+
         root_instructions = _compose_root_instructions_override(
-            root_instructions_override,
+            effective_override,
             skills=skills,
             scan_mode=scan_mode,
             is_whitebox=is_whitebox,
@@ -597,10 +695,13 @@ async def run_strix_scan(
             "parent_id": None,
             "interactive": interactive,
             "spawn_child_agent": spawn_child_agent,
-            "scan_targets": build_scan_targets(scan_config),
+            "scan_targets": scan_targets_list,
             "max_context_images": settings.runtime.max_context_images,
             "supports_images": supports_images,
             "coverage_tools": coverage_tools,
+            "gap_run": gap_run,
+            "decision_engine": decision_engine,
+            "scan_id": scan_id,
             SUBAGENT_TURN_LIMITS_KEY: dict(subagent_turn_limits or {}),
         }
 
@@ -726,6 +827,12 @@ async def run_strix_scan(
         raise
     finally:
         configure_spill_writer(None)
+        with contextlib.suppress(Exception):
+            if gap_run is not None:
+                gap_run.save()
+            current_rs = get_global_report_state()
+            if current_rs is not None:
+                current_rs.save_run_data()
         # Settle descendants before closing sessions: on a clean finish a child
         # can still be mid-turn, and closing its session underneath it crashes it.
         if root_id is not None:
