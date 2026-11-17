@@ -33,7 +33,12 @@ def _accepts_required_tool_choice(model_name: str | None) -> bool:
         if name.startswith(prefix):
             name = name[len(prefix) :]
             break
-    return name.startswith("openai/") or is_known_openai_bare_model(name)
+    return (
+        name.startswith("openai/")
+        or name.startswith("ollama/")
+        or name.startswith("openrouter/")
+        or is_known_openai_bare_model(name)
+    )
 
 
 def _render_diff_scope(diff_scope: dict[str, Any]) -> list[str]:
@@ -184,6 +189,19 @@ def build_root_task(scan_config: dict[str, Any]) -> str:
 
     parts.extend(_render_diff_scope(diff_scope))
 
+    additional_hosts = [
+        str(h).strip()
+        for h in (scan_config.get("additional_authorized_hosts") or [])
+        if str(h).strip()
+    ]
+    if additional_hosts:
+        parts.append("\n\nAdditional Authorized In-Scope Hosts:")
+        for h in additional_hosts:
+            parts.append(f"- {h}")
+        parts.append(
+            "- Strictly stay within these authorized targets and hosts. Do NOT test or scan any out-of-scope third-party domains."
+        )
+
     task = " ".join(parts)
     if user_instructions:
         task = f"{task}\n\nSpecial instructions: {user_instructions}"
@@ -226,6 +244,14 @@ def build_scope_context(scan_config: dict[str, Any]) -> dict[str, Any]:
                 {"type": "web_application", "value": base_url, "workspace_path": ""}
                 for base_url in details.get("base_urls") or []
             )
+
+    for host in scan_config.get("additional_authorized_hosts", []) or []:
+        if host and isinstance(host, str):
+            clean_host = host.strip()
+            if clean_host:
+                authorized.append(
+                    {"type": "web_application", "value": clean_host, "workspace_path": ""}
+                )
 
     return {
         "scope_source": "user_scan_config",

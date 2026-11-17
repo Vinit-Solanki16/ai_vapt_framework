@@ -35,6 +35,7 @@ class FullScanner:
         target_url: str,
         scan_mode: str = "quick",
         timeout: float = 7.0,
+        additional_authorized_hosts: list[str] | None = None,
     ) -> dict[str, Any]:
         """Perform full multi-category assessment against target URL."""
         ctx = ssl.create_default_context()
@@ -68,7 +69,12 @@ class FullScanner:
             logger.warning("Target request error on %s: %s", target_url, exc)
 
         # 2. Web Spidering (depth 1 in quick, 2 in standard, 3 in deep)
-        spider = WebSpider(base_url=target_url, scan_mode=scan_mode, timeout=min(timeout, 3.5))
+        spider = WebSpider(
+            base_url=target_url,
+            scan_mode=scan_mode,
+            timeout=min(timeout, 3.5),
+            additional_authorized_hosts=additional_authorized_hosts,
+        )
         spider_results = spider.crawl()
 
         # 3. Run Comprehensive Passive Audit Rules across all 6 categories
@@ -182,15 +188,31 @@ class FullScanner:
         scan_matrix = []
         for cat_key, cat_meta in SCAN_CATEGORIES.items():
             found_count = category_summary.get(cat_key, {}).get("found", 0)
+            configured = int(cat_meta["test_count"])
+            if found_count > 0:
+                status = "VULNERABILITIES_IDENTIFIED"
+                executed = 1
+            elif cat_key == "configuration" and (status_code == 200 or headers_dict):
+                executed = 4 if open_ports else 2
+                status = "PARTIALLY TESTED" if executed < configured else "PASSED"
+            elif cat_key == "version_sca" and components:
+                executed = min(len(components), configured)
+                status = "PARTIALLY TESTED" if executed < configured else "PASSED"
+            else:
+                executed = 0
+                status = "NOT TESTED"
+
             scan_matrix.append(
                 {
                     "category_key": cat_key,
                     "title": cat_meta["title"],
                     "description": cat_meta["description"],
-                    "test_count": cat_meta["test_count"],
+                    "test_count": configured,
+                    "configured_checks": configured,
+                    "executed_checks": executed,
                     "capability": cat_meta["capability"],
                     "findings_count": found_count,
-                    "status": "VULNERABILITIES_IDENTIFIED" if found_count > 0 else "PASSED",
+                    "status": status,
                 }
             )
 
@@ -201,6 +223,7 @@ class FullScanner:
             "components": components,
             "scan_matrix": scan_matrix,
             "category_summary": category_summary,
+            "spider_results": spider_results,
             "spider_stats": {
                 "visited_count": spider_results.get("visited_count", 1),
                 "discovered_paths": spider_results.get("discovered_paths", [base_endpoint]),
@@ -208,5 +231,6 @@ class FullScanner:
                 "parameters_count": sum(
                     len(p) for p in spider_results.get("parameters", {}).values()
                 ),
+                "api_endpoints": sorted(spider_results.get("api_endpoints", [])),
             },
         }

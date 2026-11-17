@@ -365,6 +365,7 @@ def test_completion_gate_enforcement_with_gap1_and_gap2(
         title="SQL Injection in Search",
         endpoint="/rest/products/search",
         probe_status="positive",
+        report_id="VULN-0001",
         directory=control_dir,
     )
 
@@ -441,7 +442,11 @@ def test_per_run_state_isolation_concurrent(tmp_path: Path):
     )
     # Run B records positive on c1
     record_outcome(
-        candidate_id="c1", endpoint="/rest/products/search", probe_status="positive", state=state_b
+        candidate_id="c1",
+        endpoint="/rest/products/search",
+        probe_status="positive",
+        report_id="VULN-0002",
+        state=state_b,
     )
 
     assert state_a.attempts.get("c1") == 1
@@ -519,6 +524,8 @@ def test_api_telemetry_synchronization_with_gap1_and_gap2(tmp_path: Path):
         "print('Output strix_runs/sub-run-gap', flush=True)\n"
         "with open(run_dir / 'strix.log', 'a') as f:\n"
         "    f.write('INFO - Starting scan\\n')\n"
+        "    f.write('DEBUG - Calling LLM model=test-model\\n')\n"
+        "    f.write('DEBUG - Invoking tool http_request\\n')\n"
         "    f.write('DEBUG - openai.agents: Starting turn 1, current_agent=Root Agent\\n')\n"
         "    f.flush()\n"
         "time.sleep(0.05)\n"

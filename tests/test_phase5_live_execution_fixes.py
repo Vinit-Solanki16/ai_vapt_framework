@@ -105,6 +105,9 @@ def test_real_subprocess_log_tailing_turn_tracking(tmp_path: Path):
         "    time.sleep(0.05)\n"
         "    f.write('DEBUG - openai.agents: Starting turn 3, current_agent=Web Agent\\n')\n"
         "    f.flush()\n"
+        "    f.write('DEBUG - Calling LLM model=test-model\\n')\n"
+        "    f.write('DEBUG - Invoking tool http_request\\n')\n"
+        "    f.flush()\n"
         "(run_dir / 'run.json').write_text(json.dumps({'status': 'completed', 'vulnerabilities': []}))\n"
         "sys.exit(0)\n"
     )

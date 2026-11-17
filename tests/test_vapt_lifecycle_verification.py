@@ -734,7 +734,7 @@ def test_resume_preserves_completed_candidates_and_findings(tmp_path: Path):
         f["id"] == "find-c1" and f["verification_state"] == "Verified" for f in final_findings
     )
 
-    # Preserved candidates: c1 is still VALIDATED, c2 is still ABANDONED
+    # Preserved candidates: c1 is still VALIDATED/VERIFIED_VULNERABILITY, c2 is still ABANDONED
     cands_by_id = {c["id"]: c for c in run_entry["candidates"]}
-    assert cands_by_id["c1"]["state"] == "VALIDATED"
+    assert cands_by_id["c1"]["state"] in ("VALIDATED", "VERIFIED_VULNERABILITY")
     assert cands_by_id["c2"]["state"] == "ABANDONED"

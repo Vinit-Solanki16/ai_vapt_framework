@@ -327,3 +327,206 @@ def normalize_severity(severity: str) -> str:
 
 def severity_label_cvss(score: float) -> str:
     return _CVSS_TO_SEVERITY.get(cvss_to_severity(score), "info")
+
+
+# ---------------------------------------------------------------------------
+# Strict Verification Enforcement per Vulnerability Class
+# ---------------------------------------------------------------------------
+
+
+def evaluate_finding_verification(finding: dict[str, Any]) -> tuple[str, str, bool]:
+    """Evaluate whether a finding genuinely satisfies verification requirements.
+
+    Returns:
+        (verification_state, rationale, is_verified)
+
+    Rules:
+    1. Reflected XSS: Input reflection alone (<script>alert(1)</script> in HTML body via curl)
+       is NOT verified XSS. Requires active browser DOM execution, alert dialog interception,
+       or headless browser proof. If only reflected input is observed -> UNCONFIRMED.
+    2. Path Traversal / LFI: PHP include warning or 'Failed to open stream' error is NOT
+       verified arbitrary file disclosure. Requires matching expected file contents
+       (/etc/passwd, /etc/hosts, system tokens). If only warnings/errors -> UNCONFIRMED.
+    3. PHPInfo / Diagnostic Disclosure: Unauthenticated HTTP 200 response containing full
+       PHP configuration / system tables -> VERIFIED.
+    4. Passive Header Observations: Missing headers without executable exploit -> UNCONFIRMED.
+    5. Severity and verification state remain strictly separate concepts.
+    """
+    title = str(finding.get("title", "")).strip()
+    title_lower = title.lower()
+    description = str(finding.get("description", "")).lower()
+    target = str(finding.get("target", "")).lower()
+    procedure = str(
+        finding.get("verification_procedure") or finding.get("validation_method") or ""
+    ).lower()
+    impact = str(finding.get("demonstrated_impact") or finding.get("impact") or "").lower()
+    response = str(
+        finding.get("reproducible_response")
+        or finding.get("verification_response")
+        or finding.get("evidence_snippet")
+        or finding.get("evidence")
+        or ""
+    ).lower()
+    request = str(
+        finding.get("reproducible_request") or finding.get("poc_script_code") or ""
+    ).lower()
+
+    # Rule 1: Reflected Cross-Site Scripting (XSS)
+    if (
+        "xss" in title_lower
+        or "cross-site scripting" in title_lower
+        or "cwe-79" in str(finding.get("cwe_id", "")).lower()
+    ):
+        # Check for genuine DOM execution / browser alert proof
+        has_dom_execution = any(
+            marker in response or marker in procedure or marker in impact
+            for marker in [
+                "alert dialog intercepted",
+                "alert(1) executed",
+                "dialog text: 1",
+                "browser execution confirmed",
+                "dom sink executed",
+                "playwright alert intercepted",
+                "puppeteer dialog",
+                "executed in chromium",
+                "executed in browser",
+            ]
+        )
+        if has_dom_execution:
+            return (
+                VerificationState.VERIFIED.value,
+                "Client-side script execution confirmed in browser DOM runtime with active alert dialog trigger.",
+                True,
+            )
+
+        # If only reflected input observed via curl / HTTP body
+        return (
+            VerificationState.UNCONFIRMED.value,
+            "Reflected input observed in HTTP response body, but client-side script execution was not verified in an active browser/DOM runtime.",
+            False,
+        )
+
+    # Rule 2: Path Traversal / Local File Inclusion (LFI)
+    if (
+        any(
+            k in title_lower
+            for k in ("path traversal", "local file inclusion", "file inclusion", "lfi")
+        )
+        or "cwe-22" in str(finding.get("cwe_id", "")).lower()
+    ):
+        # Check for genuine extracted system file contents
+        has_file_content = any(
+            marker in response
+            for marker in [
+                "root:x:0:0:",
+                "root:*:0:0:",
+                "/bin/bash",
+                "/bin/sh",
+                "127.0.0.1\tlocalhost",
+                "127.0.0.1 localhost",
+                "[extensions]",
+                "[fonts]",
+            ]
+        )
+        # Check if response is merely a PHP warning / include failure
+        is_include_error = any(
+            err in response
+            for err in [
+                "failed to open stream",
+                "failed opening",
+                "warning: include",
+                "warning: require",
+                "no such file or directory",
+                "operation failed",
+            ]
+        )
+        if has_file_content:
+            return (
+                VerificationState.VERIFIED.value,
+                "Arbitrary system file disclosure confirmed with matching target file signatures.",
+                True,
+            )
+        if is_include_error:
+            return (
+                VerificationState.UNCONFIRMED.value,
+                "Server returned PHP include warning and internal path disclosure, but arbitrary file content extraction was not demonstrated.",
+                False,
+            )
+
+        return (
+            VerificationState.UNCONFIRMED.value,
+            "File inclusion parameter probed, but access to requested file contents was not demonstrated.",
+            False,
+        )
+
+    # Rule 3: PHPInfo Diagnostic Configuration Disclosure
+    if "phpinfo" in title_lower or "diagnostic configuration" in title_lower:
+        has_phpinfo_tables = any(
+            marker in response
+            for marker in [
+                "php version",
+                "system linux",
+                "build date",
+                "server api",
+                "loaded configuration file",
+                '<!doctype html public "-//w3c//dtd xhtml 1.0 transitional//en"',
+            ]
+        )
+        if has_phpinfo_tables:
+            return (
+                VerificationState.VERIFIED.value,
+                "Direct unauthenticated HTTP response exposes full server configuration and environment diagnostic tables.",
+                True,
+            )
+
+    # Rule 4: Missing Defensive Headers / CSP / Hardening Observations
+    if any(
+        k in title_lower
+        for k in (
+            "missing-security-headers",
+            "x-frame-options",
+            "content security policy",
+            "strict-transport-security",
+            "cookie missing",
+        )
+    ):
+        return (
+            VerificationState.UNCONFIRMED.value,
+            "Passive HTTP response header audit notes missing defensive directives; active exploit unverified.",
+            False,
+        )
+
+    # Rule 5: Generic Verification Check via VerificationBlock contract
+    vb_data = finding.get("verification") or {}
+    vb = VerificationBlock(
+        verification_state=str(
+            vb_data.get("verification_state") or finding.get("verification_state") or "discovered"
+        ),
+        reproducible_request=str(vb_data.get("reproducible_request") or request or ""),
+        verification_response=str(vb_data.get("verification_response") or response or ""),
+        verification_procedure=str(vb_data.get("verification_procedure") or procedure or ""),
+        demonstrated_impact=str(vb_data.get("demonstrated_impact") or impact or ""),
+        evidence_timestamp=str(
+            vb_data.get("evidence_timestamp") or finding.get("evidence_timestamp") or ""
+        ),
+        confidence=str(vb_data.get("confidence") or finding.get("confidence") or ""),
+        severity=str(finding.get("severity") or ""),
+    )
+    if (
+        vb.satisfies_verification_contract()
+        and vb.verification_state == VerificationState.VERIFIED.value
+    ):
+        return (
+            VerificationState.VERIFIED.value,
+            "Full reproducible request, response, and demonstrated impact satisfied verification contract.",
+            True,
+        )
+
+    raw_state = (
+        str(finding.get("verification_state") or "unconfirmed").strip().lower().replace(" ", "_")
+    )
+    if raw_state == "verified":
+        raw_state = "unconfirmed"
+    if raw_state not in [s.value for s in VerificationState]:
+        raw_state = "unconfirmed"
+    return (raw_state, "Finding did not meet active exploit verification contract.", False)

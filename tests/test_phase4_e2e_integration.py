@@ -233,6 +233,8 @@ def test_workflow_zero_finding_assessment(tmp_path: Path, monkeypatch: pytest.Mo
     mock_proc.stdout.readline.side_effect = [
         f"Output  strix_runs/{u_dir.name}\n",
         "Starting turn 12\n",
+        "Calling LLM model=test-model provider=cloud_hosted\n",
+        "Invoking tool http_request\n",
         "",
     ]
     mock_proc.poll.return_value = 0
@@ -405,12 +407,13 @@ def test_workflow_concurrent_assessments(tmp_path: Path, monkeypatch: pytest.Mon
         encoding="utf-8",
     )
 
-    # Record outcomes in each run
+    # Record outcomes in each run (a real positive is backed by a report id).
     gap_bridge.record_outcome(
         directory=ctrl_1,
         candidate_id="cand-run1",
         title="Run 1 SQLi",
         probe_status="positive",
+        report_id="VULN-0001",
         source="test",
     )
     gap_bridge.record_outcome(

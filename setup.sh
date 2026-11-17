@@ -165,9 +165,13 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Environment Configuration (.env)
+# 7. Environment Configuration (.env) and Directories
 # ------------------------------------------------------------------------------
-log_step "7. Checking Environment Configuration (.env)..."
+log_step "7. Checking Environment Configuration (.env) and Directories..."
+
+# Ensure required runtime directories exist
+mkdir -p strix_runs .run logs
+log_success "Verified runtime directory structure (strix_runs/, .run/, logs/)."
 
 if [ -f ".env" ]; then
     log_success ".env already exists. Preserving existing user configuration."
@@ -229,13 +233,18 @@ if [ "$DOCKER_CLI_PRESENT" = true ]; then
             log_info "Run \`python scripts/verify_remote_docker.py\` for full connection diagnostics."
         fi
     else
+        DOCKER_ERR=$(docker info 2>&1 || true)
         if docker info --format '{{.ServerVersion}}' >/dev/null 2>&1; then
             DOCKER_DAEMON_OK=true
             DOCKER_MODE="local"
             log_success "Local Docker daemon is running and reachable via local socket."
+        elif echo "$DOCKER_ERR" | grep -qi "permission denied"; then
+            log_warn "Docker socket permission denied for user '$(whoami)'."
+            log_info "  To fix permissions, add user to docker group: sudo usermod -aG docker $USER && newgrp docker"
         else
             log_warn "Local Docker daemon is not running or socket is inaccessible."
-            log_info "In GitHub Codespaces, configure remote Docker via DOCKER_HOST (see AI_VAPT_CODESPACES_RUNTIME_GUIDE.md)."
+            log_info "  Ensure Docker daemon is started: sudo systemctl start docker (or start Docker Desktop)."
+            log_info "  In GitHub Codespaces, configure remote Docker via DOCKER_HOST (see AI_VAPT_CODESPACES_RUNTIME_GUIDE.md)."
         fi
     fi
 fi
@@ -356,7 +365,9 @@ else
 fi
 
 echo -e "\n${BOLD}Next Steps:${RESET}"
-echo -e "  1. Start the application:   ${GREEN}./start.sh${RESET}"
-echo -e "  2. Stop the application:    ${GREEN}./stop.sh${RESET}"
-echo -e "  3. Configure credentials:   Edit ${CYAN}.env${RESET} or enter keys in the Web Console UI"
+echo -e "  1. Start AI-VAPT Application:    ${GREEN}./ai-vapt.sh start${RESET}  (or ./start.sh)"
+echo -e "  2. Start Vulnerable Lab Target:  ${GREEN}./juice-shop.sh start${RESET}"
+echo -e "  3. Check Service Status:         ${CYAN}./ai-vapt.sh status${RESET}"
+echo -e "  4. Stop Application / Lab:       ${YELLOW}./ai-vapt.sh stop${RESET} && ${YELLOW}./juice-shop.sh stop${RESET}"
+echo -e "  5. Configure Credentials:        Configure dynamically in Web Console (${CYAN}http://localhost:8000/#/settings${RESET}) or edit ${CYAN}.env${RESET}"
 echo -e "${BOLD}==============================================================================${RESET}\n"

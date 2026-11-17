@@ -113,6 +113,10 @@ def discover_cloud_models(
                     for item in data:
                         if isinstance(item, dict) and "id" in item:
                             models_list.append(str(item["id"]))
+                            if "aliases" in item and isinstance(item["aliases"], list):
+                                for alias in item["aliases"]:
+                                    if isinstance(alias, str) and alias not in models_list:
+                                        models_list.append(alias)
                         elif isinstance(item, str):
                             models_list.append(item)
                 elif isinstance(body, dict) and "id" in body:

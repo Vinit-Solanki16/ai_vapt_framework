@@ -11,6 +11,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import ssl
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -37,6 +38,14 @@ SENSITIVE_PATHS = [
         7.5,
         "CWE-200",
         ["ref: refs/"],
+    ),
+    (
+        "/ftp",
+        "Directory Listing and Sensitive Files Exposure (/ftp)",
+        "high",
+        7.5,
+        "CWE-548",
+        ["listing directory", "acquisitions.md", "package.json.bak", "<title>listing directory"],
     ),
     (
         "/robots.txt",
@@ -502,11 +511,24 @@ class ActiveFuzzer:
         import re
 
         findings: list[dict[str, Any]] = []
-        max_paths = 2 if self.scan_mode == "quick" else (6 if self.scan_mode == "standard" else 15)
-        max_params = 2 if self.scan_mode == "quick" else 4
+        max_paths = 5 if self.scan_mode == "quick" else (10 if self.scan_mode == "standard" else 20)
+        max_params = 3 if self.scan_mode == "quick" else 5
+
+        # 1. Prioritize high-value API endpoints (search, products, items, query, login, basket)
+        sorted_param_paths = sorted(
+            parameters.items(),
+            key=lambda item: (
+                0
+                if any(
+                    k in item[0].lower()
+                    for k in ("search", "product", "item", "query", "user", "login", "basket")
+                )
+                else 1
+            ),
+        )
 
         # 1. Check discovered query parameters
-        for path, params in list(parameters.items())[:max_paths]:
+        for path, params in sorted_param_paths[:max_paths]:
             for param in list(params)[:max_params]:
                 # 1a. SQL Injection Error Probe
                 for sql_probe in ("1'%22", "1'", "1' OR '1'='1"):
@@ -521,36 +543,46 @@ class ActiveFuzzer:
                             req, timeout=self.timeout, context=self._ctx
                         ) as resp:
                             body = resp.read(20000).decode("utf-8", errors="ignore")
-                            sql_errors = [
-                                "sql syntax",
-                                "mysqli_sql_exception",
-                                "mysql_fetch",
-                                "ora-01756",
-                                "pg_query",
-                                "sqlite3::sql",
-                                "unclosed quotation mark",
-                                "microsoft ole db provider for sql server",
-                            ]
-                            for err in sql_errors:
-                                if err in body.lower():
-                                    findings.append(
-                                        {
-                                            "id": f"sqli-error-{param}",
-                                            "name": f"SQL Injection Syntax Leakage ({param})",
-                                            "category": "sqli",
-                                            "severity": "high",
-                                            "cvss": 8.1,
-                                            "exposure": 0.95,
-                                            "cwe_id": "CWE-89",
-                                            "endpoint": path,
-                                            "detail": f"Database syntax error disclosed on parameter '{param}': {err}",
-                                        }
-                                    )
-                                    break
-                            if any(f.get("id") == f"sqli-error-{param}" for f in findings):
-                                break
+                    except urllib.error.HTTPError as exc:
+                        # Database syntax errors frequently cause HTTP 500
+                        body = exc.read().decode("utf-8", errors="ignore")
                     except Exception:
-                        pass
+                        body = ""
+
+                    if body:
+                        sql_errors = [
+                            "sql syntax",
+                            "sqlite_error",
+                            "syntax error",
+                            "sqlite3::sql",
+                            "mysqli_sql_exception",
+                            "mysql_fetch",
+                            "ora-01756",
+                            "pg_query",
+                            "unclosed quotation mark",
+                            "microsoft ole db provider for sql server",
+                            "sequelizeparentnotfounderror",
+                            "sql statement",
+                            "near \"'",
+                        ]
+                        for err in sql_errors:
+                            if err in body.lower():
+                                findings.append(
+                                    {
+                                        "id": f"sqli-error-{param}",
+                                        "name": f"SQL Injection Syntax Leakage ({param})",
+                                        "category": "sqli",
+                                        "severity": "high",
+                                        "cvss": 8.1,
+                                        "exposure": 0.95,
+                                        "cwe_id": "CWE-89",
+                                        "endpoint": path,
+                                        "detail": f"Database syntax error disclosed on parameter '{param}': {err}",
+                                    }
+                                )
+                                break
+                        if any(f.get("id") == f"sqli-error-{param}" for f in findings):
+                            break
 
                 # 1b. Reflected XSS Probe
                 probe_tok = '"><strix_xss_probe>'
@@ -649,8 +681,61 @@ class ActiveFuzzer:
         for form in (forms or [])[:max_paths]:
             action = form.get("action") or "/"
             method = (form.get("method") or "get").lower()
-            inputs = form.get("inputs") or []
+            inputs = form.get("inputs") or form.get("fields") or []
             target_form_url = urllib.parse.urljoin(self.base_url, action)
+
+            # Test SQLi on login form
+            if method == "post" and any(k in action.lower() for k in ("login", "auth", "signin")):
+                field_names = [
+                    inp.get("name") if isinstance(inp, dict) else str(inp) for inp in inputs
+                ]
+                user_field = next(
+                    (f for f in field_names if f in ("email", "username", "user", "login")),
+                    field_names[0] if field_names else None,
+                )
+                pwd_field = next(
+                    (f for f in field_names if f in ("password", "pass", "pwd")),
+                    field_names[1] if len(field_names) > 1 else "password",
+                )
+                if user_field:
+                    import json
+
+                    login_json = json.dumps(
+                        {user_field: "' or 1=1--", pwd_field or "password": "x"}
+                    ).encode("utf-8")
+                    try:
+                        l_req = urllib.request.Request(
+                            target_form_url,
+                            data=login_json,
+                            headers={
+                                "User-Agent": "STRIX-VAPT/2.0",
+                                "Content-Type": "application/json",
+                            },
+                        )
+                        with urllib.request.urlopen(
+                            l_req, timeout=self.timeout, context=self._ctx
+                        ) as l_resp:
+                            if l_resp.status == 200:
+                                l_body = l_resp.read(20000).decode("utf-8", errors="ignore")
+                                if any(
+                                    tok in l_body.lower()
+                                    for tok in ("token", "jwt", "authentication", "success")
+                                ):
+                                    findings.append(
+                                        {
+                                            "id": "sqli-login-bypass",
+                                            "name": "SQL Injection Authentication Bypass (/rest/user/login)",
+                                            "category": "sqli",
+                                            "severity": "critical",
+                                            "cvss": 9.8,
+                                            "exposure": 1.0,
+                                            "cwe_id": "CWE-89",
+                                            "endpoint": action,
+                                            "detail": "Authentication bypass verified via boolean-based SQL injection on login form.",
+                                        }
+                                    )
+                    except Exception:
+                        pass
 
             for inp in inputs[:max_params]:
                 inp_name = inp.get("name") if isinstance(inp, dict) else str(inp)

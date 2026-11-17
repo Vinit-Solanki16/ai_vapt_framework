@@ -137,8 +137,10 @@ def _check_docker_runtime(target_image: str | None = None) -> ComponentReadiness
             details=details,
         )
 
-    # In unit tests, honor PYTEST_CURRENT_TEST to avoid hanging
-    if os.environ.get("PYTEST_CURRENT_TEST"):
+    # In unit tests, honor PYTEST_CURRENT_TEST to avoid hanging unless probe is explicitly enabled
+    if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get(
+        "STRIX_TEST_ALLOW_DOCKER_PROBE"
+    ):
         return ComponentReadiness(
             name="docker_runtime",
             status="runtime_unavailable",
@@ -236,27 +238,34 @@ def _check_llm_provider(
     api_key_override: str | None = None,
 ) -> ComponentReadiness:
     """Safely inspect configured LLM provider, model, and credentials format."""
+    from strix.core.runtime_credentials import (
+        get_runtime_credential,
+        get_runtime_model,
+        is_placeholder_credential,
+    )
+
     settings = load_settings()
 
     provider = (
         (provider_override or os.environ.get("STRIX_LLM_PROVIDER") or "openrouter").lower().strip()
     )
-    model = (model_override or settings.llm.model or os.environ.get("STRIX_LLM") or "").strip()
-
-    # Determine key presence without storing or exposing key value
-    key = (
-        api_key_override
-        or settings.llm.api_key
-        or os.environ.get("OPENROUTER_API_KEY")
-        or os.environ.get("LLM_API_KEY")
+    model = (
+        model_override
+        or settings.llm.model
+        or get_runtime_model(provider)
+        or os.environ.get("STRIX_LLM")
         or ""
-    )
+    ).strip()
+
+    # Determine key presence using runtime credentials hierarchy
+    key = get_runtime_credential(provider, override_key=api_key_override) or ""
     has_key = bool(key and str(key).strip())
+    is_placeholder = is_placeholder_credential(key)
 
     details: dict[str, Any] = {
         "provider": provider,
         "model": model or "not_configured",
-        "credential_configured": has_key,
+        "credential_configured": has_key and not is_placeholder,
         "credential_length": len(key) if has_key else 0,
     }
 
@@ -279,16 +288,17 @@ def _check_llm_provider(
                 details=details,
             )
 
+        if is_placeholder:
+            return ComponentReadiness(
+                name="llm_provider",
+                status="configuration_required",
+                available=False,
+                actionable_message=f"{provider.capitalize()} API key is set to a placeholder test token. Provide a live key for production assessments.",
+                details=details,
+            )
+
         # Check format or test validity where applicable
         if provider == "openrouter":
-            if key.startswith("sk-or-v1-test") or "placeholder" in key.lower():
-                return ComponentReadiness(
-                    name="llm_provider",
-                    status="configuration_required",
-                    available=False,
-                    actionable_message="OpenRouter API key is set to a placeholder test token. Provide a live key for production assessments.",
-                    details=details,
-                )
             if not key.startswith("sk-or-"):
                 details["format_warning"] = "Key does not match standard 'sk-or-...' prefix."
 

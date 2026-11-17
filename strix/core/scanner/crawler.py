@@ -45,6 +45,30 @@ SKIP_EXTENSIONS = {
 }
 
 
+class InScopeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Prevents crawler from following redirects to out-of-scope external hostnames."""
+
+    def __init__(self, authorized_hosts: set[str]):
+        self.authorized_hosts = authorized_hosts
+        super().__init__()
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        p = urllib.parse.urlsplit(newurl)
+        new_host = (p.hostname or "").lower().strip()
+        if new_host and new_host not in self.authorized_hosts:
+            logger.warning("Crawler skipping out-of-scope redirect to external host: %s", newurl)
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 class WebSpider:
     """Portable web crawler extracting internal endpoints, query parameters, and forms."""
 
@@ -54,12 +78,21 @@ class WebSpider:
         scan_mode: str = "quick",
         timeout: float = 4.0,
         user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) STRIX-Spider/2.0",
+        additional_authorized_hosts: list[str] | None = None,
     ):
         self.base_url = base_url.strip()
         parsed = urllib.parse.urlsplit(self.base_url)
         self.scheme = parsed.scheme or "http"
         self.netloc = parsed.netloc
-        self.hostname = parsed.hostname or ""
+        self.hostname = (parsed.hostname or "").lower()
+        self.additional_authorized_hosts = [
+            (urllib.parse.urlsplit(h if "://" in h else f"http://{h}").hostname or h)
+            .lower()
+            .strip()
+            for h in (additional_authorized_hosts or [])
+            if h and str(h).strip()
+        ]
+        self.authorized_hosts: set[str] = {self.hostname, *self.additional_authorized_hosts}
         self.scan_mode = (scan_mode or "quick").lower()
         self.timeout = timeout
         self.user_agent = user_agent
@@ -83,6 +116,12 @@ class WebSpider:
         self.api_endpoints: set[str] = set()
 
         self._ctx = ssl.create_default_context()
+        self._ctx.check_hostname = False
+        self._ctx.verify_mode = ssl.CERT_NONE
+        self._opener = urllib.request.build_opener(
+            urllib.request.HTTPSHandler(context=self._ctx),
+            InScopeRedirectHandler(self.authorized_hosts),
+        )
         self._ctx.check_hostname = False
         self._ctx.verify_mode = ssl.CERT_NONE
 
@@ -132,6 +171,17 @@ class WebSpider:
                         queue.append((link, depth + 1))
                         self.discovered_paths.add(urllib.parse.urlsplit(link).path or "/")
 
+        # Check robots.txt for disallowed sensitive paths
+        robots_body, robots_status, _ = self._fetch(
+            urllib.parse.urljoin(self.base_url, "/robots.txt")
+        )
+        if robots_status == 200 and robots_body:
+            self.discovered_paths.add("/robots.txt")
+            for disallow_match in re.findall(r"(?i)Disallow:\s*([^\s#]+)", robots_body):
+                clean_path = disallow_match.strip()
+                if clean_path and clean_path != "/":
+                    self.discovered_paths.add(clean_path)
+
         # Inspect referenced script bundles for SPA routes, APIs, parameters, and form surfaces
         inspected_scripts = 0
         for s_ref in list(self.scripts):
@@ -139,7 +189,7 @@ class WebSpider:
                 break
             if s_ref.startswith("http://") or s_ref.startswith("https://"):
                 s_parsed = urllib.parse.urlsplit(s_ref)
-                if s_parsed.hostname and s_parsed.hostname.lower() != self.hostname.lower():
+                if s_parsed.hostname and s_parsed.hostname.lower() not in self.authorized_hosts:
                     continue
                 s_url = s_ref
             else:
@@ -150,11 +200,21 @@ class WebSpider:
             if not s_body or s_status != 200:
                 continue
 
-            # API routes (support backticks, single quotes, double quotes)
-            apis = re.findall(r'[`"\'](/(?:api|rest|api-docs)/[a-zA-Z0-9_\-/]+)[`"\']', s_body)
+            # API routes (support backticks, single quotes, double quotes, and template literals ${...}/api/...)
+            apis = re.findall(r"/(?:api|rest|api-docs)/[a-zA-Z0-9_\-/]+", s_body)
             for api_ep in apis:
-                self.api_endpoints.add(api_ep)
-                self.discovered_paths.add(api_ep)
+                clean_ep = api_ep.rstrip("/")
+                if clean_ep:
+                    self.api_endpoints.add(clean_ep)
+                    self.discovered_paths.add(clean_ep)
+
+            # Query parameters from template literals / queryParams (e.g. /rest/products/search?q=${t})
+            for ep_sub, q_param in re.findall(
+                r"/(?:rest|api)/([a-zA-Z0-9_\-/]+)\?([a-zA-Z0-9_]+)=", s_body
+            ):
+                full_ep = f"/rest/{ep_sub}".replace("/rest/rest/", "/rest/")
+                self.parameters[full_ep].add(q_param)
+                self.discovered_paths.add(full_ep)
 
             # Client-side SPA routes (e.g. Angular path: '...')
             spa_routes = re.findall(r"path:[\"\x27`]([a-zA-Z0-9_\-/:*]+)[\"\x27`]", s_body)
@@ -202,6 +262,28 @@ class WebSpider:
             )
             self.parameters["/api/Feedbacks"].update(["comment", "rating"])
 
+        if any("/rest/products/search" in ep for ep in self.api_endpoints) or any(
+            "/search" in p for p in self.discovered_paths
+        ):
+            self.parameters["/rest/products/search"].add("q")
+
+        if any("/rest/user/change-password" in ep for ep in self.api_endpoints) or any(
+            "/change-password" in p for p in self.discovered_paths
+        ):
+            self.parameters["/rest/user/change-password"].update(["current", "new", "repeat"])
+
+        if any("/file-upload" in p for p in self.discovered_paths) or any(
+            "/file-upload" in ep for ep in self.api_endpoints
+        ):
+            self.forms.append(
+                {
+                    "page_url": urllib.parse.urljoin(self.base_url, "/file-upload"),
+                    "action": "/file-upload",
+                    "method": "POST",
+                    "fields": [{"name": "file", "type": "file"}],
+                }
+            )
+
         # Format parameter inventory
         param_summary = {path: sorted(params) for path, params in self.parameters.items()}
 
@@ -220,7 +302,12 @@ class WebSpider:
         return urllib.parse.urlunsplit((p.scheme, p.netloc, p.path.rstrip("/"), "", ""))
 
     def _fetch(self, url: str) -> tuple[str, int, dict[str, str]]:
-        """Fetch page content with standard timeout and header limits."""
+        """Fetch page content with standard timeout, header limits, and scope enforcement."""
+        p = urllib.parse.urlsplit(url)
+        host = (p.hostname or "").lower().strip()
+        if host and host not in self.authorized_hosts:
+            logger.debug("Skipping fetch of out-of-scope target: %s", url)
+            return "", 0, {}
         try:
             req = urllib.request.Request(
                 url,
@@ -229,7 +316,7 @@ class WebSpider:
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 },
             )
-            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+            with self._opener.open(req, timeout=self.timeout) as resp:
                 headers = {k.lower(): v for k, v in resp.headers.items()}
                 content_type = headers.get("content-type", "").lower()
                 if not any(t in content_type for t in ("html", "text", "javascript", "json")):
@@ -254,7 +341,7 @@ class WebSpider:
             abs_url = urllib.parse.urljoin(page_url, href)
             p = urllib.parse.urlsplit(abs_url)
             # Only in-scope links
-            if p.hostname and p.hostname.lower() == self.hostname.lower():
+            if p.hostname and p.hostname.lower() in self.authorized_hosts:
                 path = p.path.lower()
                 if not any(path.endswith(ext) for ext in SKIP_EXTENSIONS):
                     links.append(abs_url)

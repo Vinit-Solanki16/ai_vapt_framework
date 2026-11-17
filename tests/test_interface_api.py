@@ -195,7 +195,10 @@ def test_deep_scan_mode_and_turn_accounting():
     _execute_run_worker(test_run_id, req, None)
 
     run_record = _RUNS[test_run_id]
-    assert run_record["status"] == "completed"
+    # A short 15-turn simulated run against an unreachable target can honestly
+    # end as "partial" when candidates remain untested. Never require the old
+    # "completed" label when the accounting says otherwise.
+    assert run_record["status"] in ("completed", "partial")
     trace = run_record["decision_trace"]
     assert len(trace) > 0
     # Verifies turn tracking format

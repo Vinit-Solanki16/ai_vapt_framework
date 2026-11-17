@@ -318,4 +318,4 @@ def test_report_builder_renders_all_eight_canonical_fields():
     assert "Relevant Response Evidence:" in html_out
     assert "Server Hardening Configuration & Code Patch:" in html_out
     assert "Retest Verification Procedure:" in html_out
-    assert "8 core VAPT test categories (88 total tests)" in html_out
+    assert "Vulnerability Category Matrix" in html_out

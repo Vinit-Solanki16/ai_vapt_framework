@@ -502,13 +502,67 @@ def scan_target_ports(
                     {"service": f"TCP/{port}", "severity": "low", "risk": "Open network port."},
                 )
                 in_scope = (not is_localhost) or (explicit_port is None) or (port == explicit_port)
+                is_web = port in (80, 443) or (explicit_port is not None and port == explicit_port)
+                conv_service = meta.get("service", f"TCP/{port}")
+
+                # Probe for application banner if it's the target port or standard web port
+                http_fingerprint = None
+                if is_web:
+                    try:
+                        s_http = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s_http.settimeout(min(port_timeout, 1.0))
+                        s_http.connect((ip, port))
+                        s_http.sendall(b"HEAD / HTTP/1.1\r\nHost: " + host.encode() + b"\r\nUser-Agent: AI-VAPT-PortScan\r\nConnection: close\r\n\r\n")
+                        banner = s_http.recv(512).decode("latin-1", errors="ignore")
+                        s_http.close()
+                        if "HTTP/" in banner:
+                            server_match = [line for line in banner.split("\r\n") if line.lower().startswith("server:")]
+                            if server_match:
+                                http_fingerprint = f"HTTP Web Application ({server_match[0].split(':', 1)[1].strip()})"
+                            else:
+                                http_fingerprint = "HTTP/Web Service"
+                    except Exception:
+                        pass
+
+                if is_web and http_fingerprint:
+                    serv_name = "HTTP Web Service"
+                    serv_conf = True
+                    conf_level = "CONFIRMED"
+                    fingerprint = http_fingerprint
+                    raw_result = "HTTP response banner verified via TCP probe"
+                    serv_risk = "Target web application service."
+                    port_sev = "low"
+                elif is_web:
+                    serv_name = "HTTP Web Service"
+                    serv_conf = True
+                    conf_level = "CONFIRMED"
+                    fingerprint = "HTTP/Web Service"
+                    raw_result = "TCP SYN/ACK connection handshake succeeded on target web port"
+                    serv_risk = "Target web application port."
+                    port_sev = "low"
+                else:
+                    serv_name = "Unfingerprinted TCP Listener"
+                    serv_conf = False
+                    conf_level = "UNCONFIRMED"
+                    fingerprint = None
+                    raw_result = "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed"
+                    serv_risk = f"Host network listener observed on TCP port {port}. Application protocol unconfirmed."
+                    port_sev = "info"  # Do not assign vulnerability severity from conventional mapping alone
+
                 return {
                     "port": port,
-                    "service": meta["service"],
+                    "service": serv_name,
+                    "conventional_service": f"{conv_service} (Conventional Guess Only)",
+                    "service_confirmed": serv_conf,
+                    "service_confidence": conf_level,
+                    "service_fingerprint": fingerprint,
+                    "version": None,
+                    "exposure_demonstrated": False,
+                    "raw_probe_result": raw_result,
                     "protocol": "tcp",
                     "state": "OPEN",
-                    "severity": meta["severity"],
-                    "risk": meta["risk"],
+                    "severity": port_sev,
+                    "risk": serv_risk,
                     "cwe_id": "CWE-200",
                     "ip": ip,
                     "in_scope": in_scope,

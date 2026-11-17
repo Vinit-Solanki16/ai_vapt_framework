@@ -46,34 +46,36 @@ echo -e "${BOLD}================================================================
 
 STOPPED=false
 
-# 1. Stop via PID file if present
-if [ -f "$PID_FILE" ]; then
-    PID=$(cat "$PID_FILE" 2>/dev/null || true)
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        log_info "Stopping AI-VAPT service (PID: ${PID})..."
-        kill -TERM "$PID" 2>/dev/null || true
-        
-        # Wait up to 10 seconds for clean exit
-        for _ in {1..20}; do
-            if ! kill -0 "$PID" 2>/dev/null; then
-                break
+# Support both .run/ai-vapt.pid and legacy .ai_vapt.pid
+PID_FILES=("$SCRIPT_DIR/.run/ai-vapt.pid" "$SCRIPT_DIR/.ai_vapt.pid")
+
+for pf in "${PID_FILES[@]}"; do
+    if [ -f "$pf" ]; then
+        PID=$(cat "$pf" 2>/dev/null || true)
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+            log_info "Stopping AI-VAPT service (PID: ${PID})..."
+            kill -TERM "$PID" 2>/dev/null || true
+
+            # Wait up to 10 seconds for clean exit
+            for _ in {1..20}; do
+                if ! kill -0 "$PID" 2>/dev/null; then
+                    break
+                fi
+                sleep 0.5
+            done
+
+            # Force kill if still hanging
+            if kill -0 "$PID" 2>/dev/null; then
+                log_warn "Process ${PID} did not terminate gracefully; sending SIGKILL..."
+                kill -9 "$PID" 2>/dev/null || true
             fi
-            sleep 0.5
-        done
 
-        # Force kill if still hanging
-        if kill -0 "$PID" 2>/dev/null; then
-            log_warn "Process ${PID} did not terminate gracefully; sending SIGKILL..."
-            kill -9 "$PID" 2>/dev/null || true
+            log_success "AI-VAPT service (PID: ${PID}) stopped successfully."
+            STOPPED=true
         fi
-
-        log_success "AI-VAPT service (PID: ${PID}) stopped successfully."
-        STOPPED=true
-    else
-        log_info "No active process found for PID ${PID:-empty}."
+        rm -f "$pf"
     fi
-    rm -f "$PID_FILE"
-fi
+done
 
 # 2. Check for any remaining uvicorn process bound to AI-VAPT port or running strix.interface.api
 if command -v lsof >/dev/null 2>&1; then

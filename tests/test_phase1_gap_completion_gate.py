@@ -102,6 +102,7 @@ def test_simultaneous_runs_maintain_independent_gap_state(tmp_path: Path):
         title="SQL Injection in Login",
         endpoint="/api/login",
         success=True,
+        report_id="VULN-0002",
         detail="Confirmed exploit",
         directory=ctrl_2,
     )

@@ -31,6 +31,10 @@ def render_html_report(run_data: Any) -> str:
             "end_time": getattr(run_data, "end_time", None),
         }
 
+    from strix.report.reconciliation import reconcile_all
+
+    run_data = reconcile_all(run_data)
+
     run_id = html.escape(str(run_data.get("run_id", "unknown")))
     status = html.escape(str(run_data.get("status", "completed")))
     mode = html.escape(str(run_data.get("mode", "web")))
@@ -78,7 +82,11 @@ def render_html_report(run_data: Any) -> str:
     pivot_events = run_data.get("pivot_events", [])
     tech_stack = run_data.get("tech_stack", "generic_web")
 
-    dur_secs = run_data.get("duration_seconds")
+    dur_secs = (
+        run_data.get("active_duration_seconds")
+        if run_data.get("active_duration_seconds") is not None
+        else run_data.get("duration_seconds")
+    )
     if dur_secs is not None:
         try:
             total_sec = max(0, int(float(dur_secs)))
@@ -128,13 +136,68 @@ def render_html_report(run_data: Any) -> str:
         if f.get("verified") or str(f.get("verification_state", "")).lower() == "verified"
     )
 
+    turns_consumed = int(
+        run_data.get("turns_consumed") or (run_data.get("stats") or {}).get("attempts", 0) or 0
+    )
+    configured_turn_limit = int(
+        run_data.get("configured_turn_limit") or run_data.get("max_turns", 500) or 500
+    )
+    completeness_pct = float(run_data.get("assessment_completeness_percent", 0.0) or 0.0)
+    run_lifecycle_status = html.escape(
+        str(
+            run_data.get("run_lifecycle_status")
+            or f"Run process completed — {turns_consumed} of {configured_turn_limit} turns used."
+        )
+    )
+
     # Severity counters
     crit_count = sum(1 for f in findings if f.get("severity", "").upper() == "CRITICAL")
     high_count = sum(1 for f in findings if f.get("severity", "").upper() == "HIGH")
     med_count = sum(1 for f in findings if f.get("severity", "").upper() == "MEDIUM")
     low_count = sum(1 for f in findings if f.get("severity", "").upper() == "LOW")
 
-    total_pivots = len([e for e in pivot_events if e.get("type") == "REDIRECT"])
+    # DEF-02: Honest GAP-2 Pivot & Abandonment accounting
+    # Executed pivots require an active redirection dispatch (next_candidate exists and pivot_executed is not False)
+    executed_pivots = len(
+        [
+            e
+            for e in pivot_events
+            if (e.get("type") in ("REDIRECT", "GAP2_PIVOT") or e.get("event") == "GAP2_PIVOT")
+            and e.get("pivot_executed", True) is not False
+            and (e.get("next_candidate") or e.get("to_candidate"))
+        ]
+    )
+    abandoned_candidates_count = len(
+        [
+            e
+            for e in pivot_events
+            if (
+                e.get("type") in ("REDIRECT", "GAP2_PIVOT", "ABANDON")
+                or e.get("event") in ("GAP2_PIVOT", "ABANDON")
+                or "abandon" in str(e.get("result", "")).lower()
+                or "abandon" in str(e.get("message", "")).lower()
+                or "abandon" in str(e.get("reason", "")).lower()
+            )
+            and (
+                e.get("outcome") == "ABANDON"
+                or e.get("type") == "ABANDON"
+                or e.get("event") == "ABANDON"
+                or "abandon" in str(e.get("result", "")).lower()
+                or "abandon" in str(e.get("message", "")).lower()
+                or "abandon" in str(e.get("reason", "")).lower()
+            )
+        ]
+    )
+    # Fallback to run_data gap2_pivots / pivots if pivot_events list was not supplied directly
+    if not pivot_events:
+        executed_pivots = int(run_data.get("gap2_pivots", run_data.get("pivots", 0)) or 0)
+    total_pivots = executed_pivots
+    if total_pivots == 0 and abandoned_candidates_count > 0:
+        pivots_display_html = f'{total_pivots} <small style="font-size:0.75rem; color:#94a3b8;">({abandoned_candidates_count} abandoned; queue exhausted)</small>'
+    else:
+        pivots_display_html = (
+            f'{total_pivots} <small style="font-size:0.75rem; color:#94a3b8;">(k=2 bound)</small>'
+        )
 
     sp_stats = run_data.get("spider_stats") or {}
     sp_paths_cnt = len(sp_stats.get("discovered_paths", []))
@@ -232,12 +295,29 @@ def render_html_report(run_data: Any) -> str:
             )
         )
 
-        v_state = f.get("verification_state") or ("Verified" if f.get("verified") else "Candidate")
-        v_state_str = str(v_state).upper()
-        if "VERIF" in v_state_str:
+        v_state_raw = f.get("verification_state") or (
+            "Verified" if f.get("verified") else "Candidate"
+        )
+        # Normalize old title-case and new lowercase values
+        v_state_norm = str(v_state_raw).strip()
+        _v_map = {
+            "Verified": "VERIFIED",
+            "verified": "VERIFIED",
+            "Unconfirmed": "UNCONFIRMED",
+            "unconfirmed": "UNCONFIRMED",
+            "Candidate": "CANDIDATE",
+            "candidate": "CANDIDATE",
+        }
+        v_state_str = _v_map.get(v_state_norm, v_state_norm.upper())
+
+        if v_state_str == "VERIFIED" or "VERIF" in v_state_str:
             v_badge = '<span class="badge badge-emerald">VERIFIED</span>'
+        elif v_state_str == "UNCONFIRMED":
+            v_badge = '<span class="badge badge-amber">UNCONFIRMED</span>'
         elif "INVESTIGAT" in v_state_str or "ATTEMPT" in v_state_str:
             v_badge = '<span class="badge badge-amber">UNDER INVESTIGATION</span>'
+        elif v_state_str == "CANDIDATE":
+            v_badge = '<span class="badge badge-cyan">CANDIDATE</span>'
         elif "BLOCKED" in v_state_str:
             v_badge = '<span class="badge badge-rose">BLOCKED</span>'
         elif "FALSE" in v_state_str:
@@ -253,6 +333,12 @@ def render_html_report(run_data: Any) -> str:
             )
         )
         param_str = html.escape(str(f.get("parameter") or "N/A"))
+        synthetic_note = (
+            '&nbsp;⚠️ <small style="color:#f59e0b;">(synthetic)</small>'
+            if f.get("evidence_type") in ("synthetic_legacy", "legacy_synthetic")
+            else ""
+        )
+        short_hash = f"{hash_val[:12]}...{hash_val[-6:]}" if len(hash_val) > 18 else hash_val
 
         finding_rows.append(
             f"""<tr>
@@ -262,7 +348,7 @@ def render_html_report(run_data: Any) -> str:
                 <td>{cve_badge}</td>
                 <td><span class="badge-cwe">{cwe}</span></td>
                 <td>{owasp_cat}</td>
-                <td><code class="hash-code">{hash_val[:12]}...{hash_val[-6:] if len(hash_val) > 18 else ""}</code></td>
+                <td><code class="hash-code">{short_hash}</code>{synthetic_note}</td>
             </tr>"""
         )
 
@@ -284,19 +370,19 @@ def render_html_report(run_data: Any) -> str:
                 or f"Rated {sev} (CVSS {cvss}) based on unauthenticated network exploitability and observed impact."
             )
         )
-        rep_req = html.escape(
-            str(
-                f.get("poc_script_code")
-                or f.get("reproducible_request")
-                or f"GET {location} HTTP/1.1\nHost: {target_clean}"
-            )
+        # DEF-04: Remove synthetic request/response fabrication
+        raw_req = f.get("poc_script_code") or f.get("reproducible_request")
+        rep_req = (
+            html.escape(str(raw_req))
+            if raw_req and str(raw_req).strip()
+            else "No raw HTTP exchange captured."
         )
-        resp_ev = html.escape(
-            str(
-                f.get("evidence_snippet")
-                or f.get("evidence")
-                or "Response confirmed vulnerable behavior."
-            )
+
+        raw_ev = f.get("evidence_snippet") or f.get("evidence") or f.get("reproducible_response")
+        resp_ev = (
+            html.escape(str(raw_ev))
+            if raw_ev and str(raw_ev).strip()
+            else "No raw HTTP exchange captured."
         )
 
         mitigation_sections.append(
@@ -402,6 +488,7 @@ def render_html_report(run_data: Any) -> str:
         mitigations_html = "\n".join(mitigation_sections)
 
     # 2. GAP-1 Triage table rows
+    findings_total = len(findings)
     gap1_rows = []
     for c in candidates:
         rank = html.escape(str(c.get("priority_rank", "-")))
@@ -427,15 +514,26 @@ def render_html_report(run_data: Any) -> str:
             )
         )
 
-        state_badge = (
-            '<span class="badge badge-emerald">VALIDATED</span>'
-            if c_state == "VALIDATED"
-            else (
-                '<span class="badge badge-rose">ABANDONED (PIVOT)</span>'
-                if c_state == "ABANDONED"
-                else '<span class="badge badge-cyan">PENDING</span>'
+        if c_state == "VERIFIED_VULNERABILITY" or (c_state == "VALIDATED" and findings_total > 0):
+            state_badge = '<span class="badge badge-emerald">VALIDATED VULNERABILITY</span>'
+        elif c_state == "VALIDATED_OBSERVATION" or (c_state == "VALIDATED" and findings_total == 0):
+            state_badge = '<span class="badge badge-cyan">VALIDATED OBSERVATION</span>'
+        elif c_state in ("RULED_OUT", "RULED_OUT_WITH_EVIDENCE"):
+            state_badge = '<span class="badge badge-secondary">RULED OUT</span>'
+        elif c_state == "ABANDONED":
+            state_badge = '<span class="badge badge-rose">ABANDONED</span>'
+        elif c_state == "NOT_TESTED":
+            state_badge = (
+                '<span class="badge" style="background:#334155; color:#94a3b8;">NOT TESTED</span>'
             )
-        )
+        elif c_state == "BLOCKED":
+            state_badge = '<span class="badge badge-rose">BLOCKED</span>'
+        elif c_state == "INCONCLUSIVE":
+            state_badge = '<span class="badge badge-amber">INCONCLUSIVE</span>'
+        elif c_state in ("ATTEMPTING", "UNDER_INVESTIGATION", "PROBE_EXECUTED"):
+            state_badge = '<span class="badge badge-cyan">UNDER INVESTIGATION</span>'
+        else:
+            state_badge = '<span class="badge badge-cyan">PENDING</span>'
 
         gap1_rows.append(
             f"""<tr>
@@ -467,65 +565,158 @@ def render_html_report(run_data: Any) -> str:
                 "test_count": v["test_count"],
                 "capability": v["capability"],
                 "findings_count": 0,
-                "status": "PASSED",
+                "status": "NOT TESTED",
             }
             for k, v in SCAN_CATEGORIES.items()
         ]
+
+    # DEF-01: Derive honest category execution status and test coverage
+    tested_cat_count = 0
+    executed_tests_count = 0
     matrix_rows = []
     for m in scan_matrix:
         m_title = html.escape(str(m.get("title", "")))
-        m_tests = html.escape(str(m.get("test_count", 0)))
+        configured_tests = int(m.get("configured_checks") or m.get("test_count", 0))
+        executed_tests = int(m.get("executed_checks", m.get("test_count", 0)))
         m_cap = html.escape(str(m.get("capability", "Passive & Active Probes")))
         m_count = int(m.get("findings_count", 0))
-        m_status = (
-            '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>'
-            if m_count > 0
-            else '<span class="badge badge-emerald">PASSED (BASELINE SECURE)</span>'
+        m_status_raw = str(m.get("status", "")).upper().strip()
+
+        # Enforce truthful status: 0 executed checks can NEVER be marked PASSED
+        if executed_tests == 0 and m_count == 0:
+            m_status_raw = "NOT TESTED"
+
+        if m_count > 0 or m_status_raw in ("FAILED", "VULNERABILITIES_IDENTIFIED"):
+            m_status = '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>'
+            status_color = "#f59e0b"
+            tested_cat_count += 1
+            executed_tests_count += executed_tests
+        elif m_status_raw == "PASSED":
+            m_status = '<span class="badge badge-emerald">PASSED</span>'
+            status_color = "#10b981"
+            tested_cat_count += 1
+            executed_tests_count += executed_tests
+        elif m_status_raw == "PARTIALLY TESTED":
+            m_status = '<span class="badge badge-cyan">PARTIALLY TESTED</span>'
+            status_color = "#38bdf8"
+            tested_cat_count += 1
+            executed_tests_count += executed_tests
+        elif m_status_raw == "BLOCKED":
+            m_status = '<span class="badge badge-rose">BLOCKED</span>'
+            status_color = "#f43f5e"
+            tested_cat_count += 1
+            executed_tests_count += executed_tests
+        elif m_status_raw == "INCONCLUSIVE":
+            m_status = '<span class="badge badge-amber">INCONCLUSIVE</span>'
+            status_color = "#f59e0b"
+            tested_cat_count += 1
+            executed_tests_count += executed_tests
+        else:
+            m_status = '<span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span>'
+            status_color = "#94a3b8"
+
+        test_display = (
+            f"{executed_tests} executed <small style='color:#64748b;'>({configured_tests} configured)</small>"
+            if configured_tests != executed_tests
+            else f"{executed_tests} tests"
         )
+
         matrix_rows.append(
             f"""<tr>
                 <td><strong>{m_title}</strong></td>
-                <td>{m_tests} tests</td>
+                <td>{test_display}</td>
                 <td><span style="font-size:0.8rem; color:#94a3b8;">{m_cap}</span></td>
-                <td><strong style="color:{"#f59e0b" if m_count > 0 else "#10b981"};">{m_count} finding(s)</strong></td>
+                <td><strong style="color:{status_color};">{m_count} finding(s)</strong></td>
                 <td>{m_status}</td>
             </tr>"""
         )
     matrix_table = "\n".join(matrix_rows)
 
-    # 4. Open Ports Table
+    total_matrix_tests = sum(int(m.get("test_count", 0)) for m in scan_matrix)
+    untested_cat_count = len(scan_matrix) - tested_cat_count
+    if tested_cat_count == len(scan_matrix) and len(scan_matrix) > 0:
+        matrix_narrative = (
+            f"Comprehensive multi-layer audit coverage across all {len(scan_matrix)} core VAPT test categories "
+            f"({executed_tests_count} total tests evaluated) aligned with industry benchmarks:"
+        )
+    elif tested_cat_count > 0:
+        matrix_narrative = (
+            f"Audit coverage across {tested_cat_count} of {len(scan_matrix)} test categories "
+            f"({executed_tests_count} of {total_matrix_tests} test routines evaluated; {untested_cat_count} categories not tested):"
+        )
+    else:
+        matrix_narrative = "Scan category baseline matrix (no category tests were dispatched or completed in this assessment; all categories marked NOT TESTED):"
+
+    # 4. Open Ports & Environmental Observations Table
     open_ports = run_data.get("open_ports", [])
-    port_rows = []
-    for p in open_ports:
-        p_num = html.escape(str(p.get("port", "-")))
-        p_serv = html.escape(str(p.get("service", "TCP")))
-        p_proto = html.escape(str(p.get("protocol", "tcp")).upper())
-        p_state = html.escape(str(p.get("state", "OPEN")).upper())
-        p_sev = str(p.get("severity", "low")).upper()
-        p_sev_badge = (
-            '<span class="badge badge-high">HIGH</span>'
-            if p_sev == "HIGH"
-            else (
-                '<span class="badge badge-med">MEDIUM</span>'
-                if p_sev == "MEDIUM"
-                else '<span class="badge badge-low">LOW (INFO)</span>'
+    target_ports = [
+        p for p in open_ports if p.get("in_scope", True) and p.get("scope") != "environmental"
+    ]
+    env_ports = [
+        p for p in open_ports if not p.get("in_scope", True) or p.get("scope") == "environmental"
+    ]
+
+    def _render_port_rows(port_list: list[dict[str, Any]], is_env: bool = False) -> str:
+        rows = []
+        for p in port_list:
+            p_num = html.escape(str(p.get("port", "-")))
+            p_proto = html.escape(str(p.get("protocol", "tcp")).upper())
+            p_state = html.escape(str(p.get("state", "OPEN")).upper())
+            p_confirmed = bool(p.get("service_confirmed", False))
+
+            if is_env or not p_confirmed:
+                p_serv = "Unfingerprinted TCP Listener"
+                conv = p.get("conventional_service") or p.get("service", "")
+                conv_clean = conv.split(" (Conventional")[0]
+                serv_cell = f"{p_serv}<br><small style='color:#94a3b8;'>Conventional Guess: {html.escape(conv_clean)}</small>"
+                conf_badge = '<span class="badge badge-amber">UNCONFIRMED</span>'
+                p_sev_badge = '<span class="badge badge-low">INFO</span>'
+                p_risk = html.escape(
+                    str(
+                        p.get("risk")
+                        or f"TCP handshake succeeded on port {p_num}. Protocol unconfirmed; out of scope."
+                    )
+                )
+            else:
+                p_serv = html.escape(str(p.get("service", "HTTP Web Service")))
+                fp = p.get("service_fingerprint") or "HTTP/Web Service"
+                serv_cell = f"<strong>{p_serv}</strong><br><small style='color:#38bdf8;'>Fingerprint: {html.escape(str(fp))}</small>"
+                conf_badge = '<span class="badge badge-emerald">CONFIRMED</span>'
+                p_sev_badge = '<span class="badge badge-low">LOW (INFO)</span>'
+                p_risk = html.escape(
+                    str(p.get("risk") or "Target application web service endpoint.")
+                )
+
+            rows.append(
+                f"""<tr>
+                    <td><strong style="font-family:monospace; color:#38bdf8;">Port {p_num}/{p_proto}</strong></td>
+                    <td>{serv_cell}</td>
+                    <td>{conf_badge}</td>
+                    <td><span class="badge badge-emerald">{p_state}</span></td>
+                    <td>{p_sev_badge}</td>
+                    <td style="font-size:0.85rem; color:#cbd5e1;">{p_risk}</td>
+                </tr>"""
             )
-        )
-        p_risk = html.escape(str(p.get("risk", "Exposed network listener.")))
-        port_rows.append(
-            f"""<tr>
-                <td><strong style="font-family:monospace; color:#38bdf8;">Port {p_num}/{p_proto}</strong></td>
-                <td>{p_serv}</td>
-                <td><span class="badge badge-emerald">{p_state}</span></td>
-                <td>{p_sev_badge}</td>
-                <td style="font-size:0.85rem; color:#cbd5e1;">{p_risk}</td>
-            </tr>"""
-        )
-    ports_table = (
-        "\n".join(port_rows)
-        if port_rows
-        else "<tr><td colspan='5'>Standard web ports inspected. No anomalous non-standard ports exposed.</td></tr>"
+        return "\n".join(rows)
+
+    target_ports_header = """<tr style="background:rgba(15, 23, 42, 0.8);"><td colspan="6" style="padding:8px 12px; font-weight:700; color:#38bdf8; font-size:0.8rem; letter-spacing:0.05em; text-transform:uppercase;">
+        Target Application Exposed Ports
+    </td></tr>"""
+    target_ports_html = (
+        _render_port_rows(target_ports, is_env=False)
+        if target_ports
+        else "<tr><td colspan='6'>Standard web ports inspected.</td></tr>"
     )
+    env_ports_html = _render_port_rows(env_ports, is_env=True) if env_ports else ""
+
+    ports_table = target_ports_header + "\n" + target_ports_html
+    if env_ports_html:
+        ports_table += f"""
+        <tr style="background:rgba(30, 41, 59, 0.6);"><td colspan="6" style="padding:8px 12px; font-weight:700; color:#94a3b8; font-size:0.8rem; letter-spacing:0.05em; text-transform:uppercase;">
+            Out-of-Scope Environmental Host Network Listeners (Non-Target Handshakes — Informational Only)
+        </td></tr>
+        {env_ports_html}
+        """
 
     # 5. Software Components (SCA) Table
     components = run_data.get("components", [])
@@ -1010,7 +1201,15 @@ def render_html_report(run_data: Any) -> str:
         </div>
         <div class="meta-card">
             <div class="meta-label">GAP-2 Dynamic Pivots</div>
-            <div class="meta-value" style="color:#f59e0b;">{total_pivots} <small style="font-size:0.75rem; color:#94a3b8;">(k=2 bound)</small></div>
+            <div class="meta-value" style="color:#f59e0b;">{pivots_display_html}</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Execution Turns</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">{turns_consumed} / {configured_turn_limit} <small style="font-size:0.75rem; color:#94a3b8;">turns used</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Assessment Lifecycle</div>
+            <div class="meta-value" style="font-size:0.85rem; color:#f8fafc;">{run_lifecycle_status}</div>
         </div>
     </div>
 
@@ -1059,7 +1258,7 @@ def render_html_report(run_data: Any) -> str:
     <!-- Section 2: Scan Coverage & Vulnerability Category Matrix -->
     <h2 id="matrix">2. Scan Capabilities & Vulnerability Category Matrix</h2>
     <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
-        Comprehensive multi-layer audit coverage across 8 core VAPT test categories (88 total tests) aligned with industry benchmarks:
+        {matrix_narrative}
     </p>
     <table>
         <thead>
@@ -1163,3 +1362,7 @@ def render_html_report(run_data: Any) -> str:
 </body>
 </html>"""
     return html_doc
+
+
+build_executive_html_report = render_html_report
+build_html_report = render_html_report

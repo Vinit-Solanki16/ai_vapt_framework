@@ -56,7 +56,7 @@ body {
 .top-nav {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  padding: 0.75rem 2rem;
+  padding: 0.45rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -69,19 +69,19 @@ body {
 .brand-area {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
 .brand-badge {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   background: linear-gradient(135deg, #0284c7, #06b6d4);
-  padding: 0.35rem 0.65rem;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--radius-md);
-  box-shadow: 0 0 12px var(--accent-cyan-glow);
+  box-shadow: 0 0 10px var(--accent-cyan-glow);
 }
 
 .brand-title {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: -0.025em;
   color: #fff;
@@ -92,30 +92,32 @@ body {
 }
 
 .brand-sub {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
 }
 
 .nav-link {
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: all 0.2s ease;
   cursor: pointer;
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -132,13 +134,14 @@ body {
 .sys-indicator {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.8rem;
+  gap: 0.55rem;
+  font-size: 0.75rem;
   font-family: var(--font-mono);
   background: var(--bg-card);
-  padding: 0.35rem 0.85rem;
+  padding: 0.3rem 0.7rem;
   border-radius: 9999px;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .dot-pulse {
@@ -158,10 +161,10 @@ body {
 /* Main Container */
 .main-wrapper {
   flex: 1;
-  max-width: 1400px;
+  max-width: 1600px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 1.5rem;
 }
 
 /* Page Sections */
@@ -208,62 +211,62 @@ body {
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 1.5rem;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-color);
 }
 
 .card-title {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   color: var(--text-main);
 }
 
 .card-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
 /* Forms & Inputs */
 .form-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .form-help {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
 }
 
 .form-input, .form-select, .form-textarea {
   width: 100%;
-  padding: 0.65rem 0.85rem;
+  padding: 0.5rem 0.75rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   font-family: inherit;
 }
@@ -272,6 +275,29 @@ body {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-cyan-glow);
+}
+
+/* Select & Option Dropdown Accessibility (Fixes Windows Chrome white-on-white bug) */
+select, .form-select {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+select option, select optgroup, .form-select option, .form-select optgroup {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+select option:hover, select option:focus, select option:checked,
+.form-select option:hover, .form-select option:focus, .form-select option:checked {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+}
+
+select option:disabled, .form-select option:disabled {
+  color: #64748b !important;
+  background-color: #0f172a !important;
 }
 
 .input-with-button {
@@ -459,69 +485,105 @@ body {
 .metric-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
 }
 
 .metric-icon {
-  font-size: 2rem;
+  font-size: 1.25rem;
   background: var(--bg-secondary);
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 2.35rem;
+  height: 2.35rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .metric-data {
   flex: 1;
+  min-width: 0;
 }
 
 .metric-value {
-  font-size: 1.75rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--text-main);
-  line-height: 1;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metric-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  margin-top: 0.35rem;
+  margin-top: 0.15rem;
   font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact Facts Cards inside Active Assessment */
+.facts-card {
+  padding: 0.5rem 0.75rem !important;
+  gap: 0.5rem !important;
+  background: var(--bg-secondary) !important;
+}
+
+.facts-card .metric-icon {
+  width: 2rem !important;
+  height: 2rem !important;
+  font-size: 1rem !important;
+}
+
+.facts-card .metric-value {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+
+.facts-card .metric-label {
+  font-size: 0.65rem !important;
+}
+
+.findings-breakdown-card {
+  padding: 0.5rem 0.75rem !important;
+  background: var(--bg-secondary) !important;
 }
 
 /* Assessment Status Hero Bar */
 .status-hero {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem 2rem;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2rem;
-  box-shadow: var(--shadow-lg);
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .status-target {
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .status-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 /* Checkbox Style */
@@ -779,4 +841,111 @@ body {
     border-bottom: 0.5pt solid #e2e8f0 !important;
     padding: 2pt 0 !important;
   }
+}
+
+/* ==========================================================================
+   AI-VAPT Modern Modal & Provider-Specific Panel Styles
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.modal-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.provider-panel {
+  animation: panelSlideIn 0.2s ease-out;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.model-pricing-pill {
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+
+.model-pricing-pill.free {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.model-pricing-pill.paid {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.model-pricing-pill.local {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.model-pricing-pill.custom {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.model-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.model-catalog-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.model-catalog-card:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
 }

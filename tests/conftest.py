@@ -84,6 +84,12 @@ def _isolate_litellm_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _reset_config_loader_after_test() -> Iterator[None]:
     try:
+        from strix.core.runtime_credentials import clear_runtime_credentials
+
+        clear_runtime_credentials()
+    except Exception:
+        pass
+    try:
         yield
     finally:
         try:
@@ -91,5 +97,11 @@ def _reset_config_loader_after_test() -> Iterator[None]:
 
             loader._override = None
             loader._cached = None
+        except Exception:
+            pass
+        try:
+            from strix.core.runtime_credentials import clear_runtime_credentials
+
+            clear_runtime_credentials()
         except Exception:
             pass

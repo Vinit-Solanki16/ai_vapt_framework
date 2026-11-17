@@ -11,125 +11,292 @@ Autonomous AI security agents that discover, investigate, and validate applicati
 [![CI](https://github.com/Vinit-Solanki16/ai_vapt_framework/actions/workflows/ci.yml/badge.svg)](https://github.com/Vinit-Solanki16/ai_vapt_framework/actions/workflows/ci.yml)
 [![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/Python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://github.com/Vinit-Solanki16/ai_vapt_framework)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
-[![Architecture: GAP-1 / GAP-2](https://img.shields.io/badge/Architecture-GAP--1%20%2F%20GAP--2-purple.svg)](docs/strix_ai_vapt_integration/PHASE_5_AUDIT_REPORTING_AND_SAFEGUARDS.md)
+[![Release: v1.7.0 RC1](https://img.shields.io/badge/Release-v1.7.0%20RC1-orange.svg)](CHANGELOG.md)
 
 </div>
 
 ---
 
-## ⚡ Overview
+## 1. Project Overview
 
-**AI-VAPT** is an advanced autonomous security assessment framework designed to perform automated, end-to-end vulnerability assessment and penetration testing across web applications, APIs, and network endpoints. Unlike traditional static scanners that produce high false-positive rates, AI-VAPT combines multi-agent LLM reasoning with an integrated security toolkit to actively verify vulnerabilities and produce cryptographic proof-of-concept evidence.
+**AI-VAPT** is an advanced autonomous security assessment framework designed to perform automated, end-to-end vulnerability assessment and penetration testing across web applications, APIs, and network endpoints.
 
-### Core Architecture
+Unlike traditional static vulnerability scanners that produce excessive noise and unverified alert lists, AI-VAPT combines multi-agent LLM reasoning with an integrated security runtime. Autonomous agents operate in a containerized Docker sandbox to probe candidate attack surfaces, execute active verification payloads, and produce tamper-evident cryptographic SHA-256 evidence digests for all confirmed findings and posture observations.
 
-* **Multi-Agent Autonomous Execution Engine:** Orchestrates specialized agents for reconnaissance, attack surface profiling, parameter fuzzing, and exploit verification across up to 500 autonomous turns.
-* **GAP-1 Exploit Triage:** Real-time vulnerability candidate discovery and quality triage that prevents unverified reconnaissance findings from being promoted to confirmed vulnerabilities.
-* **GAP-2 Dynamic Pivoting:** Bounded failure tracking ($k \le 3$) that automatically detects blocked or unproductive attack vectors and pivots execution toward promising alternative paths.
+---
+
+## 2. Main Capabilities
+
+* **Multi-Agent Autonomous Execution Engine:** Orchestrates specialized agents (Root Agent, Recon Specialist, Injection Specialist, Hardening Auditor) across up to 500 autonomous turns with persistent telemetry.
+* **GAP-1 Exploit Triage:** Dynamic vulnerability candidate prioritization and quality triage that prevents unverified reconnaissance observations from being promoted to confirmed vulnerabilities.
+* **GAP-2 Adaptive Pivoting:** Bounded failure tracking ($k \le 2$ default, configurable) that detects unproductive, blocked, or timed-out attack vectors and pivots execution toward promising alternative paths.
 * **Headless Attack Surface Profiling:** Built-in web crawler, active parameter fuzzer, and software composition analysis (SCA) to discover hidden endpoints, form vectors, and vulnerable third-party components.
-* **Fail-Closed Scope Guard:** Enforces strict boundary validation preventing unintended assessment against cloud metadata endpoints (`169.254.169.254`), non-routable CIDRs, or unauthorized hosts.
-* **Audit-Ready Multi-Format Reporting:** Generates comprehensive executive HTML reports with SHA-256 evidence hashes, PDF summaries, SARIF v2.1.0 records, and structured JSON outputs.
+* **Fail-Closed Scope Guard:** Enforces strict boundary validation preventing unintended assessment against cloud metadata endpoints (`169.254.169.254`), non-routable CIDRs, loopback escape vectors, or unauthorized hosts.
+* **Audit-Ready Multi-Format Reporting:** Generates comprehensive executive HTML reports with SHA-256 evidence hashes, PDF summaries, SARIF v2.1.0 records, structured CSV matrices, and raw JSON telemetry.
 
 ---
 
-## 🚀 Quick Start (One-Command Experience)
+## 3. Architecture Overview
 
-AI-VAPT is designed for complete portability. Get the entire system running with one command:
-
-### 1. First-Time Setup
-```bash
-./setup.sh
 ```
-This automated setup script:
-- Detects OS (Linux, macOS, WSL2, GitHub Codespaces) and resources.
-- Verifies Python 3.12+ and sets up the `.venv` virtual environment.
-- Installs all dependencies with `uv` or `pip`.
-- Generates `.env` from `.env.example` safely without overwriting user configs.
-- Verifies local and remote Docker daemon connectivity and checks the sandbox image (`ghcr.io/usestrix/strix-sandbox:1.3.0`).
-- Validates configured AI providers without exposing credentials.
-- Runs application preflight readiness checks.
-
-### 2. Everyday Startup
-```bash
-./start.sh
+                               ┌─────────────────────────────────────────────────────────────┐
+                               │                 Web Operations Console / CLI                │
+                               │                (FastAPI Gateway + SPA Assets)               │
+                               └──────────────────────────────┬──────────────────────────────┘
+                                                              │ REST / WebSocket
+                               ┌──────────────────────────────▼──────────────────────────────┐
+                               │                    Strix Execution Engine                   │
+                               │  ┌───────────────────────┐       ┌────────────────────────┐ │
+                               │  │ GAP-1 Dynamic Triage  │◄─────►│ GAP-2 Adaptive Pivots  │ │
+                               │  └───────────┬───────────┘       └────────────────────────┘ │
+                               │              │ Dispatched Candidates                        │
+                               │  ┌───────────▼───────────┐       ┌────────────────────────┐ │
+                               │  │   Multi-Agent Graph   │◄─────►│ Multi-Provider Router  │ │
+                               │  │ (Root & Specialists)  │       │(Cloud / OpenRouter/Oll)│ │
+                               │  └───────────┬───────────┘       └────────────────────────┘ │
+                               └──────────────┼──────────────────────────────────────────────┘
+                                              │ Sandbox Execution
+                               ┌──────────────▼──────────────────────────────────────────────┐
+                               │             Docker Sandbox Container Runtime                │
+                               │   (curl, headless browser, fuzzers, port scanners, proxy)   │
+                               └──────────────────────────────┬──────────────────────────────┘
+                                                              │ Empirical Probes
+                               ┌──────────────────────────────▼──────────────────────────────┐
+                               │                Target Application / Lab Target              │
+                               │                    (e.g. OWASP Juice Shop)                  │
+                               └─────────────────────────────────────────────────────────────┘
 ```
-Starts the AI-VAPT Web Operations Console in the background (default port 8000).  
-To run in interactive foreground mode: `./start.sh --foreground`  
-To specify a custom port: `./start.sh --port 8080`
-
-Open your browser to: **`http://localhost:8000`**
-
-### 3. Clean Shutdown
-```bash
-./stop.sh
-```
-Gracefully terminates application services, frees network ports, and clears locks while **strictly preserving** all scan artifacts, logs, findings, configurations, and Docker images.
 
 ---
 
-## 📖 Complete Documentation & Guides
+## 4. Requirements
 
-| Document | Purpose |
-|---|---|
-| [**`AI_VAPT_SETUP_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_SETUP_GUIDE.md) | Step-by-step setup walkthrough for Linux, Codespaces, WSL2, and macOS |
-| [**`AI_VAPT_DEVELOPMENT_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DEVELOPMENT_GUIDE.md) | Developer guide, codebase architecture, testing, and contribution standards |
-| [**`AI_VAPT_DOCKER_RUNTIME_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DOCKER_RUNTIME_GUIDE.md) | Local and remote TLS Docker runtime architecture and sandbox container lifecycle |
-| [**`AI_VAPT_REMOTE_DOCKER_VM_SETUP.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_REMOTE_DOCKER_VM_SETUP.md) | Hardened remote Ubuntu Docker VM provisioning guide for Codespaces |
-| [**`AI_VAPT_DEPLOYMENT_GUIDE.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_DEPLOYMENT_GUIDE.md) | Production server sizing, systemd service setup, and Nginx reverse proxy |
-| [**`AI_VAPT_OPENROUTER_MODEL_BENCHMARK.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_OPENROUTER_MODEL_BENCHMARK.md) | Live empirical benchmark results across OpenRouter free models |
-| [**`AI_VAPT_FINAL_MODEL_SELECTION.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_FINAL_MODEL_SELECTION.md) | Final primary and backup model selection with live tool-calling proof |
-| [**`AI_VAPT_GAP1_GAP2_INTEGRATION_AUDIT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_GAP1_GAP2_INTEGRATION_AUDIT.md) | Verification audit of GAP-1 triage, GAP-2 dynamic pivots, and accounting math |
-| [**`AI_VAPT_MASTER_IMPLEMENTATION_REPORT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_MASTER_IMPLEMENTATION_REPORT.md) | Master audit report and implementation ledger |
-| [**`AI_VAPT_FINAL_COMPLETION_REPORT.md`**](file:///workspaces/ai_vapt_framework/AI_VAPT_FINAL_COMPLETION_REPORT.md) | Consolidated phase completion verdict and manual verification roadmap |
-
----
-
----
-
-## 🤖 Supported AI Providers
-
-AI-VAPT features a flexible provider architecture supporting both cloud and local inference:
-
-| Provider | Supported Models | Configuration |
+| Resource | Minimum Requirement | Recommended Specification |
 |---|---|---|
-| **Cloud Hosted (OpenAI-compatible)** | Qwen 2.5/3 Coder, DeepSeek V3, Llama 3.3 | Configure via Web Settings: custom `api_base`, `model`, optional `api_key` |
-| **OpenRouter (Multi-Model Hub)** | NVIDIA Nemotron 3.5 Super VL (Primary Free — 1M Context), NVIDIA Nemotron 3.5 Lightning (Backup Free — 1M Context), Claude 3.5/3.7, GPT-4o, DeepSeek V3 | Set `OPENROUTER_API_KEY` in `.env` or configure in Web Settings |
-| **Google Gemini** | Gemini 2.0 Flash, Gemini 1.5 Pro | Set `GEMINI_API_KEY` or configure in Web Settings |
-| **Local Ollama** | Qwen 2.5 Coder, Llama 3.1 | Connects to local Ollama instance at `http://127.0.0.1:11434` |
+| **Operating System** | Linux (Ubuntu 22.04+ / Debian 12+), macOS 13+, Windows 11 with WSL2 | Ubuntu 24.04 LTS or Debian 12 |
+| **Python** | Python 3.12.0+ | Python 3.12.11+ |
+| **Package Manager** | `uv` (recommended) or `pip` / `venv` | `uv` 0.5.0+ |
+| **Container Engine** | Docker Engine 24.0+ (local daemon or remote TLS socket) | Docker 27.0+ with Compose v2 |
+| **Sandbox Image** | `ghcr.io/usestrix/strix-sandbox:1.3.0` | Pre-pulled locally via launcher |
+| **Hardware** | 2 CPU Cores, 4 GB RAM, 10 GB Disk | 4+ CPU Cores, 8 GB RAM, 25 GB Disk |
+| **Network Egress** | Outbound access to chosen LLM provider or local LLM server | Broadband connection |
 
 ---
 
-## 📊 Features & Security Tooling
+## 5. Installation Instructions
 
-* **HTTP Interception & Replay:** Deep request/response analysis with custom header and payload manipulation.
-* **Authentication & Session Analysis:** Automated JWT signature inspection, role decoding, and IDOR parameter validation.
-* **Injection Testing:** Active fuzzer probes for Reflected/Stored XSS, SQL injection error patterns, Local File Inclusion (LFI), and SSTI.
-* **SCA Component Profiler:** Identifies outdated libraries (Bootstrap, jQuery, Angular, Express) against known CVE databases.
-* **Cryptographic Evidence Verification:** Every confirmed finding records an immutable SHA-256 evidence hash of the exploit payload and server response.
-
----
-
-## 📁 Repository Structure
-
-```
-├── strix/                     # AI-VAPT Core Package
-│   ├── core/                  # Decision engine, GAP bridge, crawler, fuzzer, safety validator
-│   ├── interface/             # Web Operations Console, REST API, CLI, and Viewer
-│   │   ├── web/               # SPA Frontend assets (index.html, app.js, css)
-│   │   ├── viewer/            # Assessment report viewer and PDF builder
-│   │   ├── api.py             # FastAPI gateway implementation
-│   │   └── main.py            # CLI entrypoint and command dispatcher
-│   ├── llm/                   # Multi-model router, Cloud Hosted provider, Ollama service
-│   ├── report/                # HTML audit builder, SARIF exporter, and pricing ledger
-│   └── tools/                 # Assessment tooling (recon, proxy, fuzzer, reporting)
-├── tests/                     # 2,672 test cases across 132 test modules
-├── benchmark_results/         # Benchmark data and comparative performance reports
-└── pyproject.toml             # Project dependencies, tool configuration, and entrypoints
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Vinit-Solanki16/ai_vapt_framework.git
+cd ai_vapt_framework
 ```
 
+### Step 2: Automated Environment Setup
+Run the unified setup launcher:
+```bash
+./ai-vapt.sh setup    # or ./setup.sh
+```
+This automated script:
+1. Detects OS architecture, system CPU/RAM, and software prerequisites.
+2. Creates and isolates the virtual environment (`.venv/`).
+3. Installs runtime dependencies with `uv` (or falls back to `pip`).
+4. Generates `.env` from `.env.example` safely without overwriting existing settings.
+5. Verifies Docker daemon connectivity and pulls the Strix sandbox image (`ghcr.io/usestrix/strix-sandbox:1.3.0`).
+6. Executes environment preflight validation.
+
 ---
 
-## 🔒 Responsible Use & Authorization
+## 6. Quickstart
+
+Get AI-VAPT running in four simple commands:
+
+```bash
+# 1. Setup environment
+./ai-vapt.sh setup
+
+# 2. Launch the local lab target (OWASP Juice Shop)
+./juice-shop.sh start
+
+# 3. Start the AI-VAPT Operations Console
+./ai-vapt.sh start
+
+# 4. Open the Web Console in your browser:
+#    http://127.0.0.1:8000
+```
+
+To stop services when finished:
+```bash
+./ai-vapt.sh stop
+./juice-shop.sh stop
+```
+
+---
+
+## 7. Provider Configuration
+
+AI-VAPT supports a multi-provider LLM routing architecture:
+
+| Provider Category | Supported Models | Configuration Mechanism |
+|---|---|---|
+| **Cloud Hosted (Custom)** | Qwen3-Coder (30B), DeepSeek-V3, Llama 3.3 | Web Settings UI (`/#/settings`) or `LLM_API_BASE` in `.env` |
+| **OpenRouter** | Llama 3.3 70B, DeepSeek R1, Nemotron 3.5 | Set `OPENROUTER_API_KEY` in Web Settings UI or `.env` |
+| **Google Gemini** | Gemini 2.0 Flash, Gemini 1.5 Pro | Set `GEMINI_API_KEY` in Web Settings UI or `.env` |
+| **Anthropic Claude** | Claude 3.5 Sonnet, Claude 3.7 Sonnet | Set `ANTHROPIC_API_KEY` in Web Settings UI or `.env` |
+| **OpenAI** | GPT-4o, GPT-4o-mini | Set `OPENAI_API_KEY` in Web Settings UI or `.env` |
+| **Local Ollama** | Qwen 2.5 Coder, Llama 3.1 | Connects to `http://localhost:11434` (zero external network egress) |
+
+> [!TIP]
+> **In-Memory Security:** Keys entered in the Web Console are stored in process memory only (`runtime_credentials.py`) and are never written to disk or logged.
+
+---
+
+## 8. Cloud Hosted Profile Configuration (No Hardcoded URLs)
+
+When using remote self-hosted models (e.g. Qwen3-Coder hosted on Kaggle or remote GPU clusters via ephemeral Cloudflare Quick Tunnels):
+
+1. **Strict Dynamic Configuration:** AI-VAPT strictly prohibits hardcoding ephemeral tunnel URLs (such as `[temporary Cloudflare tunnel endpoint]`) in source code or configuration files.
+2. **Web Console Profile Registration:**
+   - Open **AI Models** (`http://localhost:8000/#/settings`).
+   - Under **Cloud Hosted (Custom OpenAI-Compatible)**, click **Add Profile**.
+   - Enter your active session endpoint:
+     - **Base URL:** `[temporary Cloudflare tunnel endpoint]/v1`
+     - **Model Name:** `kaggle-model` (or `kaggle-model-deep`)
+     - **Context Window:** `131,072`
+   - Click **Validate Credentials** -> Click **Save Profile** -> Set as **Active**.
+3. **Session Rotation:** When your temporary tunnel rotates, simply update the Base URL in the Settings UI without restarting the server or modifying configuration files.
+
+---
+
+## 9. Docker and Juice Shop Setup
+
+AI-VAPT includes an automated management script for the OWASP Juice Shop lab target container:
+
+```bash
+./juice-shop.sh start     # Starts Juice Shop with dual-binding (127.0.0.1:3000 & 172.17.0.1:3000)
+./juice-shop.sh status    # Displays container health, uptime, and host/sandbox URLs
+./juice-shop.sh restart   # Restarts container cleanly
+./juice-shop.sh logs -f   # Tails Juice Shop access and error logs
+./juice-shop.sh stop      # Stops and removes container safely
+```
+
+*Sandbox Bridge Routing:* The launcher binds port 3000 to both `127.0.0.1` (host access) and `172.17.0.1` (Docker bridge). When scanning `http://127.0.0.1:3000/`, AI-VAPT automatically rewrites the loopback target to `http://host.docker.internal:3000/` inside the sandbox so the containerized agents can reach the target.
+
+---
+
+## 10. Application Startup and Shutdown
+
+Manage the AI-VAPT backend service using `./ai-vapt.sh`:
+
+```bash
+# Start backend in daemon mode (default port: 8000)
+./ai-vapt.sh start
+
+# Start on custom port or host
+./ai-vapt.sh start --port 8080 --host 0.0.0.0
+
+# Start in interactive foreground mode
+./ai-vapt.sh start --foreground
+
+# Check process status and resource usage
+./ai-vapt.sh status
+
+# Inspect application server logs
+./ai-vapt.sh logs -f
+
+# Gracefully terminate AI-VAPT services
+./ai-vapt.sh stop
+```
+
+*Data Preservation Guarantee:* Stopping the application preserves all historical run artifacts in `strix_runs/`, evidence hashes, database records, and configuration files.
+
+---
+
+## 11. Assessment Workflow
+
+```
+[Target Input] ──► [Crawler & SCA Profiling] ──► [GAP-1 Candidate Triage]
+                                                          │
+   ┌──────────────────────────────────────────────────────┘
+   ▼
+[Agent Probe Execution (Docker Sandbox)]
+   │
+   ├─► [Observation Validated] ──────────► [State: VALIDATED_OBSERVATION]
+   ├─► [Exploit Confirmed with Proof] ───► [State: VERIFIED_VULNERABILITY]
+   ├─► [Ruled Out / Negative Space] ─────► [State: RULED_OUT / ABANDONED]
+   └─► [Timeout / Blocked] ──────────────► [GAP-2 Adaptive Pivot (k <= 2)]
+                                                          │
+                                                          ▼
+                                            [Multi-Format Reports Emitted]
+```
+
+1. **Launch:** Enter Target URL, select scan mode (`quick` or `deep`), and pick your AI model.
+2. **Reconnaissance:** The crawler discovers routes, parameters, and technologies.
+3. **Candidate Triage:** GAP-1 generates candidates scored by priority, usability, and exploit viability.
+4. **Investigation:** Agents execute probes in the Docker sandbox.
+5. **Contract Verification:**
+   - Exploited findings require reproducible proofs to be marked `VERIFIED_VULNERABILITY`.
+   - Defensive posture gaps without active exploits are marked `VALIDATED_OBSERVATION`.
+   - Non-vulnerable endpoints are added to the negative space ledger.
+6. **Completion:** When candidates are exhausted, reports are compiled and reconciled.
+
+---
+
+## 12. Report Formats
+
+Every assessment automatically generates audit-grade deliverables in `strix_runs/<run-id>/`:
+
+* **Executive HTML Report:** Interactive report with findings table, scan matrix, and SHA-256 evidence digests (`vapt_report_<run-id>.html`).
+* **Summary PDF Report:** Presentation-ready printable executive summary (`vapt_report_<run-id>.pdf`).
+* **SARIF Export:** OASIS SARIF v2.1.0 standard record for CI/CD and GitHub Security integration (`findings.sarif`).
+* **CSV Export:** Tabular finding records with OWASP categories and CVSS scores (`vulnerabilities.csv`).
+* **Structured JSON Data:** Full machine-readable execution telemetry, probe results, and candidate accounting (`run.json`, `vulnerabilities.json`, `coverage.json`).
+* **Technical Markdown:** Detailed penetration test report (`penetration_test_report.md`).
+
+---
+
+## 13. Testing Instructions
+
+Run the automated test and code quality suites:
+
+```bash
+# 1. Run full repository test suite (2,920+ passing tests)
+.venv/bin/python -m pytest tests/
+
+# 2. Run reporting and export subsystem tests (177 tests)
+.venv/bin/python -m pytest tests/test_report*.py
+
+# 3. Run targeted assessment integrity regression tests
+.venv/bin/python -m pytest tests/test_assessment_integrity_run_14ee778a_remediation.py \
+                           tests/test_phase_b_defect_remediation.py \
+                           tests/test_phase5_live_execution_fixes.py
+
+# 4. Code formatting & linting (Ruff)
+.venv/bin/ruff check .
+
+# 5. Static type checking (Mypy)
+.venv/bin/mypy strix/
+
+# 6. Static security analysis (Bandit)
+.venv/bin/bandit -r strix/ -ll -ii
+```
+
+---
+
+## 14. Documented Operational Boundaries, Limitations & Responsible Use (RC1)
+
+To ensure academic and operational transparency, the following qualifications are documented for the RC1 release:
+
+1. **Candidate Verification Standards:** AI-VAPT strictly distinguishes genuine vulnerabilities from security observations. Hardening defects (e.g. missing security headers or wildcard CORS on unauthenticated static endpoints) are categorized as `VALIDATED_OBSERVATIONS` and are not claimed as weaponized exploits.
+2. **GAP-2 Adaptive Pivots:** Bounded alternative-path pivoting ($k \le 2$) triggers upon execution obstacles (timeouts, blocks). When endpoints respond deterministically without error, the engine completes candidate investigations without unnecessary pivoting.
+3. **Model Server Availability:** External cloud-hosted inference requires that the remote inference endpoint remains accessible during the run.
+4. **Heuristic Coverage Boundaries:** While AI-VAPT evaluates attack surfaces against OWASP Top 10 vulnerability categories, autonomous scanning operates under finite turn limits and candidate triage. An assessment tests only the specific endpoints and candidate vectors investigated during that run; it does not constitute exhaustive verification of all possible vulnerability classes across the entire target.
 
 > [!WARNING]
-> **Authorized Testing Only:** AI-VAPT actively probes targets with dynamic penetration testing techniques. Only assess targets that you own or have **explicit, written authorization** to test. Unauthorized security testing is strictly illegal in most jurisdictions. Users are solely responsible for verifying scope and legal compliance.
+> **Authorized Testing Only:** AI-VAPT executes active security probes. Only scan targets that you own or have **explicit, written authorization** to test. Unauthorized security testing is illegal.
+
+---
+
+## 15. License & Contributing
+
+* **License:** AI-VAPT is licensed under the [Apache License, Version 2.0](LICENSE).
+* **Contributing:** Pull requests, bug reports, and security disclosures are welcome. Please ensure all modifications pass `pytest`, `ruff`, `mypy`, and `bandit` before submitting.

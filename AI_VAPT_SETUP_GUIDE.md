@@ -11,27 +11,30 @@ Get AI-VAPT up and running in under three minutes:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/ai_vapt_framework.git
+git clone https://github.com/Vinit-Solanki16/ai_vapt_framework.git
 cd ai_vapt_framework
 
 # 2. Run first-time setup (validates Python, sets up virtualenv, checks Docker, creates .env)
-./setup.sh
+./ai-vapt.sh setup   # or ./setup.sh
 
-# 3. Configure credentials in .env (if testing with LLM API keys)
-# Open .env with your editor of choice:
-#   OPENROUTER_API_KEY=sk-or-v1-...
-#   OPENAI_API_KEY=sk-...
+# 3. Start the vulnerable lab target (OWASP Juice Shop)
+./juice-shop.sh start
 
 # 4. Start AI-VAPT Operations Console
-./start.sh
+./ai-vapt.sh start   # or ./start.sh
 
-# 5. Open your browser:
+# 5. Check service and container status
+./ai-vapt.sh status
+
+# 6. Open your browser:
 #   http://localhost:8000
 ```
 
-To stop the application at any time:
+To view logs or stop services:
 ```bash
-./stop.sh
+./ai-vapt.sh logs -f   # Tail application logs
+./ai-vapt.sh stop      # Gracefully stop AI-VAPT backend
+./juice-shop.sh stop   # Gracefully stop Juice Shop container
 ```
 
 ---
@@ -106,7 +109,7 @@ GitHub Codespaces containers run with restricted capabilities that prevent runni
 
 - **For Lightweight In-Process Scanning**: Runs immediately with `./setup.sh` and `./start.sh`.
 - **For Autonomous Containerized Multi-Agent Pentesting**: Connect to an external Docker host over TLS.
-  1. Follow [`AI_VAPT_REMOTE_DOCKER_VM_SETUP.md`](file:///workspaces/ai_vapt_framework/AI_VAPT_REMOTE_DOCKER_VM_SETUP.md) to provision a secure Ubuntu Docker VM.
+  1. Follow [`AI_VAPT_REMOTE_DOCKER_VM_SETUP.md`](./AI_VAPT_REMOTE_DOCKER_VM_SETUP.md) to provision a secure Ubuntu Docker VM.
   2. Set `DOCKER_HOST`, `DOCKER_TLS_VERIFY`, and `DOCKER_CERT_PATH` in `.env`.
   3. Re-run `./setup.sh` to confirm connectivity.
 
@@ -139,26 +142,37 @@ GitHub Codespaces containers run with restricted capabilities that prevent runni
 
 ## 5. Startup and Shutdown Commands
 
-### Starting AI-VAPT
+### Starting AI-VAPT & Lab Target
 ```bash
-# Default: Starts in background daemon mode on port 8000
-./start.sh
+# Start vulnerable lab container (OWASP Juice Shop)
+./juice-shop.sh start
 
-# Start in interactive foreground mode (displays real-time server output)
-./start.sh --foreground
+# Start AI-VAPT Web Operations Console (default: background daemon on port 8000)
+./ai-vapt.sh start       # (or ./start.sh)
+
+# Start in interactive foreground mode
+./ai-vapt.sh start --foreground
 
 # Start on a custom port
-./start.sh --port 8080
+./ai-vapt.sh start --port 8080
 
-# Start on a custom host interface
-./start.sh --host 127.0.0.1 --port 9000
+# Check real-time service and container status
+./ai-vapt.sh status
+./juice-shop.sh status
+
+# View backend server logs
+./ai-vapt.sh logs -f
 ```
 
-### Stopping AI-VAPT
+### Stopping AI-VAPT & Lab Target
 ```bash
-./stop.sh
+# Gracefully stop backend server (preserves all data in strix_runs/)
+./ai-vapt.sh stop        # (or ./stop.sh)
+
+# Gracefully stop vulnerable lab container
+./juice-shop.sh stop
 ```
-`./stop.sh` cleanly stops background processes, frees ports, removes PID locks, and preserves all assessment records and artifacts in `strix_runs/`.
+`./ai-vapt.sh stop` and `./juice-shop.sh stop` cleanly stop processes, free listening ports, remove PID locks, and preserve all assessment records, findings, configurations, and Docker images.
 
 ---
 

@@ -2,15 +2,44 @@
 
 from __future__ import annotations
 
+import re
+import urllib.parse
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+_HOSTNAME_REGEX = re.compile(
+    r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+)
+
+
+def _normalize_host_entry(raw: str) -> str:
+    h = str(raw).strip().lower()
+    if not h:
+        raise ValueError("Authorized host entry cannot be empty.")
+    if "*" in h:
+        raise ValueError(f"Wildcards are not permitted in authorized hosts: '{raw}'")
+    if "://" in h:
+        parsed = urllib.parse.urlsplit(h)
+        h = parsed.hostname or ""
+    elif "/" in h:
+        h = h.split("/")[0]
+    if ":" in h:
+        if not h.startswith("["):
+            h = h.split(":")[0]
+    h = h.strip()
+    if not h:
+        raise ValueError(f"Invalid host format in '{raw}'")
+    if not _HOSTNAME_REGEX.match(h):
+        raise ValueError(f"Invalid hostname or domain format: '{raw}'")
+    return h
 
 
 class RunRequest(BaseModel):
@@ -36,14 +65,21 @@ class RunRequest(BaseModel):
     target_scope_acknowledged: bool = Field(
         False, description="Explicit operator acknowledgement of target authorization"
     )
-    assessor: Literal["deterministic", "llm"] = Field("llm", description="Assessor type")
+    assessor: Literal["deterministic", "llm"] = Field(default="llm", description="Assessor type")
     assessor_provider: Literal[
-        "ollama", "google", "openrouter", "openai", "cloud_hosted", "custom"
-    ] = Field("ollama", description="AI provider")
-    assessor_model: str | None = Field("qwen2.5:1.5b", description="Model identifier")
+        "ollama", "google", "openrouter", "openai", "anthropic", "cloud_hosted", "custom"
+    ] = Field(default="openrouter", description="AI provider")
+    provider: str | None = Field(default=None, description="Provider identifier alias")
+    assessor_model: str | None = Field(default=None, description="Model identifier")
+    model: str | None = Field(default=None, description="Model identifier alias")
     assessor_api_key: str | None = Field(
-        None, description="Runtime API key (in-memory only, never persisted)"
+        default=None, description="Runtime API key (in-memory only, never persisted)"
     )
+    api_key: str | None = Field(default=None, description="Runtime API key alias")
+    assessor_api_base: str | None = Field(
+        default=None, description="Optional base URL for local or custom endpoints"
+    )
+    api_base: str | None = Field(default=None, description="Optional base URL alias")
     scan_file: str | None = Field(None, description="Optional scan file override")
     assessment_type: Literal["scenario", "web", "strix_autonomous"] = Field(
         "scenario", description="Assessment type"
@@ -62,6 +98,31 @@ class RunRequest(BaseModel):
     auth_config: dict[str, Any] | None = Field(
         None, description="Optional target authentication configuration"
     )
+    additional_authorized_hosts: list[str] = Field(
+        default_factory=list,
+        description="Explicitly authorized additional hostnames or subdomains in scope",
+    )
+
+    @field_validator("additional_authorized_hosts", mode="before")
+    @classmethod
+    def validate_additional_authorized_hosts(cls, v: Any) -> list[str]:
+        if not v:
+            return []
+        items: list[str] = []
+        if isinstance(v, str):
+            parts = [p.strip() for p in re.split(r"[\n,]+", v) if p.strip()]
+            items = parts
+        elif isinstance(v, (list, tuple, set)):
+            items = [str(x).strip() for x in v if str(x).strip()]
+        else:
+            return []
+
+        normalized: list[str] = []
+        for item in items:
+            norm = _normalize_host_entry(item)
+            if norm not in normalized:
+                normalized.append(norm)
+        return normalized
 
     @field_validator("max_turns", mode="before")
     @classmethod
@@ -91,13 +152,35 @@ class RunResponse(BaseModel):
 class PivotEventSchema(BaseModel):
     """GAP-2 decision pivot event."""
 
+    model_config = ConfigDict(extra="allow")
+
     timestamp: str = Field(default_factory=_utc_now)
-    type: str  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE
+    type: str = "GAP2_PIVOT"  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE, GAP2_PIVOT
+    event: str | None = None
     candidate_id: str | None = None
     attempt: int | None = None
     max_attempts: int | None = None
     reason: str | None = None
     to_candidate: str | None = None
+    next_candidate: str | None = None
+    probe_outcome: str | None = None
+    pivot_executed: bool = True
+    result: str | None = None
+    message: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_gap2_event(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "type" not in data and "event" in data:
+                data["type"] = data.get("event") or "GAP2_PIVOT"
+            if "event" not in data and "type" in data:
+                data["event"] = data.get("type") or "GAP2_PIVOT"
+            if "to_candidate" not in data and "next_candidate" in data:
+                data["to_candidate"] = data["next_candidate"]
+            if "next_candidate" not in data and "to_candidate" in data:
+                data["next_candidate"] = data["to_candidate"]
+        return data
 
 
 class CandidateSchema(BaseModel):
@@ -116,8 +199,21 @@ class CandidateSchema(BaseModel):
     composite_score: float | None = None
     attempts: int = 0
     max_attempts: int = 2
-    state: str = "PENDING"  # PENDING, ATTEMPTING, VALIDATED, ABANDONED
+    state: str = "PENDING"  # DISCOVERED, CANDIDATE, UNDER_INVESTIGATION, PROBE_EXECUTED, VALIDATED_OBSERVATION, EXPLOITATION_ATTEMPTED, VERIFIED_VULNERABILITY, RULED_OUT, ABANDONED, INCONCLUSIVE, BLOCKED, FALSE_POSITIVE, NOT_TESTED, PENDING, IDENTIFIED, ATTEMPTING, VALIDATED
     evidence_hash: str | None = None
+    # Probe & Execution Audit Fields
+    tool_selected: str | None = None
+    tool_invocation_id: str | None = None
+    sanitized_request: str | None = None
+    tool_result: str | None = None
+    http_status: int | None = None
+    evidence_reference: str | None = None
+    verification_contract: str | None = None
+    verification_result: str | None = None
+    retry_eligibility: bool = False
+    state_transition_reason: str | None = None
+    dispatched_at: str | None = None
+    agent_assignment: str | None = None
 
 
 class RunStatus(BaseModel):
@@ -128,12 +224,19 @@ class RunStatus(BaseModel):
         "queued",
         "running",
         "completed",
+        "completed_with_findings",
         "failed",
         "aborted",
         "provider_blocked",
         "interrupted",
         "partial",
         "blocked",
+        "paused_provider_limit",
+        "paused_execution_limit",
+        "failed_infrastructure",
+        "failed_agent",
+        "cancelled",
+        "stopped",
     ]
     scenario: str | None = None
     mode: str | None = None
@@ -142,14 +245,29 @@ class RunStatus(BaseModel):
     created_at: str | None = None
     completed_at: str | None = None
     start_time: str | None = None
+    started_at: str | None = None
     end_time: str | None = None
     duration_seconds: float | int | None = None
+    elapsed_seconds: float | int | None = None
+    active_duration_seconds: float | int | None = None
+    wall_clock_duration_seconds: float | int | None = None
+    process_exit_code: int | None = None
+    exit_code_interpretation: str | None = None
+    execution_segments: list[dict[str, Any]] = Field(default_factory=list)
+    active_agent: str | None = None
     active_task: str | None = None
+    last_progress_at: str | None = None
+    turns_consumed: int | None = None
+    progress_percent: float | int | None = None
+    gap1_candidates_identified: int | None = None
+    gap2_pivots: int | None = None
+    pivots: int | None = None
+    verification_states: dict[str, int] | None = None
     candidate_accounting: dict[str, Any] | None = None
     findings_summary: dict[str, Any] | None = None
     auth_context: dict[str, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
-    decision_trace: list[str] = Field(default_factory=list)
+    decision_trace: list[str | dict[str, Any]] = Field(default_factory=list)
     pivot_events: list[dict[str, Any]] = Field(default_factory=list)
     candidates: list[dict[str, Any]] = Field(default_factory=list)
     findings: list[dict[str, Any]] = Field(default_factory=list)
@@ -170,6 +288,13 @@ class RunStatus(BaseModel):
     provider: str | None = None
     model: str | None = None
     report_status: str | None = None
+    run_lifecycle_status: str | None = None
+    configured_turn_limit: int | None = None
+    actual_probe_count: int | None = None
+    candidate_completion_percent: float | int | None = None
+    category_coverage_percent: float | int | None = None
+    assessment_completeness_percent: float | int | None = None
+    termination_reason: str | None = None
 
 
 class TargetValidateRequest(BaseModel):
@@ -216,13 +341,24 @@ class GoogleValidateResponse(BaseModel):
     models: list[str] = Field(default_factory=list)
 
 
-class OpenRouterModelInfo(BaseModel):
-    """Catalogue entry for OpenRouter model selection."""
+class DiscoveredModelInfo(BaseModel):
+    """Universal model information across all AI providers."""
 
     id: str
     name: str
+    provider: str = "openrouter"
+    pricing_status: Literal["free", "paid", "unknown"] = "unknown"
     free: bool = False
+    prompt_price: str | None = None
+    completion_price: str | None = None
     context_length: int | None = None
+    is_custom: bool = False
+
+
+class OpenRouterModelInfo(DiscoveredModelInfo):
+    """Catalogue entry for OpenRouter model selection."""
+
+    provider: str = "openrouter"
 
 
 class OpenRouterValidateResponse(BaseModel):
@@ -242,6 +378,53 @@ class OpenRouterValidateResponse(BaseModel):
     valid: bool = False
     catalogue_count: int = 0
     models: list[OpenRouterModelInfo] = Field(default_factory=list)
+
+
+class AnthropicValidateResponse(BaseModel):
+    """Result of validating runtime Anthropic Claude credentials."""
+
+    status: Literal[
+        "not_configured",
+        "validating",
+        "configured",
+        "invalid_credentials",
+        "rate_limited",
+        "quota_exceeded",
+        "unreachable",
+        "error",
+    ] = "configured"
+    message: str = ""
+    valid: bool = False
+    catalogue_count: int = 0
+    models: list[DiscoveredModelInfo] = Field(default_factory=list)
+
+
+class OllamaValidateResponse(BaseModel):
+    """Result of probing local Ollama instance and discovering installed models."""
+
+    status: Literal["not_configured", "configured", "unreachable", "error"] = "configured"
+    message: str = ""
+    valid: bool = False
+    catalogue_count: int = 0
+    models: list[DiscoveredModelInfo] = Field(default_factory=list)
+
+
+class CustomEndpointValidateResponse(BaseModel):
+    """Result of validating custom OpenAI-compatible endpoint."""
+
+    status: Literal[
+        "not_configured",
+        "configured",
+        "invalid_credentials",
+        "rate_limited",
+        "quota_exceeded",
+        "unreachable",
+        "error",
+    ] = "configured"
+    message: str = ""
+    valid: bool = False
+    catalogue_count: int = 0
+    models: list[DiscoveredModelInfo] = Field(default_factory=list)
 
 
 class OpenAIValidateResponse(BaseModel):
@@ -423,6 +606,41 @@ class CloudTestConnectionResponse(BaseModel):
     duration_ms: float | None = None
     tokens_per_second: float | None = None
     diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResumeRunRequest(BaseModel):
+    """Request to resume an interrupted or provider-blocked run."""
+
+    model: str | None = None
+    provider: str | None = None
+    api_key: str | None = None
+    api_base: str | None = None
+    max_turns: int | None = None
+    additional_authorized_hosts: list[str] | None = Field(
+        default=None,
+        description="Optional additional authorized hostnames or subdomains to add to scope on resume",
+    )
+
+    @field_validator("additional_authorized_hosts", mode="before")
+    @classmethod
+    def validate_additional_authorized_hosts(cls, v: Any) -> list[str] | None:
+        if v is None:
+            return None
+        items: list[str] = []
+        if isinstance(v, str):
+            parts = [p.strip() for p in re.split(r"[\n,]+", v) if p.strip()]
+            items = parts
+        elif isinstance(v, (list, tuple, set)):
+            items = [str(x).strip() for x in v if str(x).strip()]
+        else:
+            return None
+
+        normalized: list[str] = []
+        for item in items:
+            norm = _normalize_host_entry(item)
+            if norm not in normalized:
+                normalized.append(norm)
+        return normalized
 
 
 class CloudVerifyToolsResponse(BaseModel):

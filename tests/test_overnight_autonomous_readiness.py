@@ -296,12 +296,13 @@ def test_web_api_passes_run_id_to_subprocess_and_monitors_dir(tmp_path: Path):
     ):
         _execute_run_worker(run_id, req, None)
 
-        # Assert --run-name {run_id} was explicitly delivered in CLI arguments
+        # Assert a dedicated engine run name was delivered in CLI arguments,
+        # so the worker's run.json cannot overwrite the control-plane record.
         assert "--run-name" in captured_cmd
         run_name_idx = captured_cmd.index("--run-name")
-        assert captured_cmd[run_name_idx + 1] == run_id
-        # Assert STRIX_RUN_NAME environment variable was passed
-        assert captured_env.get("STRIX_RUN_NAME") == run_id
+        assert captured_cmd[run_name_idx + 1] == f"{run_id}-engine"
+        # Assert STRIX_RUN_NAME env matches the dedicated engine run name.
+        assert captured_env.get("STRIX_RUN_NAME") == f"{run_id}-engine"
 
 
 # -----------------------------------------------------------------------------

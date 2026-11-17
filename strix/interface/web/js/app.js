@@ -9,38 +9,97 @@
   // Standard Default Models for Providers
   const DEFAULT_PROVIDER_MODELS = {
     openrouter: [
-      { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'NVIDIA Nemotron 3.5 Super VL [FREE] (Recommended Primary — 1M Context)', free: true },
-      { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning [FREE] (Recommended Backup — 1M Context)', free: true },
-      { id: 'cohere/north-mini-code:free', name: 'Cohere North Mini Code [FREE] (256K Context)', free: true },
-      { id: 'recursive/flint-v1.0:free', name: 'Recursive Flint v1.0 [FREE]', free: true },
-      { id: 'dots-studio/dots-3-note-preview:free', name: 'Dots Studio 3 Note Preview [FREE]', free: true },
-      { id: 'openrouter/free', name: 'Free Models Router [FREE]', free: true },
+      { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 (Free)', free: true, pricing_status: 'free' },
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct (Free)', free: true, pricing_status: 'free' },
+      { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp (Free)', free: true, pricing_status: 'free' },
+      { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B (Free)', free: true, pricing_status: 'free' },
+      { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'NVIDIA Nemotron 3.5 Super VL [FREE]', free: true, pricing_status: 'free' },
+      { id: 'openrouter/free', name: 'Free Models Router [FREE]', free: true, pricing_status: 'free' },
+    ],
+    anthropic: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (Latest)', free: false, pricing_status: 'paid' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)', free: false, pricing_status: 'paid' },
+      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus (Complex)', free: false, pricing_status: 'paid' },
     ],
     ollama: [
-      { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B (Local Default)' },
-      { id: 'llama3.2:3b', name: 'Llama 3.2 3B (Local Baseline)' },
-      { id: 'deepseek-r1:1.5b', name: 'DeepSeek R1 1.5B (Local)' },
+      { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B (Local Default)', free: true, pricing_status: 'free' },
+      { id: 'llama3.2:3b', name: 'Llama 3.2 3B (Local Baseline)', free: true, pricing_status: 'free' },
+      { id: 'deepseek-r1:1.5b', name: 'DeepSeek R1 1.5B (Local)', free: true, pricing_status: 'free' },
     ],
     google: [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Fast)' },
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Flagship)' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Fast)', free: false, pricing_status: 'paid' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Flagship)', free: false, pricing_status: 'paid' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', free: false, pricing_status: 'paid' },
     ],
     openai: [
-      { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)' },
-      { id: 'gpt-4o', name: 'GPT-4o (Flagship)' },
-      { id: 'o3-mini', name: 'o3-mini (Reasoning)' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)', free: false, pricing_status: 'paid' },
+      { id: 'gpt-4o', name: 'GPT-4o (Flagship)', free: false, pricing_status: 'paid' },
+      { id: 'o3-mini', name: 'o3-mini (Reasoning)', free: false, pricing_status: 'paid' },
     ],
     cloud_hosted: [
-      { id: 'meta-llama/Llama-3.3-70B-Instruct', name: 'Llama 3.3 70B Instruct (Remote/Cloud)' },
-      { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen 2.5 72B Instruct (Remote)' },
-      { id: 'mistralai/Mistral-Small-24B-Instruct-2501', name: 'Mistral Small 24B (Remote)' },
-      { id: 'custom-model', name: 'Custom Hosted Model' },
+      { id: 'meta-llama/Llama-3.3-70B-Instruct', name: 'Llama 3.3 70B Instruct (Remote/Cloud)', free: false, pricing_status: 'unknown' },
+      { id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen 2.5 72B Instruct (Remote)', free: false, pricing_status: 'unknown' },
+      { id: 'mistralai/Mistral-Small-24B-Instruct-2501', name: 'Mistral Small 24B (Remote)', free: false, pricing_status: 'unknown' },
+      { id: 'custom-model', name: 'Custom Hosted Model', free: false, pricing_status: 'unknown' },
     ],
+    custom: [
+      { id: 'custom-model', name: 'Custom Model Identifier', free: false, pricing_status: 'unknown' },
+    ],
+  };
+
+  // Provider Metadata for Display & Dynamic Badges
+  const PROVIDER_META = {
+    openrouter: {
+      name: 'OpenRouter',
+      badgeClass: 'badge-purple',
+      badgeText: 'OpenRouter',
+      description: 'Access 400+ hosted models across diverse providers with real-time pricing and free tier options.',
+    },
+    openai: {
+      name: 'OpenAI',
+      badgeClass: 'badge-amber',
+      badgeText: 'OpenAI',
+      description: 'Direct OpenAI API integration for flagship reasoning and tool execution.',
+    },
+    anthropic: {
+      name: 'Anthropic Claude',
+      badgeClass: 'badge-purple',
+      badgeText: 'Anthropic Claude',
+      description: 'Native Claude 3.5 Sonnet / Haiku integration with sophisticated tool calling.',
+    },
+    google: {
+      name: 'Google Gemini',
+      badgeClass: 'badge-emerald',
+      badgeText: 'Google Gemini',
+      description: 'Fast cloud API with 1M+ token context window and native function calling.',
+    },
+    ollama: {
+      name: 'Local Ollama',
+      badgeClass: 'badge-cyan',
+      badgeText: 'Local Ollama',
+      description: 'Runs 100% locally on your machine with zero external network access.',
+    },
+    cloud_hosted: {
+      name: 'Cloud Hosted',
+      badgeClass: 'badge-cyan',
+      badgeText: 'Cloud Hosted',
+      description: 'Connect to any custom OpenAI-compatible endpoint (vLLM, TGI, RunPod, Kaggle GPU, FastChat) with custom headers and tool support.',
+    },
   };
 
   // State Management
   const state = {
+    previousProvider: 'openrouter',
+    providerConfigs: {
+      openrouter: { apiKey: '', model: 'deepseek/deepseek-r1:free', customModel: '', search: '', models: [] },
+      openai: { apiKey: '', model: 'gpt-4o-mini', customModel: '', search: '', models: [] },
+      anthropic: { apiKey: '', model: 'claude-3-5-sonnet-20241022', customModel: '', search: '', models: [] },
+      google: { apiKey: '', model: 'gemini-2.0-flash', customModel: '', search: '', models: [] },
+      ollama: { baseUrl: 'http://127.0.0.1:11434', apiKey: '', model: '', customModel: '', search: '', models: [] },
+      cloud_hosted: { profileId: null, model: '', customModel: '', search: '', models: [] },
+    },
+    catalogActiveProvider: 'all',
+    catalogSearchQuery: '',
     activeRunId: null,
     pollTimer: null,
     systemHealthy: true,
@@ -48,6 +107,8 @@
     currentView: 'new-assessment',
     latestRunData: null,
     availableModels: [...DEFAULT_PROVIDER_MODELS.openrouter],
+    currentProviderModels: [...DEFAULT_PROVIDER_MODELS.openrouter],
+    modelFilterText: '',
     cloudProfiles: [],
     activeCloudProfileId: null,
     dagZoom: 1.0,
@@ -83,11 +144,17 @@
     elements.chkScopeAck = document.getElementById('chk-scope-ack');
     elements.modelProviderSelect = document.getElementById('model-provider-select');
     elements.modelSelect = document.getElementById('model-select');
+    elements.modelSearchFilter = document.getElementById('model-search-filter');
     elements.modelCustomInput = document.getElementById('model-custom-input');
     elements.modelBadgeStatus = document.getElementById('model-badge-status');
+    elements.modelPricingNotice = document.getElementById('model-pricing-notice');
     elements.modelHint = document.getElementById('model-hint');
+    elements.groupCustomBaseUrl = document.getElementById('group-custom-base-url');
+    elements.customBaseUrl = document.getElementById('custom-base-url');
     elements.groupApiKey = document.getElementById('group-api-key');
     elements.runtimeApiKey = document.getElementById('runtime-api-key');
+    elements.btnToggleKeyVisibility = document.getElementById('btn-toggle-key-visibility');
+    elements.btnToggleSettingsKeyVisibility = document.getElementById('btn-toggle-settings-key-visibility');
     elements.btnValidateKey = document.getElementById('btn-validate-model-key');
     elements.apiKeyFeedback = document.getElementById('api-key-feedback');
     elements.gap2Threshold = document.getElementById('gap2-threshold-select');
@@ -101,6 +168,16 @@
     elements.btnStopRun = document.getElementById('btn-stop-run');
     elements.btnViewReportNow = document.getElementById('btn-view-report-now');
     elements.btnRefreshRun = document.getElementById('btn-refresh-run');
+    elements.providerResumeCard = document.getElementById('provider-resume-card');
+    elements.providerResumeStatusLabel = document.getElementById('provider-resume-status-label');
+    elements.providerResumeMessage = document.getElementById('provider-resume-message');
+    elements.resumeProviderSelect = document.getElementById('resume-provider-select');
+    elements.resumeModelSelect = document.getElementById('resume-model-select');
+    elements.resumeApiKey = document.getElementById('resume-api-key');
+    elements.resumeConfirmCheckbox = document.getElementById('resume-confirm-checkbox');
+    elements.resumeWarnProvider = document.getElementById('resume-warn-provider');
+    elements.resumeWarnModel = document.getElementById('resume-warn-model');
+    elements.btnResumeAssessment = document.getElementById('btn-resume-assessment');
     elements.progressMilestoneCard = document.getElementById('progress-milestone-card');
     elements.progressPhaseIcon = document.getElementById('progress-phase-icon');
     elements.progressPhaseName = document.getElementById('progress-phase-name');
@@ -111,6 +188,21 @@
     elements.metricPivots = document.getElementById('metric-pivots-count');
     elements.metricAttempts = document.getElementById('metric-attempts-count');
     elements.metricFindings = document.getElementById('metric-findings-count');
+
+    // Live Run Facts & Verification States
+    elements.metricStarted = document.getElementById('metric-started');
+    elements.metricElapsed = document.getElementById('metric-elapsed');
+    elements.metricActiveAgent = document.getElementById('metric-active-agent');
+    elements.metricActiveTask = document.getElementById('metric-active-task');
+    elements.feDiscovered = document.getElementById('fe-discovered');
+    elements.feCandidate = document.getElementById('fe-candidate');
+    elements.feUnderInvestigation = document.getElementById('fe-under-investigation');
+    elements.feExploitation = document.getElementById('fe-exploitation');
+    elements.feVerified = document.getElementById('fe-verified');
+    elements.feUnconfirmed = document.getElementById('fe-unconfirmed');
+    elements.feFp = document.getElementById('fe-fp');
+    elements.feBlocked = document.getElementById('fe-blocked');
+    elements.feInc = document.getElementById('fe-inc');
     elements.tbodyCandidates = document.getElementById('tbody-candidates');
     elements.findingsLive = document.getElementById('findings-live-container');
     elements.tbodyMatrixLive = document.getElementById('tbody-matrix-live');
@@ -194,6 +286,112 @@
     elements.cloudDiagnosticsConsole = document.getElementById('cloud-diagnostics-console');
     elements.cloudDiagClearBtn = document.getElementById('cloud-diag-clear-btn');
 
+    // Provider Specific Panels & Badges
+    elements.panelProviderOpenrouter = document.getElementById('panel-provider-openrouter');
+    elements.panelProviderOpenai = document.getElementById('panel-provider-openai');
+    elements.panelProviderAnthropic = document.getElementById('panel-provider-anthropic');
+    elements.panelProviderGoogle = document.getElementById('panel-provider-google');
+    elements.panelProviderOllama = document.getElementById('panel-provider-ollama');
+    elements.panelProviderCloudHosted = document.getElementById('panel-provider-cloud-hosted');
+    elements.activeProviderBadge = document.getElementById('active-provider-badge');
+    elements.providerDescriptionHint = document.getElementById('provider-description-hint');
+
+    // OpenRouter Panel Elements
+    elements.openrouterApiKey = document.getElementById('openrouter-api-key');
+    elements.btnValidateOpenrouter = document.getElementById('btn-validate-openrouter');
+    elements.openrouterFeedback = document.getElementById('openrouter-feedback');
+    elements.openrouterModelBadge = document.getElementById('openrouter-model-badge');
+    elements.openrouterModelSearch = document.getElementById('openrouter-model-search');
+    elements.openrouterModelSelect = document.getElementById('openrouter-model-select');
+    elements.openrouterCustomModel = document.getElementById('openrouter-custom-model');
+    elements.openrouterPricingNotice = document.getElementById('openrouter-pricing-notice');
+    elements.openrouterModelHint = document.getElementById('openrouter-model-hint');
+
+    // OpenAI Panel Elements
+    elements.openaiApiKey = document.getElementById('openai-api-key');
+    elements.btnValidateOpenai = document.getElementById('btn-validate-openai');
+    elements.openaiFeedback = document.getElementById('openai-feedback');
+    elements.openaiModelBadge = document.getElementById('openai-model-badge');
+    elements.openaiModelSearch = document.getElementById('openai-model-search');
+    elements.openaiModelSelect = document.getElementById('openai-model-select');
+    elements.openaiCustomModel = document.getElementById('openai-custom-model');
+    elements.openaiPricingNotice = document.getElementById('openai-pricing-notice');
+
+    // Anthropic Panel Elements
+    elements.anthropicApiKey = document.getElementById('anthropic-api-key');
+    elements.btnValidateAnthropic = document.getElementById('btn-validate-anthropic');
+    elements.anthropicFeedback = document.getElementById('anthropic-feedback');
+    elements.anthropicModelSelect = document.getElementById('anthropic-model-select');
+    elements.anthropicCustomModel = document.getElementById('anthropic-custom-model');
+    elements.anthropicPricingNotice = document.getElementById('anthropic-pricing-notice');
+
+    // Google Gemini Panel Elements
+    elements.googleApiKey = document.getElementById('google-api-key');
+    elements.btnValidateGoogle = document.getElementById('btn-validate-google');
+    elements.googleFeedback = document.getElementById('google-feedback');
+    elements.googleModelSelect = document.getElementById('google-model-select');
+    elements.googleCustomModel = document.getElementById('google-custom-model');
+    elements.googlePricingNotice = document.getElementById('google-pricing-notice');
+
+    // Ollama Panel Elements
+    elements.ollamaBaseUrl = document.getElementById('ollama-base-url');
+    elements.btnValidateOllama = document.getElementById('btn-validate-ollama');
+    elements.ollamaFeedback = document.getElementById('ollama-feedback');
+    elements.ollamaModelBadge = document.getElementById('ollama-model-badge');
+    elements.ollamaModelSelect = document.getElementById('ollama-model-select');
+    elements.ollamaCustomModel = document.getElementById('ollama-custom-model');
+    elements.ollamaPricingNotice = document.getElementById('ollama-pricing-notice');
+    elements.ollamaApiKey = document.getElementById('ollama-api-key');
+
+    // Cloud Hosted Panel Elements (New Assessment)
+    elements.cloudEmptyState = document.getElementById('cloud-empty-state');
+    elements.cloudActiveProfileSection = document.getElementById('cloud-active-profile-section');
+    elements.btnCloudCreateFirstProfile = document.getElementById('btn-cloud-create-first-profile');
+    elements.cloudProfileSelectMain = document.getElementById('cloud-profile-select-main');
+    elements.btnCloudNewProfileInline = document.getElementById('btn-cloud-new-profile-inline');
+    elements.btnCloudEditProfileInline = document.getElementById('btn-cloud-edit-profile-inline');
+    elements.btnCloudDeleteProfileInline = document.getElementById('btn-cloud-delete-profile-inline');
+    elements.btnOpenCloudProfileModal = document.getElementById('btn-open-cloud-profile-modal');
+    elements.cloudProfileEndpointText = document.getElementById('cloud-profile-endpoint-text');
+    elements.cloudProfileAuthStatus = document.getElementById('cloud-profile-auth-status');
+    elements.btnTestCloudProfile = document.getElementById('btn-test-cloud-profile');
+    elements.cloudModelSearch = document.getElementById('cloud-model-search');
+    elements.cloudDiscoveredModelSelect = document.getElementById('cloud-discovered-model-select');
+    elements.cloudManualModelInput = document.getElementById('cloud-manual-model-input');
+    elements.cloudProfileFeedback = document.getElementById('cloud-profile-feedback');
+
+    // Cloud Hosted Profile Modal Elements
+    elements.modalCloudProfilesBackdrop = document.getElementById('modal-cloud-profiles-backdrop');
+    elements.btnCloseCloudModal = document.getElementById('btn-close-cloud-modal');
+    elements.modalProfileSelect = document.getElementById('modal-profile-select');
+    elements.btnModalProfileActivate = document.getElementById('btn-modal-profile-activate');
+    elements.btnModalProfileSave = document.getElementById('btn-modal-profile-save');
+    elements.btnModalProfileDelete = document.getElementById('btn-modal-profile-delete');
+    elements.modalProfileStateBadge = document.getElementById('modal-profile-state-badge');
+    elements.modalProfileAuthBadge = document.getElementById('modal-profile-auth-badge');
+    elements.modalProfileConnBadge = document.getElementById('modal-profile-conn-badge');
+    elements.modalProfileName = document.getElementById('modal-profile-name');
+    elements.modalProfileBaseUrl = document.getElementById('modal-profile-base-url');
+    elements.modalProfileApiKey = document.getElementById('modal-profile-api-key');
+    elements.modalProfileCurrentKeyHint = document.getElementById('modal-profile-current-key-hint');
+    elements.modalProfileModel = document.getElementById('modal-profile-model');
+    elements.btnModalDiscoverModels = document.getElementById('btn-modal-discover-models');
+    elements.modalProfileDiscoveredSelect = document.getElementById('modal-profile-discovered-select');
+    elements.modalProfileAlias = document.getElementById('modal-profile-alias');
+    elements.btnModalTestConn = document.getElementById('btn-modal-test-conn');
+    elements.btnModalVerifyTools = document.getElementById('btn-modal-verify-tools');
+    elements.modalProfileTestResult = document.getElementById('modal-profile-test-result');
+
+    // Active Assessment Header Badges
+    elements.heroEngineBadge = document.getElementById('hero-engine-badge');
+    elements.heroProviderBadge = document.getElementById('hero-provider-badge');
+    elements.heroModelBadge = document.getElementById('hero-model-badge');
+
+    // Model Catalog Explorer in Settings View
+    elements.catalogModelsGrid = document.getElementById('catalog-models-grid');
+    elements.catalogSearchInput = document.getElementById('catalog-search-input');
+    elements.catalogTabBtns = document.querySelectorAll('.catalog-tab-btn');
+
     // Toasts
     elements.toastContainer = document.getElementById('toast-container');
   }
@@ -242,70 +440,633 @@
       loadHistory();
     } else if (viewName === 'settings') {
       probeOllamaService();
+    } else if (viewName === 'reports') {
+      if (state.latestRunData) {
+        loadReportView(state.latestRunData);
+      }
     }
   }
 
-  // Populate Dynamic Models in Dropdown
-  function populateModelOptions(provider, modelsList = []) {
-    const list = modelsList && modelsList.length ? modelsList : DEFAULT_PROVIDER_MODELS[provider] || [];
-    elements.modelSelect.innerHTML = '';
+  // Update Real-Time Model Pricing Callout
+  function updateModelPricingNotice() {
+    if (!elements.modelPricingNotice || !elements.modelSelect) return;
+    const val = elements.modelSelect.value;
+    if (val === '__custom__') {
+      elements.modelPricingNotice.style.display = 'block';
+      elements.modelPricingNotice.style.background = 'rgba(168, 85, 247, 0.1)';
+      elements.modelPricingNotice.style.border = '1px solid rgba(168, 85, 247, 0.3)';
+      elements.modelPricingNotice.style.color = '#c084fc';
+      elements.modelPricingNotice.textContent = '⚙️ Custom Model Identifier: Model string routed directly to endpoint.';
+      return;
+    }
+    const selectedOpt = elements.modelSelect.selectedOptions[0];
+    const pricing = selectedOpt ? selectedOpt.dataset.pricing : '';
+    if (pricing === '[FREE]') {
+      elements.modelPricingNotice.style.display = 'block';
+      elements.modelPricingNotice.style.background = 'rgba(16, 185, 129, 0.1)';
+      elements.modelPricingNotice.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+      elements.modelPricingNotice.style.color = '#34d399';
+      elements.modelPricingNotice.textContent = '✅ Free Model: Zero token charges on provider.';
+    } else if (pricing === '[PAID]') {
+      elements.modelPricingNotice.style.display = 'block';
+      elements.modelPricingNotice.style.background = 'rgba(245, 158, 11, 0.1)';
+      elements.modelPricingNotice.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+      elements.modelPricingNotice.style.color = '#fbbf24';
+      elements.modelPricingNotice.textContent = '⚠️ Paid Model: Token usage will be billed to your API key balance.';
+    } else if (pricing === '[LOCAL]') {
+      elements.modelPricingNotice.style.display = 'block';
+      elements.modelPricingNotice.style.background = 'rgba(56, 189, 248, 0.1)';
+      elements.modelPricingNotice.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+      elements.modelPricingNotice.style.color = '#38bdf8';
+      elements.modelPricingNotice.textContent = '💻 Local Model: Zero API costs, executed entirely on local compute.';
+    } else {
+      elements.modelPricingNotice.style.display = 'none';
+    }
+  }
 
-    list.forEach((m) => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      const isFree = m.free || m.id.endsWith(':free');
-      opt.textContent = isFree ? `${m.id} [FREE]` : (m.name || m.id);
-      elements.modelSelect.appendChild(opt);
+  // Active Provider Credentials & Base URL Resolvers
+  function getActiveProviderApiKey() {
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+    if (provider === 'openrouter') {
+      return (elements.openrouterApiKey ? elements.openrouterApiKey.value.trim() : '') || state.providerConfigs.openrouter.apiKey || '';
+    } else if (provider === 'openai') {
+      return (elements.openaiApiKey ? elements.openaiApiKey.value.trim() : '') || state.providerConfigs.openai.apiKey || '';
+    } else if (provider === 'anthropic') {
+      return (elements.anthropicApiKey ? elements.anthropicApiKey.value.trim() : '') || state.providerConfigs.anthropic.apiKey || '';
+    } else if (provider === 'google') {
+      return (elements.googleApiKey ? elements.googleApiKey.value.trim() : '') || state.providerConfigs.google.apiKey || '';
+    } else if (provider === 'ollama') {
+      return (elements.ollamaApiKey ? elements.ollamaApiKey.value.trim() : '') || state.providerConfigs.ollama.apiKey || '';
+    } else if (provider === 'cloud_hosted') {
+      const selectedId = elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null;
+      let activeProf = null;
+      if (selectedId) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.id === selectedId);
+      }
+      if (!activeProf) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+      }
+      return activeProf && activeProf.api_key ? activeProf.api_key : '';
+    }
+    return (elements.runtimeApiKey ? elements.runtimeApiKey.value.trim() : '') || state.runtimeApiKey || '';
+  }
+
+  function getActiveProviderBaseUrl() {
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+    if (provider === 'ollama') {
+      return (elements.ollamaBaseUrl ? elements.ollamaBaseUrl.value.trim() : '') || state.providerConfigs.ollama.baseUrl || 'http://127.0.0.1:11434';
+    } else if (provider === 'cloud_hosted') {
+      const selectedId = elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null;
+      let activeProf = null;
+      if (selectedId) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.id === selectedId);
+      }
+      if (!activeProf) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+      }
+      return activeProf && activeProf.api_base ? activeProf.api_base : '';
+    }
+    return elements.customBaseUrl ? elements.customBaseUrl.value.trim() : '';
+  }
+
+  // Get Currently Chosen Model ID Directly From Active Provider Panel
+  function getSelectedModelId() {
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+    if (provider === 'openrouter') {
+      if (elements.openrouterModelSelect && elements.openrouterModelSelect.value === '__custom__') {
+        return (elements.openrouterCustomModel ? elements.openrouterCustomModel.value.trim() : '') || 'deepseek/deepseek-r1:free';
+      }
+      return elements.openrouterModelSelect && elements.openrouterModelSelect.value ? elements.openrouterModelSelect.value : 'deepseek/deepseek-r1:free';
+    } else if (provider === 'openai') {
+      if (elements.openaiModelSelect && elements.openaiModelSelect.value === '__custom__') {
+        return (elements.openaiCustomModel ? elements.openaiCustomModel.value.trim() : '') || 'gpt-4o-mini';
+      }
+      return elements.openaiModelSelect && elements.openaiModelSelect.value ? elements.openaiModelSelect.value : 'gpt-4o-mini';
+    } else if (provider === 'anthropic') {
+      if (elements.anthropicModelSelect && elements.anthropicModelSelect.value === '__custom__') {
+        return (elements.anthropicCustomModel ? elements.anthropicCustomModel.value.trim() : '') || 'claude-3-5-sonnet-20241022';
+      }
+      return elements.anthropicModelSelect && elements.anthropicModelSelect.value ? elements.anthropicModelSelect.value : 'claude-3-5-sonnet-20241022';
+    } else if (provider === 'google') {
+      if (elements.googleModelSelect && elements.googleModelSelect.value === '__custom__') {
+        return (elements.googleCustomModel ? elements.googleCustomModel.value.trim() : '') || 'gemini-2.0-flash';
+      }
+      return elements.googleModelSelect && elements.googleModelSelect.value ? elements.googleModelSelect.value : 'gemini-2.0-flash';
+    } else if (provider === 'ollama') {
+      if (elements.ollamaModelSelect && elements.ollamaModelSelect.value === '__custom__') {
+        return (elements.ollamaCustomModel ? elements.ollamaCustomModel.value.trim() : '') || 'qwen2.5:1.5b';
+      }
+      return elements.ollamaModelSelect && elements.ollamaModelSelect.value ? elements.ollamaModelSelect.value : 'qwen2.5:1.5b';
+    } else if (provider === 'cloud_hosted') {
+      if (elements.cloudDiscoveredModelSelect && elements.cloudDiscoveredModelSelect.value === '__custom__') {
+        return (elements.cloudManualModelInput ? elements.cloudManualModelInput.value.trim() : '') || 'meta-llama/Llama-3.3-70B-Instruct';
+      }
+      if (elements.cloudDiscoveredModelSelect && elements.cloudDiscoveredModelSelect.value) {
+        return elements.cloudDiscoveredModelSelect.value;
+      }
+      const selectedId = elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null;
+      let activeProf = null;
+      if (selectedId) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.id === selectedId);
+      }
+      if (!activeProf) {
+        activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+      }
+      return activeProf && activeProf.model ? activeProf.model : 'meta-llama/Llama-3.3-70B-Instruct';
+    }
+
+    if (elements.modelSelect && elements.modelSelect.value === '__custom__') {
+      return elements.modelCustomInput ? elements.modelCustomInput.value.trim() : 'default-model';
+    }
+    return elements.modelSelect ? elements.modelSelect.value : 'default-model';
+  }
+
+  // Synchronize Compatibility Proxies for Legacy Tests & Background Diagnostics
+  function syncCompatibilityProxies() {
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+    const modelId = getSelectedModelId();
+    const apiKey = getActiveProviderApiKey();
+    const baseUrl = getActiveProviderBaseUrl();
+
+    if (elements.runtimeApiKey) elements.runtimeApiKey.value = apiKey;
+    if (elements.customBaseUrl) elements.customBaseUrl.value = baseUrl;
+    if (elements.modelSelect) {
+      let found = false;
+      for (let i = 0; i < elements.modelSelect.options.length; i++) {
+        if (elements.modelSelect.options[i].value === modelId) {
+          elements.modelSelect.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const opt = document.createElement('option');
+        opt.value = modelId;
+        opt.textContent = modelId;
+        opt.selected = true;
+        elements.modelSelect.appendChild(opt);
+      }
+    }
+  }
+
+  // Pricing Notice Updaters for Panels
+  function updateOpenRouterPricingNotice() {
+    if (!elements.openrouterPricingNotice || !elements.openrouterModelSelect) return;
+    const val = elements.openrouterModelSelect.value;
+    if (val === '__custom__') {
+      elements.openrouterPricingNotice.style.display = 'block';
+      elements.openrouterPricingNotice.className = 'model-pricing-pill custom';
+      elements.openrouterPricingNotice.textContent = '⚙️ Custom Model: Identifier will be passed directly to OpenRouter API.';
+      return;
+    }
+    const opt = elements.openrouterModelSelect.selectedOptions[0];
+    const isFree = opt && opt.dataset.pricing === 'free';
+    elements.openrouterPricingNotice.style.display = 'block';
+    if (isFree) {
+      elements.openrouterPricingNotice.className = 'model-pricing-pill free';
+      elements.openrouterPricingNotice.textContent = '✅ Free Model: Zero token charges on OpenRouter.';
+    } else {
+      elements.openrouterPricingNotice.className = 'model-pricing-pill paid';
+      elements.openrouterPricingNotice.textContent = '⚠️ Paid Model: Token usage will be billed to your OpenRouter account balance.';
+    }
+  }
+
+  function updateOpenAIPricingNotice() {
+    if (!elements.openaiPricingNotice || !elements.openaiModelSelect) return;
+    const val = elements.openaiModelSelect.value;
+    elements.openaiPricingNotice.style.display = 'block';
+    if (val === '__custom__') {
+      elements.openaiPricingNotice.className = 'model-pricing-pill custom';
+      elements.openaiPricingNotice.textContent = '⚙️ Custom OpenAI Model: Model identifier passed directly to /v1/chat/completions.';
+    } else {
+      elements.openaiPricingNotice.className = 'model-pricing-pill paid';
+      elements.openaiPricingNotice.textContent = '⚠️ Paid Model: Usage billed directly to your OpenAI API key account.';
+    }
+  }
+
+  function updateAnthropicPricingNotice() {
+    if (!elements.anthropicPricingNotice || !elements.anthropicModelSelect) return;
+    const val = elements.anthropicModelSelect.value;
+    elements.anthropicPricingNotice.style.display = 'block';
+    if (val === '__custom__') {
+      elements.anthropicPricingNotice.className = 'model-pricing-pill custom';
+      elements.anthropicPricingNotice.textContent = '⚙️ Custom Anthropic Model: Model identifier passed directly to Claude API.';
+    } else {
+      elements.anthropicPricingNotice.className = 'model-pricing-pill paid';
+      elements.anthropicPricingNotice.textContent = '⚠️ Paid Model: Usage billed to your Anthropic console balance ($3.00/M in, $15.00/M out).';
+    }
+  }
+
+  function updateGooglePricingNotice() {
+    if (!elements.googlePricingNotice || !elements.googleModelSelect) return;
+    const val = elements.googleModelSelect.value;
+    elements.googlePricingNotice.style.display = 'block';
+    if (val === '__custom__') {
+      elements.googlePricingNotice.className = 'model-pricing-pill custom';
+      elements.googlePricingNotice.textContent = '⚙️ Custom Gemini Model: Identifier passed to Google Generative AI API.';
+    } else {
+      elements.googlePricingNotice.className = 'model-pricing-pill free';
+      elements.googlePricingNotice.textContent = '✅ Gemini Cloud API: Generous free tier with high rate limits in Google AI Studio.';
+    }
+  }
+
+  function updateOllamaPricingNotice() {
+    if (!elements.ollamaPricingNotice || !elements.ollamaModelSelect) return;
+    const val = elements.ollamaModelSelect.value;
+    elements.ollamaPricingNotice.style.display = 'block';
+    if (val === '__custom__') {
+      elements.ollamaPricingNotice.className = 'model-pricing-pill custom';
+      elements.ollamaPricingNotice.textContent = '⚙️ Custom Local Model: Must be pulled locally (ollama pull <tag>).';
+    } else {
+      elements.ollamaPricingNotice.className = 'model-pricing-pill local';
+      elements.ollamaPricingNotice.textContent = '💻 Local Compute: Zero token costs, executed entirely on your local GPU/CPU.';
+    }
+  }
+
+  // Dedicated Model Populator: OpenRouter
+  function populateOpenRouterModels(modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.providerConfigs.openrouter.models = modelsList;
+      DEFAULT_PROVIDER_MODELS.openrouter = modelsList;
+    }
+    const models = state.providerConfigs.openrouter.models.length
+      ? state.providerConfigs.openrouter.models
+      : DEFAULT_PROVIDER_MODELS.openrouter;
+
+    const filter = (elements.openrouterModelSearch ? elements.openrouterModelSearch.value : '').trim().toLowerCase();
+    const filtered = models.filter((m) => {
+      if (!filter) return true;
+      return (m.id && m.id.toLowerCase().includes(filter)) || (m.name && m.name.toLowerCase().includes(filter));
     });
 
-    // Custom option
-    const customOpt = document.createElement('option');
-    customOpt.value = '__custom__';
-    customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
-    elements.modelSelect.appendChild(customOpt);
+    if (elements.openrouterModelSelect) {
+      const currentVal = elements.openrouterModelSelect.value;
+      elements.openrouterModelSelect.innerHTML = '';
+      let matched = false;
 
-    // Update status badge
-    if (provider === 'openrouter') {
-      const freeCount = list.filter((m) => m.free || m.id.endsWith(':free')).length;
-      elements.modelBadgeStatus.textContent = `${freeCount} Free Models Available`;
-      elements.modelBadgeStatus.className = 'badge badge-emerald';
-      elements.modelHint.textContent = 'All free models are loaded from OpenRouter with zero token charges.';
-    } else if (provider === 'ollama') {
-      elements.modelBadgeStatus.textContent = 'Local Offline';
-      elements.modelBadgeStatus.className = 'badge badge-cyan';
-      elements.modelHint.textContent = 'Runs entirely locally on your machine with zero external network access.';
-    } else if (provider === 'google') {
-      elements.modelBadgeStatus.textContent = 'Google Cloud';
-      elements.modelBadgeStatus.className = 'badge badge-purple';
-      elements.modelHint.textContent = 'High-speed completions via Google Gemini API.';
-    } else if (provider === 'cloud_hosted') {
-      elements.modelBadgeStatus.textContent = 'Cloud Hosted';
-      elements.modelBadgeStatus.className = 'badge badge-cyan';
-      elements.modelHint.textContent = 'Custom OpenAI-compatible model with structured tool-calling support.';
-    } else {
-      elements.modelBadgeStatus.textContent = 'OpenAI API';
-      elements.modelBadgeStatus.className = 'badge badge-amber';
+      filtered.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        const isFree = m.free || (m.id && m.id.endsWith(':free')) || m.pricing_status === 'free';
+        opt.textContent = `${m.name || m.id} ${isFree ? '[FREE]' : '[PAID]'}`;
+        opt.dataset.pricing = isFree ? 'free' : 'paid';
+        if (currentVal && m.id === currentVal) {
+          opt.selected = true;
+          matched = true;
+        }
+        elements.openrouterModelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      if (currentVal === '__custom__') {
+        customOpt.selected = true;
+        matched = true;
+      }
+      elements.openrouterModelSelect.appendChild(customOpt);
+
+      if (!matched && elements.openrouterModelSelect.options.length > 0) {
+        elements.openrouterModelSelect.selectedIndex = 0;
+      }
     }
 
-    elements.modelCustomInput.style.display = 'none';
+    const freeCount = models.filter((m) => m.free || (m.id && m.id.endsWith(':free')) || m.pricing_status === 'free').length;
+    if (elements.openrouterModelBadge) {
+      elements.openrouterModelBadge.textContent = `${freeCount} Free Models Available`;
+      elements.openrouterModelBadge.className = 'badge badge-emerald';
+    }
+
+    updateOpenRouterPricingNotice();
+    syncCompatibilityProxies();
   }
 
-  // Handle Model Select Change
+  // Dedicated Model Populator: OpenAI
+  function populateOpenAIModels(modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.providerConfigs.openai.models = modelsList;
+      DEFAULT_PROVIDER_MODELS.openai = modelsList;
+    }
+    const models = state.providerConfigs.openai.models.length
+      ? state.providerConfigs.openai.models
+      : DEFAULT_PROVIDER_MODELS.openai;
+
+    const filter = (elements.openaiModelSearch ? elements.openaiModelSearch.value : '').trim().toLowerCase();
+    const filtered = models.filter((m) => {
+      if (!filter) return true;
+      return (m.id && m.id.toLowerCase().includes(filter)) || (m.name && m.name.toLowerCase().includes(filter));
+    });
+
+    if (elements.openaiModelSelect) {
+      const currentVal = elements.openaiModelSelect.value;
+      elements.openaiModelSelect.innerHTML = '';
+      let matched = false;
+
+      filtered.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name || m.id} [PAID]`;
+        opt.dataset.pricing = 'paid';
+        if (currentVal && m.id === currentVal) {
+          opt.selected = true;
+          matched = true;
+        }
+        elements.openaiModelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      if (currentVal === '__custom__') {
+        customOpt.selected = true;
+        matched = true;
+      }
+      elements.openaiModelSelect.appendChild(customOpt);
+
+      if (!matched && elements.openaiModelSelect.options.length > 0) {
+        elements.openaiModelSelect.selectedIndex = 0;
+      }
+    }
+    updateOpenAIPricingNotice();
+    syncCompatibilityProxies();
+  }
+
+  // Dedicated Model Populator: Anthropic
+  function populateAnthropicModels(modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.providerConfigs.anthropic.models = modelsList;
+      DEFAULT_PROVIDER_MODELS.anthropic = modelsList;
+    }
+    const models = state.providerConfigs.anthropic.models.length
+      ? state.providerConfigs.anthropic.models
+      : DEFAULT_PROVIDER_MODELS.anthropic;
+
+    if (elements.anthropicModelSelect) {
+      const currentVal = elements.anthropicModelSelect.value;
+      elements.anthropicModelSelect.innerHTML = '';
+      let matched = false;
+
+      models.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name || m.id} [PAID]`;
+        opt.dataset.pricing = 'paid';
+        if (currentVal && m.id === currentVal) {
+          opt.selected = true;
+          matched = true;
+        }
+        elements.anthropicModelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      if (currentVal === '__custom__') {
+        customOpt.selected = true;
+        matched = true;
+      }
+      elements.anthropicModelSelect.appendChild(customOpt);
+
+      if (!matched && elements.anthropicModelSelect.options.length > 0) {
+        elements.anthropicModelSelect.selectedIndex = 0;
+      }
+    }
+    updateAnthropicPricingNotice();
+    syncCompatibilityProxies();
+  }
+
+  // Dedicated Model Populator: Google
+  function populateGoogleModels(modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.providerConfigs.google.models = modelsList;
+      DEFAULT_PROVIDER_MODELS.google = modelsList;
+    }
+    const models = state.providerConfigs.google.models.length
+      ? state.providerConfigs.google.models
+      : DEFAULT_PROVIDER_MODELS.google;
+
+    if (elements.googleModelSelect) {
+      const currentVal = elements.googleModelSelect.value;
+      elements.googleModelSelect.innerHTML = '';
+      let matched = false;
+
+      models.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name || m.id} [FREE/PAID]`;
+        opt.dataset.pricing = 'free';
+        if (currentVal && m.id === currentVal) {
+          opt.selected = true;
+          matched = true;
+        }
+        elements.googleModelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      if (currentVal === '__custom__') {
+        customOpt.selected = true;
+        matched = true;
+      }
+      elements.googleModelSelect.appendChild(customOpt);
+
+      if (!matched && elements.googleModelSelect.options.length > 0) {
+        elements.googleModelSelect.selectedIndex = 0;
+      }
+    }
+    updateGooglePricingNotice();
+    syncCompatibilityProxies();
+  }
+
+  // Dedicated Model Populator: Ollama
+  function populateOllamaModels(modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.providerConfigs.ollama.models = modelsList;
+      DEFAULT_PROVIDER_MODELS.ollama = modelsList;
+    }
+    const models = state.providerConfigs.ollama.models.length
+      ? state.providerConfigs.ollama.models
+      : DEFAULT_PROVIDER_MODELS.ollama;
+
+    if (elements.ollamaModelSelect) {
+      const currentVal = elements.ollamaModelSelect.value;
+      elements.ollamaModelSelect.innerHTML = '';
+      let matched = false;
+
+      models.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name || m.id} [LOCAL]`;
+        opt.dataset.pricing = 'local';
+        if (currentVal && m.id === currentVal) {
+          opt.selected = true;
+          matched = true;
+        }
+        elements.ollamaModelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      if (currentVal === '__custom__') {
+        customOpt.selected = true;
+        matched = true;
+      }
+      elements.ollamaModelSelect.appendChild(customOpt);
+
+      if (!matched && elements.ollamaModelSelect.options.length > 0) {
+        elements.ollamaModelSelect.selectedIndex = 0;
+      }
+    }
+
+    if (elements.ollamaModelBadge) {
+      elements.ollamaModelBadge.textContent = `${models.length} Local Models`;
+      elements.ollamaModelBadge.className = 'badge badge-cyan';
+    }
+
+    updateOllamaPricingNotice();
+    syncCompatibilityProxies();
+  }
+
+  // Backward Compatible Populator
+  function populateModelOptions(provider, modelsList = []) {
+    if (modelsList && modelsList.length) {
+      state.currentProviderModels = modelsList;
+      DEFAULT_PROVIDER_MODELS[provider] = modelsList;
+    } else if (DEFAULT_PROVIDER_MODELS[provider]) {
+      state.currentProviderModels = DEFAULT_PROVIDER_MODELS[provider];
+    } else {
+      state.currentProviderModels = [];
+    }
+
+    if (provider === 'openrouter') populateOpenRouterModels(modelsList);
+    else if (provider === 'openai') populateOpenAIModels(modelsList);
+    else if (provider === 'anthropic') populateAnthropicModels(modelsList);
+    else if (provider === 'google') populateGoogleModels(modelsList);
+    else if (provider === 'ollama') populateOllamaModels(modelsList);
+
+    // Sync the proxy select
+    const filterText = (state.modelFilterText || '').trim().toLowerCase();
+    const list = state.currentProviderModels.filter((m) => {
+      if (!filterText) return true;
+      return (m.id && m.id.toLowerCase().includes(filterText)) ||
+             (m.name && m.name.toLowerCase().includes(filterText));
+    });
+
+    if (elements.modelSelect) {
+      const currentSelected = elements.modelSelect.value;
+      elements.modelSelect.innerHTML = '';
+      let selectedFound = false;
+
+      list.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        let badge = '[PRICE UNKNOWN]';
+        const isFree = m.free || (m.id && m.id.endsWith(':free')) || m.pricing_status === 'free';
+        if (provider === 'ollama') badge = '[LOCAL]';
+        else if (isFree) badge = '[FREE]';
+        else if (m.pricing_status === 'paid' || provider === 'anthropic' || provider === 'openai' || provider === 'google') badge = '[PAID]';
+
+        opt.textContent = `${m.name || m.id} ${badge}`;
+        opt.dataset.pricing = badge;
+        if (currentSelected && m.id === currentSelected) {
+          opt.selected = true;
+          selectedFound = true;
+        }
+        elements.modelSelect.appendChild(opt);
+      });
+
+      const customOpt = document.createElement('option');
+      customOpt.value = '__custom__';
+      customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+      customOpt.dataset.pricing = '[CUSTOM]';
+      if (currentSelected === '__custom__') customOpt.selected = true;
+      elements.modelSelect.appendChild(customOpt);
+
+      if (!selectedFound && elements.modelSelect.options.length > 0) {
+        elements.modelSelect.selectedIndex = 0;
+      }
+    }
+    updateModelPricingNotice();
+  }
+
+  // Handle Proxy Model Select Change
   function onModelSelectChange() {
-    if (elements.modelSelect.value === '__custom__') {
-      elements.modelCustomInput.style.display = 'block';
-      elements.modelCustomInput.focus();
-    } else {
-      elements.modelCustomInput.style.display = 'none';
+    if (elements.modelSelect && elements.modelCustomInput) {
+      if (elements.modelSelect.value === '__custom__') {
+        elements.modelCustomInput.style.display = 'block';
+        elements.modelCustomInput.focus();
+      } else {
+        elements.modelCustomInput.style.display = 'none';
+      }
     }
+    updateModelPricingNotice();
+    refreshReadiness();
   }
 
-  // Get Currently Chosen Model ID
-  function getSelectedModelId() {
-    if (elements.modelSelect.value === '__custom__') {
-      return elements.modelCustomInput.value.trim() || 'nvidia/nemotron-3.5-lightning:free';
+  // Update Execution Engine Readiness Help Banner with Truthful Diagnostics
+  function updateReadinessDisplay(rData) {
+    if (!rData) return;
+    state.readiness = rData;
+    const scanModeEl = document.getElementById('scan-mode-select');
+    if (!scanModeEl) return;
+    const helpEl = scanModeEl.parentElement ? scanModeEl.parentElement.querySelector('.form-help') : null;
+    if (!helpEl) return;
+
+    const dockerComp = rData.components ? rData.components.docker_runtime : null;
+    const llmComp = rData.components ? rData.components.llm_provider : null;
+    const dockerOk = Boolean(dockerComp && dockerComp.available);
+    const autonomousOk = Boolean(rData.autonomous_ready);
+
+    if (autonomousOk) {
+      helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready:</strong> Full autonomous multi-agent pentest available.`;
+      return;
     }
-    return elements.modelSelect.value;
+
+    if (dockerOk) {
+      // Docker is available on host! Autonomous readiness failure is NOT a Docker failure.
+      if (llmComp && !llmComp.available) {
+        const msg = escapeHtml(llmComp.actionable_message || 'AI provider configuration required.');
+        helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready.</strong> ⚠️ <strong style="color:#f59e0b;">AI Provider configuration required:</strong> ${msg} <a href="/diagnostics/readiness" target="_blank" style="color:#38bdf8; text-decoration:underline;">View diagnostics</a>.`;
+        return;
+      }
+      const failingComp = Object.values(rData.components || {}).find((c) => !c.available && c.name !== 'docker_runtime');
+      if (failingComp) {
+        const cName = escapeHtml(failingComp.name.replace(/_/g, ' ').toUpperCase());
+        const msg = escapeHtml(failingComp.actionable_message || 'Component setup required.');
+        helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready.</strong> ⚠️ <strong style="color:#f59e0b;">${cName}:</strong> ${msg} <a href="/diagnostics/readiness" target="_blank" style="color:#38bdf8; text-decoration:underline;">View diagnostics</a>.`;
+        return;
+      }
+      helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready:</strong> Configuration check in progress.`;
+      return;
+    }
+
+    // Docker is truly unavailable
+    const dockerMsg = escapeHtml(dockerComp ? dockerComp.actionable_message : 'Autonomous multi-agent mode requires Docker.');
+    helpEl.innerHTML = `⚠️ <strong style="color:#f59e0b;">Docker unavailable on host:</strong> ${dockerMsg} Select <em>Lightweight In-Process Scanner</em> or view <a href="/diagnostics/readiness" target="_blank" style="color:#38bdf8; text-decoration:underline;">diagnostics</a>.`;
+  }
+
+  // Refresh Preflight Runtime Readiness from Backend
+  async function refreshReadiness() {
+    try {
+      const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+      const model = getSelectedModelId();
+      const apiKey = state.runtimeApiKey || (elements.runtimeApiKey ? elements.runtimeApiKey.value.trim() : '');
+      const headers = {};
+      if (apiKey) {
+        if (provider === 'google') headers['X-Google-API-Key'] = apiKey;
+        else if (provider === 'openrouter') headers['X-OpenRouter-API-Key'] = apiKey;
+      }
+      const url = `/system/readiness?provider=${encodeURIComponent(provider)}&model=${encodeURIComponent(model)}`;
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const rData = await res.json();
+        updateReadinessDisplay(rData);
+        return rData;
+      }
+    } catch (_) {}
+    return null;
   }
 
   // System Health Probe
@@ -338,24 +1099,7 @@
       }
 
       // Preflight runtime readiness check
-      try {
-        const rRes = await fetch('/system/readiness');
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          state.readiness = rData;
-          const scanModeEl = document.getElementById('scan-mode-select');
-          if (scanModeEl) {
-            const helpEl = scanModeEl.parentElement ? scanModeEl.parentElement.querySelector('.form-help') : null;
-            if (helpEl) {
-              if (rData.autonomous_ready) {
-                helpEl.innerHTML = `✅ <strong style="color:#10b981;">Docker runtime ready:</strong> Full autonomous multi-agent pentest available.`;
-              } else {
-                helpEl.innerHTML = `⚠️ <strong style="color:#f59e0b;">Docker unavailable on host:</strong> Autonomous multi-agent mode requires Docker. Select <em>Lightweight In-Process Scanner</em> or view <a href="/diagnostics/readiness" target="_blank" style="color:#38bdf8; text-decoration:underline;">diagnostics</a>.`;
-              }
-            }
-          }
-        }
-      } catch (_) {}
+      await refreshReadiness();
     } catch (err) {
       if (elements.sysDot && elements.sysText) {
         elements.sysDot.style.background = '#ef4444';
@@ -364,20 +1108,16 @@
     }
   }
 
-  // Fetch live free models from OpenRouter catalog
-  async function loadOpenRouterFreeModels() {
+  // Fetch live models for any provider
+  async function loadProviderModels(provider) {
     try {
-      const res = await fetch('/providers/openrouter/models');
+      const res = await fetch(`/providers/${provider}/models`);
       if (res.ok) {
         const liveModels = await res.json();
         if (liveModels && liveModels.length) {
-          DEFAULT_PROVIDER_MODELS.openrouter = liveModels;
-          if (elements.modelProviderSelect && elements.modelProviderSelect.value === 'openrouter') {
-            const currentSelected = elements.modelSelect ? elements.modelSelect.value : null;
-            populateModelOptions('openrouter', liveModels);
-            if (currentSelected && elements.modelSelect.querySelector(`option[value="${currentSelected}"]`)) {
-              elements.modelSelect.value = currentSelected;
-            }
+          DEFAULT_PROVIDER_MODELS[provider] = liveModels;
+          if (elements.modelProviderSelect && elements.modelProviderSelect.value === provider) {
+            populateModelOptions(provider, liveModels);
           }
         }
       }
@@ -386,36 +1126,141 @@
     }
   }
 
-  // Model Provider Change Handling
-  function onProviderChange() {
-    const provider = elements.modelProviderSelect.value;
-    if (provider === 'cloud_hosted') {
-      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'block';
-      elements.groupApiKey.style.display = 'none';
-      const activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
-      if (activeProf && activeProf.model) {
-        populateModelOptions('cloud_hosted', [{ id: activeProf.model, name: activeProf.model_alias || activeProf.model }]);
-      } else {
-        populateModelOptions('cloud_hosted');
-      }
-      updateQuickProfileDisplay();
-    } else if (provider === 'ollama') {
-      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'none';
-      elements.groupApiKey.style.display = 'none';
-      populateModelOptions('ollama');
-    } else {
-      if (elements.groupCloudHostedQuick) elements.groupCloudHostedQuick.style.display = 'none';
-      elements.groupApiKey.style.display = 'block';
-      populateModelOptions(provider);
-      if (provider === 'openrouter') {
-        elements.runtimeApiKey.placeholder = 'Paste OpenRouter API key (Never saved to disk)';
-        loadOpenRouterFreeModels();
-      } else if (provider === 'google') {
-        elements.runtimeApiKey.placeholder = 'Paste Google Gemini API key';
-      } else {
-        elements.runtimeApiKey.placeholder = 'Paste OpenAI API key';
-      }
+  // Save Current Provider Form Inputs Into In-Memory State
+  function saveCurrentProviderState(prevProvider) {
+    if (!prevProvider || !state.providerConfigs[prevProvider]) return;
+    const cfg = state.providerConfigs[prevProvider];
+    if (prevProvider === 'openrouter') {
+      if (elements.openrouterApiKey) cfg.apiKey = elements.openrouterApiKey.value;
+      if (elements.openrouterModelSelect) cfg.model = elements.openrouterModelSelect.value;
+      if (elements.openrouterCustomModel) cfg.customModel = elements.openrouterCustomModel.value;
+      if (elements.openrouterModelSearch) cfg.search = elements.openrouterModelSearch.value;
+    } else if (prevProvider === 'openai') {
+      if (elements.openaiApiKey) cfg.apiKey = elements.openaiApiKey.value;
+      if (elements.openaiModelSelect) cfg.model = elements.openaiModelSelect.value;
+      if (elements.openaiCustomModel) cfg.customModel = elements.openaiCustomModel.value;
+      if (elements.openaiModelSearch) cfg.search = elements.openaiModelSearch.value;
+    } else if (prevProvider === 'anthropic') {
+      if (elements.anthropicApiKey) cfg.apiKey = elements.anthropicApiKey.value;
+      if (elements.anthropicModelSelect) cfg.model = elements.anthropicModelSelect.value;
+      if (elements.anthropicCustomModel) cfg.customModel = elements.anthropicCustomModel.value;
+    } else if (prevProvider === 'google') {
+      if (elements.googleApiKey) cfg.apiKey = elements.googleApiKey.value;
+      if (elements.googleModelSelect) cfg.model = elements.googleModelSelect.value;
+      if (elements.googleCustomModel) cfg.customModel = elements.googleCustomModel.value;
+    } else if (prevProvider === 'ollama') {
+      if (elements.ollamaBaseUrl) cfg.baseUrl = elements.ollamaBaseUrl.value;
+      if (elements.ollamaApiKey) cfg.apiKey = elements.ollamaApiKey.value;
+      if (elements.ollamaModelSelect) cfg.model = elements.ollamaModelSelect.value;
+      if (elements.ollamaCustomModel) cfg.customModel = elements.ollamaCustomModel.value;
+    } else if (prevProvider === 'cloud_hosted') {
+      if (elements.cloudProfileSelectMain) cfg.profileId = elements.cloudProfileSelectMain.value;
+      if (elements.cloudDiscoveredModelSelect) cfg.model = elements.cloudDiscoveredModelSelect.value;
+      if (elements.cloudManualModelInput) cfg.customModel = elements.cloudManualModelInput.value;
+      if (elements.cloudModelSearch) cfg.search = elements.cloudModelSearch.value;
     }
+  }
+
+  // Restore Form Inputs From In-Memory State for Provider
+  function restoreProviderState(newProvider) {
+    if (!newProvider || !state.providerConfigs[newProvider]) return;
+    const cfg = state.providerConfigs[newProvider];
+    if (newProvider === 'openrouter') {
+      if (elements.openrouterApiKey && cfg.apiKey) elements.openrouterApiKey.value = cfg.apiKey;
+      if (elements.openrouterModelSearch && cfg.search) elements.openrouterModelSearch.value = cfg.search;
+      if (elements.openrouterCustomModel && cfg.customModel) elements.openrouterCustomModel.value = cfg.customModel;
+      populateOpenRouterModels();
+      if (elements.openrouterModelSelect && cfg.model) elements.openrouterModelSelect.value = cfg.model;
+      if (elements.openrouterCustomModel) elements.openrouterCustomModel.style.display = (elements.openrouterModelSelect && elements.openrouterModelSelect.value === '__custom__') ? 'block' : 'none';
+      updateOpenRouterPricingNotice();
+    } else if (newProvider === 'openai') {
+      if (elements.openaiApiKey && cfg.apiKey) elements.openaiApiKey.value = cfg.apiKey;
+      if (elements.openaiModelSearch && cfg.search) elements.openaiModelSearch.value = cfg.search;
+      if (elements.openaiCustomModel && cfg.customModel) elements.openaiCustomModel.value = cfg.customModel;
+      populateOpenAIModels();
+      if (elements.openaiModelSelect && cfg.model) elements.openaiModelSelect.value = cfg.model;
+      if (elements.openaiCustomModel) elements.openaiCustomModel.style.display = (elements.openaiModelSelect && elements.openaiModelSelect.value === '__custom__') ? 'block' : 'none';
+      updateOpenAIPricingNotice();
+    } else if (newProvider === 'anthropic') {
+      if (elements.anthropicApiKey && cfg.apiKey) elements.anthropicApiKey.value = cfg.apiKey;
+      if (elements.anthropicCustomModel && cfg.customModel) elements.anthropicCustomModel.value = cfg.customModel;
+      populateAnthropicModels();
+      if (elements.anthropicModelSelect && cfg.model) elements.anthropicModelSelect.value = cfg.model;
+      if (elements.anthropicCustomModel) elements.anthropicCustomModel.style.display = (elements.anthropicModelSelect && elements.anthropicModelSelect.value === '__custom__') ? 'block' : 'none';
+      updateAnthropicPricingNotice();
+    } else if (newProvider === 'google') {
+      if (elements.googleApiKey && cfg.apiKey) elements.googleApiKey.value = cfg.apiKey;
+      if (elements.googleCustomModel && cfg.customModel) elements.googleCustomModel.value = cfg.customModel;
+      populateGoogleModels();
+      if (elements.googleModelSelect && cfg.model) elements.googleModelSelect.value = cfg.model;
+      if (elements.googleCustomModel) elements.googleCustomModel.style.display = (elements.googleModelSelect && elements.googleModelSelect.value === '__custom__') ? 'block' : 'none';
+      updateGooglePricingNotice();
+    } else if (newProvider === 'ollama') {
+      if (elements.ollamaBaseUrl && cfg.baseUrl) elements.ollamaBaseUrl.value = cfg.baseUrl;
+      if (elements.ollamaApiKey && cfg.apiKey) elements.ollamaApiKey.value = cfg.apiKey;
+      if (elements.ollamaCustomModel && cfg.customModel) elements.ollamaCustomModel.value = cfg.customModel;
+      populateOllamaModels();
+      if (elements.ollamaModelSelect && cfg.model) elements.ollamaModelSelect.value = cfg.model;
+      if (elements.ollamaCustomModel) elements.ollamaCustomModel.style.display = (elements.ollamaModelSelect && elements.ollamaModelSelect.value === '__custom__') ? 'block' : 'none';
+      updateOllamaPricingNotice();
+    } else if (newProvider === 'cloud_hosted') {
+      updateCloudHostedPanelDisplay();
+      if (elements.cloudManualModelInput && cfg.customModel) elements.cloudManualModelInput.value = cfg.customModel;
+      if (elements.cloudModelSearch && cfg.search) elements.cloudModelSearch.value = cfg.search;
+    }
+  }
+
+  // Model Provider Change Handling - Strict Panel Exclusivity & Dynamic Badges
+  function onProviderChange() {
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
+    const prevProvider = state.previousProvider || 'openrouter';
+
+    // 1. Save in-memory inputs from previous provider
+    saveCurrentProviderState(prevProvider);
+    state.previousProvider = provider;
+
+    // 2. Strict Panel Exclusivity: Show ONLY the active provider panel, hide all 5 other panels
+    const allProviders = ['openrouter', 'openai', 'anthropic', 'google', 'ollama', 'cloud_hosted'];
+    allProviders.forEach((p) => {
+      const panelId = p === 'cloud_hosted' ? 'panel-provider-cloud-hosted' : `panel-provider-${p}`;
+      const panel = document.getElementById(panelId) || document.getElementById(`panel-provider-${p}`);
+      if (panel) {
+        panel.style.display = p === provider ? 'block' : 'none';
+      }
+    });
+
+    // 3. Update Master Provider badge and description hint
+    const meta = PROVIDER_META[provider] || {
+      name: provider,
+      badgeClass: 'badge-purple',
+      badgeText: provider.toUpperCase(),
+      description: 'Custom AI Provider',
+    };
+    if (elements.activeProviderBadge) {
+      elements.activeProviderBadge.textContent = meta.badgeText;
+      elements.activeProviderBadge.className = `badge ${meta.badgeClass}`;
+    }
+    if (elements.providerDescriptionHint) {
+      elements.providerDescriptionHint.textContent = meta.description;
+    }
+
+    // 4. Restore state & populate models for active provider
+    restoreProviderState(provider);
+
+    // 5. Fetch live models if provider's models list is currently empty
+    if (provider === 'openrouter' && (!state.providerConfigs.openrouter.models || !state.providerConfigs.openrouter.models.length)) {
+      loadProviderModels('openrouter');
+    } else if (provider === 'ollama' && (!state.providerConfigs.ollama.models || !state.providerConfigs.ollama.models.length)) {
+      loadProviderModels('ollama');
+    } else if (provider === 'cloud_hosted' && (!state.cloudProfiles || !state.cloudProfiles.length)) {
+      loadCloudProfiles();
+    }
+
+    // 6. Synchronize compatibility proxies
+    syncCompatibilityProxies();
+
+    // 7. Refresh preflight runtime readiness
+    refreshReadiness();
   }
 
   // Preflight Scope Validation
@@ -456,49 +1301,96 @@
 
   // Test Cloud API Key & Fetch Available Models
   async function validateCloudKey(provider, key, feedbackEl) {
-    if (!key) {
+    if (provider === 'ollama') {
+      feedbackEl.innerHTML = `<span style="color:#38bdf8;">Testing connection to local Ollama service...</span>`;
+      try {
+        const baseUrl = (elements.customBaseUrl ? elements.customBaseUrl.value.trim() : '') || 'http://127.0.0.1:11434';
+        const res = await fetch('/providers/ollama/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_base: baseUrl }),
+        });
+        const data = await res.json();
+        if (data.valid || data.status === 'configured') {
+          if (data.models && data.models.length) {
+            const formatted = data.models.map((m) =>
+              typeof m === 'string' ? { id: m, name: m, pricing_status: 'free', free: true } : m
+            );
+            DEFAULT_PROVIDER_MODELS.ollama = formatted;
+            populateModelOptions('ollama', formatted);
+            feedbackEl.innerHTML = `<span style="color:#34d399; font-weight: 600;">✅ Connected! ${formatted.length} local models detected.</span>`;
+            showToast(`Ollama connected: ${formatted.length} models ready.`, 'success');
+          } else {
+            feedbackEl.innerHTML = `<span style="color:#34d399;">✅ Connected! ${escapeHtml(data.message)}</span>`;
+          }
+          await refreshReadiness();
+        } else {
+          feedbackEl.innerHTML = `<span style="color:#fb7185;">❌ ${escapeHtml(data.message || 'Connection failed')}</span>`;
+        }
+      } catch (err) {
+        feedbackEl.innerHTML = `<span style="color:#fb7185;">❌ Network error: ${escapeHtml(err.message)}</span>`;
+      }
+      return;
+    }
+
+    if (!key && provider !== 'cloud_hosted') {
       feedbackEl.innerHTML = `<span style="color:#fb7185;">Please enter an API key to test.</span>`;
       return;
     }
 
     feedbackEl.innerHTML = `<span style="color:#38bdf8;">Testing connection and retrieving available models...</span>`;
-    const endpoint = provider === 'google'
-      ? '/providers/google/validate'
-      : (provider === 'openai' ? '/providers/openai/validate' : '/providers/openrouter/validate');
-    const headerName = provider === 'google'
-      ? 'X-Google-API-Key'
-      : (provider === 'openai' ? 'Authorization' : 'X-OpenRouter-API-Key');
-    const headerVal = provider === 'openai' ? `Bearer ${key}` : key;
+    let endpoint = '/providers/openrouter/validate';
+    let headers = { 'Content-Type': 'application/json' };
+    let body = { api_key: key };
+
+    if (provider === 'anthropic') {
+      endpoint = '/providers/anthropic/validate';
+      headers['X-Anthropic-API-Key'] = key;
+    } else if (provider === 'openai') {
+      endpoint = '/providers/openai/validate';
+      headers['Authorization'] = `Bearer ${key}`;
+      headers['X-OpenAI-API-Key'] = key;
+    } else if (provider === 'google') {
+      endpoint = '/providers/google/validate';
+      headers['X-Google-API-Key'] = key;
+    } else if (provider === 'cloud_hosted' || provider === 'custom') {
+      endpoint = '/providers/custom/validate';
+      const baseUrl = (elements.customBaseUrl ? elements.customBaseUrl.value.trim() : '') || 'https://api.openai.com/v1';
+      body = { api_base: baseUrl, api_key: key || undefined };
+    } else {
+      headers['X-OpenRouter-API-Key'] = key;
+    }
 
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          [headerName]: headerVal,
-        },
-        body: JSON.stringify({ api_key: key }),
+        headers: headers,
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.valid || data.status === 'configured') {
-        state.runtimeApiKey = key;
+        if (key) state.runtimeApiKey = key;
 
-        // If OpenRouter returns models, dynamically populate the dropdown
         if (data.models && data.models.length) {
           const formatted = data.models.map((m) =>
-            typeof m === 'string' ? { id: m, name: m, free: m.includes(':free') } : m
+            typeof m === 'string'
+              ? { id: m, name: m, free: m.includes(':free'), pricing_status: m.includes(':free') ? 'free' : 'paid' }
+              : m
           );
+          DEFAULT_PROVIDER_MODELS[provider] = formatted;
           populateModelOptions(provider, formatted);
-          const freeCount = formatted.filter((m) => m.free || m.id.endsWith(':free') || m.id === 'openrouter/free').length;
-          feedbackEl.innerHTML = `<span style="color:#34d399; font-weight: 600;">✅ Key Valid! ${freeCount} free models available in dropdown above.</span>`;
-          showToast(`OpenRouter verified! ${freeCount} free models ready.`, 'success');
+          const freeCount = formatted.filter((m) => m.free || m.id.endsWith(':free') || m.pricing_status === 'free').length;
+          feedbackEl.innerHTML = `<span style="color:#34d399; font-weight: 600;">✅ Key Valid! ${formatted.length} models available (${freeCount} free).</span>`;
+          showToast(`${provider.toUpperCase()} verified! ${formatted.length} models ready.`, 'success');
         } else {
-          feedbackEl.innerHTML = `<span style="color:#34d399;">✅ Valid! ${escapeHtml(data.message)}</span>`;
+          feedbackEl.innerHTML = `<span style="color:#34d399;">✅ Valid! ${escapeHtml(data.message || 'Credentials verified.')}</span>`;
           showToast(`${provider.toUpperCase()} credentials verified!`, 'success');
         }
+        await refreshReadiness();
       } else {
         feedbackEl.innerHTML = `<span style="color:#fb7185;">❌ ${escapeHtml(data.message || 'Key rejected')}</span>`;
         showToast(`Verification failed: ${data.message}`, 'error');
+        await refreshReadiness();
       }
     } catch (err) {
       feedbackEl.innerHTML = `<span style="color:#fb7185;">❌ Network error: ${escapeHtml(err.message)}</span>`;
@@ -530,16 +1422,38 @@
       return;
     }
 
-    const provider = elements.modelProviderSelect.value;
+    syncCompatibilityProxies();
+    const provider = elements.modelProviderSelect ? elements.modelProviderSelect.value : 'openrouter';
     const model = getSelectedModelId();
     const mode = elements.scanModeSelect ? elements.scanModeSelect.value : 'autonomous';
     const maxAttempts = parseInt(elements.gap2Threshold.value, 10) || 2;
-    const apiKey = elements.runtimeApiKey.value.trim();
+    const apiKey = getActiveProviderApiKey();
+    const baseUrl = getActiveProviderBaseUrl();
+
+    // Preflight readiness verification before launching
+    const currentReadiness = await refreshReadiness();
+    if (mode === 'autonomous' && currentReadiness) {
+      const dockerComp = currentReadiness.components ? currentReadiness.components.docker_runtime : null;
+      const llmComp = currentReadiness.components ? currentReadiness.components.llm_provider : null;
+      if (dockerComp && !dockerComp.available) {
+        showToast(`Autonomous execution blocked: ${dockerComp.actionable_message || 'Docker is unavailable on host.'}`, 'error');
+        return;
+      }
+      if (llmComp && !llmComp.available && !apiKey) {
+        showToast(`Autonomous execution blocked: ${llmComp.actionable_message || 'AI Provider credentials required.'}`, 'error');
+        return;
+      }
+    }
 
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) {
       if (provider === 'google') headers['X-Google-API-Key'] = apiKey;
       else if (provider === 'openrouter') headers['X-OpenRouter-API-Key'] = apiKey;
+      else if (provider === 'anthropic') headers['X-Anthropic-API-Key'] = apiKey;
+      else if (provider === 'openai') {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        headers['X-OpenAI-API-Key'] = apiKey;
+      }
     }
 
     elements.btnLaunch.disabled = true;
@@ -560,6 +1474,12 @@
       return;
     }
 
+    let additionalHosts = [];
+    const additionalHostsInput = document.getElementById('additional-hosts-input');
+    if (additionalHostsInput && additionalHostsInput.value.trim()) {
+      additionalHosts = additionalHostsInput.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    }
+
     try {
       const res = await fetch('/runs', {
         method: 'POST',
@@ -575,7 +1495,9 @@
           assessor_provider: provider,
           assessor_model: model,
           assessor_api_key: apiKey || null,
+          assessor_api_base: baseUrl || null,
           max_attempts: maxAttempts,
+          additional_authorized_hosts: additionalHosts,
           target_scope_acknowledged: true,
         }),
       });
@@ -597,6 +1519,9 @@
 
   // Active Assessment Polling and Server-Sent Events (SSE) Streaming
   function startRunPolling(runId) {
+    if (runId) {
+      localStorage.setItem('activeRunId', runId);
+    }
     if (state.pollTimer) {
       clearInterval(state.pollTimer);
       state.pollTimer = null;
@@ -709,12 +1634,15 @@
     connectSse();
   }
 
+  let consecutivePollErrors = 0;
+
   async function fetchRunState(runId) {
     if (!runId || (state.activeRunId && runId !== state.activeRunId)) return;
     try {
       const res = await fetch(`/runs/${runId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const run = await res.json();
+      consecutivePollErrors = 0;
       if (state.activeRunId && runId !== state.activeRunId) return;
 
       // Stale data guard: prevent older poll responses from overwriting newer SSE states
@@ -732,7 +1660,7 @@
       state.latestRunData = run;
       renderActiveRun(run);
 
-      if (run.status === 'completed' || run.status === 'failed' || run.status === 'aborted') {
+      if (['completed', 'failed', 'aborted', 'provider_blocked', 'stopped', 'interrupted', 'partial', 'blocked'].includes(run.status)) {
         if (state.pollTimer) {
           clearInterval(state.pollTimer);
           state.pollTimer = null;
@@ -741,17 +1669,40 @@
           state.eventSource.close();
           state.eventSource = null;
         }
+        if (state.elapsedTimerInterval) {
+          clearInterval(state.elapsedTimerInterval);
+          state.elapsedTimerInterval = null;
+        }
         if (run.status === 'completed') {
           elements.btnViewReportNow.style.display = 'inline-flex';
           showToast(`Assessment ${runId} completed!`, 'success');
+        } else if (run.status === 'partial') {
+          showToast(`Assessment ${runId} finished partially: ${run.error || 'untested candidates remain'}`, 'warning');
+        } else if (run.status === 'interrupted') {
+          showToast(`Assessment ${runId} was interrupted: ${run.error || 'execution did not survive'}`, 'warning');
+        } else if (run.status === 'provider_blocked') {
+          showToast(`Assessment ${runId} paused: provider quota exceeded. Choose a fallback model to resume.`, 'warning');
         } else if (run.status === 'failed') {
           showToast(`Assessment ${runId} failed: ${run.error || 'Check terminal logs'}`, 'error');
-        } else if (run.status === 'aborted') {
-          showToast(`Assessment ${runId} stopped by operator.`, 'info');
+        } else if (run.status === 'aborted' || run.status === 'stopped') {
+          showToast(`Assessment ${runId} stopped.`, 'info');
         }
       }
     } catch (err) {
+      consecutivePollErrors++;
       console.debug('Run polling error:', err);
+      if (consecutivePollErrors >= 4) {
+        if (state.elapsedTimerInterval) {
+          clearInterval(state.elapsedTimerInterval);
+          state.elapsedTimerInterval = null;
+        }
+        if (elements.metricActiveTask) {
+          elements.metricActiveTask.textContent = 'Server Disconnected';
+        }
+        if (elements.metricActiveAgent) {
+          elements.metricActiveAgent.textContent = 'Offline';
+        }
+      }
     }
   }
 
@@ -769,9 +1720,9 @@
     const pct = typeof prog.percent === 'number' ? Math.min(100, Math.max(0, prog.percent)) : 0;
 
     elements.progressBarFill.style.width = `${pct}%`;
-    if (status === 'FAILED') {
+    if (status === 'FAILED' || status === 'FAILED_INFRASTRUCTURE' || status === 'FAILED_AGENT') {
       elements.progressBarFill.style.background = '#f43f5e';
-    } else if (status === 'ABORTED') {
+    } else if (status === 'ABORTED' || status === 'CANCELLED' || status === 'PROVIDER_BLOCKED' || status === 'PAUSED_PROVIDER_LIMIT' || status === 'PAUSED_EXECUTION_LIMIT') {
       elements.progressBarFill.style.background = '#f59e0b';
     } else if (status === 'COMPLETED') {
       elements.progressBarFill.style.background = '#10b981';
@@ -790,20 +1741,146 @@
     if (elements.progressPhaseIcon) {
       if (status === 'COMPLETED') {
         elements.progressPhaseIcon.textContent = '✅';
-      } else if (status === 'FAILED') {
+      } else if (status === 'FAILED' || status === 'FAILED_INFRASTRUCTURE' || status === 'FAILED_AGENT') {
         elements.progressPhaseIcon.textContent = '❌';
-      } else if (status === 'ABORTED') {
-        elements.progressPhaseIcon.textContent = '🛑';
+      } else if (status === 'ABORTED' || status === 'CANCELLED' || status === 'PROVIDER_BLOCKED' || status === 'PAUSED_PROVIDER_LIMIT' || status === 'PAUSED_EXECUTION_LIMIT') {
+        elements.progressPhaseIcon.textContent = '⏸️';
       } else {
         elements.progressPhaseIcon.textContent = PHASE_ICONS[prog.phase_index] || '⚡';
       }
     }
 
     if (elements.progressTurnsText) {
-      const curTurns = prog.current !== undefined ? prog.current : 0;
       const maxTurns = prog.total || run?.max_turns || 500;
+      const curTurns = prog.current !== undefined ? Math.min(prog.current, maxTurns) : 0;
       elements.progressTurnsText.textContent = `${curTurns} / ${maxTurns} Turns`;
     }
+  }
+
+  function updateResumeModelsDropdown(provider, selectedModel) {
+    if (!elements.resumeModelSelect) return;
+    elements.resumeModelSelect.innerHTML = '';
+    const models = DEFAULT_PROVIDER_MODELS[provider] || [];
+    let found = false;
+    models.forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name || m.id;
+      if (selectedModel && m.id === selectedModel) {
+        opt.selected = true;
+        found = true;
+      }
+      elements.resumeModelSelect.appendChild(opt);
+    });
+    if (selectedModel && !found) {
+      const opt = document.createElement('option');
+      opt.value = selectedModel;
+      opt.textContent = `${selectedModel} (Original)`;
+      opt.selected = true;
+      elements.resumeModelSelect.insertBefore(opt, elements.resumeModelSelect.firstChild);
+      found = true;
+    }
+    if (!found && elements.resumeModelSelect.options.length > 0) {
+      elements.resumeModelSelect.selectedIndex = 0;
+    }
+  }
+
+  function formatDuration(totalSeconds) {
+    const totalSec = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  function startElapsedTimer(run) {
+    if (state.elapsedTimerInterval) {
+      clearInterval(state.elapsedTimerInterval);
+      state.elapsedTimerInterval = null;
+    }
+
+    const startTs = run.started_at || run.start_time;
+    if (elements.metricStarted) {
+      if (startTs) {
+        try {
+          const d = new Date(startTs);
+          elements.metricStarted.textContent = d.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        } catch (_) {
+          elements.metricStarted.textContent = String(startTs).substring(0, 19);
+        }
+      } else {
+        elements.metricStarted.textContent = '—';
+      }
+    }
+
+    const isRunning = run.status === 'running' || run.status === 'queued';
+    if (isRunning && startTs) {
+      const updateTimer = () => {
+        const startMs = new Date(startTs).getTime();
+        const nowMs = Date.now();
+        const elapsedSec = Math.max(0, (nowMs - startMs) / 1000);
+        if (elements.metricElapsed) {
+          elements.metricElapsed.textContent = formatDuration(elapsedSec);
+        }
+      };
+      updateTimer();
+      state.elapsedTimerInterval = setInterval(updateTimer, 1000);
+    } else {
+      const dur = run.duration_seconds !== undefined && run.duration_seconds !== null
+        ? run.duration_seconds
+        : (run.elapsed_seconds || 0);
+      if (elements.metricElapsed) {
+        elements.metricElapsed.textContent = formatDuration(dur);
+      }
+    }
+  }
+
+  function updateRunFactsAndTelemetry(run) {
+    if (!run) return;
+
+    // 1. Start Time & Elapsed Duration
+    startElapsedTimer(run);
+
+    // 2. Active Agent
+    if (elements.metricActiveAgent) {
+      const status = (run.status || '').toLowerCase();
+      let ag = run.active_agent;
+      if (!ag) {
+        if (status === 'running' && !run.error) ag = 'Root Agent';
+        else if (status === 'completed') ag = 'Completed';
+        else if (status === 'provider_blocked' || status === 'interrupted' || status === 'partial' || status === 'blocked') ag = 'Paused';
+        else if (status === 'failed' || status === 'aborted' || status === 'stopped') ag = 'Stopped';
+        else ag = 'Idle';
+      }
+      elements.metricActiveAgent.textContent = ag;
+    }
+
+    // 3. Active Task
+    if (elements.metricActiveTask) {
+      const status = (run.status || '').toLowerCase();
+      let task = run.active_task;
+      if (!task) {
+        if (status === 'running') task = 'Investigating attack surface';
+        else if (status === 'completed') task = 'Assessment completed';
+        else if (status === 'provider_blocked') task = 'Awaiting provider resume';
+        else if (status === 'failed') task = run.error ? String(run.error).substring(0, 45) : 'Failed';
+        else if (status === 'aborted' || status === 'stopped') task = 'Assessment stopped';
+        else task = 'Standby';
+      }
+      elements.metricActiveTask.textContent = task;
+    }
+
+    // 4. Findings by Verification State Breakdown
+    const vs = run.verification_states || run.findings_summary || {};
+    if (elements.feDiscovered) elements.feDiscovered.textContent = vs.discovered ?? 0;
+    if (elements.feCandidate) elements.feCandidate.textContent = vs.candidate ?? 0;
+    if (elements.feUnderInvestigation) elements.feUnderInvestigation.textContent = vs.under_investigation ?? 0;
+    if (elements.feExploitation) elements.feExploitation.textContent = vs.exploitation_attempted ?? 0;
+    if (elements.feVerified) elements.feVerified.textContent = vs.verified ?? (run.findings ? run.findings.length : 0);
+    if (elements.feUnconfirmed) elements.feUnconfirmed.textContent = vs.unconfirmed ?? 0;
+    if (elements.feFp) elements.feFp.textContent = vs.false_positive ?? 0;
+    if (elements.feBlocked) elements.feBlocked.textContent = vs.blocked ?? 0;
+    if (elements.feInc) elements.feInc.textContent = vs.inconclusive ?? 0;
   }
 
   // Render Active Run Dashboard
@@ -811,13 +1888,28 @@
     elements.heroRunId.textContent = run.run_id;
     elements.heroTargetText.textContent = run.target_url || 'Target Application';
     const prov = (run.provider || 'openrouter').toUpperCase();
-    const mdl = run.model || 'nvidia/nemotron-3.5-lightning:free';
+    const mdl = run.model || 'default-model';
     const execModeLabel = run.execution_mode === 'autonomous_multi_agent'
       ? 'Autonomous Multi-Agent Core (Docker)'
       : (run.execution_mode === 'lightweight_active_scanner'
         ? 'Lightweight Active Scanner (In-Process)'
         : (run.execution_mode === 'blocked' ? 'Blocked' : (run.mode || 'web').toUpperCase()));
     elements.heroModeText.textContent = `Engine: ${execModeLabel} • Provider: ${prov} (${mdl})`;
+
+    if (elements.heroEngineBadge) {
+      elements.heroEngineBadge.textContent = execModeLabel.includes('Docker')
+        ? '⚔️ Autonomous Multi-Agent (Docker)'
+        : (execModeLabel.includes('Lightweight') ? '⚡ Lightweight Scanner' : execModeLabel);
+    }
+    if (elements.heroProviderBadge) {
+      elements.heroProviderBadge.textContent = `🌐 ${prov}`;
+    }
+    if (elements.heroModelBadge) {
+      elements.heroModelBadge.textContent = `🧠 ${mdl}`;
+    }
+
+    // Update Live Run Facts and Verification State Counters
+    updateRunFactsAndTelemetry(run);
 
     const errorBanner = document.getElementById('hero-error-banner');
     const errorText = document.getElementById('hero-error-text');
@@ -826,26 +1918,101 @@
 
     const findings = run.findings || [];
 
+    const isResumable = [
+      'PROVIDER_BLOCKED',
+      'PAUSED_PROVIDER_LIMIT',
+      'PAUSED_EXECUTION_LIMIT',
+      'INTERRUPTED',
+      'FAILED',
+      'FAILED_INFRASTRUCTURE',
+      'FAILED_AGENT',
+      'ABORTED',
+      'CANCELLED',
+      'PARTIAL',
+    ].includes(status) || !!run.provider_error;
+
     if (status === 'COMPLETED') {
       elements.heroRunStatus.className = 'badge badge-emerald';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
       if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'inline-flex';
       if (errorBanner) errorBanner.style.display = 'none';
-    } else if (status === 'FAILED' || status === 'ABORTED' || status === 'BLOCKED') {
-      elements.heroRunStatus.className = 'badge badge-rose';
+      if (elements.providerResumeCard) elements.providerResumeCard.style.display = 'none';
+    } else if (isResumable) {
+      const isPaused = ['PROVIDER_BLOCKED', 'PAUSED_PROVIDER_LIMIT', 'PAUSED_EXECUTION_LIMIT'].includes(status);
+      elements.heroRunStatus.className = isPaused ? 'badge badge-amber' : (status === 'CANCELLED' || status === 'ABORTED' ? 'badge badge-cyan' : 'badge badge-rose');
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'none';
+      if (elements.btnViewReportNow && findings.length > 0) elements.btnViewReportNow.style.display = 'inline-flex';
       if (errorBanner && errorText) {
         errorBanner.style.display = 'block';
-        errorText.textContent = run.error || (status === 'ABORTED' ? 'Assessment stopped by operator.' : (status === 'BLOCKED' ? 'Execution blocked: Docker runtime required.' : 'Scanner exited unexpectedly. Check terminal logs.'));
+        const errorTitle = document.getElementById('hero-error-title');
+        const errorIcon = document.getElementById('hero-error-icon');
+        const detailsWrap = document.getElementById('hero-error-details-wrap');
+        const detailsText = document.getElementById('hero-error-details-text');
+
+        let rawError = run.error || run.provider_error || (status === 'ABORTED' || status === 'CANCELLED' ? 'Assessment stopped by operator.' : 'Assessment halted.');
+
+        if (status === 'PAUSED_PROVIDER_LIMIT' || status === 'PROVIDER_BLOCKED') {
+          if (errorTitle) errorTitle.textContent = 'Provider Limit Paused:';
+          if (errorIcon) errorIcon.textContent = '⏸️';
+          errorBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+          errorBanner.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+          errorBanner.style.color = '#fbbf24';
+        } else if (status === 'PAUSED_EXECUTION_LIMIT') {
+          if (errorTitle) errorTitle.textContent = 'Execution Limit Reached:';
+          if (errorIcon) errorIcon.textContent = '⏸️';
+          errorBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+          errorBanner.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+          errorBanner.style.color = '#fbbf24';
+        } else if (status === 'CANCELLED' || status === 'ABORTED') {
+          if (errorTitle) errorTitle.textContent = 'Assessment Cancelled:';
+          if (errorIcon) errorIcon.textContent = '🛑';
+          errorBanner.style.background = 'rgba(100, 116, 139, 0.15)';
+          errorBanner.style.borderColor = 'rgba(100, 116, 139, 0.4)';
+          errorBanner.style.color = '#94a3b8';
+        } else {
+          if (errorTitle) errorTitle.textContent = status === 'FAILED_INFRASTRUCTURE' ? 'Infrastructure Failure:' : 'Agent Error:';
+          if (errorIcon) errorIcon.textContent = '⚠️';
+          errorBanner.style.background = 'rgba(244, 63, 94, 0.15)';
+          errorBanner.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+          errorBanner.style.color = '#fb7185';
+        }
+
+        if (rawError && (rawError.includes('\n') || rawError.length > 120)) {
+          const firstLine = rawError.split('\n')[0].slice(0, 120);
+          errorText.textContent = firstLine + (firstLine.length < rawError.length ? '...' : '');
+          if (detailsWrap && detailsText) {
+            detailsWrap.style.display = 'block';
+            detailsText.textContent = rawError;
+          }
+        } else {
+          errorText.textContent = rawError;
+          if (detailsWrap) detailsWrap.style.display = 'none';
+        }
       }
-      if (findings.length > 0 && elements.btnViewReportNow) {
-        elements.btnViewReportNow.style.display = 'inline-flex';
+      if (elements.providerResumeCard) {
+        elements.providerResumeCard.style.display = 'block';
+        if (elements.providerResumeStatusLabel) {
+          elements.providerResumeStatusLabel.textContent = status;
+        }
+        if (elements.providerResumeMessage) {
+          elements.providerResumeMessage.textContent = run.provider_error || run.error || `Assessment halted in status ${status}. All reconnaissance, candidate queue, and findings are preserved. You can resume below with the current or alternative AI configuration.`;
+        }
+        if (elements.resumeProviderSelect && !elements.resumeProviderSelect.dataset.userEdited) {
+          elements.resumeProviderSelect.value = run.provider || 'openrouter';
+        }
+        const activeProv = elements.resumeProviderSelect ? elements.resumeProviderSelect.value : (run.provider || 'openrouter');
+        updateResumeModelsDropdown(activeProv, run.model);
+        if (elements.resumeWarnProvider) elements.resumeWarnProvider.textContent = activeProv;
+        if (elements.resumeWarnModel && elements.resumeModelSelect) {
+          elements.resumeWarnModel.textContent = elements.resumeModelSelect.value;
+        }
       }
     } else {
       elements.heroRunStatus.className = 'badge badge-cyan';
       if (elements.btnStopRun) elements.btnStopRun.style.display = 'inline-flex';
       if (elements.btnViewReportNow) elements.btnViewReportNow.style.display = 'none';
       if (errorBanner) errorBanner.style.display = 'none';
+      if (elements.providerResumeCard) elements.providerResumeCard.style.display = 'none';
     }
 
     // Metrics
@@ -905,9 +2072,19 @@
       if (scanMatrix.length) {
         elements.tbodyMatrixLive.innerHTML = scanMatrix.map((m) => {
           const cnt = m.findings_count || 0;
-          const statusBadge = cnt > 0
-            ? '<span class="badge badge-amber">FINDINGS</span>'
-            : '<span class="badge badge-emerald">PASSED</span>';
+          const st = (m.status || '').toUpperCase();
+          let statusBadge;
+          if (cnt > 0 || st === 'VULNERABILITIES_IDENTIFIED' || st === 'FAILED') {
+            statusBadge = '<span class="badge badge-amber">FINDINGS</span>';
+          } else if (st === 'PASSED') {
+            statusBadge = '<span class="badge badge-emerald">PASSED</span>';
+          } else if (st === 'BLOCKED') {
+            statusBadge = '<span class="badge badge-rose">BLOCKED</span>';
+          } else if (st === 'INCONCLUSIVE') {
+            statusBadge = '<span class="badge badge-purple">INCONCLUSIVE</span>';
+          } else {
+            statusBadge = '<span class="badge" style="background:rgba(100,116,139,0.2);color:#94a3b8;">NOT TESTED</span>';
+          }
           return `<tr>
             <td><strong>${escapeHtml(m.title)}</strong></td>
             <td>${m.test_count} tests</td>
@@ -983,14 +2160,22 @@
           c.state === 'VALIDATED'
             ? '<span class="badge badge-emerald">VALIDATED</span>'
             : c.state === 'ABANDONED'
-            ? '<span class="badge badge-rose">RULED OUT</span>'
-            : c.state === 'ATTEMPTING'
-            ? '<span class="badge badge-cyan">ATTEMPTING</span>'
+            ? '<span class="badge badge-rose">ABANDONED</span>'
+            : (c.state === 'RULED_OUT' || c.state === 'RULED_OUT_WITH_EVIDENCE')
+            ? '<span class="badge" style="background:#334155;color:#cbd5e1;">RULED OUT</span>'
+            : (c.state === 'ATTEMPTING' || c.state === 'UNDER_INVESTIGATION')
+            ? '<span class="badge badge-cyan">UNDER INVESTIGATION</span>'
+            : c.state === 'DISPATCHED'
+            ? '<span class="badge badge-cyan">DISPATCHED</span>'
+            : c.state === 'PROBE_EXECUTED'
+            ? '<span class="badge badge-cyan">PROBE EXECUTED</span>'
             : c.state === 'NOT_TESTED'
             ? '<span class="badge" style="background:#334155;color:#94a3b8;">NOT TESTED</span>'
             : c.state === 'BLOCKED'
             ? '<span class="badge badge-rose">BLOCKED</span>'
-            : '<span class="badge" style="background:#334155;color:#94a3b8;">PENDING</span>';
+            : c.state === 'INCONCLUSIVE'
+            ? '<span class="badge badge-amber">INCONCLUSIVE</span>'
+            : '<span class="badge" style="background:#334155;color:#94a3b8;">IDENTIFIED</span>';
 
         const priorityScore = (c.composite_score !== undefined && c.composite_score !== null)
           ? Number(c.composite_score).toFixed(3)
@@ -1056,8 +2241,13 @@
 
     const isVal = cand.state === 'VALIDATED';
     const isAb = cand.state === 'ABANDONED';
-    const statusColor = isVal ? '#34d399' : (isAb ? '#f43f5e' : '#38bdf8');
-    const statusText = isVal ? 'CONFIRMED VULNERABILITY (PoC Validated)' : (isAb ? 'RULED OUT / NOT EXPLOITABLE' : cand.state);
+    const isRo = cand.state === 'RULED_OUT' || cand.state === 'RULED_OUT_WITH_EVIDENCE';
+    const statusColor = isVal ? '#34d399' : (isRo ? '#94a3b8' : (isAb ? '#f43f5e' : '#38bdf8'));
+    const statusText = isVal
+      ? 'VALIDATED (Vulnerability Confirmed)'
+      : (isRo
+        ? 'RULED OUT (Non-Vulnerable / Negative Proof)'
+        : (isAb ? 'ABANDONED (Investigation Ended Without Positive Proof)' : (cand.state || 'PENDING')));
 
     detailBox.style.display = 'block';
     detailBox.innerHTML = `
@@ -1068,13 +2258,22 @@
           <button type="button" class="btn btn-xs btn-secondary" onclick="document.getElementById('dag-node-detail').style.display='none';">✕</button>
         </div>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; font-size:0.8rem; margin-top:0.5rem;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem; font-size:0.8rem; margin-top:0.5rem;">
         <div><strong style="color:var(--text-muted);">Target Endpoint:</strong> <code style="color:#7dd3fc;">${escapeHtml(cand.endpoint || cand.target || '/')}</code></div>
         <div><strong style="color:var(--text-muted);">Priority Score (GAP-1):</strong> <span style="color:#38bdf8; font-weight:700;">${cand.composite_score !== undefined ? Number(cand.composite_score).toFixed(3) : '0.500'}</span> (#${cand.priority_rank || 1})</div>
         <div><strong style="color:var(--text-muted);">Usability Rank:</strong> <span class="badge badge-purple">${escapeHtml(cand.usability_rank || 'MEDIUM')}</span></div>
         <div><strong style="color:var(--text-muted);">Attempts / Limit:</strong> <span style="font-family:monospace;">${cand.attempts || 0} / ${cand.max_attempts || 2}</span></div>
+        <div><strong style="color:var(--text-muted);">Dispatched At:</strong> <span style="color:#94a3b8; font-family:monospace;">${escapeHtml(cand.dispatched_at || 'Recorded at run init')}</span></div>
+        <div><strong style="color:var(--text-muted);">Agent Assignment:</strong> <span style="color:#c084fc;">${escapeHtml(cand.agent_assignment || 'Root Agent')}</span></div>
+        <div><strong style="color:var(--text-muted);">Probe Tool:</strong> <code style="color:#fde047;">${escapeHtml(cand.tool_selected || 'exec_command')}</code></div>
+        <div><strong style="color:var(--text-muted);">Invocation ID:</strong> <code style="color:#94a3b8; font-size:0.72rem;">${escapeHtml(cand.tool_invocation_id || 'n/a')}</code></div>
+        <div><strong style="color:var(--text-muted);">Retry Eligible:</strong> <span style="font-weight:600; color:${cand.retry_eligibility ? '#38bdf8' : '#64748b'};">${cand.retry_eligibility ? 'YES' : 'NO (Concluded)'}</span></div>
       </div>
-      ${cand.evidence_hash ? `<div style="margin-top:0.5rem; font-size:0.75rem; background:#020617; padding:0.35rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Proof Hash:</strong> <code style="color:#34d399;">${escapeHtml(cand.evidence_hash)}</code></div>` : ''}
+      ${cand.sanitized_request ? `<div style="margin-top:0.5rem; font-size:0.75rem; background:#020617; padding:0.4rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Probe Command:</strong> <code style="color:#38bdf8;">${escapeHtml(cand.sanitized_request)}</code></div>` : ''}
+      ${cand.tool_result ? `<div style="margin-top:0.35rem; font-size:0.75rem; background:#020617; padding:0.4rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Observed Probe Result:</strong> <div style="color:#cbd5e1; font-family:monospace; margin-top:2px;">${escapeHtml(cand.tool_result)}</div></div>` : ''}
+      ${cand.verification_result ? `<div style="margin-top:0.35rem; font-size:0.75rem; background:#020617; padding:0.4rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Verification Contract:</strong> <span style="color:#f59e0b;">${escapeHtml(cand.verification_contract || 'Standard VAPT Contract')}</span><br><strong style="color:var(--text-muted);">Contract Outcome:</strong> <span style="color:#94a3b8;">${escapeHtml(cand.verification_result)}</span></div>` : ''}
+      ${cand.state_transition_reason ? `<div style="margin-top:0.35rem; font-size:0.75rem; background:#020617; padding:0.4rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Transition Reason:</strong> <span style="color:#e2e8f0;">${escapeHtml(cand.state_transition_reason)}</span></div>` : ''}
+      ${cand.evidence_hash ? `<div style="margin-top:0.35rem; font-size:0.75rem; background:#020617; padding:0.35rem 0.5rem; border-radius:4px; border:1px solid #1f2937;"><strong style="color:var(--text-muted);">Proof Hash:</strong> <code style="color:#34d399;">${escapeHtml(cand.evidence_hash)}</code></div>` : ''}
     `;
   }
 
@@ -1088,7 +2287,9 @@
     if (!svg) return;
 
     currentDagCandidates = candidates || [];
-    currentDagPivotEvents = pivotEvents || [];
+    currentDagPivotEvents = (pivotEvents || []).filter(
+      (e) => e && e.pivot_executed !== false && (e.event === 'GAP2_PIVOT' || e.type === 'GAP2_PIVOT')
+    );
 
     if (!currentDagCandidates.length) {
       svg.innerHTML = `<text x="490" y="280" fill="#64748b" text-anchor="middle" font-size="14" font-family="sans-serif">Evaluating discovered attack surface nodes...</text>`;
@@ -1098,11 +2299,27 @@
     // Filter according to current dagFilterMode
     let displayNodes = currentDagCandidates;
     if (state.dagFilterMode === 'found') {
-      const found = currentDagCandidates.filter((c) => c.state === 'VALIDATED' || c.state === 'ABANDONED');
+      const found = currentDagCandidates.filter((c) => c.state === 'VALIDATED');
       displayNodes = found.length ? found : currentDagCandidates;
     } else if (state.dagFilterMode === 'pivots') {
-      const pivots = currentDagCandidates.filter((c) => c.state === 'ABANDONED' || (c.attempts && c.attempts > 1));
-      displayNodes = pivots.length ? pivots : currentDagCandidates;
+      const pivotCandIds = new Set(currentDagPivotEvents.map(e => e.candidate_id || e.from_candidate).filter(Boolean));
+      const pivots = currentDagCandidates.filter((c) => pivotCandIds.has(c.id));
+      displayNodes = pivots;
+      if (!displayNodes.length) {
+        svg.setAttribute('viewBox', '0 0 980 320');
+        svg.innerHTML = `
+          <g transform="translate(0, 40)">
+            <rect x="190" y="100" width="600" height="120" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+            <text x="490" y="150" fill="#94a3b8" text-anchor="middle" font-size="15" font-family="sans-serif" font-weight="600">
+              No adaptive pivots were executed during this assessment.
+            </text>
+            <text x="490" y="180" fill="#64748b" text-anchor="middle" font-size="12" font-family="sans-serif">
+              All prioritized candidate vectors completed their primary probe without triggering a threshold-bounded alternative branch.
+            </text>
+          </g>
+        `;
+        return;
+      }
     }
 
     const count = displayNodes.length;
@@ -1121,34 +2338,42 @@
 
     displayNodes.forEach((c, idx) => {
       const cy = count === 1 ? totalHeight / 2 : startY + idx * stepY;
-      const isValidated = c.state === 'VALIDATED';
+      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || (c.state === 'VALIDATED' && (run.findings || []).length > 0);
+      const isObservation = c.state === 'VALIDATED_OBSERVATION' || (c.state === 'VALIDATED' && (run.findings || []).length === 0);
       const isAbandoned = c.state === 'ABANDONED';
-      const isAttempting = c.state === 'ATTEMPTING';
+      const isRo = c.state === 'RULED_OUT' || c.state === 'RULED_OUT_WITH_EVIDENCE';
+      const isInconclusive = c.state === 'INCONCLUSIVE';
+      const isAttempting = c.state === 'ATTEMPTING' || c.state === 'UNDER_INVESTIGATION' || c.state === 'PROBE_EXECUTED';
 
-      const strokeColor = isValidated ? '#10b981' : (isAbandoned ? '#f43f5e' : (isAttempting ? '#06b6d4' : '#475569'));
-      const fillColor = isValidated ? '#064e3b' : (isAbandoned ? '#4c0519' : (isAttempting ? '#083344' : '#1e293b'));
-      const edgeColor = isValidated ? '#059669' : (isAbandoned ? '#f43f5e' : '#334155');
-      const markerId = isAbandoned ? 'url(#arrow-red)' : (isValidated ? 'url(#arrow-green)' : 'url(#arrow)');
+      const strokeColor = isVerifiedVuln ? '#10b981' : (isObservation ? '#38bdf8' : (isRo ? '#64748b' : (isAbandoned ? '#f43f5e' : (isInconclusive ? '#f59e0b' : (isAttempting ? '#06b6d4' : '#475569')))));
+      const fillColor = isVerifiedVuln ? '#064e3b' : (isObservation ? '#082f49' : (isRo ? '#1e293b' : (isAbandoned ? '#4c0519' : (isInconclusive ? '#451a03' : (isAttempting ? '#083344' : '#1e293b')))));
+      // Never draw candidate branches from target with red pivot lines - use slate neutral for standard candidate exploration
+      const edgeColor = isVerifiedVuln ? '#059669' : (isObservation ? '#0284c7' : '#334155');
+      const markerId = isVerifiedVuln ? 'url(#arrow-green)' : 'url(#arrow)';
 
       // Edge from Target to Candidate
       edgesHtml += `
         <path d="M ${rootX + 30} ${rootY} C ${rootX + 140} ${rootY}, ${candX - 120} ${cy}, ${candX - 22} ${cy}" 
-              stroke="${edgeColor}" stroke-width="${isValidated ? '2.5' : '1.8'}" fill="none" marker-end="${markerId}" opacity="0.85"/>
+              stroke="${edgeColor}" stroke-width="${isVerifiedVuln ? '2.5' : '1.8'}" fill="none" marker-end="${markerId}" opacity="0.85"/>
       `;
 
       // Candidate Node & Label
       const activeClass = state.selectedCandidateId === c.id ? 'active-node' : '';
-      const pivotEvt = (pivotEvents || []).find(
-        (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && (e.event === 'GAP2_PIVOT' || e.type === 'REDIRECT')
+      const pivotEvt = (currentDagPivotEvents || []).find(
+        (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && e.pivot_executed === true && Boolean(e.next_candidate || e.to_candidate)
       );
       const hasPivotEvent = Boolean(pivotEvt);
-      const badgeText = isValidated
-        ? '✓ VALIDATED'
-        : (hasPivotEvent
-          ? '⚡ PIVOT'
-          : (isAbandoned
-            ? '✕ RULED OUT'
-            : (isAttempting ? '⟳ PROBING' : (c.state || 'PENDING'))));
+      const badgeText = isVerifiedVuln
+        ? '✓ VULNERABILITY'
+        : (isObservation
+          ? 'ℹ OBSERVATION'
+          : (hasPivotEvent
+            ? '⚡ PIVOT'
+            : (isRo
+              ? '✓ RULED OUT'
+              : (isAbandoned
+                ? '✕ ABANDONED'
+                : (isInconclusive ? '? INCONCLUSIVE' : (isAttempting ? '⟳ PROBING' : (c.state || 'IDENTIFIED')))))));
 
       nodesHtml += `
         <g class="dag-node ${activeClass}" data-id="${c.id}" onclick="inspectDagNode('${c.id}')">
@@ -1160,22 +2385,26 @@
           <text x="${candX + 26}" y="${cy + 9}" fill="#94a3b8" font-size="9.5" font-family="monospace">${escapeHtml(c.endpoint || c.target || '/')}</text>
           
           <!-- Status Pill -->
-          <rect x="${candX + 26}" y="${cy + 15}" width="88" height="16" rx="3" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1"/>
-          <text x="${candX + 70}" y="${cy + 27}" fill="${strokeColor}" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">${badgeText}</text>
-          <text x="${candX + 124}" y="${cy + 27}" fill="#94a3b8" font-size="8.5" font-family="monospace">(${c.attempts || 0}/${c.max_attempts || 2} turns)</text>
+          <rect x="${candX + 26}" y="${cy + 15}" width="98" height="16" rx="3" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1"/>
+          <text x="${candX + 75}" y="${cy + 27}" fill="${strokeColor}" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">${badgeText}</text>
+          <text x="${candX + 132}" y="${cy + 27}" fill="#94a3b8" font-size="8.5" font-family="monospace">(${c.attempts || 0}/${c.max_attempts || 2} turns)</text>
         </g>
       `;
 
-      // ONLY draw dynamic pivot loop on LEFT side of candidate nodes if an ACTUAL pivot event was recorded
-      if (hasPivotEvent && idx + 1 < count) {
-        const nextCy = count === 1 ? totalHeight / 2 : startY + (idx + 1) * stepY;
-        const midY = (cy + nextCy) / 2;
-        edgesHtml += `
-          <path d="M ${candX - 18} ${cy} C ${candX - 65} ${cy + 15}, ${candX - 65} ${nextCy - 15}, ${candX - 18} ${nextCy}" 
-                stroke="#f43f5e" stroke-width="2.2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrow-red)"/>
-          <rect x="${candX - 146}" y="${midY - 9}" width="126" height="18" rx="4" fill="#4c0519" stroke="#f43f5e" stroke-width="1"/>
-          <text x="${candX - 83}" y="${midY + 4}" fill="#fecdd3" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="monospace">k=${c.max_attempts || 2} LIMIT ➔ PIVOT</text>
-        `;
+      // ONLY draw dynamic pivot loop on LEFT side of candidate nodes if an ACTUAL pivot event was recorded to a valid next candidate
+      if (hasPivotEvent && pivotEvt) {
+        const nextId = pivotEvt.next_candidate || pivotEvt.to_candidate;
+        const targetIdx = displayNodes.findIndex(node => node.id === nextId);
+        if (targetIdx !== -1 && targetIdx !== idx) {
+          const nextCy = count === 1 ? totalHeight / 2 : startY + targetIdx * stepY;
+          const midY = (cy + nextCy) / 2;
+          edgesHtml += `
+            <path d="M ${candX - 18} ${cy} C ${candX - 65} ${cy + 15}, ${candX - 65} ${nextCy - 15}, ${candX - 18} ${nextCy}" 
+                  stroke="#f43f5e" stroke-width="2.2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrow-red)"/>
+            <rect x="${candX - 146}" y="${midY - 9}" width="126" height="18" rx="4" fill="#4c0519" stroke="#f43f5e" stroke-width="1"/>
+            <text x="${candX - 83}" y="${midY + 4}" fill="#fecdd3" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="monospace">k=${c.max_attempts || 2} LIMIT ➔ PIVOT</text>
+          `;
+        }
       }
     });
 
@@ -1217,13 +2446,26 @@
     elements.terminalCount.textContent = `${trace.length} events`;
 
     elements.terminalBody.innerHTML = trace
-      .map((line) => {
+      .map((entry) => {
+        let line = '';
+        if (typeof entry === 'string') {
+          line = entry;
+        } else if (entry && typeof entry === 'object') {
+          const type = (entry.type || entry.event || 'EVENT').toUpperCase();
+          const target = entry.candidate_id || entry.title || entry.endpoint || '';
+          const msg = entry.message || entry.detail || entry.reasoning || '';
+          line = `[${type}] ${target ? target + ' - ' : ''}${msg || JSON.stringify(entry)}`;
+        } else {
+          line = String(entry || '');
+        }
+
         let prefixClass = 'log-prefix-init';
         if (line.includes('[DISPATCH]')) prefixClass = 'log-prefix-dispatch';
         else if (line.includes('[ADVANCE]')) prefixClass = 'log-prefix-advance';
         else if (line.includes('[RETRY]')) prefixClass = 'log-prefix-retry';
         else if (line.includes('[REDIRECT]')) prefixClass = 'log-prefix-redirect';
         else if (line.includes('[ABANDON]')) prefixClass = 'log-prefix-abandon';
+        else if (line.includes('[GAP2_PIVOT]') || line.includes('[PIVOT]')) prefixClass = 'log-prefix-redirect';
 
         return `<div class="terminal-line"><span class="log-prefix ${prefixClass}">${escapeHtml(line)}</span></div>`;
       })
@@ -1273,7 +2515,7 @@
     const candidates = run.candidates || [];
     const trace = run.decision_trace || [];
     const pivotEvents = run.pivot_events || [];
-    const totalPivots = pivotEvents.filter((e) => e.type === 'REDIRECT').length;
+    const totalPivots = pivotEvents.filter((e) => (e.pivot_executed !== false) && (e.type === 'REDIRECT' || e.type === 'GAP2_PIVOT' || e.event === 'GAP2_PIVOT')).length;
     const scanMatrix = run.scan_matrix || [];
     const openPorts = run.open_ports || [];
     const components = run.components || [];
@@ -1287,6 +2529,22 @@
     const statusColor = rawStatus === 'COMPLETED' ? '#10b981' : (rawStatus === 'FAILED' ? '#f43f5e' : '#f59e0b');
 
     let html = `
+      <!-- Executive Assessment Attribution Banner -->
+      <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+        <div>
+          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 600;">Autonomous Security Assessment Attribution</div>
+          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+            <span class="badge badge-purple" style="font-size: 0.82rem;">🌐 Provider: ${escapeHtml((run.provider || 'openrouter').toUpperCase())}</span>
+            <span class="badge badge-amber" style="font-size: 0.82rem;">🧠 Model: ${escapeHtml(run.model || 'default')}</span>
+            <span class="badge badge-cyan" style="font-size: 0.82rem;">⚔️ Engine: ${escapeHtml(run.execution_mode === 'autonomous_multi_agent' ? 'Autonomous Multi-Agent Core (Docker)' : (run.execution_mode === 'lightweight_active_scanner' ? 'Lightweight Active Scanner' : (run.mode || 'web').toUpperCase()))}</span>
+          </div>
+        </div>
+        <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
+          <div>Evidence Tier: <strong style="color: #10b981;">${escapeHtml(run.evidence_tier || 'OBSERVED_EXTERNAL')}</strong></div>
+          <div style="margin-top: 0.15rem;">Proof Hash: <code style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.75rem;">SHA256:${escapeHtml((run.run_id || '').slice(0, 8))}...${escapeHtml((run.evidence_hash || 'verified').slice(0, 12))}</code></div>
+        </div>
+      </div>
+
       <!-- Engagement Verification & Integrity Notice -->
       <div style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.3); border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.75rem;">
         <span style="font-size:1.25rem;">🔒</span>
@@ -1401,7 +2659,18 @@
       <!-- SECTION 2: Scan Capabilities & Vulnerability Category Matrix -->
       <h2 style="font-size: 1.25rem; color: #38bdf8; margin-bottom: 0.5rem;">2. Scan Capabilities & Vulnerability Category Matrix</h2>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Comprehensive multi-layer audit coverage across 8 core VAPT test categories (88 total tests) aligned with industry benchmarks:
+        ${
+          (() => {
+            const testedCats = scanMatrix.filter((m) => {
+              const s = (m.status || '').toUpperCase();
+              return s === 'PASSED' || s === 'VULNERABILITIES_IDENTIFIED' || s === 'FAILED' || (m.findings_count || 0) > 0;
+            });
+            const totalExecTests = testedCats.reduce((acc, c) => acc + (c.test_count || 0), 0);
+            return scanMatrix.length > 0 && testedCats.length === scanMatrix.length
+              ? `Comprehensive multi-layer audit coverage across all ${scanMatrix.length} core VAPT test categories (${totalExecTests} total tests executed) aligned with industry benchmarks:`
+              : `Assessment audit matrix reflecting ${testedCats.length} of ${scanMatrix.length} categories tested (${totalExecTests} individual test routines executed; remaining categories marked NOT TESTED or BLOCKED):`;
+          })()
+        }
       </p>
       <div class="data-table-container" style="margin-bottom: 2rem;">
         <table class="data-table">
@@ -1419,9 +2688,19 @@
               scanMatrix.length
                 ? scanMatrix.map((m) => {
                     const cnt = m.findings_count || 0;
-                    const statusBadge = cnt > 0
-                      ? '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>'
-                      : '<span class="badge badge-emerald">PASSED (BASELINE SECURE)</span>';
+                    const st = (m.status || '').toUpperCase();
+                    let statusBadge;
+                    if (cnt > 0 || st === 'VULNERABILITIES_IDENTIFIED' || st === 'FAILED') {
+                      statusBadge = '<span class="badge badge-amber">FINDINGS IDENTIFIED</span>';
+                    } else if (st === 'PASSED') {
+                      statusBadge = '<span class="badge badge-emerald">PASSED (BASELINE SECURE)</span>';
+                    } else if (st === 'BLOCKED') {
+                      statusBadge = '<span class="badge badge-rose">BLOCKED (UNREACHABLE)</span>';
+                    } else if (st === 'INCONCLUSIVE') {
+                      statusBadge = '<span class="badge badge-purple">INCONCLUSIVE (UNRESOLVED)</span>';
+                    } else {
+                      statusBadge = '<span class="badge" style="background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);">NOT TESTED</span>';
+                    }
                     return `
                       <tr>
                         <td><strong>${escapeHtml(m.title)}</strong></td>
@@ -1582,13 +2861,21 @@
               candidates.length
                 ? candidates
                     .map((c) => {
-                      const stateBadge = c.state === 'VALIDATED'
-                        ? '<span class="badge badge-emerald">VALIDATED</span>'
+                      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || (c.state === 'VALIDATED' && (run.findings || []).length > 0);
+                      const isObservation = c.state === 'VALIDATED_OBSERVATION' || (c.state === 'VALIDATED' && (run.findings || []).length === 0);
+                      const stateBadge = isVerifiedVuln
+                        ? '<span class="badge badge-emerald">VULNERABILITY</span>'
+                        : (isObservation
+                        ? '<span class="badge badge-cyan">OBSERVATION</span>'
                         : (c.state === 'ABANDONED'
-                        ? '<span class="badge badge-rose">RULED OUT</span>'
+                        ? '<span class="badge badge-rose">ABANDONED</span>'
+                        : (c.state === 'RULED_OUT' || c.state === 'RULED_OUT_WITH_EVIDENCE'
+                        ? '<span class="badge" style="background:#1e293b;color:#94a3b8;border:1px solid #475569;">RULED OUT</span>'
+                        : (c.state === 'INCONCLUSIVE'
+                        ? '<span class="badge" style="background:#451a03;color:#f59e0b;border:1px solid #b45309;">INCONCLUSIVE</span>'
                         : (c.state === 'NOT_TESTED'
                         ? '<span class="badge" style="background:#334155;color:#94a3b8;">NOT TESTED</span>'
-                        : '<span class="badge badge-cyan">PENDING</span>'));
+                        : '<span class="badge badge-cyan">PENDING</span>')))));
                       const scoreFormatted = (c.composite_score !== undefined && c.composite_score !== null)
                         ? Number(c.composite_score).toFixed(3)
                         : (c.probability !== undefined ? Number(c.probability).toFixed(3) : '0.500');
@@ -1634,15 +2921,15 @@
     elements.reportContentArea.innerHTML = html;
   }
 
-  // Load Past Runs History
+  // Load Past Runs History with Provider, Model & Engine Attribution
   async function loadHistory() {
-    elements.tbodyHistory.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Fetching runs...</td></tr>`;
+    elements.tbodyHistory.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Fetching runs...</td></tr>`;
     try {
       const res = await fetch('/runs');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const runs = await res.json();
       if (!runs || !runs.length) {
-        elements.tbodyHistory.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No past assessments found. Launch one above!</td></tr>`;
+        elements.tbodyHistory.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No past assessments found. Launch one above!</td></tr>`;
         return;
       }
 
@@ -1650,12 +2937,19 @@
         .map((r) => {
           const status = (r.status || 'unknown').toUpperCase();
           const badgeClass = status === 'COMPLETED' ? 'badge-emerald' : status === 'FAILED' ? 'badge-rose' : 'badge-cyan';
+          const prov = (r.provider || 'openrouter').toUpperCase();
+          const mdl = r.model || 'default';
+          const execMode = r.execution_mode === 'autonomous_multi_agent'
+            ? 'Autonomous Docker'
+            : (r.execution_mode === 'lightweight_active_scanner' ? 'Lightweight Scanner' : (r.mode || 'web').toUpperCase());
+
           return `<tr>
             <td><code style="font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8;">${escapeHtml(r.run_id)}</code></td>
             <td><strong>${escapeHtml(r.target_url || 'Target')}</strong></td>
-            <td>${escapeHtml((r.mode || 'web').toUpperCase())}</td>
+            <td><span class="badge badge-purple" style="font-size:0.75rem;">${escapeHtml(prov)}</span> <code style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(mdl)}</code></td>
+            <td><span class="badge badge-cyan" style="font-size:0.75rem;">${escapeHtml(execMode)}</span></td>
             <td><span class="badge ${badgeClass}">${status}</span></td>
-            <td>${(r.findings || []).length}</td>
+            <td><strong>${(r.findings || []).length}</strong></td>
             <td style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(r.created_at ? r.created_at.replace('T', ' ').slice(0, 19) : '—')}</td>
             <td>
               <button class="btn btn-secondary" style="padding:0.35rem 0.65rem; font-size:0.8rem;" onclick="window.vaptApp.openRun('${escapeHtml(r.run_id)}')">
@@ -1666,7 +2960,7 @@
         })
         .join('');
     } catch (err) {
-      elements.tbodyHistory.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Error: ${escapeHtml(err.message)}</td></tr>`;
+      elements.tbodyHistory.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Error: ${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -1690,13 +2984,331 @@
     elements.modelSelect.addEventListener('change', onModelSelectChange);
     elements.btnPreflight.addEventListener('click', preflightTarget);
 
-    elements.btnValidateKey.addEventListener('click', () => {
-      validateCloudKey(
-        elements.modelProviderSelect.value,
-        elements.runtimeApiKey.value.trim(),
-        elements.apiKeyFeedback
-      );
+    if (elements.modelSearchFilter) {
+      elements.modelSearchFilter.addEventListener('input', (e) => {
+        state.modelFilterText = e.target.value;
+        populateModelOptions(elements.modelProviderSelect.value, state.currentProviderModels);
+      });
+    }
+
+    // Universal Show/Hide Key Toggle for all password inputs with data-target
+    document.querySelectorAll('.btn-toggle-key').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        if (!targetId) return;
+        const targetEl = document.getElementById(targetId);
+        if (!targetEl) return;
+        const isPass = targetEl.type === 'password';
+        targetEl.type = isPass ? 'text' : 'password';
+        btn.textContent = isPass ? '🔒' : '👁️';
+      });
     });
+
+    if (elements.btnToggleSettingsKeyVisibility && elements.settingsApiKey) {
+      elements.btnToggleSettingsKeyVisibility.addEventListener('click', () => {
+        const isPass = elements.settingsApiKey.type === 'password';
+        elements.settingsApiKey.type = isPass ? 'text' : 'password';
+        elements.btnToggleSettingsKeyVisibility.textContent = isPass ? '🔒' : '👁️';
+      });
+    }
+
+    // OpenRouter Panel Listeners
+    if (elements.btnValidateOpenrouter) {
+      elements.btnValidateOpenrouter.addEventListener('click', () => {
+        const key = elements.openrouterApiKey ? elements.openrouterApiKey.value.trim() : '';
+        validateCloudKey('openrouter', key, elements.openrouterFeedback);
+      });
+    }
+    if (elements.openrouterModelSearch) {
+      elements.openrouterModelSearch.addEventListener('input', () => {
+        populateOpenRouterModels();
+      });
+    }
+    if (elements.openrouterModelSelect) {
+      elements.openrouterModelSelect.addEventListener('change', () => {
+        if (elements.openrouterCustomModel) {
+          elements.openrouterCustomModel.style.display = elements.openrouterModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.openrouterModelSelect.value === '__custom__') elements.openrouterCustomModel.focus();
+        }
+        updateOpenRouterPricingNotice();
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.openrouterCustomModel) {
+      elements.openrouterCustomModel.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // OpenAI Panel Listeners
+    if (elements.btnValidateOpenai) {
+      elements.btnValidateOpenai.addEventListener('click', () => {
+        const key = elements.openaiApiKey ? elements.openaiApiKey.value.trim() : '';
+        validateCloudKey('openai', key, elements.openaiFeedback);
+      });
+    }
+    if (elements.openaiModelSearch) {
+      elements.openaiModelSearch.addEventListener('input', () => {
+        populateOpenAIModels();
+      });
+    }
+    if (elements.openaiModelSelect) {
+      elements.openaiModelSelect.addEventListener('change', () => {
+        if (elements.openaiCustomModel) {
+          elements.openaiCustomModel.style.display = elements.openaiModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.openaiModelSelect.value === '__custom__') elements.openaiCustomModel.focus();
+        }
+        updateOpenAIPricingNotice();
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.openaiCustomModel) {
+      elements.openaiCustomModel.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // Anthropic Panel Listeners
+    if (elements.btnValidateAnthropic) {
+      elements.btnValidateAnthropic.addEventListener('click', () => {
+        const key = elements.anthropicApiKey ? elements.anthropicApiKey.value.trim() : '';
+        validateCloudKey('anthropic', key, elements.anthropicFeedback);
+      });
+    }
+    if (elements.anthropicModelSelect) {
+      elements.anthropicModelSelect.addEventListener('change', () => {
+        if (elements.anthropicCustomModel) {
+          elements.anthropicCustomModel.style.display = elements.anthropicModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.anthropicModelSelect.value === '__custom__') elements.anthropicCustomModel.focus();
+        }
+        updateAnthropicPricingNotice();
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.anthropicCustomModel) {
+      elements.anthropicCustomModel.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // Google Gemini Panel Listeners
+    if (elements.btnValidateGoogle) {
+      elements.btnValidateGoogle.addEventListener('click', () => {
+        const key = elements.googleApiKey ? elements.googleApiKey.value.trim() : '';
+        validateCloudKey('google', key, elements.googleFeedback);
+      });
+    }
+    if (elements.googleModelSelect) {
+      elements.googleModelSelect.addEventListener('change', () => {
+        if (elements.googleCustomModel) {
+          elements.googleCustomModel.style.display = elements.googleModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.googleModelSelect.value === '__custom__') elements.googleCustomModel.focus();
+        }
+        updateGooglePricingNotice();
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.googleCustomModel) {
+      elements.googleCustomModel.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // Ollama Panel Listeners
+    if (elements.btnValidateOllama) {
+      elements.btnValidateOllama.addEventListener('click', () => {
+        validateCloudKey('ollama', '', elements.ollamaFeedback);
+      });
+    }
+    if (elements.ollamaModelSelect) {
+      elements.ollamaModelSelect.addEventListener('change', () => {
+        if (elements.ollamaCustomModel) {
+          elements.ollamaCustomModel.style.display = elements.ollamaModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.ollamaModelSelect.value === '__custom__') elements.ollamaCustomModel.focus();
+        }
+        updateOllamaPricingNotice();
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.ollamaCustomModel) {
+      elements.ollamaCustomModel.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.ollamaBaseUrl) {
+      elements.ollamaBaseUrl.addEventListener('change', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // Cloud Hosted Panel Listeners
+    if (elements.btnCloudCreateFirstProfile) {
+      elements.btnCloudCreateFirstProfile.addEventListener('click', () => openCloudProfileModal('__new__'));
+    }
+    if (elements.btnCloudNewProfileInline) {
+      elements.btnCloudNewProfileInline.addEventListener('click', () => openCloudProfileModal('__new__'));
+    }
+    if (elements.btnCloudEditProfileInline) {
+      elements.btnCloudEditProfileInline.addEventListener('click', () => {
+        openCloudProfileModal(elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null);
+      });
+    }
+    if (elements.btnCloudDeleteProfileInline) {
+      elements.btnCloudDeleteProfileInline.addEventListener('click', async () => {
+        const pid = elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null;
+        if (!pid || pid === '__new__') return;
+        if (!confirm('Are you sure you want to delete this cloud hosted profile?')) return;
+        try {
+          const res = await fetch(`/providers/cloud_hosted/profiles/${pid}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          showToast('Profile deleted successfully', 'success');
+          await loadCloudProfiles();
+        } catch (e) {
+          showToast(`Failed to delete profile: ${e.message}`, 'error');
+        }
+      });
+    }
+    if (elements.btnOpenCloudProfileModal) {
+      elements.btnOpenCloudProfileModal.addEventListener('click', () => {
+        openCloudProfileModal(elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null);
+      });
+    }
+    if (elements.cloudProfileSelectMain) {
+      elements.cloudProfileSelectMain.addEventListener('change', () => {
+        const pid = elements.cloudProfileSelectMain.value;
+        if (pid && pid !== '__new__') {
+          localStorage.setItem('selectedCloudProfileId', pid);
+        }
+        const prof = (state.cloudProfiles || []).find((p) => p.id === pid);
+        if (prof) {
+          if (elements.cloudProfileEndpointText) elements.cloudProfileEndpointText.textContent = prof.api_base || '-';
+          if (elements.cloudProfileAuthStatus) {
+            elements.cloudProfileAuthStatus.textContent = prof.has_api_key ? 'Key Set' : 'Unauthenticated';
+            elements.cloudProfileAuthStatus.className = prof.has_api_key ? 'badge badge-emerald' : 'badge badge-amber';
+          }
+          if (elements.cloudDiscoveredModelSelect) {
+            elements.cloudDiscoveredModelSelect.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = prof.model || 'custom-model';
+            defaultOpt.textContent = `${prof.model_alias || prof.model || 'Configured Model'} [ACTIVE]`;
+            defaultOpt.selected = true;
+            elements.cloudDiscoveredModelSelect.appendChild(defaultOpt);
+            const customOpt = document.createElement('option');
+            customOpt.value = '__custom__';
+            customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+            elements.cloudDiscoveredModelSelect.appendChild(customOpt);
+          }
+          if (elements.cloudManualModelInput) elements.cloudManualModelInput.style.display = 'none';
+        }
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.btnTestCloudProfile) {
+      elements.btnTestCloudProfile.addEventListener('click', testAndDiscoverCloudEndpointModels);
+    }
+    if (elements.cloudModelSearch) {
+      elements.cloudModelSearch.addEventListener('input', () => {
+        const query = elements.cloudModelSearch.value.trim().toLowerCase();
+        if (elements.cloudDiscoveredModelSelect) {
+          Array.from(elements.cloudDiscoveredModelSelect.options).forEach((opt) => {
+            if (opt.value === '__custom__') return;
+            opt.style.display = (!query || opt.text.toLowerCase().includes(query)) ? '' : 'none';
+          });
+        }
+      });
+    }
+    if (elements.cloudDiscoveredModelSelect) {
+      elements.cloudDiscoveredModelSelect.addEventListener('change', () => {
+        if (elements.cloudManualModelInput) {
+          elements.cloudManualModelInput.style.display = elements.cloudDiscoveredModelSelect.value === '__custom__' ? 'block' : 'none';
+          if (elements.cloudDiscoveredModelSelect.value === '__custom__') elements.cloudManualModelInput.focus();
+        }
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+    if (elements.cloudManualModelInput) {
+      elements.cloudManualModelInput.addEventListener('input', () => {
+        syncCompatibilityProxies();
+        refreshReadiness();
+      });
+    }
+
+    // Cloud Hosted Modal Listeners
+    if (elements.btnCloseCloudModal) {
+      elements.btnCloseCloudModal.addEventListener('click', closeCloudProfileModal);
+    }
+    if (elements.modalCloudProfilesBackdrop) {
+      elements.modalCloudProfilesBackdrop.addEventListener('click', (e) => {
+        if (e.target === elements.modalCloudProfilesBackdrop) closeCloudProfileModal();
+      });
+    }
+    if (elements.modalProfileSelect) {
+      elements.modalProfileSelect.addEventListener('change', () => {
+        fillModalProfileForm(elements.modalProfileSelect.value);
+      });
+    }
+    if (elements.btnModalProfileActivate) {
+      elements.btnModalProfileActivate.addEventListener('click', activateModalCloudProfile);
+    }
+    if (elements.btnModalProfileSave) {
+      elements.btnModalProfileSave.addEventListener('click', saveModalCloudProfile);
+    }
+    if (elements.btnModalProfileDelete) {
+      elements.btnModalProfileDelete.addEventListener('click', deleteModalCloudProfile);
+    }
+    if (elements.btnModalDiscoverModels) {
+      elements.btnModalDiscoverModels.addEventListener('click', discoverModalCloudModels);
+    }
+    if (elements.modalProfileDiscoveredSelect) {
+      elements.modalProfileDiscoveredSelect.addEventListener('change', () => {
+        if (elements.modalProfileModel) elements.modalProfileModel.value = elements.modalProfileDiscoveredSelect.value;
+      });
+    }
+    if (elements.btnModalTestConn) {
+      elements.btnModalTestConn.addEventListener('click', testModalCloudConnection);
+    }
+    if (elements.btnModalVerifyTools) {
+      elements.btnModalVerifyTools.addEventListener('click', verifyModalCloudTools);
+    }
+
+    // Model Catalog Explorer in Settings View
+    if (elements.catalogSearchInput) {
+      elements.catalogSearchInput.addEventListener('input', renderModelCatalog);
+    }
+    if (elements.catalogTabBtns) {
+      elements.catalogTabBtns.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          elements.catalogTabBtns.forEach((t) => t.classList.remove('active'));
+          tab.classList.add('active');
+          state.catalogActiveProvider = tab.dataset.provider || 'all';
+          renderModelCatalog();
+        });
+      });
+    }
+
+    // Compatibility validation button
+    if (elements.btnValidateKey) {
+      elements.btnValidateKey.addEventListener('click', () => {
+        validateCloudKey(
+          elements.modelProviderSelect.value,
+          elements.runtimeApiKey.value.trim(),
+          elements.apiKeyFeedback
+        );
+      });
+    }
 
     function syncExecutionLimits() {
       if (!elements.scanIntensity || !elements.executionLimitsSelect) return;
@@ -1755,6 +3367,64 @@
         } finally {
           elements.btnStopRun.disabled = false;
           elements.btnStopRun.innerHTML = `<span>🛑</span> Stop Scan`;
+        }
+      });
+    }
+
+    if (elements.resumeProviderSelect) {
+      elements.resumeProviderSelect.addEventListener('change', () => {
+        elements.resumeProviderSelect.dataset.userEdited = 'true';
+        const p = elements.resumeProviderSelect.value;
+        updateResumeModelsDropdown(p);
+        if (elements.resumeWarnProvider) elements.resumeWarnProvider.textContent = p;
+        if (elements.resumeWarnModel && elements.resumeModelSelect) {
+          elements.resumeWarnModel.textContent = elements.resumeModelSelect.value;
+        }
+      });
+    }
+
+    if (elements.resumeModelSelect) {
+      elements.resumeModelSelect.addEventListener('change', () => {
+        if (elements.resumeWarnModel) elements.resumeWarnModel.textContent = elements.resumeModelSelect.value;
+      });
+    }
+
+    if (elements.btnResumeAssessment) {
+      elements.btnResumeAssessment.addEventListener('click', async () => {
+        const runId = state.activeRunId || state.latestRunData?.run_id;
+        if (!runId) return;
+        if (elements.resumeConfirmCheckbox && !elements.resumeConfirmCheckbox.checked) {
+          showToast('Please confirm resuming by checking the confirmation box.', 'error');
+          return;
+        }
+        const provider = elements.resumeProviderSelect ? elements.resumeProviderSelect.value : (state.latestRunData?.provider || 'openrouter');
+        const model = elements.resumeModelSelect ? elements.resumeModelSelect.value : (state.latestRunData?.model || 'default');
+        const apiKey = elements.resumeApiKey ? elements.resumeApiKey.value.trim() : '';
+
+        try {
+          elements.btnResumeAssessment.disabled = true;
+          elements.btnResumeAssessment.innerHTML = `<span>⏳</span> Resuming...`;
+          const payload = { model: model, provider: provider };
+          if (apiKey) payload.api_key = apiKey;
+          const res = await fetch(`/runs/${runId}/resume`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            showToast(`Assessment ${runId} resumed with ${model}!`, 'success');
+            if (elements.providerResumeCard) elements.providerResumeCard.style.display = 'none';
+            await fetchRunState(runId);
+            startRunPolling(runId);
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            showToast(`Failed to resume assessment: ${errData.detail || res.statusText}`, 'error');
+          }
+        } catch (err) {
+          showToast(`Error resuming assessment: ${err.message}`, 'error');
+        } finally {
+          elements.btnResumeAssessment.disabled = false;
+          elements.btnResumeAssessment.innerHTML = `▶️ Confirm & Resume`;
         }
       });
     }
@@ -2021,11 +3691,611 @@
     }
   }
 
+  // ============================================================
+  // Cloud Hosted Profile Modal & New Assessment Panel Management
+  // ============================================================
+
+  function updateCloudHostedPanelDisplay() {
+    const profiles = state.cloudProfiles || [];
+    if (profiles.length === 0) {
+      if (elements.cloudEmptyState) elements.cloudEmptyState.style.display = 'block';
+      if (elements.cloudActiveProfileSection) elements.cloudActiveProfileSection.style.display = 'none';
+      return;
+    }
+
+    if (elements.cloudEmptyState) elements.cloudEmptyState.style.display = 'none';
+    if (elements.cloudActiveProfileSection) elements.cloudActiveProfileSection.style.display = 'block';
+
+    const savedPid = localStorage.getItem('selectedCloudProfileId');
+    let selectedProf = null;
+    if (savedPid) {
+      selectedProf = profiles.find((p) => p.id === savedPid);
+    }
+    if (!selectedProf) {
+      selectedProf = profiles.find((p) => p.is_active) || profiles[0];
+    }
+
+    if (elements.cloudProfileSelectMain) {
+      elements.cloudProfileSelectMain.innerHTML = '';
+      profiles.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.model || 'No model'})${p.is_active ? ' ⭐ [Active]' : ''}`;
+        if (selectedProf && p.id === selectedProf.id) opt.selected = true;
+        elements.cloudProfileSelectMain.appendChild(opt);
+      });
+      if (selectedProf) {
+        elements.cloudProfileSelectMain.value = selectedProf.id;
+      }
+    }
+
+    if (selectedProf) {
+      if (elements.cloudProfileEndpointText) elements.cloudProfileEndpointText.textContent = selectedProf.api_base || '-';
+      if (elements.cloudProfileAuthStatus) {
+        elements.cloudProfileAuthStatus.textContent = selectedProf.has_api_key ? 'Key Set' : 'Unauthenticated';
+        elements.cloudProfileAuthStatus.className = selectedProf.has_api_key ? 'badge badge-emerald' : 'badge badge-amber';
+      }
+
+      if (elements.cloudDiscoveredModelSelect) {
+        elements.cloudDiscoveredModelSelect.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = selectedProf.model || 'custom-model';
+        defaultOpt.textContent = `${selectedProf.model_alias || selectedProf.model || 'Configured Model'} [ACTIVE]`;
+        defaultOpt.selected = true;
+        elements.cloudDiscoveredModelSelect.appendChild(defaultOpt);
+
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+        elements.cloudDiscoveredModelSelect.appendChild(customOpt);
+      }
+      if (elements.cloudManualModelInput) elements.cloudManualModelInput.style.display = 'none';
+    }
+  }
+
+  function openCloudProfileModal(profileId) {
+    if (!elements.modalCloudProfilesBackdrop) return;
+    elements.modalCloudProfilesBackdrop.style.display = 'flex';
+
+    if (elements.modalProfileSelect) {
+      elements.modalProfileSelect.innerHTML = '';
+      (state.cloudProfiles || []).forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.model || 'No model'})${p.is_active ? ' ⭐ [Active]' : ''}`;
+        elements.modalProfileSelect.appendChild(opt);
+      });
+      const newOpt = document.createElement('option');
+      newOpt.value = '__new__';
+      newOpt.textContent = '➕ Create New Cloud Profile...';
+      elements.modalProfileSelect.appendChild(newOpt);
+
+      let targetId = profileId;
+      if (!targetId || targetId === '__none__') {
+        const activeProf = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+        targetId = activeProf ? activeProf.id : '__new__';
+      }
+      elements.modalProfileSelect.value = targetId;
+      fillModalProfileForm(targetId);
+    }
+  }
+
+  function closeCloudProfileModal() {
+    if (elements.modalCloudProfilesBackdrop) {
+      elements.modalCloudProfilesBackdrop.style.display = 'none';
+    }
+  }
+
+  function fillModalProfileForm(profileOrId) {
+    const profile = typeof profileOrId === 'string'
+      ? (state.cloudProfiles || []).find((p) => p.id === profileOrId) || null
+      : profileOrId;
+
+    if (!profile || profileOrId === '__new__') {
+      if (elements.modalProfileName) elements.modalProfileName.value = 'Cloud Hosted Endpoint';
+      if (elements.modalProfileBaseUrl) elements.modalProfileBaseUrl.value = '';
+      if (elements.modalProfileApiKey) elements.modalProfileApiKey.value = '';
+      if (elements.modalProfileCurrentKeyHint) elements.modalProfileCurrentKeyHint.textContent = 'Current key: Not configured';
+      if (elements.modalProfileModel) elements.modalProfileModel.value = '';
+      if (elements.modalProfileAlias) elements.modalProfileAlias.value = '';
+      if (elements.modalProfileStateBadge) {
+        elements.modalProfileStateBadge.textContent = 'New Profile';
+        elements.modalProfileStateBadge.className = 'badge badge-amber';
+      }
+      if (elements.modalProfileAuthBadge) {
+        elements.modalProfileAuthBadge.textContent = 'No Credential';
+        elements.modalProfileAuthBadge.className = 'badge badge-rose';
+      }
+      if (elements.modalProfileConnBadge) {
+        elements.modalProfileConnBadge.textContent = 'Unverified Connection';
+        elements.modalProfileConnBadge.className = 'badge badge-amber';
+      }
+      if (elements.modalProfileDiscoveredSelect) elements.modalProfileDiscoveredSelect.style.display = 'none';
+      if (elements.modalProfileTestResult) elements.modalProfileTestResult.style.display = 'none';
+      return;
+    }
+
+    if (elements.modalProfileName) elements.modalProfileName.value = profile.name || '';
+    if (elements.modalProfileBaseUrl) elements.modalProfileBaseUrl.value = profile.api_base || '';
+    if (elements.modalProfileApiKey) elements.modalProfileApiKey.value = '';
+    if (elements.modalProfileCurrentKeyHint) {
+      elements.modalProfileCurrentKeyHint.innerHTML = profile.has_api_key
+        ? `Saved key: <code style="color:#34d399;">${escapeHtml(profile.masked_api_key)}</code>`
+        : 'Current key: Not configured (Unauthenticated)';
+    }
+    if (elements.modalProfileModel) elements.modalProfileModel.value = profile.model || '';
+    if (elements.modalProfileAlias) elements.modalProfileAlias.value = profile.model_alias || '';
+    if (elements.modalProfileStateBadge) {
+      elements.modalProfileStateBadge.textContent = profile.is_active ? '⭐ Active Profile' : 'Saved Profile';
+      elements.modalProfileStateBadge.className = profile.is_active ? 'badge badge-emerald' : 'badge badge-cyan';
+    }
+    if (elements.modalProfileAuthBadge) {
+      elements.modalProfileAuthBadge.textContent = profile.has_api_key ? 'Credential Configured' : 'No Credential';
+      elements.modalProfileAuthBadge.className = profile.has_api_key ? 'badge badge-emerald' : 'badge badge-amber';
+    }
+    if (elements.modalProfileConnBadge) {
+      elements.modalProfileConnBadge.textContent = 'Ready to Test';
+      elements.modalProfileConnBadge.className = 'badge badge-cyan';
+    }
+    if (elements.modalProfileTestResult) elements.modalProfileTestResult.style.display = 'none';
+  }
+
+  async function saveModalCloudProfile() {
+    const name = elements.modalProfileName ? elements.modalProfileName.value.trim() : '';
+    const apiBase = elements.modalProfileBaseUrl ? elements.modalProfileBaseUrl.value.trim() : '';
+    const apiKey = elements.modalProfileApiKey ? elements.modalProfileApiKey.value.trim() : '';
+    const model = elements.modalProfileModel ? elements.modalProfileModel.value.trim() : '';
+    const modelAlias = elements.modalProfileAlias ? elements.modalProfileAlias.value.trim() : '';
+
+    if (!name || !apiBase || !model) {
+      showToast('Please fill in required fields: Name, API Base URL, and Model Identifier', 'error');
+      return;
+    }
+
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : '__new__';
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    const payload = {
+      name: name,
+      api_base: apiBase,
+      api_key: apiKey || null,
+      model: model,
+      model_alias: modelAlias || null,
+      is_active: true,
+    };
+    if (profileId) payload.id = profileId;
+
+    if (elements.btnModalProfileSave) {
+      elements.btnModalProfileSave.disabled = true;
+      elements.btnModalProfileSave.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        let errDetail = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.detail) errDetail = String(errData.detail);
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
+      const saved = await res.json();
+      showToast(`Profile '${saved.name}' saved and activated!`, 'success');
+      await loadCloudProfiles();
+      openCloudProfileModal(saved.id);
+      updateCloudHostedPanelDisplay();
+    } catch (err) {
+      showToast(`Failed to save profile: ${err.message}`, 'error');
+    } finally {
+      if (elements.btnModalProfileSave) {
+        elements.btnModalProfileSave.disabled = false;
+        elements.btnModalProfileSave.textContent = '💾 Save Profile';
+      }
+    }
+  }
+
+  async function activateModalCloudProfile() {
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : '__new__';
+    if (currentVal === '__new__') {
+      showToast('Please select a saved profile to activate', 'info');
+      return;
+    }
+    try {
+      const res = await fetch(`/providers/cloud_hosted/profiles/${currentVal}/activate`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const prof = await res.json();
+      showToast(`'${prof.name}' is now active!`, 'success');
+      await loadCloudProfiles();
+      openCloudProfileModal(prof.id);
+      updateCloudHostedPanelDisplay();
+    } catch (err) {
+      showToast(`Failed to activate profile: ${err.message}`, 'error');
+    }
+  }
+
+  async function deleteModalCloudProfile() {
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : '__new__';
+    if (currentVal === '__new__') {
+      fillModalProfileForm('__new__');
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this cloud provider profile?')) return;
+    try {
+      const res = await fetch(`/providers/cloud_hosted/profiles/${currentVal}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('Profile deleted successfully', 'success');
+      await loadCloudProfiles();
+      if (state.cloudProfiles.length > 0) {
+        openCloudProfileModal(state.cloudProfiles[0].id);
+      } else {
+        openCloudProfileModal('__new__');
+      }
+      updateCloudHostedPanelDisplay();
+    } catch (err) {
+      showToast(`Failed to delete profile: ${err.message}`, 'error');
+    }
+  }
+
+  async function discoverModalCloudModels() {
+    const apiBase = elements.modalProfileBaseUrl ? elements.modalProfileBaseUrl.value.trim() : '';
+    const apiKey = elements.modalProfileApiKey ? elements.modalProfileApiKey.value.trim() : '';
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase) {
+      showToast('Please enter an API Base URL first', 'error');
+      return;
+    }
+
+    if (elements.btnModalDiscoverModels) {
+      elements.btnModalDiscoverModels.disabled = true;
+      elements.btnModalDiscoverModels.textContent = '🔍 Fetching...';
+    }
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_base: apiBase, api_key: apiKey || null, profile_id: profileId }),
+      });
+      const data = await res.json();
+      if (data.valid && data.models && data.models.length > 0) {
+        showToast(`Discovered ${data.models.length} model(s)!`, 'success');
+        if (elements.modalProfileDiscoveredSelect) {
+          elements.modalProfileDiscoveredSelect.innerHTML = '<option value="">-- Choose Discovered Model --</option>';
+          data.models.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            elements.modalProfileDiscoveredSelect.appendChild(opt);
+          });
+          elements.modalProfileDiscoveredSelect.style.display = 'block';
+        }
+        if (elements.modalProfileModel && !elements.modalProfileModel.value.trim()) {
+          elements.modalProfileModel.value = data.models[0];
+        }
+      } else {
+        showToast(data.message || 'No models returned from endpoint', 'info');
+      }
+    } catch (err) {
+      showToast(`Discovery error: ${err.message}`, 'error');
+    } finally {
+      if (elements.btnModalDiscoverModels) {
+        elements.btnModalDiscoverModels.disabled = false;
+        elements.btnModalDiscoverModels.textContent = '🔍 Fetch Models';
+      }
+    }
+  }
+
+  async function testModalCloudConnection() {
+    const apiBase = elements.modalProfileBaseUrl ? elements.modalProfileBaseUrl.value.trim() : '';
+    const model = elements.modalProfileModel ? elements.modalProfileModel.value.trim() : '';
+    const apiKey = elements.modalProfileApiKey ? elements.modalProfileApiKey.value.trim() : '';
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase || !model) {
+      showToast('Please provide both API Base URL and Model Identifier', 'error');
+      return;
+    }
+
+    if (elements.btnModalTestConn) {
+      elements.btnModalTestConn.disabled = true;
+      elements.btnModalTestConn.textContent = 'Testing...';
+    }
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_base: apiBase, model: model, api_key: apiKey || null, profile_id: profileId }),
+      });
+      const data = await res.json();
+      if (elements.modalProfileTestResult) {
+        elements.modalProfileTestResult.style.display = 'block';
+        if (data.valid) {
+          elements.modalProfileTestResult.innerHTML = `
+            <div style="color: #34d399; font-weight: 600;">✅ Connection Verified!</div>
+            <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">
+              Latency: ${data.duration_ms}ms | TTFT: ${data.ttft_ms}ms | Speed: ${data.tokens_per_second ? data.tokens_per_second + ' tok/s' : 'N/A'}
+            </div>`;
+          if (elements.modalProfileConnBadge) {
+            elements.modalProfileConnBadge.textContent = 'Connection Verified';
+            elements.modalProfileConnBadge.className = 'badge badge-emerald';
+          }
+          showToast('Connection verified successfully!', 'success');
+        } else {
+          elements.modalProfileTestResult.innerHTML = `<div style="color: #fb7185;">❌ ${escapeHtml(data.message || 'Connection failed')}</div>`;
+          if (elements.modalProfileConnBadge) {
+            elements.modalProfileConnBadge.textContent = 'Connection Failed';
+            elements.modalProfileConnBadge.className = 'badge badge-rose';
+          }
+          showToast(`Verification failed: ${data.message}`, 'error');
+        }
+      }
+    } catch (err) {
+      if (elements.modalProfileTestResult) {
+        elements.modalProfileTestResult.style.display = 'block';
+        elements.modalProfileTestResult.innerHTML = `<div style="color: #fb7185;">❌ Network Error: ${escapeHtml(err.message)}</div>`;
+      }
+    } finally {
+      if (elements.btnModalTestConn) {
+        elements.btnModalTestConn.disabled = false;
+        elements.btnModalTestConn.textContent = '🧪 Test Connection';
+      }
+    }
+  }
+
+  async function verifyModalCloudTools() {
+    const apiBase = elements.modalProfileBaseUrl ? elements.modalProfileBaseUrl.value.trim() : '';
+    const model = elements.modalProfileModel ? elements.modalProfileModel.value.trim() : '';
+    const apiKey = elements.modalProfileApiKey ? elements.modalProfileApiKey.value.trim() : '';
+    const currentVal = elements.modalProfileSelect ? elements.modalProfileSelect.value : null;
+    const profileId = currentVal !== '__new__' ? currentVal : null;
+
+    if (!apiBase || !model) {
+      showToast('Please provide both API Base URL and Model Identifier', 'error');
+      return;
+    }
+
+    if (elements.btnModalVerifyTools) {
+      elements.btnModalVerifyTools.disabled = true;
+      elements.btnModalVerifyTools.textContent = 'Verifying...';
+    }
+
+    try {
+      const res = await fetch('/providers/cloud_hosted/verify_tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_base: apiBase, model: model, api_key: apiKey || null, profile_id: profileId }),
+      });
+      const data = await res.json();
+      if (elements.modalProfileTestResult) {
+        elements.modalProfileTestResult.style.display = 'block';
+        if (data.tools_supported) {
+          elements.modalProfileTestResult.innerHTML = `
+            <div style="color: #34d399; font-weight: 600;">🛠️ Structured Tool Calling Supported!</div>
+            <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">${escapeHtml(data.message)}</div>`;
+          showToast('Autonomous tool calling confirmed compatible!', 'success');
+        } else {
+          elements.modalProfileTestResult.innerHTML = `
+            <div style="color: #fb7185; font-weight: 600;">⚠️ Tool Calling Compatibility Issue</div>
+            <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">${escapeHtml(data.message)}</div>`;
+          showToast('Tool calling check failed or unsupported', 'error');
+        }
+      }
+    } catch (err) {
+      if (elements.modalProfileTestResult) {
+        elements.modalProfileTestResult.style.display = 'block';
+        elements.modalProfileTestResult.innerHTML = `<div style="color: #fb7185;">❌ Network Error: ${escapeHtml(err.message)}</div>`;
+      }
+    } finally {
+      if (elements.btnModalVerifyTools) {
+        elements.btnModalVerifyTools.disabled = false;
+        elements.btnModalVerifyTools.textContent = '🛠️ Verify Tool Calling';
+      }
+    }
+  }
+
+  async function testAndDiscoverCloudEndpointModels() {
+    const prof = (state.cloudProfiles || []).find((p) => p.is_active) || (state.cloudProfiles || [])[0];
+    if (!prof) {
+      showToast('No active cloud profile configured', 'error');
+      return;
+    }
+    if (elements.btnTestCloudProfile) {
+      elements.btnTestCloudProfile.disabled = true;
+      elements.btnTestCloudProfile.textContent = 'Testing...';
+    }
+    try {
+      const res = await fetch('/providers/cloud_hosted/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_base: prof.api_base, api_key: prof.api_key || null, profile_id: prof.id }),
+      });
+      const data = await res.json();
+      if (data.valid && data.models && data.models.length > 0) {
+        showToast(`Discovered ${data.models.length} model(s) on endpoint!`, 'success');
+        if (elements.cloudDiscoveredModelSelect) {
+          elements.cloudDiscoveredModelSelect.innerHTML = '';
+          data.models.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            elements.cloudDiscoveredModelSelect.appendChild(opt);
+          });
+          const customOpt = document.createElement('option');
+          customOpt.value = '__custom__';
+          customOpt.textContent = '⚙️ Enter Custom Model Identifier...';
+          elements.cloudDiscoveredModelSelect.appendChild(customOpt);
+        }
+        if (elements.cloudProfileFeedback) {
+          elements.cloudProfileFeedback.innerHTML = `<span style="color:#34d399;">✅ Connected! ${data.models.length} model(s) ready.</span>`;
+        }
+      } else {
+        if (elements.cloudProfileFeedback) {
+          elements.cloudProfileFeedback.innerHTML = `<span style="color:#f59e0b;">⚠️ Endpoint reachable; enter model manually.</span>`;
+        }
+      }
+    } catch (e) {
+      if (elements.cloudProfileFeedback) {
+        elements.cloudProfileFeedback.innerHTML = `<span style="color:#fb7185;">❌ Error: ${escapeHtml(e.message)}</span>`;
+      }
+    } finally {
+      if (elements.btnTestCloudProfile) {
+        elements.btnTestCloudProfile.disabled = false;
+        elements.btnTestCloudProfile.textContent = '🧪 Test & Fetch Models';
+      }
+    }
+  }
+
+  // ============================================================
+  // Multi-Provider Model Catalog Explorer (AI Models Settings)
+  // ============================================================
+
+  function renderModelCatalog() {
+    if (!elements.catalogModelsGrid) return;
+    const activeTab = state.catalogActiveProvider || 'all';
+    const filterQuery = (elements.catalogSearchInput ? elements.catalogSearchInput.value : '').trim().toLowerCase();
+
+    const allModels = [];
+    const providers = ['openrouter', 'openai', 'anthropic', 'google', 'ollama', 'cloud_hosted'];
+
+    providers.forEach((prov) => {
+      const list = DEFAULT_PROVIDER_MODELS[prov] || [];
+      list.forEach((m) => {
+        allModels.push({
+          ...m,
+          provider: prov,
+        });
+      });
+    });
+
+    const filtered = allModels.filter((m) => {
+      if (activeTab !== 'all' && m.provider !== activeTab) return false;
+      if (!filterQuery) return true;
+      return (m.id && m.id.toLowerCase().includes(filterQuery)) ||
+             (m.name && m.name.toLowerCase().includes(filterQuery)) ||
+             (m.provider && m.provider.toLowerCase().includes(filterQuery));
+    });
+
+    if (filtered.length === 0) {
+      elements.catalogModelsGrid.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); padding: 2.5rem; grid-column: 1 / -1;">
+          No models matched your filter. Try another keyword or switch provider tab.
+        </div>`;
+      return;
+    }
+
+    elements.catalogModelsGrid.innerHTML = filtered
+      .map((m) => {
+        const isFree = m.free || (m.id && m.id.endsWith(':free')) || m.pricing_status === 'free';
+        const isLocal = m.provider === 'ollama';
+        const pricingClass = isLocal ? 'local' : (isFree ? 'free' : 'paid');
+        const pricingLabel = isLocal ? '💻 Local Compute (Zero Cost)' : (isFree ? '✅ Free Tier [FREE]' : '⚠️ Paid Token Usage');
+        const meta = PROVIDER_META[m.provider] || { badgeText: m.provider.toUpperCase(), badgeClass: 'badge-purple' };
+
+        return `
+          <div class="model-catalog-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <span class="badge ${meta.badgeClass}" style="font-size: 0.72rem;">${escapeHtml(meta.badgeText)}</span>
+              <span class="model-pricing-pill ${pricingClass}" style="margin: 0; font-size: 0.72rem; padding: 0.15rem 0.45rem;">${escapeHtml(pricingLabel)}</span>
+            </div>
+            <div style="font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; color: #f8fafc; word-break: break-all;">
+              ${escapeHtml(m.name || m.id)}
+            </div>
+            <code style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.75rem; word-break: break-all;">
+              ${escapeHtml(m.id)}
+            </code>
+            <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+              <button type="button" class="btn btn-secondary btn-sm btn-select-catalog-model" data-provider="${escapeHtml(m.provider)}" data-model="${escapeHtml(m.id)}" style="font-size: 0.78rem;">
+                ⚡ Select for Assessment
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    elements.catalogModelsGrid.querySelectorAll('.btn-select-catalog-model').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.provider;
+        const mdl = btn.dataset.model;
+        if (elements.modelProviderSelect) {
+          elements.modelProviderSelect.value = p;
+          onProviderChange();
+        }
+        selectModelForProvider(p, mdl);
+        switchView('new-assessment');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast(`Selected ${mdl} (${p.toUpperCase()}) for New Assessment`, 'success');
+      });
+    });
+  }
+
+  function selectModelForProvider(provider, modelId) {
+    if (provider === 'openrouter') {
+      if (elements.openrouterModelSelect) {
+        let opt = elements.openrouterModelSelect.querySelector(`option[value="${modelId}"]`);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = modelId;
+          opt.textContent = modelId;
+          elements.openrouterModelSelect.insertBefore(opt, elements.openrouterModelSelect.firstChild);
+        }
+        elements.openrouterModelSelect.value = modelId;
+        if (elements.openrouterCustomModel) elements.openrouterCustomModel.style.display = 'none';
+        updateOpenRouterPricingNotice();
+      }
+    } else if (provider === 'openai') {
+      if (elements.openaiModelSelect) {
+        let opt = elements.openaiModelSelect.querySelector(`option[value="${modelId}"]`);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = modelId;
+          opt.textContent = modelId;
+          elements.openaiModelSelect.insertBefore(opt, elements.openaiModelSelect.firstChild);
+        }
+        elements.openaiModelSelect.value = modelId;
+        if (elements.openaiCustomModel) elements.openaiCustomModel.style.display = 'none';
+      }
+    } else if (provider === 'anthropic') {
+      if (elements.anthropicModelSelect) {
+        elements.anthropicModelSelect.value = modelId;
+        if (elements.anthropicCustomModel) elements.anthropicCustomModel.style.display = 'none';
+      }
+    } else if (provider === 'google') {
+      if (elements.googleModelSelect) {
+        elements.googleModelSelect.value = modelId;
+        if (elements.googleCustomModel) elements.googleCustomModel.style.display = 'none';
+      }
+    } else if (provider === 'ollama') {
+      if (elements.ollamaModelSelect) {
+        let opt = elements.ollamaModelSelect.querySelector(`option[value="${modelId}"]`);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = modelId;
+          opt.textContent = modelId;
+          elements.ollamaModelSelect.insertBefore(opt, elements.ollamaModelSelect.firstChild);
+        }
+        elements.ollamaModelSelect.value = modelId;
+        if (elements.ollamaCustomModel) elements.ollamaCustomModel.style.display = 'none';
+      }
+    }
+    syncCompatibilityProxies();
+  }
+
   async function loadCloudProfiles() {
     try {
       const res = await fetch('/providers/cloud_hosted/profiles');
       if (!res.ok) return;
       state.cloudProfiles = await res.json();
+      updateCloudHostedPanelDisplay();
 
       if (elements.cloudProfileSelect) {
         elements.cloudProfileSelect.innerHTML = '';
@@ -2607,6 +4877,7 @@
       }
       if (elements.settingsApiKey) elements.settingsApiKey.value = '';
       await loadLlmSettings();
+      await refreshReadiness();
     } catch (err) {
       showToast(`Failed to save config: ${err.message}`, 'error');
       if (elements.settingsKeyResult) {
@@ -2624,6 +4895,7 @@
   window.vaptApp = {
     openRun: async function (runId) {
       state.activeRunId = runId;
+      if (runId) localStorage.setItem('activeRunId', runId);
       await fetchRunState(runId);
       if (state.latestRunData) {
         loadReportView(state.latestRunData);
@@ -2632,19 +4904,73 @@
     },
   };
 
+  async function recoverActiveAssessmentOnLoad() {
+    let runIdToRecover = null;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      runIdToRecover = urlParams.get('run_id') || localStorage.getItem('activeRunId');
+    } catch (_) {
+      runIdToRecover = localStorage.getItem('activeRunId');
+    }
+    if (!runIdToRecover) {
+      try {
+        const res = await fetch('/runs');
+        if (res.ok) {
+          const data = await res.json();
+          const runs = Array.isArray(data) ? data : (data.runs || []);
+          const activeRun = runs.find((r) => r.status === 'running' || r.status === 'queued');
+          if (activeRun) {
+            runIdToRecover = activeRun.run_id;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (runIdToRecover) {
+      try {
+        const res = await fetch(`/runs/${runIdToRecover}`);
+        if (res.ok) {
+          const run = await res.json();
+          state.activeRunId = run.run_id;
+          state.latestRunData = run;
+          localStorage.setItem('activeRunId', run.run_id);
+          renderActiveRun(run);
+          loadReportView(run);
+          const reqHash = (window.location.hash || '').replace('#/', '');
+          if (reqHash && document.getElementById(`view-${reqHash}`)) {
+            switchView(reqHash);
+          } else {
+            switchView('active-assessment');
+          }
+          if (run.status === 'running' || run.status === 'queued') {
+            startRunPolling(run.run_id);
+          }
+        } else {
+          localStorage.removeItem('activeRunId');
+        }
+      } catch (_) {}
+    }
+  }
+
   // Entry Point
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     initElements();
     initEvents();
+    onProviderChange();
     populateModelOptions('openrouter');
-    loadOpenRouterFreeModels();
+    loadProviderModels('openrouter');
     loadLlmSettings();
-    loadCloudProfiles();
+    await loadCloudProfiles();
+    renderModelCatalog();
     checkSystemHealth();
+
+    await recoverActiveAssessmentOnLoad();
 
     const initialHash = window.location.hash.replace('#/', '');
     if (initialHash && document.getElementById(`view-${initialHash}`)) {
-      switchView(initialHash);
+      if (!state.activeRunId || initialHash !== 'new-assessment') {
+        switchView(initialHash);
+      }
     }
   });
 })();

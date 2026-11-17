@@ -431,6 +431,18 @@ def record_outcome(
             "duplicate": True,
         }
 
+    # A positive outcome is a *claim of a confirmed vulnerability*. It is only
+    # legitimate when it is backed by a real vulnerability report id produced
+    # by the reporting tool. Coverage records, agent narration and raw surface
+    # observations are not proof. run-fd0f5ec4 showed seven GAP2_SUCCESS events
+    # with an empty report_id while vulnerabilities.json stayed empty.
+    if status_norm == "positive" and not str(report_id or "").strip():
+        detail = (
+            (detail or "")
+            + " [rejected: positive outcome requires a vulnerability report id]"
+        ).strip()
+        status_norm = "observed"
+
     # 1. Confirmed Positive Finding (Vulnerability confirmed)
     if status_norm == "positive":
         attempts = max(1, st.attempts.get(candidate_id, 0))
@@ -462,6 +474,37 @@ def record_outcome(
             "pivot": False,
             "next_candidate": nxt,
             "status": "positive",
+        }
+
+    # 1b. Surface observed/labelled but no confirmed finding. This is an
+    # inconclusive attempt for GAP-2 purposes: it advances the attempt counter
+    # (so a stuck candidate eventually pivots) but is never a confirmed result.
+    if status_norm == "observed":
+        attempts = st.attempts.get(candidate_id, 0) + 1
+        st.attempts[candidate_id] = attempts
+        note_event(
+            "GAP2_OBSERVED",
+            candidate_id=candidate_id,
+            outcome="OBSERVED",
+            detail=detail,
+            directory=st.directory,
+        )
+        st.probe_outcomes.append(
+            {
+                "candidate_id": candidate_id,
+                "status": "observed",
+                "detail": detail,
+                "timestamp": _utc_now(),
+            }
+        )
+        st.save()
+        return {
+            "candidate_id": candidate_id,
+            "attempts": attempts,
+            "threshold": st.threshold(),
+            "pivot": False,
+            "next_candidate": next_candidate(directory=st.directory, state=st),
+            "status": "observed",
         }
 
     # 2. Confirmed Negative Result (Clean / Ruled out / No issue found)
@@ -561,25 +604,43 @@ def record_outcome(
         st.exhausted.add(candidate_id)
         next_entry = next_candidate(directory=st.directory, state=st)
         next_cid = (next_entry or {}).get("candidate_id")
-        pivot_reason = (
-            reason
-            or f"GAP-2 threshold reached for {candidate_id} after {attempts} failed attempts; abandon it and pivot"
-        )
-        note_event(
-            "GAP2_PIVOT",
-            candidate_id=candidate_id,
-            outcome="ABANDON",
-            attempts=attempts,
-            threshold=st.threshold(),
-            next_candidate=next_cid,
-            to_candidate=next_cid,
-            reason=pivot_reason,
-            probe_outcome=status_norm,
-            pivot_executed=bool(next_entry),
-            result=f"Pivoted to {next_cid}" if next_cid else "Queue exhausted",
-            message=pivot_reason,
-            directory=st.directory,
-        )
+        if next_entry and next_cid:
+            pivot_reason = (
+                reason
+                or f"GAP-2 threshold reached for {candidate_id} after {attempts} failed attempts; pivoted to {next_cid}"
+            )
+            note_event(
+                "GAP2_PIVOT",
+                candidate_id=candidate_id,
+                outcome="REDIRECT",
+                attempts=attempts,
+                threshold=st.threshold(),
+                next_candidate=next_cid,
+                to_candidate=next_cid,
+                reason=pivot_reason,
+                probe_outcome=status_norm,
+                pivot_executed=True,
+                result=f"Pivoted to {next_cid}",
+                message=pivot_reason,
+                directory=st.directory,
+            )
+        else:
+            pivot_reason = f"GAP2 threshold reached for {candidate_id}. Candidate abandoned. Queue exhausted. No alternative path executed. Pivot count: 0."
+            note_event(
+                "GAP2_ABANDON",
+                candidate_id=candidate_id,
+                outcome="ABANDON",
+                attempts=attempts,
+                threshold=st.threshold(),
+                next_candidate=None,
+                to_candidate=None,
+                reason=pivot_reason,
+                probe_outcome=status_norm,
+                pivot_executed=False,
+                result="Queue exhausted",
+                message=pivot_reason,
+                directory=st.directory,
+            )
     st.probe_outcomes.append(
         {
             "candidate_id": candidate_id,
@@ -593,13 +654,16 @@ def record_outcome(
         }
     )
     st.save()
+    executed_pivot = bool(pivot and next_entry and (next_entry or {}).get("candidate_id"))
     return {
         "candidate_id": candidate_id,
         "attempts": attempts,
         "threshold": st.threshold(),
-        "pivot": pivot,
-        "next_candidate": next_entry or next_candidate(directory=st.directory, state=st),
-        "status": "inconclusive",
+        "pivot": executed_pivot,
+        "pivot_executed": executed_pivot,
+        "next_candidate": next_entry if executed_pivot else None,
+        "status": "abandoned" if (attempts >= st.threshold() and not executed_pivot) else status_norm,
+        "reason": pivot_reason if pivot else None,
     }
 
 

@@ -261,7 +261,20 @@ def _fmt_time(raw: Any) -> str:
     return parsed.strftime("%Y-%m-%d %H:%M UTC") if parsed else "n/a"
 
 
-def _duration(start: Any, end: Any) -> str:
+def _duration(start: Any, end: Any, duration_seconds: Any = None) -> str:
+    if duration_seconds is not None:
+        try:
+            seconds = int(float(duration_seconds))
+            if seconds >= 0:
+                hours, remainder = divmod(seconds, 3600)
+                minutes, secs = divmod(remainder, 60)
+                if hours:
+                    return f"{hours}h {minutes}m {secs}s"
+                if minutes:
+                    return f"{minutes}m {secs}s"
+                return f"{secs}s"
+        except (ValueError, TypeError):
+            pass
     start_dt = _parse_time(start)
     end_dt = _parse_time(end)
     if not start_dt or not end_dt:
@@ -380,7 +393,7 @@ def _cover(
         ("STATUS", str(record.get("status") or "n/a")),
         ("STARTED", _fmt_time(record.get("start_time"))),
         ("COMPLETED", _fmt_time(record.get("end_time"))),
-        ("DURATION", _duration(record.get("start_time"), record.get("end_time"))),
+        ("DURATION", _duration(record.get("start_time"), record.get("end_time"), record.get("active_duration_seconds") or record.get("duration_seconds"))),
     ]
     meta_table = Table(
         [
@@ -610,8 +623,156 @@ def _overview_flowables(
         Spacer(1, 16),
         _severity_grid(styles, counts),
         Spacer(1, 10),
-        Paragraph(f"<b>{total}</b> total findings across this assessment.", styles["body"]),
+        Paragraph(f"<b>{total}</b> total confirmed findings across this assessment.", styles["body"]),
     ]
+
+    # 1. Assessment Lifecycle & Completeness Table
+    turns_consumed = record.get("turns_consumed", 0)
+    max_turns = record.get("configured_turn_limit") or record.get("max_turns", 500)
+    lifecycle_msg = record.get("run_lifecycle_status") or f"Run process completed — {turns_consumed} of {max_turns} turns used."
+    actual_probes = record.get("actual_probe_count", turns_consumed)
+    pivots_count = record.get("pivots", record.get("gap2_pivots", 0))
+    cands = record.get("candidates", [])
+    val_obs_cnt = sum(1 for c in cands if c.get("state") == "VALIDATED_OBSERVATION")
+    verif_vuln_cnt = sum(1 for c in cands if c.get("state") == "VERIFIED_VULNERABILITY")
+    ab_cnt = sum(1 for c in cands if c.get("state") == "ABANDONED")
+    ro_cnt = sum(1 for c in cands if c.get("state") in ("RULED_OUT", "RULED_OUT_WITH_EVIDENCE"))
+    tot_cands = len(cands)
+
+    if verif_vuln_cnt > 0:
+        cands_summary = f"{tot_cands} identified | {tot_cands} investigated ({verif_vuln_cnt} verified vulnerabilities, {val_obs_cnt} validated observations, {ab_cnt} abandoned)"
+    else:
+        cands_summary = f"{tot_cands} identified | {tot_cands} investigated ({val_obs_cnt} validated observations, 0 verified vulnerabilities, {ab_cnt} abandoned)"
+
+    pivot_narrative = (
+        f"{pivots_count} pivot(s) executed"
+        if pivots_count > 0
+        else "0 executed (No adaptive pivots were executed during this assessment)"
+    )
+
+    compl_rows = [
+        [Paragraph("RUN LIFECYCLE", styles["meta_label"]), Paragraph(_esc(lifecycle_msg), styles["meta_value"])],
+        [Paragraph("PROBES EXECUTED", styles["meta_label"]), Paragraph(f"{actual_probes} concrete tool probe executions recorded", styles["meta_value"])],
+        [Paragraph("GAP-1 CANDIDATES", styles["meta_label"]), Paragraph(_esc(cands_summary), styles["meta_value"])],
+        [Paragraph("GAP-2 ADAPTIVE PIVOTS", styles["meta_label"]), Paragraph(_esc(pivot_narrative), styles["meta_value"])],
+    ]
+    compl_table = Table(compl_rows, colWidths=[42 * mm, _PAGE_W - 40 * mm - 42 * mm])
+    compl_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LINEBELOW", (0, 0), (-1, -2), 0.5, _BORDER),
+            ]
+        )
+    )
+    story.append(Spacer(1, 10))
+    story.append(compl_table)
+
+    # 2. Vulnerability Category Scan Matrix Table
+    scan_matrix = record.get("scan_matrix", [])
+    if scan_matrix:
+        story.append(Spacer(1, 8))
+        story.append(_section(styles, "Vulnerability Category Scan Matrix"))
+        story.append(Spacer(1, 4))
+        matrix_table_data: list[list[Flowable]] = [
+            [
+                Paragraph("<b>Category</b>", styles["body"]),
+                Paragraph("<b>Executed / Configured</b>", styles["body"]),
+                Paragraph("<b>Findings</b>", styles["body"]),
+                Paragraph("<b>Audit Status</b>", styles["body"]),
+            ]
+        ]
+        for m in scan_matrix:
+            m_title = str(m.get("title", ""))
+            cfg = int(m.get("configured_checks") or m.get("test_count", 0))
+            ex = int(m.get("executed_checks", 0))
+            cnt = int(m.get("findings_count", 0))
+            st = str(m.get("status", "NOT TESTED")).upper()
+            if ex == 0 and cnt == 0:
+                st = "NOT TESTED"
+            elif ex < cfg and cnt == 0:
+                st = "PARTIALLY TESTED"
+            elif ex >= cfg and cnt == 0:
+                st = "PASSED"
+
+            test_str = f"{ex} executed ({cfg} configured)" if cfg != ex else f"{ex} tests"
+            matrix_table_data.append(
+                [
+                    Paragraph(_esc(m_title), styles["body"]),
+                    Paragraph(_esc(test_str), styles["body"]),
+                    Paragraph(f"{cnt} finding(s)", styles["body"]),
+                    Paragraph(f"<b>{_esc(st)}</b>", styles["body"]),
+                ]
+            )
+        col_w = (_PAGE_W - 40 * mm) / 4
+        m_tbl = Table(matrix_table_data, colWidths=[col_w * 1.5, col_w * 1.1, col_w * 0.7, col_w * 0.7])
+        m_tbl.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, _INK),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.5, _BORDER),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1.8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8),
+                ]
+            )
+        )
+        story.append(m_tbl)
+
+    # 3. Port & Environmental Scope Table
+    open_ports = record.get("open_ports", [])
+    if open_ports:
+        story.append(Spacer(1, 8))
+        story.append(_section(styles, "Port & Environmental Scope Inventory"))
+        story.append(Spacer(1, 4))
+        port_table_data: list[list[Flowable]] = [
+            [
+                Paragraph("<b>Port / Proto</b>", styles["body"]),
+                Paragraph("<b>Service & Fingerprint</b>", styles["body"]),
+                Paragraph("<b>Scope</b>", styles["body"]),
+                Paragraph("<b>Confidence</b>", styles["body"]),
+            ]
+        ]
+        for p in open_ports:
+            p_port = p.get("port")
+            p_proto = str(p.get("protocol", "tcp")).upper()
+            is_env = not p.get("in_scope", True) or p.get("scope") == "environmental"
+            if is_env:
+                serv_desc = "Unfingerprinted TCP Listener (Out of Scope Host Handshake)"
+                conf = "UNCONFIRMED"
+                scope_desc = "Environmental"
+            else:
+                fp = p.get("service_fingerprint") or "HTTP Web Service"
+                serv_desc = f"HTTP Web Service ({fp})"
+                conf = "CONFIRMED"
+                scope_desc = "Target Scope"
+
+            port_table_data.append(
+                [
+                    Paragraph(f"Port {p_port}/{p_proto}", styles["body"]),
+                    Paragraph(_esc(serv_desc), styles["body"]),
+                    Paragraph(_esc(scope_desc), styles["body"]),
+                    Paragraph(f"<b>{_esc(conf)}</b>", styles["body"]),
+                ]
+            )
+        col_w = (_PAGE_W - 40 * mm) / 4
+        p_tbl = Table(port_table_data, colWidths=[col_w * 0.8, col_w * 1.8, col_w * 0.7, col_w * 0.7])
+        p_tbl.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, _INK),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.5, _BORDER),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1.8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8),
+                ]
+            )
+        )
+        story.append(p_tbl)
+
     scan_results = record.get("scan_results")
     if not isinstance(scan_results, dict):
         return story
@@ -635,7 +796,10 @@ def _overview_flowables(
 
 def generate_report_pdf(run_dir: Path) -> bytes:
     """Render a branded, full-detail PDF report for the run at ``run_dir``."""
+    from strix.report.reconciliation import reconcile_all
+
     record = read_run_summary(run_dir)
+    record = reconcile_all(record, run_dir=run_dir)
     vulns = [v for v in read_vulnerabilities(run_dir) if isinstance(v, dict)]
     counts = severity_counts(vulns)
     run_name = str(record.get("run_name") or run_dir.name)

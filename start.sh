@@ -31,7 +31,10 @@ log_success() { echo -e "${GREEN}[OK]${RESET} $*"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 log_error()   { echo -e "${RED}[ERROR]${RESET} $*"; }
 
-PID_FILE="$SCRIPT_DIR/.ai_vapt.pid"
+RUN_DIR="$SCRIPT_DIR/.run"
+mkdir -p "$RUN_DIR"
+PID_FILE="$RUN_DIR/ai-vapt.pid"
+LEGACY_PID_FILE="$SCRIPT_DIR/.ai_vapt.pid"
 LOG_FILE="$SCRIPT_DIR/ai_vapt_server.log"
 
 # ------------------------------------------------------------------------------
@@ -114,18 +117,21 @@ fi
 # ------------------------------------------------------------------------------
 # 2. Check if Server is Already Running
 # ------------------------------------------------------------------------------
-if [ -f "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE" 2>/dev/null || true)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        log_warn "AI-VAPT server is already running with PID ${OLD_PID}."
-        echo -e "  URL: ${CYAN}http://localhost:${PORT}/${RESET}"
-        echo -e "  To stop: ${BOLD}./stop.sh${RESET}"
-        exit 0
-    else
-        # Stale PID file
-        rm -f "$PID_FILE"
+CHECK_PIDS=("$PID_FILE" "$LEGACY_PID_FILE")
+for pf in "${CHECK_PIDS[@]}"; do
+    if [ -f "$pf" ]; then
+        OLD_PID=$(cat "$pf" 2>/dev/null || true)
+        if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+            log_warn "AI-VAPT server is already running with PID ${OLD_PID}."
+            echo -e "  URL: ${CYAN}http://localhost:${PORT}/${RESET}"
+            echo -e "  To stop: ${BOLD}./ai-vapt.sh stop${RESET} or ${BOLD}./stop.sh${RESET}"
+            exit 0
+        else
+            # Stale PID file
+            rm -f "$pf"
+        fi
     fi
-fi
+done
 
 # Also check if port is currently in use
 if command -v lsof >/dev/null 2>&1; then
@@ -180,15 +186,16 @@ fi
 log_info "Starting AI-VAPT Web Operations Console on ${HOST}:${PORT}..."
 
 if [ "$RUN_MODE" = "background" ]; then
-    nohup "$VENV_PY" -m uvicorn strix.interface.api:app \
+    setsid "$VENV_PY" -m uvicorn strix.interface.api:app \
         --host "$HOST" \
         --port "$PORT" \
         --log-level info \
-        > "$LOG_FILE" 2>&1 &
+        < /dev/null > "$LOG_FILE" 2>&1 &
     
     SERVER_PID=$!
     disown "$SERVER_PID" 2>/dev/null || true
     echo "$SERVER_PID" > "$PID_FILE"
+    echo "$SERVER_PID" > "$LEGACY_PID_FILE"
 
     # Wait up to 10 seconds for server to bind and respond to /health
     log_info "Waiting for service initialization (PID: ${SERVER_PID})..."
@@ -213,7 +220,8 @@ if [ "$RUN_MODE" = "background" ]; then
         echo -e "  • Process PID:      ${BOLD}${SERVER_PID}${RESET}"
         echo -e "  • Server Log:       ${DIM}${LOG_FILE}${RESET}"
         echo -e ""
-        echo -e "  To stop the application: ${BOLD}./stop.sh${RESET}"
+        echo -e "  To manage:          ${BOLD}./ai-vapt.sh status${RESET} | ${BOLD}./ai-vapt.sh stop${RESET}"
+        echo -e "  To stop:            ${BOLD}./stop.sh${RESET}"
         echo -e "${BOLD}==============================================================================${RESET}\n"
     else
         log_error "Server process did not report ready within timeout."
@@ -221,7 +229,7 @@ if [ "$RUN_MODE" = "background" ]; then
             log_error "Server process terminated unexpectedly. Check log:"
             echo -e "${RED}--- Last 20 lines of ${LOG_FILE} ---${RESET}"
             tail -n 20 "$LOG_FILE" 2>/dev/null || true
-            rm -f "$PID_FILE"
+            rm -f "$PID_FILE" "$LEGACY_PID_FILE"
             exit 1
         else
             log_warn "Server process is running (PID: ${SERVER_PID}), but health check hasn't responded yet."
@@ -232,7 +240,8 @@ else
     # Foreground execution
     log_info "Starting in interactive foreground mode. Press Ctrl+C to stop."
     echo "$$" > "$PID_FILE"
-    trap 'rm -f "$PID_FILE"; exit 0' INT TERM EXIT
+    echo "$$" > "$LEGACY_PID_FILE"
+    trap 'rm -f "$PID_FILE" "$LEGACY_PID_FILE"; exit 0' INT TERM EXIT
     exec "$VENV_PY" -m uvicorn strix.interface.api:app \
         --host "$HOST" \
         --port "$PORT" \

@@ -362,8 +362,15 @@ def evaluate_runtime_readiness(
         .strip()
     )
 
+    from strix.core.runtime_credentials import (
+        get_runtime_credential,
+        get_runtime_model,
+        is_placeholder_credential,
+    )
+
     model_id = (
         custom_model
+        or get_runtime_model(provider)
         or os.environ.get("STRIX_LLM")
         or getattr(getattr(settings, "llm", None), "model", None)
         or cli_cfg.get("STRIX_LLM")
@@ -400,38 +407,20 @@ def evaluate_runtime_readiness(
     # ---------------------------------------------------------------------------
     # 6. Provider Credentials & Connectivity
     # ---------------------------------------------------------------------------
-    # Resolve runtime key safely
-    active_key: str | None = None
-    if custom_api_key:
-        active_key = custom_api_key
-    elif provider == "openrouter":
-        active_key = (
-            os.environ.get("OPENROUTER_API_KEY")
-            or cli_cfg.get("OPENROUTER_API_KEY")
-            or os.environ.get("LLM_API_KEY")
-            or cli_cfg.get("LLM_API_KEY")
-        )
-    elif provider == "google":
-        active_key = (
-            os.environ.get("GEMINI_API_KEY")
-            or cli_cfg.get("GEMINI_API_KEY")
-            or os.environ.get("LLM_API_KEY")
-            or cli_cfg.get("LLM_API_KEY")
-        )
-    elif provider == "openai":
-        active_key = (
-            os.environ.get("OPENAI_API_KEY")
-            or cli_cfg.get("OPENAI_API_KEY")
-            or os.environ.get("LLM_API_KEY")
-            or cli_cfg.get("LLM_API_KEY")
-        )
-    else:
-        active_key = os.environ.get("LLM_API_KEY") or cli_cfg.get("LLM_API_KEY")
-
+    # Resolve runtime key safely with frontend in-memory precedence
+    active_key: str | None = get_runtime_credential(provider, override_key=custom_api_key)
     cred_summary = _mask_credential_summary(active_key)
     cred_configured = bool(active_key and str(active_key).strip())
+    is_placeholder = is_placeholder_credential(active_key)
 
-    if not cred_configured and provider not in ("ollama", "local"):
+    if (not cred_configured or is_placeholder) and provider not in ("ollama", "local"):
+        if is_placeholder and cred_configured:
+            details_msg = f"API key for provider '{provider.upper()}' is set to a placeholder test token. Provide a live key for production assessments."
+            rem_msg = f"Provide a live {provider.upper()} API key in Settings > AI Models or via environment variable."
+        else:
+            details_msg = f"API key for provider '{provider.upper()}' is not configured."
+            rem_msg = f"Add your {provider.upper()} API key in Settings > AI Models or export {provider.upper()}_API_KEY."
+
         checks.append(
             DiagnosticCheck(
                 id="provider_credential",
@@ -439,13 +428,11 @@ def evaluate_runtime_readiness(
                 category="provider",
                 status=ReadinessStatus.CONFIGURATION_REQUIRED,
                 passed=False,
-                details=f"API key for provider '{provider.upper()}' is not configured.",
-                remediation=f"Add your {provider.upper()} API key in Settings > AI Models or export {provider.upper()}_API_KEY.",
+                details=details_msg,
+                remediation=rem_msg,
             )
         )
-        recommendations.append(
-            f"Provide an API key for {provider.upper()} in Settings > AI Models or via environment variable."
-        )
+        recommendations.append(rem_msg)
     else:
         # Check safe connectivity if key is present
         provider_conn_ok = True

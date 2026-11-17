@@ -21,7 +21,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
-STRIX_ROOT = Path(os.environ.get("STRIX_ROOT", "/home/vinit/STRIX/strix"))
+STRIX_ROOT = Path(os.environ.get("STRIX_ROOT", Path(__file__).resolve().parent.parent))
 BRIDGE_PATH = STRIX_ROOT / "strix" / "core" / "gap_bridge.py"
 THRESHOLD = 2
 BASELINE_ATTEMPTS_PER_CANDIDATE = 6

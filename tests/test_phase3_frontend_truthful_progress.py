@@ -279,6 +279,8 @@ def test_valid_early_completion_reaches_100_percent(tmp_path: Path):
     mock_proc.stdout.readline.side_effect = [
         f"Output  strix_runs/{u_dir.name}\n",
         "Starting turn 15\n",
+        "Calling LLM model=test-model provider=cloud_hosted\n",
+        "Invoking tool http_request\n",
         "",
     ]
     mock_proc.poll.return_value = 0

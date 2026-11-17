@@ -298,6 +298,9 @@ def test_6_api_marks_run_completed_with_zero_findings(
     mock_proc.returncode = 0
     mock_proc.stdout.readline.side_effect = [
         f"Output  strix_runs/{u_dir.name}\n",
+        "Calling LLM model=test-model provider=cloud_hosted\n",
+        "Invoking tool http_request\n",
+        "Starting turn 5\n",
         "",
     ]
     mock_proc.stderr.readline.side_effect = [""]

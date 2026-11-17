@@ -51,10 +51,10 @@
     <!-- VIEW 1: NEW ASSESSMENT (Unified Setup) -->
     <section class="view-section active" id="view-new-assessment">
       <div class="grid-2">
-        <!-- Target & Scope Card -->
-        <div class="card">
+        <!-- Left: Target Specification & Assessment Configuration -->
+        <div class="card" id="card-target-config">
           <div class="card-header">
-            <div class="card-title"><span>🎯</span> Target Specification & Scope</div>
+            <div class="card-title"><span>🎯</span> Target Specification & Assessment Configuration</div>
             <span class="badge badge-cyan">Ethical Boundary</span>
           </div>
 
@@ -65,6 +65,12 @@
               <button type="button" class="btn btn-secondary" id="btn-preflight-target">Preflight</button>
             </div>
             <div class="form-help">Fail-closed gatekeeper automatically validates DNS and blocks unauthorized RFC 1918 / SSRF endpoints.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="additional-hosts-input">Additional Authorized Scope Hosts / Subdomains (Optional)</label>
+            <input type="text" id="additional-hosts-input" class="form-input" placeholder="e.g. api.pentest-ground.com, cdn.pentest-ground.com (comma-separated)">
+            <div class="form-help">Explicit in-scope subdomains or hosts. External domains and wildcards (*) are forbidden and strictly blocked.</div>
           </div>
 
           <div id="target-scope-feedback" style="display: none; margin-bottom: 1rem;">
@@ -79,7 +85,7 @@
               <option value="web">🛡️ Fast Web Audit (Passive Discovery & Header/Cookie Scan)</option>
               <option value="simulation">🧪 Simulation Benchmark (Harness Offline Validation)</option>
             </select>
-            <div class="form-help">Genuine autonomous multi-agent pentest with Docker sandbox isolation, real exploit verification, and GAP-1/GAP-2 dynamic bounded pivoting.</div>
+            <div class="form-help" id="scan-mode-hint">Genuine autonomous multi-agent pentest with Docker sandbox isolation, real exploit verification, and GAP-1/GAP-2 dynamic bounded pivoting.</div>
           </div>
 
           <div class="grid-2" style="gap: 1rem; margin-bottom: 0.75rem;">
@@ -105,6 +111,17 @@
             </div>
           </div>
 
+          <!-- GAP-2 Dynamic Failure Pivot Threshold -->
+          <div class="form-group" style="margin-top: 0.75rem;">
+            <label class="form-label" for="gap2-threshold-select">GAP-2 Failure Pivot Threshold (k)</label>
+            <select id="gap2-threshold-select" class="form-select">
+              <option value="1">k = 1 (Immediate pivot after 1 failure)</option>
+              <option value="2" selected>k = 2 (Default optimal threshold — 2 attempts before redirect)</option>
+              <option value="3">k = 3 (Allow 3 attempts before abandonment)</option>
+            </select>
+            <div class="form-help">Bounds agent turns to prevent infinite retry loops. Automatically abandons dead ends and pivots to the next best candidate.</div>
+          </div>
+
           <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem;">
             <div style="color: #6ee7b7; display: flex; align-items: center; gap: 0.5rem;">
               <span>🔒</span>
@@ -122,81 +139,276 @@
           </label>
         </div>
 
-        <!-- AI Model & Decision Configuration Card -->
-        <div class="card">
+        <!-- Right: AI Provider and Model Configuration (Dynamic per Provider) -->
+        <div class="card" id="card-ai-provider-config">
           <div class="card-header">
-            <div class="card-title"><span>🧠</span> AI Model & Decision Configuration</div>
-            <span class="badge badge-purple">Multi-Provider</span>
+            <div class="card-title"><span>🧠</span> AI Provider & Model Configuration</div>
+            <span id="active-provider-badge" class="badge badge-purple">OpenRouter</span>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="model-provider-select">AI Provider</label>
-            <select id="model-provider-select" class="form-select">
+          <!-- Master AI Provider Selector -->
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" for="model-provider-select">Select AI Provider</label>
+            <select id="model-provider-select" class="form-select" style="font-weight: 600;">
               <option value="openrouter" selected>🌐 OpenRouter (Free Models & Hosted Hub)</option>
-              <option value="cloud_hosted">☁️ Cloud Hosted (Custom OpenAI API / Remote)</option>
-              <option value="ollama">🦙 Local Ollama (Zero Cost, Offline Safe)</option>
-              <option value="google">♊ Google Gemini (Fast Cloud API)</option>
+              <option value="anthropic">🧠 Anthropic Claude (Claude 3.5 Sonnet / Haiku)</option>
               <option value="openai">⚡ OpenAI (GPT-4o / GPT-4o-mini)</option>
+              <option value="google">♊ Google Gemini (Fast Cloud API)</option>
+              <option value="ollama">🦙 Local Ollama (Zero Cost, Offline Safe)</option>
+              <option value="cloud_hosted">☁️ Cloud Hosted (Custom OpenAI API / Remote)</option>
             </select>
+            <div class="form-help" id="provider-description-hint">
+              Access 400+ hosted models across diverse providers with real-time pricing and free tier options.
+            </div>
           </div>
 
-          <!-- Cloud Hosted Quick Profile Indicator -->
-          <div class="form-group" id="group-cloud-hosted-quick" style="display: none;">
-            <label class="form-label" for="cloud-quick-profile-select">Cloud Hosted Profile</label>
-            <div class="input-with-button">
-              <select id="cloud-quick-profile-select" class="form-select">
-                <option value="__none__">Loading cloud profiles...</option>
+          <!-- ============================================================ -->
+          <!-- PANEL A: OpenRouter -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-openrouter">
+            <div class="form-group">
+              <label class="form-label" for="openrouter-api-key">OpenRouter API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="openrouter-api-key" class="form-input" placeholder="Paste OpenRouter API key (sk-or-v1-...)">
+                <button type="button" class="btn btn-secondary btn-toggle-key" data-target="openrouter-api-key" title="Show/Hide Key">👁️</button>
+                <button type="button" class="btn btn-secondary" id="btn-validate-openrouter">🧪 Test / Fetch Models</button>
+              </div>
+              <div id="openrouter-feedback" class="form-help">Click "Test / Fetch Models" to automatically fetch and display available models.</div>
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label class="form-label" for="openrouter-model-select" style="margin-bottom: 0;">Discovered OpenRouter Models</label>
+                <span id="openrouter-model-badge" class="badge badge-emerald">Models Ready</span>
+              </div>
+              <div style="margin-bottom: 0.4rem;">
+                <input type="text" id="openrouter-model-search" class="form-input" placeholder="🔍 Search / filter OpenRouter models..." style="padding: 0.4rem 0.65rem; font-size: 0.85rem;">
+              </div>
+              <select id="openrouter-model-select" class="form-select">
+                <option value="" disabled selected>Loading models...</option>
               </select>
-              <button type="button" class="btn btn-secondary" id="btn-cloud-quick-configure">⚙️ Manage Profiles</button>
+              <input type="text" id="openrouter-custom-model" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. meta-llama/llama-3.3-70b-instruct:free">
+              <div id="openrouter-pricing-notice" class="model-pricing-pill free" style="display: none; margin-top: 0.4rem;"></div>
+              <div class="form-help" id="openrouter-model-hint">Selected model will be used by GAP-1 for exploit quality scoring and agent reasoning.</div>
             </div>
-            <div id="cloud-quick-profile-hint" class="form-help">Endpoint: <span id="cloud-quick-base-url" style="font-family: var(--font-mono); color: var(--accent-cyan);">-</span></div>
           </div>
 
-          <!-- In-Memory Cloud API Key Input -->
-          <div class="form-group" id="group-api-key">
-            <label class="form-label" for="runtime-api-key">In-Memory Runtime API Key</label>
-            <div class="input-with-button">
-              <input type="password" id="runtime-api-key" class="form-input" placeholder="Paste OpenRouter API key (Never written to disk)">
-              <button type="button" class="btn btn-secondary" id="btn-validate-model-key">Test Key</button>
+          <!-- ============================================================ -->
+          <!-- PANEL B: OpenAI -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-openai" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="openai-api-key">OpenAI API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="openai-api-key" class="form-input" placeholder="Paste OpenAI API key (sk-...)">
+                <button type="button" class="btn btn-secondary btn-toggle-key" data-target="openai-api-key" title="Show/Hide Key">👁️</button>
+                <button type="button" class="btn btn-secondary" id="btn-validate-openai">🧪 Test Connection</button>
+              </div>
+              <div id="openai-feedback" class="form-help">Direct OpenAI API integration for flagship reasoning and tool execution.</div>
             </div>
-            <div id="api-key-feedback" class="form-help">Click "Test Key" to automatically fetch and display all available free models.</div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label class="form-label" for="openai-model-select" style="margin-bottom: 0;">OpenAI Model Selection</label>
+                <span id="openai-model-badge" class="badge badge-amber">Paid API</span>
+              </div>
+              <div style="margin-bottom: 0.4rem;">
+                <input type="text" id="openai-model-search" class="form-input" placeholder="🔍 Search OpenAI models..." style="padding: 0.4rem 0.65rem; font-size: 0.85rem;">
+              </div>
+              <select id="openai-model-select" class="form-select">
+                <option value="gpt-4o">GPT-4o (Flagship Multimodal Reasoning) [PAID]</option>
+                <option value="gpt-4o-mini" selected>GPT-4o-mini (Fast & Cost-Efficient) [PAID]</option>
+                <option value="o1-preview">o1-preview (Deep Thinking / Complex Reasoning) [PAID]</option>
+                <option value="o1-mini">o1-mini (Fast Math & Coding) [PAID]</option>
+                <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
+              </select>
+              <input type="text" id="openai-custom-model" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. gpt-4-turbo">
+              <div id="openai-pricing-notice" class="model-pricing-pill paid" style="margin-top: 0.4rem;">
+                ⚠️ Paid Model: Usage billed directly to your OpenAI API key account ($0.15/M in, $0.60/M out).
+              </div>
+            </div>
           </div>
 
-          <!-- Dynamic Model Selection Dropdown -->
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-              <label class="form-label" for="model-select" style="margin-bottom: 0;">Available Models</label>
-              <span id="model-badge-status" class="badge badge-emerald">Free Models Ready</span>
+          <!-- ============================================================ -->
+          <!-- PANEL C: Anthropic Claude -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-anthropic" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="anthropic-api-key">Anthropic Claude API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="anthropic-api-key" class="form-input" placeholder="Paste Anthropic API key (sk-ant-...)">
+                <button type="button" class="btn btn-secondary btn-toggle-key" data-target="anthropic-api-key" title="Show/Hide Key">👁️</button>
+                <button type="button" class="btn btn-secondary" id="btn-validate-anthropic">🧪 Test Connection</button>
+              </div>
+              <div id="anthropic-feedback" class="form-help">Native Claude 3.5 Sonnet / Haiku integration with sophisticated tool calling.</div>
             </div>
-            <select id="model-select" class="form-select">
-              <!-- Dynamically populated or default options -->
-              <option value="nvidia/nemotron-3.5-super-vl:free" selected>nvidia/nemotron-3.5-super-vl:free [FREE] (Recommended Primary — 1M Context)</option>
-              <option value="nvidia/nemotron-3.5-lightning:free">nvidia/nemotron-3.5-lightning:free [FREE] (Recommended Backup — 1M Context)</option>
-              <option value="cohere/north-mini-code:free">cohere/north-mini-code:free [FREE] (256K Context)</option>
-              <option value="recursive/flint-v1.0:free">recursive/flint-v1.0:free [FREE]</option>
-              <option value="dots-studio/dots-3-note-preview:free">dots-studio/dots-3-note-preview:free [FREE]</option>
-              <option value="openrouter/free">openrouter/free [FREE Router]</option>
-              <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
-            </select>
-            <input type="text" id="model-custom-input" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. meta-llama/llama-3.3-70b-instruct">
-            <div class="form-help" id="model-hint">Selected model will be used by GAP-1 for exploit quality scoring and agent reasoning.</div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label class="form-label" for="anthropic-model-select" style="margin-bottom: 0;">Claude Model Selection</label>
+                <span class="badge badge-purple">Claude 3.5</span>
+              </div>
+              <select id="anthropic-model-select" class="form-select">
+                <option value="claude-3-5-sonnet-20241022" selected>Claude 3.5 Sonnet (Latest / State-of-the-Art) [PAID]</option>
+                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast / Lightweight) [PAID]</option>
+                <option value="claude-3-opus-20240229">Claude 3 Opus (Complex Analysis) [PAID]</option>
+                <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
+              </select>
+              <input type="text" id="anthropic-custom-model" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. claude-3-sonnet-20240229">
+              <div id="anthropic-pricing-notice" class="model-pricing-pill paid" style="margin-top: 0.4rem;">
+                ⚠️ Paid Model: Usage billed to your Anthropic console balance ($3.00/M in, $15.00/M out).
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="gap2-threshold-select">GAP-2 Failure Pivot Threshold (k)</label>
-            <select id="gap2-threshold-select" class="form-select">
-              <option value="1">k = 1 (Immediate pivot after 1 failure)</option>
-              <option value="2" selected>k = 2 (Default optimal threshold — 2 attempts before redirect)</option>
-              <option value="3">k = 3 (Allow 3 attempts before abandonment)</option>
-            </select>
-            <div class="form-help">Bounds agent turns to prevent infinite retry loops. Automatically abandons dead ends and pivots to the next best candidate.</div>
+          <!-- ============================================================ -->
+          <!-- PANEL D: Google Gemini -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-google" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="google-api-key">Google Gemini API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="google-api-key" class="form-input" placeholder="Paste Google AI Studio API key (AIzaSy...)">
+                <button type="button" class="btn btn-secondary btn-toggle-key" data-target="google-api-key" title="Show/Hide Key">👁️</button>
+                <button type="button" class="btn btn-secondary" id="btn-validate-google">🧪 Test Connection</button>
+              </div>
+              <div id="google-feedback" class="form-help">Fast cloud API with 1M+ token context window and native function calling.</div>
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label class="form-label" for="google-model-select" style="margin-bottom: 0;">Gemini Model Selection</label>
+                <span class="badge badge-emerald">Gemini 2.0</span>
+              </div>
+              <select id="google-model-select" class="form-select">
+                <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Next-Gen Fast Multimodal) [FREE/PAID]</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Large Context Reasoning) [PAID]</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Ultra-Fast Lightweight) [FREE/PAID]</option>
+                <option value="__custom__">⚙️ Enter Custom Model Identifier...</option>
+              </select>
+              <input type="text" id="google-custom-model" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. gemini-2.0-flash-exp">
+              <div id="google-pricing-notice" class="model-pricing-pill free" style="margin-top: 0.4rem;">
+                ✅ Gemini Cloud API: Generous free tier with high rate limits in Google AI Studio.
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- PANEL E: Ollama Local -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-ollama" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="ollama-base-url">Ollama Server Endpoint</label>
+              <div class="input-with-button">
+                <input type="text" id="ollama-base-url" class="form-input" value="http://127.0.0.1:11434" placeholder="http://127.0.0.1:11434">
+                <button type="button" class="btn btn-secondary" id="btn-validate-ollama">🔄 Test & Refresh</button>
+              </div>
+              <div id="ollama-feedback" class="form-help">Runs 100% locally on your machine with zero external network access.</div>
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label class="form-label" for="ollama-model-select" style="margin-bottom: 0;">Installed Local Models</label>
+                <span id="ollama-model-badge" class="badge badge-cyan">Offline Local</span>
+              </div>
+              <select id="ollama-model-select" class="form-select">
+                <option value="" disabled selected>Querying local Ollama models...</option>
+              </select>
+              <input type="text" id="ollama-custom-model" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. qwen2.5:1.5b or llama3:8b">
+              <div id="ollama-pricing-notice" class="model-pricing-pill local" style="margin-top: 0.4rem;">
+                💻 Local Compute: Zero token costs, executed entirely on your local GPU/CPU.
+              </div>
+            </div>
+
+            <!-- Optional progressive disclosure for auth -->
+            <details style="margin-top: 0.75rem; font-size: 0.85rem;">
+              <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem;">🔒 Ollama Endpoint Authentication (Optional)</summary>
+              <div style="margin-top: 0.5rem;">
+                <input type="password" id="ollama-api-key" class="form-input" placeholder="Bearer token / API key (leave blank if unauthenticated)">
+              </div>
+            </details>
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- PANEL F: Cloud Hosted / Custom OpenAI-Compatible -->
+          <!-- ============================================================ -->
+          <div class="provider-panel" id="panel-provider-cloud-hosted" style="display: none;">
+            <!-- Empty state when no profiles exist -->
+            <div id="cloud-empty-state" style="display: none; text-align: center; padding: 1.5rem 1rem; background: var(--bg-secondary); border: 1px dashed var(--border-color); border-radius: var(--radius-md); margin-bottom: 1rem;">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">☁️</div>
+              <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">No Cloud Hosted Profiles Configured</div>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem; max-width: 360px; margin-left: auto; margin-right: auto;">
+                Connect to any custom OpenAI-compatible endpoint (vLLM, TGI, RunPod, Kaggle GPU, FastChat) with custom headers and tool support.
+              </p>
+              <button type="button" class="btn btn-primary" id="btn-cloud-create-first-profile">➕ Create Cloud Profile</button>
+            </div>
+
+            <!-- Profile active content (when at least 1 profile exists) -->
+            <div id="cloud-active-profile-section">
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <label class="form-label" for="cloud-profile-select-main" style="margin-bottom: 0;">Cloud Hosted Profile</label>
+                  <div style="display: flex; gap: 0.35rem;">
+                    <button type="button" class="btn btn-secondary" id="btn-cloud-new-profile-inline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">➕ New</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cloud-edit-profile-inline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">✏️ Edit</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cloud-delete-profile-inline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">🗑️ Delete</button>
+                    <button type="button" class="btn btn-secondary" id="btn-open-cloud-profile-modal" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">⚙️ Manage</button>
+                  </div>
+                </div>
+                <select id="cloud-profile-select-main" class="form-select">
+                  <option value="" disabled selected>Loading profiles...</option>
+                </select>
+                <div id="cloud-profile-summary-bar" style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="color: var(--text-muted);">Endpoint:</span> <code id="cloud-profile-endpoint-text" style="color: var(--accent-cyan);">-</code>
+                  </div>
+                  <span id="cloud-profile-auth-status" class="badge badge-emerald">Key Set</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <label class="form-label" for="cloud-discovered-model-select" style="margin-bottom: 0;">Discovered Models on Endpoint</label>
+                  <button type="button" class="btn btn-secondary" id="btn-test-cloud-profile" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">🧪 Test & Fetch Models</button>
+                </div>
+                <div style="margin-bottom: 0.4rem;">
+                  <input type="text" id="cloud-model-search" class="form-input" placeholder="🔍 Search endpoint models..." style="padding: 0.4rem 0.65rem; font-size: 0.85rem;">
+                </div>
+                <select id="cloud-discovered-model-select" class="form-select">
+                  <option value="" disabled selected>Select or fetch models...</option>
+                </select>
+                <input type="text" id="cloud-manual-model-input" class="form-input" style="display: none; margin-top: 0.5rem;" placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct">
+                <div id="cloud-profile-feedback" class="form-help" style="margin-top: 0.4rem;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden proxy elements to maintain complete compatibility for existing tests and routines -->
+          <div style="display: none;" aria-hidden="true">
+            <input type="password" id="runtime-api-key">
+            <button type="button" id="btn-toggle-key-visibility"></button>
+            <button type="button" id="btn-validate-model-key"></button>
+            <input type="text" id="custom-base-url">
+            <select id="model-select"></select>
+            <input type="text" id="model-search-filter">
+            <input type="text" id="model-custom-input">
+            <span id="model-badge-status"></span>
+            <div id="model-pricing-notice"></div>
+            <div id="api-key-feedback"></div>
+            <div id="model-hint"></div>
+            <div id="group-custom-base-url"></div>
+            <div id="group-cloud-hosted-quick"></div>
+            <select id="cloud-quick-profile-select"></select>
+            <span id="cloud-quick-base-url"></span>
+            <button type="button" id="btn-cloud-quick-configure"></button>
+            <div id="group-api-key"></div>
           </div>
         </div>
       </div>
 
       <!-- Launch Action Bar -->
-      <div style="text-align: center; margin-top: 1rem;">
-        <button type="button" class="btn btn-primary btn-lg" id="btn-launch-assessment">
+      <div style="text-align: center; margin-top: 1.25rem;">
+        <button type="button" class="btn btn-primary btn-lg" id="btn-launch-assessment" style="padding: 0.75rem 2rem; font-size: 1rem;">
           <span>⚡</span> Launch Autonomous VAPT Assessment
         </button>
       </div>
@@ -204,13 +416,19 @@
 
     <!-- VIEW 2: ACTIVE ASSESSMENT (Live Monitoring) -->
     <section class="view-section" id="view-active-assessment">
-      <!-- Error Alert Banner -->
-      <div id="hero-error-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fb7185; font-size: 0.85rem;">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.1rem;">⚠️</span>
-          <div>
-            <strong>Assessment Error:</strong>
+      <!-- Error / Pause Alert Banner -->
+      <div id="hero-error-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; color: #fb7185; font-size: 0.82rem;">
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+          <span id="hero-error-icon" style="font-size: 1.1rem; line-height: 1;">⚠️</span>
+          <div style="flex: 1; min-width: 0;">
+            <strong id="hero-error-title">Assessment Error:</strong>
             <span id="hero-error-text">Scanner exited unexpectedly.</span>
+            <div id="hero-error-details-wrap" style="display: none; margin-top: 0.35rem;">
+              <details>
+                <summary style="cursor: pointer; font-size: 0.75rem; color: #cbd5e1;">View Technical Details</summary>
+                <pre id="hero-error-details-text" style="margin-top: 0.35rem; padding: 0.4rem; background: rgba(0,0,0,0.4); border-radius: 4px; font-size: 0.72rem; max-height: 120px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></pre>
+              </details>
+            </div>
           </div>
         </div>
       </div>
@@ -218,9 +436,12 @@
       <!-- Active Run Hero Header -->
       <div class="status-hero">
         <div>
-          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
             <span class="badge badge-emerald" id="hero-run-status">RUNNING</span>
             <span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted);" id="hero-run-id">run-id</span>
+            <span class="badge badge-cyan" id="hero-engine-badge">⚔️ Autonomous Multi-Agent</span>
+            <span class="badge badge-purple" id="hero-provider-badge">🌐 OpenRouter</span>
+            <span class="badge badge-amber" id="hero-model-badge">Default Model</span>
           </div>
           <div class="status-target" id="hero-run-target">
             <span>🎯</span> Target: <span id="hero-target-text">https://pentest-ground.com:4280/</span>
@@ -244,27 +465,27 @@
       </div>
 
       <!-- Execution Milestone & Truthful Progress Card -->
-      <div class="card" id="progress-milestone-card" style="margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <span id="progress-phase-icon" style="font-size: 1.3rem;">🔍</span>
+      <div class="card" id="progress-milestone-card" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="progress-phase-icon" style="font-size: 1.15rem;">🔍</span>
             <div>
-              <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Current Execution Phase</div>
-              <div id="progress-phase-name" style="font-weight: 700; font-size: 1rem; color: var(--text-main);">Reconnaissance and port scanning</div>
+              <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600;">Current Execution Phase</div>
+              <div id="progress-phase-name" style="font-weight: 700; font-size: 0.92rem; color: var(--text-main);">Reconnaissance and port scanning</div>
             </div>
           </div>
           <div style="text-align: right;">
-            <div id="progress-percent-text" style="font-size: 1.25rem; font-weight: 800; color: var(--color-primary, #6366f1);">0%</div>
-            <div id="progress-turns-text" style="font-size: 0.75rem; color: var(--text-muted);">0 / 500 Turns</div>
+            <div id="progress-percent-text" style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary, #6366f1);">0%</div>
+            <div id="progress-turns-text" style="font-size: 0.72rem; color: var(--text-muted);">0 / 500 Turns</div>
           </div>
         </div>
-        <div style="background: rgba(255, 255, 255, 0.08); border-radius: 999px; height: 10px; overflow: hidden; position: relative;">
+        <div style="background: rgba(255, 255, 255, 0.08); border-radius: 999px; height: 8px; overflow: hidden; position: relative;">
           <div id="progress-bar-fill" style="background: linear-gradient(90deg, #6366f1, #10b981); height: 100%; width: 0%; border-radius: 999px; transition: width 0.4s ease;"></div>
         </div>
       </div>
 
       <!-- Metric Cards Grid -->
-      <div class="grid-4" style="margin-bottom: 1.5rem;">
+      <div class="grid-4" style="margin-bottom: 0.85rem; gap: 0.65rem;">
         <div class="metric-card">
           <div class="metric-icon">📑</div>
           <div class="metric-data">
@@ -298,31 +519,31 @@
         </div>
       </div>
       <!-- Run Facts & Live Details Card (assessment start, elapsed timer, active agent/task, findings by verification state) -->
-      <div class="card" id="run-facts-card" style="margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-          <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+      <div class="card" id="run-facts-card" style="margin-bottom: 0.85rem; padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; flex: 1 1 600px;">
+            <div class="metric-card facts-card" style="flex: 1 1 140px;">
               <div class="metric-icon">🕐</div>
               <div class="metric-data">
                 <div class="metric-value" id="metric-started">—</div>
                 <div class="metric-label">Assessment Started (UTC)</div>
               </div>
             </div>
-            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+            <div class="metric-card facts-card" style="flex: 1 1 100px;">
               <div class="metric-icon">⏱️</div>
               <div class="metric-data">
-                <div class="metric-value" id="metric-elapsed" style="font-size: 1.2rem;">00:00:00</div>
+                <div class="metric-value" id="metric-elapsed">00:00:00</div>
                 <div class="metric-label">Elapsed</div>
               </div>
             </div>
-            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+            <div class="metric-card facts-card" style="flex: 1 1 160px;">
               <div class="metric-icon">👤</div>
               <div class="metric-data">
                 <div class="metric-value" id="metric-active-agent">—</div>
                 <div class="metric-label">Active Agent</div>
               </div>
             </div>
-            <div class="metric-card facts-card" style="flex: 1 1 200px;">
+            <div class="metric-card facts-card" style="flex: 1 1 180px;">
               <div class="metric-icon">📋</div>
               <div class="metric-data">
                 <div class="metric-value" id="metric-active-task">—</div>
@@ -361,25 +582,55 @@
 
       <!-- Provider Quota Blocked / Actionable Resume Card -->
       <div class="card" id="provider-resume-card" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: #f59e0b; font-weight: 700; font-size: 1rem;">
-              <span>⚠️</span> Assessment Interrupted: Provider Quota Blocked
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #f59e0b; font-weight: 700; font-size: 1.05rem;">
+              <span>⚠️</span> Assessment Interrupted: <span id="provider-resume-status-label">Provider Blocked / Interrupted</span>
             </div>
-            <div id="provider-resume-message" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; max-width: 650px;">
-              Provider daily quota or rate limit exhausted. Completed reconnaissance, candidate investigations, and verified findings have been preserved. You can resume this assessment with an alternative model or provider below.
+            <div id="provider-resume-message" style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.35rem; max-width: 800px;">
+              Provider quota exhausted or assessment interrupted. Completed reconnaissance, candidate investigations, and verified findings have been preserved. You can resume this assessment with an alternative model or provider below.
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <select id="resume-model-select" class="form-control" style="width: auto; min-width: 180px; padding: 0.4rem 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);">
-              <option value="openrouter/z-ai/glm-5.3">GLM-5.3 (OpenRouter)</option>
-              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="openai/gpt-4o-mini">GPT-4o-mini</option>
-              <option value="ollama/llama3">Ollama Local</option>
-            </select>
-            <button id="btn-resume-assessment" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 0.4rem 1rem; cursor: pointer;">
-              ▶️ Resume Assessment
+
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="resume-provider-select" style="font-size: 0.8rem;">Resume Provider</label>
+              <select id="resume-provider-select" class="form-select">
+                <option value="openrouter">OpenRouter (Hosted Hub & Free Models)</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="openai">OpenAI</option>
+                <option value="google">Google Gemini</option>
+                <option value="ollama">Local Ollama</option>
+                <option value="cloud_hosted">Custom / Cloud Hosted</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="resume-model-select" style="font-size: 0.8rem;">Resume Model</label>
+              <select id="resume-model-select" class="form-select">
+                <option value="openrouter/z-ai/glm-5.3">GLM-5.3</option>
+                <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="openai/gpt-4o-mini">GPT-4o-mini</option>
+                <option value="ollama/llama3">Ollama Local</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;" id="resume-key-group">
+              <label class="form-label" for="resume-api-key" style="font-size: 0.8rem;">API Key (Optional / Reauth)</label>
+              <input type="password" id="resume-api-key" class="form-input" placeholder="Leave blank to use active runtime key">
+            </div>
+          </div>
+
+          <div id="resume-warning-banner" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; font-size: 0.85rem; color: #38bdf8;">
+            ℹ️ Resuming with provider <strong id="resume-warn-provider">OpenRouter</strong> / model <strong id="resume-warn-model">default</strong>. The assessment will continue with existing candidate queue and findings preserved.
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-main); cursor: pointer;">
+              <input type="checkbox" id="resume-confirm-checkbox">
+              <span>I confirm resuming this assessment with the selected AI configuration.</span>
+            </label>
+            <button id="btn-resume-assessment" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 0.5rem 1.25rem; cursor: pointer;">
+              ▶️ Confirm & Resume
             </button>
           </div>
         </div>
@@ -599,7 +850,8 @@
               <tr>
                 <th>Run ID</th>
                 <th>Target URL</th>
-                <th>Mode</th>
+                <th>AI Provider & Model</th>
+                <th>Execution Engine</th>
                 <th>Status</th>
                 <th>Findings</th>
                 <th>Timestamp</th>
@@ -607,7 +859,7 @@
               </tr>
             </thead>
             <tbody id="tbody-history">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading past runs...</td></tr>
+              <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading past runs...</td></tr>
             </tbody>
           </table>
         </div>
@@ -654,20 +906,24 @@
               <label class="form-label" for="settings-provider-select">Provider:</label>
               <select id="settings-provider-select" class="form-select">
                 <option value="openrouter" selected>OpenRouter (Hosted Hub & Free Models)</option>
-                <option value="cloud_hosted">Cloud Hosted (Custom OpenAI-Compatible API)</option>
+                <option value="anthropic">Anthropic Claude (Claude 3.5 Sonnet / Haiku)</option>
+                <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
                 <option value="google">Google Gemini (Gemini 2.0 / Flash)</option>
                 <option value="ollama">Local Ollama (Self-Hosted)</option>
-                <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                <option value="cloud_hosted">Cloud Hosted (Custom OpenAI-Compatible API)</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label" for="settings-model-input">Model Name / Identifier:</label>
-              <input type="text" id="settings-model-input" class="form-input" placeholder="e.g. nvidia/nemotron-3.5-lightning:free" value="nvidia/nemotron-3.5-lightning:free">
-              <div class="form-help">Provider model string (e.g. <code>nvidia/nemotron-3.5-lightning:free</code> or <code>gemini-2.0-flash</code>)</div>
+              <input type="text" id="settings-model-input" class="form-input" placeholder="e.g. claude-3-5-sonnet-20241022 or gpt-4o">
+              <div class="form-help">Provider model string (e.g. <code>claude-3-5-sonnet-20241022</code>, <code>gpt-4o</code>, or <code>gemini-2.0-flash</code>)</div>
             </div>
             <div class="form-group">
               <label class="form-label" for="settings-api-key">API Key:</label>
-              <input type="password" id="settings-api-key" class="form-input" placeholder="Paste runtime API key (leave blank to keep current)">
+              <div class="input-with-button">
+                <input type="password" id="settings-api-key" class="form-input" placeholder="Paste runtime API key (leave blank to keep current)">
+                <button type="button" class="btn btn-secondary" id="btn-toggle-settings-key-visibility" title="Show/Hide API Key">👁️</button>
+              </div>
               <div id="settings-current-key-hint" class="form-help" style="color: var(--text-muted);">Current key: Checking saved config...</div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
@@ -822,36 +1078,121 @@ Ready. Configure Base URL and click "Test Connection" or "Verify Tool Calling" t
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Provider Quota Blocked / Actionable Resume Card -->
-      <div class="card" id="provider-resume-card" style="display: none; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: #f59e0b; font-weight: 700; font-size: 1rem;">
-              <span>⚠️</span> Assessment Interrupted: Provider Quota Blocked
+        <!-- Multi-Provider Model Catalog & Pricing Explorer -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <div class="card-title"><span>📚</span> Multi-Provider Model Catalog & Pricing Explorer</div>
+            <span class="badge badge-purple" id="catalog-count-badge">Models Ready</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Explore and compare available reasoning and pentest models organized by provider, with transparent prompt/completion token pricing and free-tier badges.
+          </p>
+
+          <!-- Provider Tabs & Search Bar -->
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;" id="catalog-provider-tabs">
+              <button type="button" class="btn btn-primary btn-sm catalog-tab-btn active" data-provider="all">All Providers</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="openrouter">🌐 OpenRouter</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="openai">⚡ OpenAI</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="anthropic">🧠 Anthropic</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="google">♊ Google</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="ollama">🦙 Ollama</button>
+              <button type="button" class="btn btn-secondary btn-sm catalog-tab-btn" data-provider="cloud_hosted">☁️ Cloud Hosted</button>
             </div>
-            <div id="provider-resume-message" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; max-width: 650px;">
-              Provider daily quota or rate limit exhausted. Completed reconnaissance, candidate investigations, and verified findings have been preserved. You can resume this assessment with an alternative model or provider below.
+            <div style="min-width: 240px; flex: 1; max-width: 360px;">
+              <input type="text" id="catalog-search-input" class="form-input" placeholder="🔍 Search catalog models..." style="padding: 0.35rem 0.65rem; font-size: 0.82rem;">
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <select id="resume-model-select" class="form-control" style="width: auto; min-width: 180px; padding: 0.4rem 0.75rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);">
-              <option value="openrouter/z-ai/glm-5.3">GLM-5.3 (OpenRouter)</option>
-              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="openai/gpt-4o-mini">GPT-4o-mini</option>
-              <option value="ollama/llama3">Ollama Local</option>
-            </select>
-            <button id="btn-resume-assessment" class="btn btn-primary" style="background: #10b981; border-color: #059669; font-weight: 700; padding: 0.4rem 1rem; cursor: pointer;">
-              ▶️ Resume Assessment
-            </button>
+
+          <!-- Catalog Cards Grid -->
+          <div id="catalog-models-grid" class="model-catalog-grid">
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem; grid-column: 1 / -1;">
+              Loading models catalog...
+            </div>
           </div>
         </div>
       </div>
     </section>
 
   </main>
+
+  <!-- Cloud Hosted Profile Management Modal -->
+  <div id="modal-cloud-profiles-backdrop" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog card" style="max-width: 680px; width: 92%; max-height: 90vh; overflow-y: auto;">
+      <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <div class="card-title"><span>☁️</span> Manage Cloud Hosted Profiles</div>
+        <button type="button" class="btn btn-secondary" id="btn-close-cloud-modal" style="padding: 0.25rem 0.6rem; font-size: 1rem; line-height: 1;">✖</button>
+      </div>
+
+      <!-- Profile Selector & Toolbar -->
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem;">
+        <div style="flex: 1; min-width: 220px;">
+          <label class="form-label" for="modal-profile-select" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Active Profile Selection</label>
+          <select id="modal-profile-select" class="form-select">
+            <option value="__new__">➕ Create New Cloud Profile...</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end;">
+          <button type="button" class="btn btn-secondary" id="btn-modal-profile-activate" title="Set this profile as default active cloud provider">⭐ Set Active</button>
+          <button type="button" class="btn btn-primary" id="btn-modal-profile-save">💾 Save Profile</button>
+          <button type="button" class="btn btn-secondary" id="btn-modal-profile-delete" style="color: #fb7185; border-color: rgba(244,63,94,0.3);">🗑️ Delete</button>
+        </div>
+      </div>
+
+      <!-- Status Badges Bar -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <span id="modal-profile-state-badge" class="badge badge-cyan">Saved Profile</span>
+        <span id="modal-profile-auth-badge" class="badge badge-emerald">Credential Configured</span>
+        <span id="modal-profile-conn-badge" class="badge badge-amber">Unverified Connection</span>
+      </div>
+
+      <!-- Form Inputs -->
+      <div class="grid-2" style="gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="modal-profile-name">Profile Display Name <span style="color:#f43f5e;">*</span></label>
+          <input type="text" id="modal-profile-name" class="form-input" placeholder="e.g. Remote vLLM / RunPod GPU">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-profile-base-url">API Base URL <span style="color:#f43f5e;">*</span></label>
+          <input type="text" id="modal-profile-base-url" class="form-input" placeholder="e.g. https://xxxx.runpod.net/v1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="modal-profile-api-key">API Key / Bearer Token</label>
+        <div class="input-with-button">
+          <input type="password" id="modal-profile-api-key" class="form-input" placeholder="Leave blank if unauthenticated or enter token">
+          <button type="button" class="btn btn-secondary btn-toggle-key" data-target="modal-profile-api-key" title="Show/Hide Key">👁️</button>
+        </div>
+        <div id="modal-profile-current-key-hint" class="form-help" style="color: var(--text-muted);">Current key: Not configured</div>
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+          <label class="form-label" for="modal-profile-model" style="margin-bottom: 0;">Model Identifier <span style="color:#f43f5e;">*</span></label>
+          <button type="button" class="btn btn-secondary" id="btn-modal-discover-models" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">🔍 Fetch Models</button>
+        </div>
+        <input type="text" id="modal-profile-model" class="form-input" placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct">
+        <select id="modal-profile-discovered-select" class="form-select" style="display: none; margin-top: 0.5rem;"></select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="modal-profile-alias">Model Friendly Alias (Optional)</label>
+        <input type="text" id="modal-profile-alias" class="form-input" placeholder="e.g. Llama 3.3 70B [Self-Hosted]">
+      </div>
+
+      <!-- Verification & Diagnostics Actions -->
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.85rem; margin-top: 1rem;">
+        <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;">Connection Testing & Tool Verification</div>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <button type="button" class="btn btn-secondary" id="btn-modal-test-conn">🧪 Test Connection</button>
+          <button type="button" class="btn btn-secondary" id="btn-modal-verify-tools">🛠️ Verify Tool Calling</button>
+        </div>
+        <div id="modal-profile-test-result" style="font-size: 0.85rem; display: none;"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>

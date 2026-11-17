@@ -36,6 +36,10 @@ class DecisionEngine:
     def decision_trace(self) -> list[str]:
         return self._tracer.get_lines()
 
+    @decision_trace.setter
+    def decision_trace(self, lines: list[str]) -> None:
+        self._tracer.trace_lines = list(lines)
+
     def log(self, prefix: str, message: str) -> None:
         """Append a custom decision trace entry."""
         self._tracer.log(prefix, message)

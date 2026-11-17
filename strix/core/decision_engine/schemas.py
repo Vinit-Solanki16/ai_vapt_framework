@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def _utc_now() -> str:
@@ -13,15 +14,26 @@ def _utc_now() -> str:
 
 
 class CandidateState(str, Enum):
-    PENDING = "PENDING"
     DISCOVERED = "DISCOVERED"
-    ATTEMPTING = "ATTEMPTING"
+    CANDIDATE = "CANDIDATE"
     UNDER_INVESTIGATION = "UNDER_INVESTIGATION"
-    VALIDATED = "VALIDATED"
+    PROBE_EXECUTED = "PROBE_EXECUTED"
+    VALIDATED_OBSERVATION = "VALIDATED_OBSERVATION"
+    EXPLOITATION_ATTEMPTED = "EXPLOITATION_ATTEMPTED"
+    VERIFIED_VULNERABILITY = "VERIFIED_VULNERABILITY"
+    RULED_OUT = "RULED_OUT"
+    RULED_OUT_WITH_EVIDENCE = "RULED_OUT_WITH_EVIDENCE"
     ABANDONED = "ABANDONED"
-    BLOCKED = "BLOCKED"
-    NOT_TESTED = "NOT_TESTED"
     INCONCLUSIVE = "INCONCLUSIVE"
+    BLOCKED = "BLOCKED"
+    FALSE_POSITIVE = "FALSE_POSITIVE"
+    NOT_TESTED = "NOT_TESTED"
+    # Backwards compatibility aliases
+    IDENTIFIED = "IDENTIFIED"
+    DISPATCHED = "DISPATCHED"
+    PENDING = "PENDING"
+    ATTEMPTING = "ATTEMPTING"
+    VALIDATED = "VALIDATED"
 
 
 class VerificationState(str, Enum):
@@ -62,8 +74,10 @@ class PivotAction(BaseModel):
 
 
 class PivotEvent(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     timestamp: str = Field(default_factory=_utc_now)
-    type: str  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE, GAP2_PIVOT
+    type: str = "GAP2_PIVOT"  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE, GAP2_PIVOT
     event: str | None = None
     candidate_id: str | None = None
     attempt: int | None = None
@@ -75,6 +89,21 @@ class PivotEvent(BaseModel):
     pivot_executed: bool = True
     result: str | None = None
     message: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_gap2_event(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Backward compatibility: populate type if only event exists, and vice-versa
+            if "type" not in data and "event" in data:
+                data["type"] = data.get("event") or "GAP2_PIVOT"
+            if "event" not in data and "type" in data:
+                data["event"] = data.get("type") or "GAP2_PIVOT"
+            if "to_candidate" not in data and "next_candidate" in data:
+                data["to_candidate"] = data["next_candidate"]
+            if "next_candidate" not in data and "to_candidate" in data:
+                data["next_candidate"] = data["to_candidate"]
+        return data
 
 
 class ActionCandidate(BaseModel):
@@ -99,3 +128,16 @@ class ActionCandidate(BaseModel):
     verification_procedure: str | None = None
     demonstrated_impact: str | None = None
     timestamp: str | None = None
+    # Probe & Execution Audit Fields
+    tool_selected: str | None = None
+    tool_invocation_id: str | None = None
+    sanitized_request: str | None = None
+    tool_result: str | None = None
+    http_status: int | None = None
+    evidence_reference: str | None = None
+    verification_contract: str | None = None
+    verification_result: str | None = None
+    retry_eligibility: bool = False
+    state_transition_reason: str | None = None
+    dispatched_at: str | None = None
+    agent_assignment: str | None = None

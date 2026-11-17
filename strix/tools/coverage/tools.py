@@ -260,8 +260,11 @@ def _record_impl(
 
         if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
             if normalized == "reported":
-                p_status = "positive"
-                succ = True
+                # A coverage record is an observation, not proof of a
+                # vulnerability. Only create_vulnerability_report with a real
+                # report id may produce a GAP-2 positive outcome.
+                p_status = "observed"
+                succ = False
             elif normalized in ("no_issue_found", "ruled_out"):
                 p_status = "negative"
                 succ = True
@@ -278,6 +281,33 @@ def _record_impl(
                 detail=entry.get("evidence", "") or f"Coverage recorded as {normalized}",
                 probe_status=p_status,
             )
+            if gap_outcome and gap_outcome.get("candidate_id"):
+                try:
+                    from strix.report.state import get_global_gap_run
+
+                    g_run = get_global_gap_run()
+                    if g_run is not None:
+                        cand_id = gap_outcome["candidate_id"]
+                        if cand_id in g_run.candidates:
+                            cand_obj = g_run.candidates[cand_id]
+                            cand_obj.attempts = max(
+                                cand_obj.attempts + 1, gap_outcome.get("attempts", 1)
+                            )
+                            if normalized == "reported":
+                                cand_obj.status = "investigated"
+                                cand_obj.investigation_outcome = "positive"
+                            elif normalized in ("no_issue_found", "ruled_out"):
+                                cand_obj.status = (
+                                    "abandoned"
+                                    if cand_obj.attempts >= cand_obj.max_attempts
+                                    else "investigated"
+                                )
+                                cand_obj.investigation_outcome = "negative"
+                            elif normalized == "needs_follow_up":
+                                cand_obj.status = "investigated"
+                                cand_obj.investigation_outcome = "attempting"
+                except Exception:
+                    pass
     except Exception:
         pass
     ret = {
@@ -362,8 +392,11 @@ def _update_impl(
 
         if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
             if normalized == "reported":
-                p_status = "positive"
-                succ = True
+                # A coverage record is an observation, not proof of a
+                # vulnerability. Only create_vulnerability_report with a real
+                # report id may produce a GAP-2 positive outcome.
+                p_status = "observed"
+                succ = False
             elif normalized in ("no_issue_found", "ruled_out"):
                 p_status = "negative"
                 succ = True
@@ -381,6 +414,33 @@ def _update_impl(
                 or f"Coverage updated from {previous_outcome} to {normalized}",
                 probe_status=p_status,
             )
+            if gap_outcome and gap_outcome.get("candidate_id"):
+                try:
+                    from strix.report.state import get_global_gap_run
+
+                    g_run = get_global_gap_run()
+                    if g_run is not None:
+                        cand_id = gap_outcome["candidate_id"]
+                        if cand_id in g_run.candidates:
+                            cand_obj = g_run.candidates[cand_id]
+                            cand_obj.attempts = max(
+                                cand_obj.attempts + 1, gap_outcome.get("attempts", 1)
+                            )
+                            if normalized == "reported":
+                                cand_obj.status = "investigated"
+                                cand_obj.investigation_outcome = "positive"
+                            elif normalized in ("no_issue_found", "ruled_out"):
+                                cand_obj.status = (
+                                    "abandoned"
+                                    if cand_obj.attempts >= cand_obj.max_attempts
+                                    else "investigated"
+                                )
+                                cand_obj.investigation_outcome = "negative"
+                            elif normalized == "needs_follow_up":
+                                cand_obj.status = "investigated"
+                                cand_obj.investigation_outcome = "attempting"
+                except Exception:
+                    pass
     except Exception:
         pass
     ret = {

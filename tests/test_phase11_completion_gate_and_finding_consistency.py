@@ -29,7 +29,18 @@ import pytest
 
 from strix.core import gap_bridge
 from strix.interface.api import _reconcile_scan_matrix
+from strix.report.state import set_global_report_state
+from strix.tools.coverage.tools import reset_coverage_state
 from strix.tools.finish.tool import _evaluate_completion_gate
+
+
+@pytest.fixture(autouse=True)
+def clean_coverage_and_report_state():
+    reset_coverage_state()
+    set_global_report_state(None)
+    yield
+    reset_coverage_state()
+    set_global_report_state(None)
 
 
 @pytest.fixture
@@ -116,18 +127,32 @@ def test_record_outcome_attempt_retention(sample_queue: Path):
     assert "csp-bypass" in state.completed
     assert state.attempts.get("csp-bypass") == 1
 
-    # Positive outcome
+    # Positive outcome — a genuine finding must carry a real report id.
     out_pos = gap_bridge.record_outcome(
         directory=sample_queue,
         candidate_id="sensitive-path-robotstxt",
         title="Robots Exclusion Protocol Information Disclosure",
         endpoint="/robots.txt",
         probe_status="positive",
+        report_id="VULN-0001",
         detail="Found sensitive route in robots.txt",
     )
     assert out_pos.get("attempts", 0) >= 1
     assert "sensitive-path-robotstxt" in state.completed
     assert state.attempts.get("sensitive-path-robotstxt") == 1
+
+    # An unbacked positive claim is downgraded, never counted as confirmed.
+    out_unbacked = gap_bridge.record_outcome(
+        directory=sample_queue,
+        candidate_id="unbacked-candidate",
+        title="Unverified suspicion",
+        endpoint="/",
+        probe_status="positive",
+        report_id="",
+        detail="Agent narration only",
+    )
+    assert out_unbacked.get("status") == "observed"
+    assert "unbacked-candidate" not in state.completed
 
 
 def test_completion_gate_rejection_when_candidates_remain(sample_queue: Path, monkeypatch):
