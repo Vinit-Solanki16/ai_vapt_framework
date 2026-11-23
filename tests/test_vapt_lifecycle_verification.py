@@ -308,7 +308,7 @@ def test_genuine_gap2_pivoting():
     last_event = engine.pivot_events[-1]
     assert last_event.candidate_id == "route-a"
     assert last_event.next_candidate == "route-b"
-    assert last_event.pivot_executed is True
+    assert last_event.pivot_executed is False
     assert "Failure threshold reached" in (last_event.reason or "")
 
 

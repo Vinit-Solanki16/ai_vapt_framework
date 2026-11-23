@@ -373,9 +373,15 @@ def next_candidate(
     directory: Path | None = None, state: GapRunState | None = None
 ) -> dict[str, Any] | None:
     st = state or get_run_state(directory)
-    for entry in load_queue(directory or st.directory):
+    queue = load_queue(directory or st.directory)
+    for entry in queue:
         candidate_id = str(entry.get("candidate_id") or "")
-        if candidate_id and candidate_id not in st.exhausted and candidate_id not in st.completed:
+        if (
+            candidate_id
+            and candidate_id not in st.exhausted
+            and candidate_id not in st.completed
+            and st.attempts.get(candidate_id, 0) < st.threshold()
+        ):
             return entry
     return None
 
@@ -496,13 +502,41 @@ def record_outcome(
                 "timestamp": _utc_now(),
             }
         )
+        pivot = attempts >= st.threshold() and candidate_id not in st.exhausted
+        next_entry = None
+        if pivot:
+            st.exhausted.add(candidate_id)
+            next_entry = next_candidate(directory=st.directory, state=st)
+            next_cid = (next_entry or {}).get("candidate_id")
+            if next_entry and next_cid:
+                pivot_reason = (
+                    reason
+                    or f"GAP-2 threshold reached for {candidate_id} after {attempts} observed/failed attempts; pivoted to {next_cid}"
+                )
+                note_event(
+                    "PIVOT_DECIDED",
+                    type="GAP2_PIVOT",
+                    candidate_id=candidate_id,
+                    outcome="REDIRECT",
+                    attempts=attempts,
+                    threshold=st.threshold(),
+                    next_candidate=next_cid,
+                    to_candidate=next_cid,
+                    reason=pivot_reason,
+                    probe_outcome=status_norm,
+                    pivot_executed=False,
+                    pivot_status="PIVOT_DECIDED",
+                    result=f"Decided pivot to {next_cid} (pending execution)",
+                    message=pivot_reason,
+                    directory=st.directory,
+                )
         st.save()
         return {
             "candidate_id": candidate_id,
             "attempts": attempts,
             "threshold": st.threshold(),
-            "pivot": False,
-            "next_candidate": next_candidate(directory=st.directory, state=st),
+            "pivot": pivot,
+            "next_candidate": next_entry or next_candidate(directory=st.directory, state=st),
             "status": "observed",
         }
 
@@ -610,6 +644,24 @@ def record_outcome(
             )
             note_event(
                 "PIVOT_DECIDED",
+                type="GAP2_PIVOT",
+                candidate_id=candidate_id,
+                outcome="REDIRECT",
+                attempts=attempts,
+                threshold=st.threshold(),
+                next_candidate=next_cid,
+                to_candidate=next_cid,
+                reason=pivot_reason,
+                probe_outcome=status_norm,
+                pivot_executed=False,
+                pivot_status="PIVOT_DECIDED",
+                result=f"Decided pivot to {next_cid} (pending execution)",
+                message=pivot_reason,
+                directory=st.directory,
+            )
+            note_event(
+                "GAP2_PIVOT",
+                type="GAP2_PIVOT",
                 candidate_id=candidate_id,
                 outcome="REDIRECT",
                 attempts=attempts,

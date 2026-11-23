@@ -1660,7 +1660,7 @@
       state.latestRunData = run;
       renderActiveRun(run);
 
-      if (['completed', 'failed', 'aborted', 'provider_blocked', 'stopped', 'interrupted', 'partial', 'blocked'].includes(run.status)) {
+      if (['completed', 'failed', 'aborted', 'provider_blocked', 'paused_provider_limit', 'paused_execution_limit', 'stopped', 'interrupted', 'partial', 'blocked'].includes(run.status)) {
         if (state.pollTimer) {
           clearInterval(state.pollTimer);
           state.pollTimer = null;
@@ -1680,8 +1680,10 @@
           showToast(`Assessment ${runId} finished partially: ${run.error || 'untested candidates remain'}`, 'warning');
         } else if (run.status === 'interrupted') {
           showToast(`Assessment ${runId} was interrupted: ${run.error || 'execution did not survive'}`, 'warning');
-        } else if (run.status === 'provider_blocked') {
+        } else if (run.status === 'provider_blocked' || run.status === 'paused_provider_limit') {
           showToast(`Assessment ${runId} paused: provider quota exceeded. Choose a fallback model to resume.`, 'warning');
+        } else if (run.status === 'paused_execution_limit') {
+          showToast(`Assessment ${runId} paused: maximum turn limit reached. Resume to continue assessment.`, 'info');
         } else if (run.status === 'failed') {
           showToast(`Assessment ${runId} failed: ${run.error || 'Check terminal logs'}`, 'error');
         } else if (run.status === 'aborted' || run.status === 'stopped') {
@@ -1848,7 +1850,7 @@
       if (!ag) {
         if (status === 'running' && !run.error) ag = 'Root Agent';
         else if (status === 'completed') ag = 'Completed';
-        else if (status === 'provider_blocked' || status === 'interrupted' || status === 'partial' || status === 'blocked') ag = 'Paused';
+        else if (status === 'provider_blocked' || status === 'paused_provider_limit' || status === 'paused_execution_limit' || status === 'interrupted' || status === 'partial' || status === 'blocked') ag = 'Paused';
         else if (status === 'failed' || status === 'aborted' || status === 'stopped') ag = 'Stopped';
         else ag = 'Idle';
       }
@@ -1862,7 +1864,7 @@
       if (!task) {
         if (status === 'running') task = 'Investigating attack surface';
         else if (status === 'completed') task = 'Assessment completed';
-        else if (status === 'provider_blocked') task = 'Awaiting provider resume';
+        else if (status === 'provider_blocked' || status === 'paused_provider_limit' || status === 'paused_execution_limit') task = 'Awaiting provider resume';
         else if (status === 'failed') task = run.error ? String(run.error).substring(0, 45) : 'Failed';
         else if (status === 'aborted' || status === 'stopped') task = 'Assessment stopped';
         else task = 'Standby';

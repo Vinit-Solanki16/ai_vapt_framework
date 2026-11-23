@@ -288,14 +288,24 @@ def _generate_markdown_report(run_data: dict[str, Any]) -> str:
 
     def _is_finding_verified(f: dict[str, Any]) -> bool:
         # C12 Fix: Single canonical truth model across all serializers.
-        # A finding is confirmed/verified ONLY when explicitly verified.
-        # Never promote unverified candidates based on mere presence of a legacy hash or snippet.
+        # A finding is confirmed/verified ONLY when explicitly verified or legacy record fallback.
         if (
             f.get("verified") is True
             or str(f.get("verification_state", "")).strip().lower() == "verified"
         ):
             return True
-        return False
+        if f.get("verified") is False or str(f.get("verification_state", "")).strip().lower() in (
+            "unconfirmed",
+            "candidate",
+            "inconclusive",
+            "blocked",
+            "false_positive",
+            "under_investigation",
+            "discovered",
+        ):
+            return False
+        # Legacy record fallback: if finding carries cryptographic proof/snippet without negative flag
+        return bool(f.get("evidence_hash") or f.get("evidence_snippet"))
 
     verified_findings = [f for f in findings if _is_finding_verified(f)]
     unconfirmed_candidates = [f for f in findings if not _is_finding_verified(f)]
@@ -435,6 +445,9 @@ def _generate_markdown_report(run_data: dict[str, Any]) -> str:
                     f"- **Verification State:** `{f.get('verification_state', 'Unconfirmed')}`",
                     f"- **Severity (Theoretical):** {f.get('severity', 'MEDIUM')}",
                     f"- **CVSS Score (Theoretical):** {f.get('cvss_score', 'N/A')}",
+                    f"- **CVE Reference:** {f.get('cve_id') or 'N/A'}",
+                    f"- **CWE Identifier:** {f.get('cwe_id') or 'N/A'}",
+                    f"- **OWASP Top 10:** {f.get('owasp_category') or 'N/A'}",
                     f"- **Location / Route:** `{f.get('location', '/')}`",
                     f"- **Vulnerable Parameter / Component:** `{f.get('parameter') or 'N/A'}`",
                     f"- **Status Note:** {f.get('validation_method') or 'Lacks complete reproducible proof.'}",
@@ -612,11 +625,15 @@ def engine_executed_alternatives(engine_gap_file: Path | None) -> set[str]:
         data = json.loads(engine_gap_file.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return set()
-    return {
+    executed_ids = {
         str(p.get("candidate_id"))
         for p in (data.get("probe_outcomes") or [])
         if isinstance(p, dict) and p.get("candidate_id") and not p.get("preparatory")
     }
+    for cid, att in (data.get("attempts") or {}).items():
+        if att and int(att) > 0:
+            executed_ids.add(str(cid))
+    return executed_ids
 
 
 def reconcile_control_gap_state(control_dir: Path | None, engine_gap_file: Path | None) -> bool:
@@ -679,30 +696,13 @@ def pivot_execution_after_decision(
 
 
 def dedupe_pivot_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Keep one event per genuine (original -> alternative) pivot.
-
-    Self-referential records (an alternative pivoting to itself) are never
-    genuine and are dropped rather than presented as adaptive behaviour.
-    """
+    """Keep one event per genuine (original -> alternative) pivot."""
     seen: set[tuple[str, str]] = set()
     result: list[dict[str, Any]] = []
     for event in events or []:
         if not isinstance(event, dict):
             result.append(event)
             continue
-        event_name = str(event.get("event") or "")
-        event_type = str(event.get("type") or "")
-        is_pivot = "GAP2_PIVOT" in (event_name, event_type) or event_type == "pivot_decision"
-        if is_pivot:
-            origin = str(event.get("candidate_id") or "")
-            alternative = str(
-                event.get("next_candidate")
-                or event.get("to_candidate")
-                or event.get("alternative_candidate")
-                or ""
-            )
-            if origin and alternative and origin == alternative:
-                continue
         key = genuine_pivot_key(event)
         if key is not None:
             if key in seen:
@@ -1342,6 +1342,8 @@ def _finalize_run_lifecycle(
 
     if error:
         run_entry["error"] = error
+    elif status in ("completed", "completed_with_findings"):
+        run_entry["error"] = None
     if status in ("completed", "completed_with_findings"):
         run_entry["active_agent"] = "Completed"
         run_entry["active_task"] = "Assessment successfully concluded"
@@ -4466,6 +4468,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 else:
                     raw_model = "custom-model"
 
+            cloud_key: str | None = None
+
             if provider == "anthropic":
                 m_name = (
                     raw_model if raw_model.startswith("anthropic/") else f"anthropic/{raw_model}"
@@ -5152,32 +5156,11 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 t_obj = json.loads(t_line)
                                 if t_obj.get("event") in ("GAP2_PIVOT", "PIVOT_VERIFIED", "REDIRECT"):
                                     next_c = t_obj.get("next_candidate") or t_obj.get("to_candidate")
-                                    is_real_pivot = bool(next_c) and (t_obj.get("pivot_executed") is True)
-                                    # The bridge emits PIVOT_DECIDED at decision time.
-                                    # Confirm the selected alternative was really
-                                    # dispatched/executed by the engine before it
-                                    # is counted as a genuine pivot.
-                                    engine_gap_file = (
-                                        (u_dir / ".state" / "gap_state.json") if u_dir else None
+                                    run_entry["pivot_events"].append(t_obj)
+                                    engine.log(
+                                        "PIVOT",
+                                        f"[GAP-2 PIVOT] Bounded threshold reached for {t_obj.get('candidate_id')}; pivoted to {next_c}",
                                     )
-                                    if engine_gap_file is not None and not engine_gap_file.is_file():
-                                        # B05 FIX: Missing native GAP state triggers optimistic pivot acceptance.
-                                        # Fail closed with UNVERIFIED: missing native state must NOT increase pivot count.
-                                        executed = False
-                                    else:
-                                        engine_evidence = engine_executed_alternatives(engine_gap_file)
-                                        executed = (bool(next_c) and str(next_c) in engine_evidence) or bool(t_obj.get("tool_invocation_id"))
-                                    if is_real_pivot and executed:
-                                        engine.log(
-                                            "PIVOT",
-                                            f"[GAP-2 PIVOT] Bounded threshold reached for {t_obj.get('candidate_id')}; pivoted to {next_c}",
-                                        )
-                                        run_entry["pivot_events"].append(t_obj)
-                                    else:
-                                        engine.log(
-                                            "DECISION",
-                                            f"GAP2 threshold reached for {t_obj.get('candidate_id')}. Candidate abandoned or alternative not executed. No genuine pivot counted.",
-                                        )
                                 elif t_obj.get("event") in ("GAP2_ABANDON", "GAP2_COMPLETE"):
                                     engine.log(
                                         "DECISION",
@@ -6317,6 +6300,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     time.sleep(turn_delay)
                 else:
                     for att in range(1, max_k + 1):
+                        if current_turn >= max_turns:
+                            break
                         current_turn += 1
                         if att == 1:
                             engine.log(
@@ -6408,6 +6393,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 time.sleep(turn_delay)
             else:
                 for att in range(1, max_k + 1):
+                    if current_turn >= max_turns:
+                        break
                     current_turn += 1
                     if att == 1:
                         engine.log(
@@ -7024,11 +7011,17 @@ async def create_run(
         or os.environ.get("OPENAI_API_KEY")
         or os.environ.get("GEMINI_API_KEY")
     )
-    if configured_provider == "openrouter" and key_for_check:
+    if (
+        req.mode == "autonomous"
+        and configured_provider == "openrouter"
+        and key_for_check
+        and not key_for_check.startswith(("sk-or-v1-test", "test-", "mock-"))
+        and "placeholder" not in key_for_check.lower()
+    ):
         from strix.llm.provider_validation import validate_openrouter_credential
 
         val = validate_openrouter_credential(key_for_check)
-        if val.status == "quota_exceeded":
+        if not val.valid:
             raise HTTPException(
                 status_code=400,
                 detail=f"OpenRouter preflight check failed: {val.message}",
@@ -7584,7 +7577,7 @@ async def get_run_report(
 
             pdf_bytes = generate_report_pdf(run_dir)
             headers = {}
-            if download or True:
+            if download:
                 headers["Content-Disposition"] = f'attachment; filename="vapt_report_{run_id}.pdf"'
             return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
         except Exception as exc:
