@@ -32,19 +32,16 @@ def test_execution_evidence_from_logs_counts_only_real_work() -> None:
 def test_execution_evidence_rejects_bookkeeping_only_run() -> None:
     evidence = api.execution_evidence_from_run(
         {"status": "completed", "candidates": [{"state": "ABANDONED"}] * 8},
-        "\n".join(
-            [
-                "Calling LLM once",
-                "Invoking tool record_coverage",
-                "Invoking tool finish_scan",
-            ]
-        ),
+        "Calling LLM once\nInvoking tool record_coverage\nInvoking tool finish_scan",
     )
     assert evidence["llm_calls"] == 1
     assert evidence["security_tool_calls"] == 0
-    assert api.has_genuine_assessment_execution(
-        {"status": "completed"}, "Calling LLM\nInvoking tool record_coverage"
-    ) is False
+    assert (
+        api.has_genuine_assessment_execution(
+            {"status": "completed"}, "Calling LLM\nInvoking tool record_coverage"
+        )
+        is False
+    )
 
 
 def test_execution_evidence_accepts_model_and_security_tools() -> None:
@@ -54,9 +51,7 @@ def test_execution_evidence_accepts_model_and_security_tools() -> None:
     )
     assert evidence["has_model_participation"] is True
     assert evidence["has_security_execution"] is True
-    assert api.has_genuine_assessment_execution(
-        {}, "Calling LLM\nInvoking tool terminal"
-    ) is True
+    assert api.has_genuine_assessment_execution({}, "Calling LLM\nInvoking tool terminal") is True
 
 
 def test_worker_completion_gate_requires_execution_evidence() -> None:
@@ -79,9 +74,7 @@ def test_worker_completion_gate_requires_execution_evidence() -> None:
 
 def test_runner_does_not_shortcut_complete_before_model_loop() -> None:
     """Automated probes must not write a success report or skip the model."""
-    source = Path(api.__file__).parent.parent.joinpath("core/runner.py").read_text(
-        encoding="utf-8"
-    )
+    source = Path(api.__file__).parent.parent.joinpath("core/runner.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     run_scan = next(
         n

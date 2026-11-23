@@ -46,8 +46,7 @@ def test_only_pivots_with_alternative_execution_are_reconciled(tmp_path: Path) -
     genuine = [
         e
         for e in persisted["decision_trace"]
-        if e.get("type") == "pivot_decision"
-        and str(e.get("alternative_candidate")) in executed
+        if e.get("type") == "pivot_decision" and str(e.get("alternative_candidate")) in executed
     ]
     assert genuine == []
 
@@ -58,8 +57,7 @@ def test_only_pivots_with_alternative_execution_are_reconciled(tmp_path: Path) -
     genuine = [
         e
         for e in persisted["decision_trace"]
-        if e.get("type") == "pivot_decision"
-        and str(e.get("alternative_candidate")) in executed
+        if e.get("type") == "pivot_decision" and str(e.get("alternative_candidate")) in executed
     ]
     assert len(genuine) == 1
     assert run.summary["pivots_executed"] == 1

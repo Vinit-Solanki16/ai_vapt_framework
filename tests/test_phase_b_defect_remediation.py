@@ -62,8 +62,20 @@ from strix.report.builder import render_html_report
 def test_def01_scan_matrix_unexecuted_category_is_not_tested():
     """Unexecuted categories must be marked NOT TESTED, not PASSED."""
     matrix = [
-        {"category_key": "xss", "title": "XSS Testing", "test_count": 12, "findings_count": 0, "status": "NOT TESTED"},
-        {"category_key": "sqli", "title": "SQL Injection", "test_count": 15, "findings_count": 0, "status": "NOT TESTED"},
+        {
+            "category_key": "xss",
+            "title": "XSS Testing",
+            "test_count": 12,
+            "findings_count": 0,
+            "status": "NOT TESTED",
+        },
+        {
+            "category_key": "sqli",
+            "title": "SQL Injection",
+            "test_count": 15,
+            "findings_count": 0,
+            "status": "NOT TESTED",
+        },
     ]
     # Run data has zero candidate attempts and no spider parameters
     run_data = {
@@ -119,7 +131,9 @@ def test_def01_scan_matrix_with_findings_is_vulnerabilities_identified():
     ]
     run_data = {
         "status": "completed",
-        "candidates": [{"id": "cand-sqli", "category": "sqli", "attempts": 1, "state": "VALIDATED"}],
+        "candidates": [
+            {"id": "cand-sqli", "category": "sqli", "attempts": 1, "state": "VALIDATED"}
+        ],
         "findings": findings,
     }
     reconciled = _reconcile_scan_matrix(matrix, findings, run_data=run_data)
@@ -154,7 +168,12 @@ def test_def01_scan_matrix_blocked_category():
 def test_def01_scan_matrix_inconclusive_category():
     """Categories abandoned without confirmation or block must be marked INCONCLUSIVE."""
     matrix = [
-        {"category_key": "code_injection", "title": "Command Injection", "test_count": 14, "findings_count": 0},
+        {
+            "category_key": "code_injection",
+            "title": "Command Injection",
+            "test_count": 14,
+            "findings_count": 0,
+        },
     ]
     run_data = {
         "status": "completed",
@@ -177,7 +196,12 @@ def test_def01_scan_matrix_inconclusive_category():
 def test_def01_quick_mode_subset_honest_reporting():
     """In quick-mode scan, unattempted categories remain NOT TESTED while executed subset derives honestly."""
     matrix = [
-        {"category_key": "configuration", "title": "Configuration", "test_count": 8, "findings_count": 0},
+        {
+            "category_key": "configuration",
+            "title": "Configuration",
+            "test_count": 8,
+            "findings_count": 0,
+        },
         {"category_key": "version_sca", "title": "SCA", "test_count": 14, "findings_count": 0},
         {"category_key": "sqli", "title": "SQL Injection", "test_count": 15, "findings_count": 0},
         {"category_key": "ssti", "title": "SSTI", "test_count": 8, "findings_count": 0},
@@ -211,8 +235,20 @@ def test_def01_html_report_dynamic_narrative_no_hardcoded_88():
         "status": "completed",
         "created_at": "2026-11-16T12:00:00Z",
         "scan_matrix": [
-            {"category_key": "configuration", "title": "Configuration", "test_count": 8, "findings_count": 0, "status": "PASSED"},
-            {"category_key": "xss", "title": "XSS Testing", "test_count": 12, "findings_count": 0, "status": "NOT TESTED"},
+            {
+                "category_key": "configuration",
+                "title": "Configuration",
+                "test_count": 8,
+                "findings_count": 0,
+                "status": "PASSED",
+            },
+            {
+                "category_key": "xss",
+                "title": "XSS Testing",
+                "test_count": 12,
+                "findings_count": 0,
+                "status": "NOT TESTED",
+            },
         ],
         "findings": [],
         "pivot_events": [],
@@ -402,13 +438,24 @@ def test_def03_is_in_authorized_scope_helper():
     primary = "https://pentest-ground.com:4280/"
     additional = ["api.pentest-ground.com", "cdn.pentest-ground.com"]
 
-    assert is_in_authorized_scope("https://pentest-ground.com:4280/login", primary, additional) is True
-    assert is_in_authorized_scope("https://api.pentest-ground.com/v1/users", primary, additional) is True
-    assert is_in_authorized_scope("http://cdn.pentest-ground.com/image.png", primary, additional) is True
+    assert (
+        is_in_authorized_scope("https://pentest-ground.com:4280/login", primary, additional) is True
+    )
+    assert (
+        is_in_authorized_scope("https://api.pentest-ground.com/v1/users", primary, additional)
+        is True
+    )
+    assert (
+        is_in_authorized_scope("http://cdn.pentest-ground.com/image.png", primary, additional)
+        is True
+    )
 
     # Out of scope
     assert is_in_authorized_scope("https://evil.com/exploit", primary, additional) is False
-    assert is_in_authorized_scope("https://unauthorized.pentest-ground.com", primary, additional) is False
+    assert (
+        is_in_authorized_scope("https://unauthorized.pentest-ground.com", primary, additional)
+        is False
+    )
 
 
 def test_def03_web_spider_scope_filtering():
@@ -453,7 +500,12 @@ def test_def03_in_scope_redirect_handler_skips_external_redirect():
 def test_def03_inputs_scope_context_and_task_rendering():
     """build_scope_context and build_root_task include authorized hosts and guardrails."""
     scan_cfg = {
-        "targets": [{"type": "web_application", "details": {"target_url": "https://pentest-ground.com:4280/"}}],
+        "targets": [
+            {
+                "type": "web_application",
+                "details": {"target_url": "https://pentest-ground.com:4280/"},
+            }
+        ],
         "additional_authorized_hosts": ["api.pentest-ground.com", "auth.pentest-ground.com"],
     }
     ctx = build_scope_context(scan_cfg)
@@ -471,7 +523,10 @@ def test_def03_inputs_scope_context_and_task_rendering():
 def test_def03_resume_run_request_scope_support():
     """ResumeRunRequest accepts and normalizes additional authorized hosts on resume."""
     resume_req = ResumeRunRequest(
-        additional_authorized_hosts=["https://api.pentest-ground.com:8443", "api.pentest-ground.com"]
+        additional_authorized_hosts=[
+            "https://api.pentest-ground.com:8443",
+            "api.pentest-ground.com",
+        ]
     )
     assert resume_req.additional_authorized_hosts == ["api.pentest-ground.com"]
 
@@ -528,7 +583,10 @@ def test_def04_genuine_evidence_preserved_in_reports():
         "pivot_events": [],
     }
     html = render_html_report(run_data)
-    assert "GET /api/search?q=&#x27; OR 1=1-- HTTP/1.1" in html or "GET /api/search?q=' OR 1=1-- HTTP/1.1" in html
+    assert (
+        "GET /api/search?q=&#x27; OR 1=1-- HTTP/1.1" in html
+        or "GET /api/search?q=' OR 1=1-- HTTP/1.1" in html
+    )
     assert "admin" in html
 
 

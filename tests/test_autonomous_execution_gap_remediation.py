@@ -51,10 +51,18 @@ class TestAutonomousExecutionAndGapRemediation:
         """Requirement 2: Candidate-specific tool invocation is persisted with tool name, invocation ID, request, and result."""
         candidates = run_8ae38b46_data.get("candidates", [])
         for cand in candidates:
-            assert cand.get("tool_selected") is not None, f"Candidate {cand['id']} missing tool_selected"
-            assert cand.get("tool_invocation_id") is not None, f"Candidate {cand['id']} missing tool_invocation_id"
-            assert cand.get("sanitized_request") is not None, f"Candidate {cand['id']} missing sanitized_request"
-            assert cand.get("tool_result") is not None, f"Candidate {cand['id']} missing tool_result"
+            assert cand.get("tool_selected") is not None, (
+                f"Candidate {cand['id']} missing tool_selected"
+            )
+            assert cand.get("tool_invocation_id") is not None, (
+                f"Candidate {cand['id']} missing tool_invocation_id"
+            )
+            assert cand.get("sanitized_request") is not None, (
+                f"Candidate {cand['id']} missing sanitized_request"
+            )
+            assert cand.get("tool_result") is not None, (
+                f"Candidate {cand['id']} missing tool_result"
+            )
             assert len(cand["tool_invocation_id"]) >= 8
 
     def test_03_tool_results_map_to_candidate_ids(self, run_8ae38b46_data: dict[str, Any]):
@@ -71,7 +79,9 @@ class TestAutonomousExecutionAndGapRemediation:
         c_sec = next(c for c in candidates if c["id"] == "sensitive-path-wellknownsecuritytxt")
         assert "security.txt" in c_sec["sanitized_request"]
 
-    def test_04_verification_contracts_execute_on_real_tool_results(self, run_8ae38b46_data: dict[str, Any]):
+    def test_04_verification_contracts_execute_on_real_tool_results(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 4: Verification contracts execute on real tool results."""
         candidates = run_8ae38b46_data.get("candidates", [])
         for cand in candidates:
@@ -90,7 +100,9 @@ class TestAutonomousExecutionAndGapRemediation:
             # Since probe was conclusive negative, retry eligibility is False
             assert cand.get("retry_eligibility") is False
 
-    def test_06_abandonment_does_not_become_ruled_out_distinct_states(self, run_8ae38b46_data: dict[str, Any]):
+    def test_06_abandonment_does_not_become_ruled_out_distinct_states(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 6: Distinct states are supported without flattening or confusion."""
         # Ensure CandidateState enum supports all required distinct states
         expected_states = {
@@ -118,8 +130,18 @@ class TestAutonomousExecutionAndGapRemediation:
     def test_07_zero_findings_does_not_imply_passed(self):
         """Requirement 7: Zero findings does not imply PASSED."""
         scan_matrix = [
-            {"category_key": "version_sca", "test_count": 12, "configured_checks": 12, "executed_checks": 0},
-            {"category_key": "configuration", "test_count": 22, "configured_checks": 22, "executed_checks": 0},
+            {
+                "category_key": "version_sca",
+                "test_count": 12,
+                "configured_checks": 12,
+                "executed_checks": 0,
+            },
+            {
+                "category_key": "configuration",
+                "test_count": 22,
+                "configured_checks": 22,
+                "executed_checks": 0,
+            },
         ]
         reconciled = reconcile_scan_matrix(scan_matrix, findings=[], run_data={})
         for item in reconciled:
@@ -130,7 +152,12 @@ class TestAutonomousExecutionAndGapRemediation:
     def test_08_category_status_uses_actual_execution_records(self):
         """Requirement 8: Category status uses actual execution records."""
         scan_matrix = [
-            {"category_key": "sqli", "test_count": 14, "configured_checks": 14, "executed_checks": 0},
+            {
+                "category_key": "sqli",
+                "test_count": 14,
+                "configured_checks": 14,
+                "executed_checks": 0,
+            },
             {"category_key": "xss", "test_count": 8, "configured_checks": 8, "executed_checks": 4},
             {"category_key": "ssrf", "test_count": 8, "configured_checks": 8, "executed_checks": 8},
         ]
@@ -140,7 +167,9 @@ class TestAutonomousExecutionAndGapRemediation:
         assert by_key["xss"]["status"] == "PARTIALLY TESTED"
         assert by_key["ssrf"]["status"] == "PASSED"
 
-    def test_09_candidate_branches_do_not_become_gap2_pivots(self, run_8ae38b46_data: dict[str, Any]):
+    def test_09_candidate_branches_do_not_become_gap2_pivots(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 9: Candidate branches do not become GAP2 pivots."""
         reconciled = reconcile_all(run_8ae38b46_data, run_dir=FIXTURE_DIR)
         assert reconciled.get("pivots") == 0
@@ -166,7 +195,12 @@ class TestAutonomousExecutionAndGapRemediation:
         mock_run_with_real_pivot = {
             "pivots": 0,
             "pivot_events": [
-                {"type": "GAP2_PIVOT", "candidate_id": "c1", "next_candidate": "c2", "pivot_executed": True},
+                {
+                    "type": "GAP2_PIVOT",
+                    "candidate_id": "c1",
+                    "next_candidate": "c2",
+                    "pivot_executed": True,
+                },
             ],
             "candidates": [],
             "findings": [],
@@ -208,7 +242,9 @@ class TestAutonomousExecutionAndGapRemediation:
             assert ep["scope"] == "environmental"
             assert ep["severity"] == "info"
 
-    def test_13_turns_consumed_not_represented_as_full_turn_limit(self, run_8ae38b46_data: dict[str, Any]):
+    def test_13_turns_consumed_not_represented_as_full_turn_limit(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 13: 21/500 turns is not represented as 500 turns completed."""
         reconciled = reconcile_assessment_completeness(run_8ae38b46_data)
         assert reconciled["turns_consumed"] == 21
@@ -216,7 +252,9 @@ class TestAutonomousExecutionAndGapRemediation:
         assert "21 of 500 turns used" in reconciled["run_lifecycle_status"]
         assert reconciled["assessment_completeness_percent"] == 0.0
 
-    def test_14_dashboard_json_html_pdf_reconcile_with_zero_contradictions(self, run_8ae38b46_data: dict[str, Any]):
+    def test_14_dashboard_json_html_pdf_reconcile_with_zero_contradictions(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 14: Dashboard, JSON, HTML, and PDF counts reconcile with zero contradictions."""
         reconciled = reconcile_all(run_8ae38b46_data, run_dir=FIXTURE_DIR)
         errors = validate_report_consistency(reconciled)
@@ -243,7 +281,9 @@ class TestAutonomousExecutionAndGapRemediation:
             assert not f.get("synthetic_evidence")
             assert f.get("evidence_hash") is not None
 
-    def test_16_successful_process_exit_with_incomplete_objectives(self, run_8ae38b46_data: dict[str, Any]):
+    def test_16_successful_process_exit_with_incomplete_objectives(
+        self, run_8ae38b46_data: dict[str, Any]
+    ):
         """Requirement 16: Successful process exit with incomplete objectives is represented accurately."""
         assert run_8ae38b46_data.get("status") == "completed"
         # Exit code 0 does not mean 100% complete audit coverage
@@ -423,8 +463,20 @@ class TestAutonomousExecutionAndGapRemediation:
         mock_run = {
             "run_id": "test-pivot-exec",
             "candidates": [
-                {"id": "cand-primary", "category": "sqli", "state": "ABANDONED", "attempts": 2, "max_attempts": 2},
-                {"id": "cand-pivot-alt", "category": "sqli", "state": "VALIDATED", "attempts": 1, "max_attempts": 2},
+                {
+                    "id": "cand-primary",
+                    "category": "sqli",
+                    "state": "ABANDONED",
+                    "attempts": 2,
+                    "max_attempts": 2,
+                },
+                {
+                    "id": "cand-pivot-alt",
+                    "category": "sqli",
+                    "state": "VALIDATED",
+                    "attempts": 1,
+                    "max_attempts": 2,
+                },
             ],
             "pivot_events": [
                 {
@@ -456,8 +508,18 @@ class TestAutonomousExecutionAndGapRemediation:
             ],
             "findings": [],
             "scan_matrix": [
-                {"category_key": "xss", "test_count": 8, "configured_checks": 8, "executed_checks": 0},
-                {"category_key": "sqli", "test_count": 14, "configured_checks": 14, "executed_checks": 0},
+                {
+                    "category_key": "xss",
+                    "test_count": 8,
+                    "configured_checks": 8,
+                    "executed_checks": 0,
+                },
+                {
+                    "category_key": "sqli",
+                    "test_count": 14,
+                    "configured_checks": 14,
+                    "executed_checks": 0,
+                },
             ],
         }
         reconciled = reconcile_all(mock_run)

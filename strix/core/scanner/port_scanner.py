@@ -512,11 +512,19 @@ def scan_target_ports(
                         s_http = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         s_http.settimeout(min(port_timeout, 1.0))
                         s_http.connect((ip, port))
-                        s_http.sendall(b"HEAD / HTTP/1.1\r\nHost: " + host.encode() + b"\r\nUser-Agent: AI-VAPT-PortScan\r\nConnection: close\r\n\r\n")
+                        s_http.sendall(
+                            b"HEAD / HTTP/1.1\r\nHost: "
+                            + host.encode()
+                            + b"\r\nUser-Agent: AI-VAPT-PortScan\r\nConnection: close\r\n\r\n"
+                        )
                         banner = s_http.recv(512).decode("latin-1", errors="ignore")
                         s_http.close()
                         if "HTTP/" in banner:
-                            server_match = [line for line in banner.split("\r\n") if line.lower().startswith("server:")]
+                            server_match = [
+                                line
+                                for line in banner.split("\r\n")
+                                if line.lower().startswith("server:")
+                            ]
                             if server_match:
                                 http_fingerprint = f"HTTP Web Application ({server_match[0].split(':', 1)[1].strip()})"
                             else:
@@ -545,7 +553,9 @@ def scan_target_ports(
                     serv_conf = False
                     conf_level = "UNCONFIRMED"
                     fingerprint = None
-                    raw_result = "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed"
+                    raw_result = (
+                        "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed"
+                    )
                     serv_risk = f"Host network listener observed on TCP port {port}. Application protocol unconfirmed."
                     port_sev = "info"  # Do not assign vulnerability severity from conventional mapping alone
 

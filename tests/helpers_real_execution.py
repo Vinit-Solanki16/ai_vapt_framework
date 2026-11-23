@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+
 # One model call plus one real security tool call and a bookkeeping call.
 REAL_EXECUTION_LOG_LINES = [
     "Calling LLM model=test-model provider=cloud_hosted",

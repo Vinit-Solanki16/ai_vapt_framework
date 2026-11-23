@@ -114,9 +114,7 @@ def test_4_negative_outcome_redirect_when_alternative_exists() -> None:
 def test_5_no_redirect_when_no_eligible_alternative() -> None:
     """A candidate pool of one cannot produce a redirect after exhaustion."""
     engine = DecisionEngine(pivot_threshold=2, authorized_targets=["http://127.0.0.1:3000/"])
-    engine.initialize(
-        [ActionCandidate(id="c1", endpoint="/c1", target="http://127.0.0.1:3000/")]
-    )
+    engine.initialize([ActionCandidate(id="c1", endpoint="/c1", target="http://127.0.0.1:3000/")])
     engine.record_outcome("c1", Outcome.FAIL_TIMEOUT)
     result = engine.record_outcome("c1", Outcome.FAIL_TIMEOUT)
     assert result.action.value == "COMPLETE"
@@ -174,9 +172,7 @@ def test_pivot_execution_links_to_original_decision_not_self(tmp_path: Path) -> 
         pivot_result="inconclusive",
     )
 
-    decisions = [
-        e for e in run.decision_trace if e.get("type") == "pivot_decision"
-    ]
+    decisions = [e for e in run.decision_trace if e.get("type") == "pivot_decision"]
     assert len(decisions) == 1, "no self-referential second decision"
     assert decisions[0]["candidate_id"] == "c1"
     assert decisions[0]["alternative_candidate"] == "c2"

@@ -651,9 +651,7 @@ def reconcile_control_gap_state(control_dir: Path | None, engine_gap_file: Path 
         engine_state = json.loads(engine_gap_file.read_text(encoding="utf-8"))
         control_path = control_dir / "gap_state.json"
         control_state = (
-            json.loads(control_path.read_text(encoding="utf-8"))
-            if control_path.is_file()
-            else {}
+            json.loads(control_path.read_text(encoding="utf-8")) if control_path.is_file() else {}
         )
         if not isinstance(engine_state, dict) or not isinstance(control_state, dict):
             return False
@@ -813,14 +811,10 @@ def execution_evidence_from_run(
     }
 
 
-def has_genuine_assessment_execution(
-    run_data: dict[str, Any] | None, log_text: str = ""
-) -> bool:
+def has_genuine_assessment_execution(run_data: dict[str, Any] | None, log_text: str = "") -> bool:
     """True only when BOTH model reasoning and real security tools are recorded."""
     evidence = execution_evidence_from_run(run_data, log_text)
-    return bool(
-        evidence["has_model_participation"] and evidence["has_security_execution"]
-    )
+    return bool(evidence["has_model_participation"] and evidence["has_security_execution"])
 
 
 def is_in_authorized_scope(
@@ -847,8 +841,10 @@ def is_in_authorized_scope(
         if additional_hosts:
             for ah in additional_hosts:
                 clean_ah = (
-                    urllib.parse.urlsplit(ah if "://" in ah else f"http://{ah}").hostname or ah
-                ).lower().strip()
+                    (urllib.parse.urlsplit(ah if "://" in ah else f"http://{ah}").hostname or ah)
+                    .lower()
+                    .strip()
+                )
                 if host == clean_ah:
                     return True
 
@@ -988,7 +984,10 @@ def _load_runs_from_disk() -> None:
                     # A "running" record with no live process is a stale
                     # leftover from a server/thread restart, not an active scan.
                     data = _quarantine_stale_running_run(run_id, data)
-                    if data.get("duration_seconds") is not None and data.get("elapsed_seconds") is None:
+                    if (
+                        data.get("duration_seconds") is not None
+                        and data.get("elapsed_seconds") is None
+                    ):
                         data["elapsed_seconds"] = data.get("duration_seconds")
                     vuln_file = child / "vulnerabilities.json"
                     if vuln_file.is_file() and not data.get("findings"):
@@ -1000,17 +999,27 @@ def _load_runs_from_disk() -> None:
                     # Fallback: harvest findings from findings.sarif if vulnerabilities.json was empty
                     if not data.get("findings") and (child / "findings.sarif").is_file():
                         try:
-                            s_data = json.loads((child / "findings.sarif").read_text(encoding="utf-8"))
+                            s_data = json.loads(
+                                (child / "findings.sarif").read_text(encoding="utf-8")
+                            )
                             s_findings = []
                             for s_run in s_data.get("runs", []):
                                 for s_res in s_run.get("results", []):
                                     r_id = s_res.get("ruleId", "")
                                     s_props = s_res.get("properties", {})
-                                    strix_info = s_props.get("strix") if isinstance(s_props, dict) else None
+                                    strix_info = (
+                                        s_props.get("strix") if isinstance(s_props, dict) else None
+                                    )
                                     if r_id.startswith("vuln-") and isinstance(strix_info, dict):
                                         msg_txt = s_res.get("message", {}).get("text", "")
-                                        f_title = msg_txt.split("\n")[0].strip() if msg_txt else r_id
-                                        f_target = strix_info.get("target") or data.get("target_url") or "/"
+                                        f_title = (
+                                            msg_txt.split("\n")[0].strip() if msg_txt else r_id
+                                        )
+                                        f_target = (
+                                            strix_info.get("target")
+                                            or data.get("target_url")
+                                            or "/"
+                                        )
                                         f_sev = str(strix_info.get("severity", "MEDIUM")).upper()
                                         try:
                                             f_cvss = float(strix_info.get("cvss", 6.0))
@@ -1031,22 +1040,43 @@ def _load_runs_from_disk() -> None:
                                                 "owasp_category": f"{mapped_owasp.get('owasp_id', 'A01:2021')} - {mapped_owasp.get('category_name', 'Security Misconfiguration')}",
                                                 "location": f_target,
                                                 "target": f_target,
-                                                "evidence_hash": hashlib.sha256(f"{r_id}:{f_title}".encode()).hexdigest(),
-                                                "evidence_snippet": strix_info.get("technical_analysis") or msg_txt,
-                                                "reproducible_request": (strix_info.get("poc") or {}).get("description") if isinstance(strix_info.get("poc"), dict) else f"GET {f_target} HTTP/1.1",
-                                                "reproducible_response": strix_info.get("counterevidence") or "Response pattern verified by autonomous agent.",
+                                                "evidence_hash": hashlib.sha256(
+                                                    f"{r_id}:{f_title}".encode()
+                                                ).hexdigest(),
+                                                "evidence_snippet": strix_info.get(
+                                                    "technical_analysis"
+                                                )
+                                                or msg_txt,
+                                                "reproducible_request": (
+                                                    strix_info.get("poc") or {}
+                                                ).get("description")
+                                                if isinstance(strix_info.get("poc"), dict)
+                                                else f"GET {f_target} HTTP/1.1",
+                                                "reproducible_response": strix_info.get(
+                                                    "counterevidence"
+                                                )
+                                                or "Response pattern verified by autonomous agent.",
                                                 "verification_procedure": "Automated Agent Verification & PoC Confirmation",
                                                 "demonstrated_impact": strix_info.get("impact", ""),
                                                 "parameter": None,
-                                                "evidence_timestamp": strix_info.get("timestamp") or _utc_now(),
+                                                "evidence_timestamp": strix_info.get("timestamp")
+                                                or _utc_now(),
                                                 "verification_state": "Verified",
                                                 "verified": True,
                                                 "validation_method": "Exploit PoC Verification",
                                                 "severity_justification": f"Severity {aligned_s} (CVSS {aligned_c}) justified by exploitability and demonstrated impact.",
                                                 "impact": strix_info.get("impact", ""),
-                                                "remediation_summary": strix_info.get("remediation_steps") or mapped_owasp.get("remediation_summary", ""),
-                                                "remediation_technical": strix_info.get("remediation_steps") or mapped_owasp.get("remediation_technical", ""),
-                                                "retest_procedure": mapped_owasp.get("retest_procedure", ""),
+                                                "remediation_summary": strix_info.get(
+                                                    "remediation_steps"
+                                                )
+                                                or mapped_owasp.get("remediation_summary", ""),
+                                                "remediation_technical": strix_info.get(
+                                                    "remediation_steps"
+                                                )
+                                                or mapped_owasp.get("remediation_technical", ""),
+                                                "retest_procedure": mapped_owasp.get(
+                                                    "retest_procedure", ""
+                                                ),
                                                 "finding_class": "dynamic",
                                             }
                                         )
@@ -1057,7 +1087,10 @@ def _load_runs_from_disk() -> None:
 
                     # Load candidates if missing or empty
                     if not data.get("candidates"):
-                        for cand_path in [child / "control" / "gap1_queue.json", child / ".state" / "gap_state.json"]:
+                        for cand_path in [
+                            child / "control" / "gap1_queue.json",
+                            child / ".state" / "gap_state.json",
+                        ]:
                             if cand_path.is_file():
                                 try:
                                     cand_data = json.loads(cand_path.read_text(encoding="utf-8"))
@@ -1104,7 +1137,13 @@ def _load_runs_from_disk() -> None:
 
                     # Duration reconciliation
                     if data.get("execution_segments"):
-                        act_dur = round(sum(float(s.get("duration_seconds", 0.0)) for s in data["execution_segments"]), 3)
+                        act_dur = round(
+                            sum(
+                                float(s.get("duration_seconds", 0.0))
+                                for s in data["execution_segments"]
+                            ),
+                            3,
+                        )
                         data["active_duration_seconds"] = act_dur
                         data["duration_seconds"] = act_dur
                         data["elapsed_seconds"] = act_dur
@@ -1116,8 +1155,12 @@ def _load_runs_from_disk() -> None:
                                 s_dt = datetime.fromisoformat(str(s_str).replace("Z", "+00:00"))
                                 c_dt = datetime.fromisoformat(str(c_str).replace("Z", "+00:00"))
                                 span_sec = round((c_dt - s_dt).total_seconds(), 3)
-                                if span_sec > 0 and (data.get("duration_seconds") or 0) > (span_sec * 1.5):
-                                    data["wall_clock_duration_seconds"] = data.get("duration_seconds")
+                                if span_sec > 0 and (data.get("duration_seconds") or 0) > (
+                                    span_sec * 1.5
+                                ):
+                                    data["wall_clock_duration_seconds"] = data.get(
+                                        "duration_seconds"
+                                    )
                                     data["active_duration_seconds"] = span_sec
                                     data["duration_seconds"] = span_sec
                                     data["elapsed_seconds"] = span_sec
@@ -1136,7 +1179,9 @@ def _load_runs_from_disk() -> None:
                                 _recovered = True
                                 break
                         # If exit_code 2 (vulns found) and no fatal failure event
-                        if not _recovered and (data.get("exit_code") == 2 or data.get("process_exit_code") == 2):
+                        if not _recovered and (
+                            data.get("exit_code") == 2 or data.get("process_exit_code") == 2
+                        ):
                             data["status"] = "completed_with_findings"
                             data["error"] = None
                             _recovered = True
@@ -1156,13 +1201,24 @@ def _load_runs_from_disk() -> None:
                             data["progress_percent"] = 100
 
                     # Accurately account turns if inflated by subagent ping-pong in historical logs
-                    if data.get("turns_consumed", 0) > (data.get("max_turns") or 500) and (child / "strix.log").is_file():
+                    if (
+                        data.get("turns_consumed", 0) > (data.get("max_turns") or 500)
+                        and (child / "strix.log").is_file()
+                    ):
                         try:
                             a_turns: dict[str, int] = {}
-                            for log_ln in (child / "strix.log").read_text(encoding="utf-8", errors="replace").splitlines():
-                                tm = re.search(r"Starting turn\s+(\d+),\s*current_agent=([^,\n\r]+)", log_ln)
+                            for log_ln in (
+                                (child / "strix.log")
+                                .read_text(encoding="utf-8", errors="replace")
+                                .splitlines()
+                            ):
+                                tm = re.search(
+                                    r"Starting turn\s+(\d+),\s*current_agent=([^,\n\r]+)", log_ln
+                                )
                                 if tm:
-                                    a_turns[tm.group(2).strip()] = max(a_turns.get(tm.group(2).strip(), 0), int(tm.group(1)))
+                                    a_turns[tm.group(2).strip()] = max(
+                                        a_turns.get(tm.group(2).strip(), 0), int(tm.group(1))
+                                    )
                             if a_turns:
                                 true_turns = sum(a_turns.values())
                                 data["turns_consumed"] = true_turns
@@ -1217,7 +1273,9 @@ def _quarantine_stale_running_run(run_id: str, data: dict[str, Any]) -> dict[str
     return data
 
 
-def _finalize_run_lifecycle(run_entry: dict[str, Any], *, status: str, error: str | None = None) -> None:
+def _finalize_run_lifecycle(
+    run_entry: dict[str, Any], *, status: str, error: str | None = None
+) -> None:
     """Freeze duration and the terminal state of a run.
 
     ``start_time`` is the persisted source of truth; duration is computed from
@@ -1231,26 +1289,36 @@ def _finalize_run_lifecycle(run_entry: dict[str, Any], *, status: str, error: st
         ended_dt = ended_dt.replace(tzinfo=UTC)
 
     # Close current execution segment
-    seg_start_ts = run_entry.pop("_current_segment_start", None) or run_entry.get("started_at") or run_entry.get("start_time")
+    seg_start_ts = (
+        run_entry.pop("_current_segment_start", None)
+        or run_entry.get("started_at")
+        or run_entry.get("start_time")
+    )
     if seg_start_ts:
         try:
             seg_start_dt = datetime.fromisoformat(str(seg_start_ts).replace("Z", "+00:00"))
             if seg_start_dt.tzinfo is None:
                 seg_start_dt = seg_start_dt.replace(tzinfo=UTC)
             seg_dur = round(max(0.0, (ended_dt - seg_start_dt).total_seconds()), 3)
-            if "execution_segments" not in run_entry or not isinstance(run_entry["execution_segments"], list):
+            if "execution_segments" not in run_entry or not isinstance(
+                run_entry["execution_segments"], list
+            ):
                 run_entry["execution_segments"] = []
-            run_entry["execution_segments"].append({
-                "started_at": str(seg_start_ts),
-                "ended_at": run_entry["end_time"],
-                "duration_seconds": seg_dur,
-            })
+            run_entry["execution_segments"].append(
+                {
+                    "started_at": str(seg_start_ts),
+                    "ended_at": run_entry["end_time"],
+                    "duration_seconds": seg_dur,
+                }
+            )
         except Exception:
             pass
 
     # Compute active duration and wall-clock duration
     if run_entry.get("execution_segments"):
-        active_dur = round(sum(float(s.get("duration_seconds", 0.0)) for s in run_entry["execution_segments"]), 3)
+        active_dur = round(
+            sum(float(s.get("duration_seconds", 0.0)) for s in run_entry["execution_segments"]), 3
+        )
     else:
         active_dur = 0.0
 
@@ -1380,7 +1448,9 @@ def _sync_run_counters(run_entry: dict[str, Any]) -> None:
     candidates = run_entry.get("candidates")
     if not candidates and (base_dir / "control" / "gap1_queue.json").is_file():
         try:
-            q_data = json.loads((base_dir / "control" / "gap1_queue.json").read_text(encoding="utf-8"))
+            q_data = json.loads(
+                (base_dir / "control" / "gap1_queue.json").read_text(encoding="utf-8")
+            )
             if isinstance(q_data, dict) and "candidates" in q_data:
                 candidates = q_data["candidates"]
                 run_entry["candidates"] = candidates
@@ -1413,18 +1483,30 @@ def _sync_run_counters(run_entry: dict[str, Any]) -> None:
         for pe in pivot_events:
             p_type = pe.get("type") if isinstance(pe, dict) else getattr(pe, "type", "")
             p_ev = pe.get("event") if isinstance(pe, dict) else getattr(pe, "event", "")
-            p_exec = pe.get("pivot_executed", True) if isinstance(pe, dict) else getattr(pe, "pivot_executed", True)
-            if (p_type in ("REDIRECT", "GAP2_PIVOT") or p_ev == "GAP2_PIVOT") and p_exec is not False:
+            p_exec = (
+                pe.get("pivot_executed", True)
+                if isinstance(pe, dict)
+                else getattr(pe, "pivot_executed", True)
+            )
+            if (
+                p_type in ("REDIRECT", "GAP2_PIVOT") or p_ev == "GAP2_PIVOT"
+            ) and p_exec is not False:
                 executed_pivots += 1
     elif (base_dir / "control" / "decision_trace.jsonl").is_file():
         executed_pivots = 0
         try:
-            lines = (base_dir / "control" / "decision_trace.jsonl").read_text(encoding="utf-8").splitlines()
+            lines = (
+                (base_dir / "control" / "decision_trace.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            )
             for l in lines:
                 if not l.strip():
                     continue
                 d = json.loads(l)
-                if (d.get("event") == "GAP2_PIVOT" or d.get("type") in ("REDIRECT", "GAP2_PIVOT")) and d.get("pivot_executed", True) is not False:
+                if (
+                    d.get("event") == "GAP2_PIVOT" or d.get("type") in ("REDIRECT", "GAP2_PIVOT")
+                ) and d.get("pivot_executed", True) is not False:
                     executed_pivots += 1
         except Exception:
             pass
@@ -1439,8 +1521,12 @@ def _sync_run_counters(run_entry: dict[str, Any]) -> None:
 
     if isinstance(run_entry.get("progress"), dict):
         run_entry["progress"]["pivots"] = executed_pivots
-        run_entry["progress"]["candidates_identified"] = run_entry.get("gap1_candidates_identified", 0)
-        run_entry["progress"]["candidates_investigated"] = run_entry.get("gap1_candidates_under_investigation", 0)
+        run_entry["progress"]["candidates_identified"] = run_entry.get(
+            "gap1_candidates_identified", 0
+        )
+        run_entry["progress"]["candidates_investigated"] = run_entry.get(
+            "gap1_candidates_under_investigation", 0
+        )
         run_entry["progress"]["gap1"] = {
             "identified": run_entry.get("gap1_candidates_identified", 0),
             "investigated": run_entry.get("gap1_candidates_under_investigation", 0),
@@ -1665,7 +1751,9 @@ async def system_readiness(
     if not req_key and authorization and authorization.startswith("Bearer "):
         req_key = authorization.split(" ", 1)[1]
 
-    eff_provider = (provider or os.environ.get("STRIX_LLM_PROVIDER") or "openrouter").lower().strip()
+    eff_provider = (
+        (provider or os.environ.get("STRIX_LLM_PROVIDER") or "openrouter").lower().strip()
+    )
     eff_key = get_runtime_credential(eff_provider, override_key=req_key)
     eff_model = get_runtime_model(eff_provider, override_model=model)
 
@@ -1957,7 +2045,9 @@ async def list_openrouter_models():
         return []
 
 
-@app.get("/providers/{provider}/models", response_model=list[DiscoveredModelInfo | OpenRouterModelInfo])
+@app.get(
+    "/providers/{provider}/models", response_model=list[DiscoveredModelInfo | OpenRouterModelInfo]
+)
 async def list_provider_models(provider: str):
     """Retrieve dynamically discovered models for any provider with pricing transparency."""
     prov = (provider or "openrouter").lower().strip()
@@ -2112,7 +2202,11 @@ async def list_provider_models(provider: str):
     if prov in ("cloud_hosted", "custom_cloud", "custom"):
         from strix.llm.provider_validation import validate_custom_endpoint
 
-        base_url = get_runtime_base_url(prov) or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+        base_url = (
+            get_runtime_base_url(prov)
+            or os.environ.get("OPENAI_BASE_URL")
+            or "https://api.openai.com/v1"
+        )
         val_custom = validate_custom_endpoint(base_url=base_url, api_key=key)
         return val_custom.models
 
@@ -3950,9 +4044,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             if is_live_target
             else "SIMULATION BENCHMARK — Evaluated in test harness environment."
         )
-        add_hosts = (
-            getattr(req, "additional_authorized_hosts", None)
-            or run_entry.get("additional_authorized_hosts", [])
+        add_hosts = getattr(req, "additional_authorized_hosts", None) or run_entry.get(
+            "additional_authorized_hosts", []
         )
         run_entry["additional_authorized_hosts"] = add_hosts
         run_entry["evidence_tier"] = evidence_tier
@@ -4328,10 +4421,14 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             from strix.core.runtime_credentials import get_runtime_credential, get_runtime_model
 
             provider = (
-                getattr(req, "provider", None) or getattr(req, "assessor_provider", None) or ""
-            ).lower().strip()
+                (getattr(req, "provider", None) or getattr(req, "assessor_provider", None) or "")
+                .lower()
+                .strip()
+            )
             if not provider:
-                if (runtime_key and runtime_key.startswith("sk-ant-")) or cli_cfg.get("ANTHROPIC_API_KEY"):
+                if (runtime_key and runtime_key.startswith("sk-ant-")) or cli_cfg.get(
+                    "ANTHROPIC_API_KEY"
+                ):
                     provider = "anthropic"
                 elif (runtime_key and runtime_key.startswith("sk-or-")) or cli_cfg.get(
                     "OPENROUTER_API_KEY"
@@ -4376,7 +4473,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             cloud_key: str | None = None
 
             if provider == "anthropic":
-                m_name = raw_model if raw_model.startswith("anthropic/") else f"anthropic/{raw_model}"
+                m_name = (
+                    raw_model if raw_model.startswith("anthropic/") else f"anthropic/{raw_model}"
+                )
                 sub_env["STRIX_LLM_PROVIDER"] = "anthropic"
                 sub_env["STRIX_LLM"] = m_name
                 if key:
@@ -4684,7 +4783,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 last_progress_time = time.time()
                             run_entry["last_progress_at"] = _utc_now()
                         elif "Calling LLM" in clean_out:
-                            run_entry["active_task"] = f"Consulting model ({run_entry.get('active_agent', 'Root Agent')})"
+                            run_entry["active_task"] = (
+                                f"Consulting model ({run_entry.get('active_agent', 'Root Agent')})"
+                            )
                             run_entry["last_progress_at"] = _utc_now()
                         elif "update_coverage" in clean_out:
                             run_entry["active_task"] = "Updating attack surface coverage"
@@ -4834,9 +4935,14 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                             last_progress_time = time.time()
                                         run_entry["last_progress_at"] = _utc_now()
                                     elif "Calling LLM" in line:
-                                        run_entry["active_task"] = f"Consulting model ({run_entry.get('active_agent', 'Root Agent')})"
+                                        run_entry["active_task"] = (
+                                            f"Consulting model ({run_entry.get('active_agent', 'Root Agent')})"
+                                        )
                                         run_entry["last_progress_at"] = _utc_now()
-                                    elif "update_coverage" in line or "Saved coverage record to:" in line:
+                                    elif (
+                                        "update_coverage" in line
+                                        or "Saved coverage record to:" in line
+                                    ):
                                         run_entry["last_progress_at"] = _utc_now()
 
                                     if "Saved coverage record to:" in line:
@@ -4965,7 +5071,11 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 if not isinstance(ev, dict) or ev.get("type") != "pivot_decision":
                                     continue
                                 alt = str(ev.get("alternative_candidate", ""))
-                                if alt and alt in eng_executed and pivot_execution_after_decision(ev, eng_probes):
+                                if (
+                                    alt
+                                    and alt in eng_executed
+                                    and pivot_execution_after_decision(ev, eng_probes)
+                                ):
                                     pivot_ev = dict(ev)
                                     pivot_ev["event"] = "GAP2_PIVOT"
                                     pivot_ev["pivot_executed"] = True
@@ -4979,9 +5089,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 # attempt/status values back to the control file so the two
                 # stores do not disagree on resume or completion gating.
                 if final_sync and u_dir and u_dir.is_dir():
-                    reconcile_control_gap_state(
-                        control_dir, u_dir / ".state" / "gap_state.json"
-                    )
+                    reconcile_control_gap_state(control_dir, u_dir / ".state" / "gap_state.json")
 
                 # 3b. Also synchronize candidate coverage from coverage.json in underlying scan directory
                 if u_dir and u_dir.is_dir():
@@ -5073,9 +5181,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 # The bridge and the native engine can record the same executed
                 # pivot. Deduplicate by (original -> alternative) before both
                 # storing and counting so dashboard, API and reports agree.
-                run_entry["pivot_events"] = dedupe_pivot_events(
-                    run_entry.get("pivot_events", [])
-                )
+                run_entry["pivot_events"] = dedupe_pivot_events(run_entry.get("pivot_events", []))
                 pivots_count = len(
                     [
                         e
@@ -5272,7 +5378,11 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 for cb in candidate_bases:
                     if cb.is_dir():
                         for d in cb.iterdir():
-                            if d.is_dir() and d.name not in before_dirs and d.name not in (run_id, engine_run_name):
+                            if (
+                                d.is_dir()
+                                and d.name not in before_dirs
+                                and d.name not in (run_id, engine_run_name)
+                            ):
                                 discovered_candidates.append(d)
                 if discovered_candidates:
                     discovered_candidates.sort(key=lambda d: d.stat().st_mtime, reverse=True)
@@ -5320,7 +5430,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             error_msg: str | None = None
 
             report_exists = (
-                (u_dir / "penetration_test_report.md").is_file() if u_dir and u_dir.exists() else False
+                (u_dir / "penetration_test_report.md").is_file()
+                if u_dir and u_dir.exists()
+                else False
             )
             sarif_exists = (
                 (u_dir / "findings.sarif").is_file() if u_dir and u_dir.exists() else False
@@ -5336,7 +5448,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     list(last_stdout_lines)
                     + (
                         [(u_dir / "strix.log").read_text(encoding="utf-8", errors="replace")]
-                        if u_dir and (u_dir / "strix.log").is_file() else []
+                        if u_dir and (u_dir / "strix.log").is_file()
+                        else []
                     )
                 ),
             )
@@ -5400,7 +5513,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                         last_stdout_lines,
                         fallback=f"Scan engine ended with status '{engine_failure}'{reason_str} before completing",
                     )
-                elif u_status and u_status != "completed" and not report_exists and not sarif_exists:
+                elif (
+                    u_status and u_status != "completed" and not report_exists and not sarif_exists
+                ):
                     proc_failed = True
                     reason_str = f" (exit reason: {u_exit_reason})" if u_exit_reason else ""
                     error_msg = _extract_clean_error(
@@ -5543,7 +5658,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         "severity": aligned_sev,
                                         "cvss_score": aligned_cvss,
                                         "cve_id": sv.get("cve_id") or mapped.get("cve_id"),
-                                        "cwe_id": sv.get("cwe_id") or mapped.get("cwe_id", "CWE-200"),
+                                        "cwe_id": sv.get("cwe_id")
+                                        or mapped.get("cwe_id", "CWE-200"),
                                         "owasp_category": f"{mapped.get('owasp_id', 'A01:2021')} - {mapped.get('category_name', 'Broken Access Control')}",
                                         "location": loc_val,
                                         "target": target_url,
@@ -5558,12 +5674,17 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         "verification_procedure": verif_proc,
                                         "demonstrated_impact": impact_val,
                                         "parameter": param_val,
-                                        "evidence_timestamp": ev_meta.get("evidence_timestamp") or v_block.get("evidence_timestamp") or _utc_now(),
+                                        "evidence_timestamp": ev_meta.get("evidence_timestamp")
+                                        or v_block.get("evidence_timestamp")
+                                        or _utc_now(),
                                         "validation_method": verif_proc,
                                         "severity_justification": f"Severity {aligned_sev} (CVSS {aligned_cvss}) justified by exploitability and demonstrated impact.",
                                         "impact": impact_val,
-                                        "remediation_summary": sv.get("remediation") or mapped.get("remediation_summary", ""),
-                                        "remediation_technical": sv.get("remediation_steps") or sv.get("remediation_technical") or mapped.get("remediation_technical", ""),
+                                        "remediation_summary": sv.get("remediation")
+                                        or mapped.get("remediation_summary", ""),
+                                        "remediation_technical": sv.get("remediation_steps")
+                                        or sv.get("remediation_technical")
+                                        or mapped.get("remediation_technical", ""),
                                         "retest_procedure": mapped.get("retest_procedure", ""),
                                         "finding_class": sv.get("finding_class", "dynamic"),
                                     }
@@ -5594,7 +5715,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             for s_res in s_run.get("results", []):
                                 r_id = s_res.get("ruleId", "")
                                 s_props = s_res.get("properties", {})
-                                strix_info = s_props.get("strix") if isinstance(s_props, dict) else None
+                                strix_info = (
+                                    s_props.get("strix") if isinstance(s_props, dict) else None
+                                )
                                 if r_id.startswith("vuln-") and isinstance(strix_info, dict):
                                     msg_txt = s_res.get("message", {}).get("text", "")
                                     f_title = msg_txt.split("\n")[0].strip() if msg_txt else r_id
@@ -5610,10 +5733,20 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         f_cvss = 6.0
                                     aligned_c, aligned_s = _align_cvss_severity(f_cvss, f_sev)
                                     mapped_owasp = map_finding_to_owasp(
-                                        f_title, rule_id=r_id, endpoint=f_target, tech_stack=detected_tech
+                                        f_title,
+                                        rule_id=r_id,
+                                        endpoint=f_target,
+                                        tech_stack=detected_tech,
                                     )
-                                    s_req = (strix_info.get("poc") or {}).get("description") if isinstance(strix_info.get("poc"), dict) else f"GET {f_target} HTTP/1.1"
-                                    s_resp = strix_info.get("counterevidence") or "Response pattern verified by autonomous agent."
+                                    s_req = (
+                                        (strix_info.get("poc") or {}).get("description")
+                                        if isinstance(strix_info.get("poc"), dict)
+                                        else f"GET {f_target} HTTP/1.1"
+                                    )
+                                    s_resp = (
+                                        strix_info.get("counterevidence")
+                                        or "Response pattern verified by autonomous agent."
+                                    )
                                     s_snippet = strix_info.get("technical_analysis") or msg_txt
                                     s_impact = strix_info.get("impact", "")
                                     s_proc = "Automated Agent Verification & PoC Confirmation"
@@ -5648,19 +5781,29 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         "verification_procedure": s_proc,
                                         "demonstrated_impact": s_impact,
                                         "parameter": None,
-                                        "evidence_timestamp": ev_meta.get("evidence_timestamp") or strix_info.get("timestamp") or _utc_now(),
+                                        "evidence_timestamp": ev_meta.get("evidence_timestamp")
+                                        or strix_info.get("timestamp")
+                                        or _utc_now(),
                                         "validation_method": "Exploit PoC Verification",
                                         "severity_justification": f"Severity {aligned_s} (CVSS {aligned_c}) justified by exploitability and demonstrated impact.",
                                         "impact": s_impact,
-                                        "remediation_summary": strix_info.get("remediation_steps") or mapped_owasp.get("remediation_summary", ""),
-                                        "remediation_technical": strix_info.get("remediation_steps") or mapped_owasp.get("remediation_technical", ""),
-                                        "retest_procedure": mapped_owasp.get("retest_procedure", ""),
+                                        "remediation_summary": strix_info.get("remediation_steps")
+                                        or mapped_owasp.get("remediation_summary", ""),
+                                        "remediation_technical": strix_info.get("remediation_steps")
+                                        or mapped_owasp.get("remediation_technical", ""),
+                                        "retest_procedure": mapped_owasp.get(
+                                            "retest_procedure", ""
+                                        ),
                                         "finding_class": "dynamic",
                                         "verification_state": str(
                                             strix_info.get("verification_state") or ""
-                                        ).strip().lower(),
+                                        )
+                                        .strip()
+                                        .lower(),
                                     }
-                                    v_state, v_reason, is_v = evaluate_finding_verification(sarif_finding)
+                                    v_state, v_reason, is_v = evaluate_finding_verification(
+                                        sarif_finding
+                                    )
                                     sarif_finding["verification_state"] = v_state
                                     sarif_finding["verification_reason"] = v_reason
                                     sarif_finding["verified"] = is_v
@@ -5844,9 +5987,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     }
                 )
                 engine.log("WARN", f"Autonomous assessment paused at execution limit: {limit_msg}")
-                _finalize_run_lifecycle(
-                    run_entry, status="paused_execution_limit", error=limit_msg
-                )
+                _finalize_run_lifecycle(run_entry, status="paused_execution_limit", error=limit_msg)
             elif proc_failed:
                 clean_err_lower = (error_msg or "").lower()
                 is_infra = any(
@@ -5902,7 +6043,10 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     1
                     for c in run_entry.get("candidates", [])
                     if c.get("state") in ("PENDING", "NOT_TESTED")
-                    or (c.get("attempts", 0) == 0 and c.get("state") not in ("VALIDATED", "ABANDONED"))
+                    or (
+                        c.get("attempts", 0) == 0
+                        and c.get("state") not in ("VALIDATED", "ABANDONED")
+                    )
                 )
                 if insufficient_execution:
                     # The subprocess exited cleanly but no model reasoning and
@@ -5924,7 +6068,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     run_entry["progress"] = {
                         "phase": "Failed: no genuine autonomous execution",
                         "phase_index": 3,
-                        "percent": min(85, max(15, int(35 + 50 * min(1.0, current_turn / max(1, max_turns))))),
+                        "percent": min(
+                            85, max(15, int(35 + 50 * min(1.0, current_turn / max(1, max_turns))))
+                        ),
                         "current": min(current_turn, max_turns),
                         "total": max_turns,
                         "candidates_identified": candidates_identified,
@@ -6207,9 +6353,16 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 detail=f"Retry confirmation probe non-viable: {detail}",
                                 source="no_docker_probe",
                             )
-                        if action_res.action in (PivotActionType.REDIRECT, PivotActionType.COMPLETE):
+                        if action_res.action in (
+                            PivotActionType.REDIRECT,
+                            PivotActionType.COMPLETE,
+                        ):
                             break
-                    c.state = CandidateState.ABANDONED if c.attempts >= max_k else CandidateState.INCONCLUSIVE
+                    c.state = (
+                        CandidateState.ABANDONED
+                        if c.attempts >= max_k
+                        else CandidateState.INCONCLUSIVE
+                    )
                     c.detail = detail
                     run_entry["candidates"] = _sync_engine_candidates(engine, candidate_map)
                     run_entry["decision_trace"] = list(engine.decision_trace)
@@ -6295,7 +6448,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                         )
                     if action_res.action in (PivotActionType.REDIRECT, PivotActionType.COMPLETE):
                         break
-                c.state = CandidateState.ABANDONED if c.attempts >= max_k else CandidateState.INCONCLUSIVE
+                c.state = (
+                    CandidateState.ABANDONED if c.attempts >= max_k else CandidateState.INCONCLUSIVE
+                )
                 time.sleep(turn_delay)
 
             run_entry["candidates"] = _sync_engine_candidates(engine, candidate_map)
@@ -6843,7 +6998,11 @@ async def create_run(
         or DEFAULT_OPENROUTER_MODEL
     )
 
-    if runtime_key and not runtime_key.startswith("sk-or-v1-test") and "placeholder" not in runtime_key.lower():
+    if (
+        runtime_key
+        and not runtime_key.startswith("sk-or-v1-test")
+        and "placeholder" not in runtime_key.lower()
+    ):
         set_runtime_credential(configured_provider, runtime_key, configured_model)
 
     # Provider preflight validation before launching
@@ -7221,7 +7380,9 @@ async def resume_run(
         target_scope_acknowledged=True,
     )
 
-    runtime_key = (req.api_key if (req and req.api_key) else None) or get_runtime_credential(run.get("provider", "openrouter"))
+    runtime_key = (req.api_key if (req and req.api_key) else None) or get_runtime_credential(
+        run.get("provider", "openrouter")
+    )
     if background_tasks:
         background_tasks.add_task(_execute_run_worker, run_id, run_req, runtime_key)
     else:

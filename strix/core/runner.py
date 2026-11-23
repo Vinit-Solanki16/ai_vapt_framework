@@ -534,10 +534,7 @@ async def _investigate_gap1_candidates(
                     target=probe_url,
                     endpoint=cand.endpoint,
                     method="GET",
-                    evidence=(
-                        f"Request: {evidence['request']}\n"
-                        f"Response: {evidence['response']}"
-                    ),
+                    evidence=(f"Request: {evidence['request']}\nResponse: {evidence['response']}"),
                     technical_analysis=(
                         f"Live automated probe against authorized target {probe_url} "
                         f"produced {detail.lower()}."
@@ -566,9 +563,7 @@ async def _investigate_gap1_candidates(
                         demonstrated_impact=(
                             f"Confirmed observable behavior at {cand.endpoint}: {detail}"
                         ),
-                        evidence_timestamp=datetime.now(UTC).strftime(
-                            "%Y-%m-%d %H:%M:%S UTC"
-                        ),
+                        evidence_timestamp=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
                         confidence="high",
                         severity="medium",
                         remediation=(
@@ -581,9 +576,7 @@ async def _investigate_gap1_candidates(
                         verification_block=vb,
                     )
                 except Exception:
-                    logger.exception(
-                        "failed to attach verification block to report %s", report_id
-                    )
+                    logger.exception("failed to attach verification block to report %s", report_id)
 
                 # Record the positive outcome with a report_id so GAP-2 marks
                 # the candidate complete (a positive claim without a report id
@@ -591,10 +584,7 @@ async def _investigate_gap1_candidates(
                 try:
                     from strix.core import gap_bridge
 
-                    if (
-                        gap_bridge.control_dir() is not None
-                        and gap_bridge.gap2_enabled()
-                    ):
+                    if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
                         gap_bridge.record_outcome(
                             candidate_id=cand.id,
                             title=cand.title,

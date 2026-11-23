@@ -47,15 +47,19 @@ def client():
 
 def test_test_cloud_connection_mocked_success():
     """Verify test_cloud_connection correctly parses successful models and completion."""
-    models_response = json.dumps({
-        "object": "list",
-        "data": [{"id": "mock-qwen-30b", "aliases": ["mock-model-deep"]}],
-    }).encode("utf-8")
+    models_response = json.dumps(
+        {
+            "object": "list",
+            "data": [{"id": "mock-qwen-30b", "aliases": ["mock-model-deep"]}],
+        }
+    ).encode("utf-8")
 
-    chat_response = json.dumps({
-        "choices": [{"message": {"role": "assistant", "content": "pong"}}],
-        "usage": {"prompt_tokens": 12, "completion_tokens": 2},
-    }).encode("utf-8")
+    chat_response = json.dumps(
+        {
+            "choices": [{"message": {"role": "assistant", "content": "pong"}}],
+            "usage": {"prompt_tokens": 12, "completion_tokens": 2},
+        }
+    ).encode("utf-8")
 
     def mock_urlopen(req, *args, **kwargs):
         url = req.full_url if hasattr(req, "full_url") else str(req)
@@ -102,11 +106,9 @@ def test_test_cloud_connection_mocked_failure():
 
 def test_discover_cloud_models_mocked():
     """Verify discover_cloud_models parses both standard id and nested aliases."""
-    payload = json.dumps({
-        "data": [
-            {"id": "qwen3-coder", "aliases": ["kaggle-model-deep", "kaggle-model-fast"]}
-        ]
-    }).encode("utf-8")
+    payload = json.dumps(
+        {"data": [{"id": "qwen3-coder", "aliases": ["kaggle-model-deep", "kaggle-model-fast"]}]}
+    ).encode("utf-8")
 
     resp = MagicMock()
     resp.status = 200
@@ -123,37 +125,41 @@ def test_discover_cloud_models_mocked():
 
 def test_verify_cloud_tools_mocked_success():
     """Verify verify_cloud_structured_tools validates structured tool-calling execution."""
-    tool_call_reply = json.dumps({
-        "choices": [
-            {
-                "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": "call-123",
-                            "type": "function",
-                            "function": {
-                                "name": "check_service_port",
-                                "arguments": json.dumps({"host": "127.0.0.1", "port": 80}),
-                            },
-                        }
-                    ],
+    tool_call_reply = json.dumps(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call-123",
+                                "type": "function",
+                                "function": {
+                                    "name": "check_service_port",
+                                    "arguments": json.dumps({"host": "127.0.0.1", "port": 80}),
+                                },
+                            }
+                        ],
+                    }
                 }
-            }
-        ]
-    }).encode("utf-8")
+            ]
+        }
+    ).encode("utf-8")
 
-    followup_reply = json.dumps({
-        "choices": [
-            {
-                "message": {
-                    "role": "assistant",
-                    "content": "Port 80 on host 127.0.0.1 is open and running HTTP service.",
+    followup_reply = json.dumps(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "Port 80 on host 127.0.0.1 is open and running HTTP service.",
+                    }
                 }
-            }
-        ]
-    }).encode("utf-8")
+            ]
+        }
+    ).encode("utf-8")
 
     call_count = 0
 

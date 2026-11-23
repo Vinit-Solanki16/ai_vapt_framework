@@ -249,7 +249,9 @@ def test_cloud_hosted_panel_id_mapping_and_profile_priority():
     assert 'id="panel-provider-cloud-hosted"' in INDEX_HTML
 
     # Ensure getSelectedModelId, getActiveProviderApiKey, getActiveProviderBaseUrl prioritize cloudProfileSelectMain
-    assert "elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null" in APP_JS
+    assert (
+        "elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null" in APP_JS
+    )
 
 
 def test_report_download_formats_conformance():
@@ -273,4 +275,3 @@ def test_report_download_formats_conformance():
             f"Format {fmt} returned unexpected content-type: {res.headers.get('content-type')}"
         )
         assert len(res.content) > 0, f"Format {fmt} returned empty content"
-

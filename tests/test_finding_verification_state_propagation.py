@@ -17,7 +17,7 @@ def test_verification_state_from_engine_block_is_preserved() -> None:
         "title": "SQL Injection Authentication Bypass in /rest/user/login",
         "verification_state": "verified",
         "reproducible_request": "POST /rest/user/login ... email=' OR 1=1--",
-        "reproducible_response": "HTTP/1.1 200 {\"authentication\":{\"token\":\"...\"}}",
+        "reproducible_response": 'HTTP/1.1 200 {"authentication":{"token":"..."}}',
         "verification_procedure": "baseline 401 then injection payload returned admin token",
         "demonstrated_impact": "Authentication bypass to admin@juice-sh.op",
         "evidence_timestamp": "2026-11-18 07:08:00 UTC",
