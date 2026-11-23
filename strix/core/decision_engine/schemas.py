@@ -86,7 +86,9 @@ class PivotEvent(BaseModel):
     to_candidate: str | None = None
     next_candidate: str | None = None
     probe_outcome: str | None = None
-    pivot_executed: bool = True
+    pivot_executed: bool = False
+    pivot_status: str | None = None
+    tool_invocation_id: str | None = None
     result: str | None = None
     message: str | None = None
 

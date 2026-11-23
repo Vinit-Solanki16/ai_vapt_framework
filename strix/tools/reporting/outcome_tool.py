@@ -211,6 +211,7 @@ async def record_probe_outcome(
     alternative_candidate: str = "",
     pivot_executed: bool = False,
     pivot_result: str = "",
+    tool_invocation_id: str | None = None,
 ) -> str:
     """Record one GAP2 probe of one candidate.
 
@@ -230,6 +231,7 @@ async def record_probe_outcome(
         pivot_executed: True only when a real pivot was executed.
         pivot_result: the outcome of the pivot (positive | negative |
             inconclusive | skipped).
+        tool_invocation_id: verified tool execution ID supporting the pivot.
     """
     caller_agent_id, _ = _caller_identity(ctx)
     report_state = _get_report_state(caller_agent_id)
@@ -324,8 +326,9 @@ async def record_probe_outcome(
             detail=detail,
             retry_reason=retry_reason,
             alternative_candidate=alternative_candidate,
-            pivot_executed=bool(pivot_executed),
-            pivot_result=pivot_result or ("positive" if pivot_executed else ""),
+            pivot_executed=bool(pivot_executed and tool_invocation_id),
+            pivot_result=pivot_result or ("positive" if (pivot_executed and tool_invocation_id) else ""),
+            tool_invocation_id=tool_invocation_id,
         )
         if norm_outcome == "blocked":
             gap_run.record_blocked(candidate_id, reason=detail or retry_reason or "blocked")

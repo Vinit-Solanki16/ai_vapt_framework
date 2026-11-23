@@ -254,6 +254,7 @@ class GapRun:
         pivot_executed: bool = False,
         pivot_result: str = "",
         preparatory: bool = False,
+        tool_invocation_id: str | None = None,
     ) -> dict[str, Any]:
         """Record one probe of one candidate.
 
@@ -266,9 +267,8 @@ class GapRun:
         on :class:`GapCandidate`).
 
         Only records real events: a pivot is incremented only when
-        ``pivot_executed`` is True and both an alternative candidate and a real
-        probe result are supplied. Artificial pivot counts are impossible by
-        construction.
+        ``pivot_executed`` is True, both an alternative candidate and a real
+        probe result are supplied, and a verified ``tool_invocation_id`` is linked (Finding B06).
         """
         cand = self.candidates.get(candidate_id)
         if cand is None:
@@ -282,6 +282,11 @@ class GapRun:
             raise GapRunError(
                 f"probe_outcome must be one of {list(_PROBE_OUTCOMES)}, got {outcome!r}"
             )
+        # Finding B06: caller-supplied execution flag without a linked tool invocation ID
+        # cannot declare verified execution.
+        if pivot_executed and (not tool_invocation_id or not str(tool_invocation_id).strip()):
+            pivot_executed = False
+
         if pivot_executed and (not alternative_candidate or not pivot_result):
             raise GapRunError("a pivot requires an alternative_candidate and a pivot_result")
 
@@ -341,6 +346,7 @@ class GapRun:
             "alternative_candidate": alternative_candidate,
             "pivot_executed": pivot_executed,
             "pivot_result": pivot_result,
+            "tool_invocation_id": str(tool_invocation_id).strip() if tool_invocation_id else None,
             "at": _now(),
         }
         self.probe_outcomes.append(entry)
@@ -453,6 +459,7 @@ class GapRun:
             for e in self.probe_outcomes
             if e.get("pivot_executed") is True
             and e.get("alternative_candidate")
+            and e.get("tool_invocation_id")
             and str(e.get("candidate_id")) != str(e.get("alternative_candidate"))
         }
         decisions = [
@@ -470,8 +477,9 @@ class GapRun:
                     continue
                 if decision_at and str(entry.get("at", "")) < decision_at:
                     continue
-                executed_alternatives.add(alt)
-                break
+                if entry.get("tool_invocation_id"):
+                    executed_alternatives.add(alt)
+                    break
         return len(executed_alternatives)
 
     def eligible_alternatives(self, exclude: str | None = None) -> list[dict[str, Any]]:

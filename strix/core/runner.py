@@ -414,11 +414,20 @@ async def _investigate_gap1_candidates(
 
     base_url = _probe_target_url(target_url)
 
+    from strix.core.scheduler import CandidateScheduler
+    candidate_scheduler = CandidateScheduler(run_id=root_id)
+    candidate_scheduler.initialize([{"id": c.id, "priority_rank": c.rank} for c in gap_run.candidates.values()])
+
     ordered = sorted(gap_run.candidates.values(), key=lambda c: (c.rank, c.id))
 
     for cand in ordered:
         # Skip candidates already resolved by a previous pass or resume.
         if cand.status in ("investigated", "validated", "abandoned", "blocked"):
+            continue
+
+        auth_ok, ticket, auth_msg = candidate_scheduler.authorize_dispatch(cand.id)
+        if not auth_ok:
+            logger.warning("Scheduler blocked dispatch for candidate %s: %s", cand.id, auth_msg)
             continue
 
         probe_url = base_url + cand.endpoint
@@ -645,6 +654,7 @@ async def _investigate_gap1_candidates(
             # every candidate to a single probe.
 
         # Persist per-candidate state after each probe loop.
+        candidate_scheduler.complete_ticket(cand.id, outcome=cand.status)
         gap_run.save()
 
     gap_run.save()

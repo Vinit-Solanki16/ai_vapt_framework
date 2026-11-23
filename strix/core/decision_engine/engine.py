@@ -229,7 +229,7 @@ class DecisionEngine:
                 self.pivot_events.append(
                     PivotEvent(
                         type="REDIRECT",
-                        event="GAP2_PIVOT",
+                        event="PIVOT_DECIDED",
                         candidate_id=candidate_id,
                         to_candidate=next_cand.id,
                         next_candidate=next_cand.id,
@@ -237,9 +237,10 @@ class DecisionEngine:
                         max_attempts=self.pivot_threshold,
                         reason=pivot_reason,
                         probe_outcome=probe_outcome or outcome.value,
-                        pivot_executed=True,
-                        result=f"Pivoted execution to {next_cand.id}",
-                        message=f"GAP-2 pivot from {candidate_id} to {next_cand.id}",
+                        pivot_executed=False,
+                        pivot_status="PIVOT_DECIDED",
+                        result=f"Pivoted decision to {next_cand.id} (pending execution)",
+                        message=f"GAP-2 pivot decided from {candidate_id} to {next_cand.id}",
                     )
                 )
                 return PivotAction(
@@ -301,3 +302,99 @@ class DecisionEngine:
             probe_outcome=probe_outcome or outcome.value,
             result=f"Retrying ({cand.attempts}/{self.pivot_threshold})",
         )
+
+    def record_alternative_dispatched(
+        self,
+        from_candidate_id: str,
+        to_candidate_id: str,
+        tool_name: str | None = None,
+    ) -> PivotEvent:
+        """Record explicit dispatch of an alternative candidate (Finding B04)."""
+        event = PivotEvent(
+            type="DISPATCH",
+            event="ALTERNATIVE_DISPATCHED",
+            candidate_id=from_candidate_id,
+            to_candidate=to_candidate_id,
+            next_candidate=to_candidate_id,
+            pivot_executed=False,
+            pivot_status="ALTERNATIVE_DISPATCHED",
+            message=f"Dispatched alternative candidate {to_candidate_id} using tool {tool_name or 'unspecified'}",
+        )
+        self.pivot_events.append(event)
+        self._tracer.log("DISPATCH", f"Dispatched alternative {to_candidate_id} from {from_candidate_id}")
+        return event
+
+    def record_alternative_tool_started(
+        self,
+        candidate_id: str,
+        tool_invocation_id: str,
+        tool_name: str | None = None,
+    ) -> PivotEvent:
+        """Record start of alternative tool execution (Finding B04)."""
+        event = PivotEvent(
+            type="TOOL_START",
+            event="ALTERNATIVE_TOOL_STARTED",
+            candidate_id=candidate_id,
+            to_candidate=candidate_id,
+            next_candidate=candidate_id,
+            pivot_executed=False,
+            pivot_status="ALTERNATIVE_TOOL_STARTED",
+            tool_invocation_id=tool_invocation_id,
+            message=f"Alternative tool {tool_name or 'unspecified'} started with execution ID {tool_invocation_id}",
+        )
+        self.pivot_events.append(event)
+        self._tracer.log("TOOL_START", f"Tool {tool_name} started on {candidate_id} ({tool_invocation_id})")
+        return event
+
+    def record_alternative_tool_completed(
+        self,
+        candidate_id: str,
+        tool_invocation_id: str,
+        outcome: str = "completed",
+        detail: str = "",
+    ) -> PivotEvent:
+        """Record completion of alternative tool execution (Finding B04)."""
+        event = PivotEvent(
+            type="TOOL_COMPLETE",
+            event="ALTERNATIVE_TOOL_COMPLETED",
+            candidate_id=candidate_id,
+            to_candidate=candidate_id,
+            next_candidate=candidate_id,
+            pivot_executed=False,
+            pivot_status="ALTERNATIVE_TOOL_COMPLETED",
+            tool_invocation_id=tool_invocation_id,
+            result=outcome,
+            detail=detail,
+            message=f"Alternative tool execution {tool_invocation_id} completed: {outcome}",
+        )
+        self.pivot_events.append(event)
+        self._tracer.log("TOOL_COMPLETE", f"Tool execution {tool_invocation_id} completed on {candidate_id}: {outcome}")
+        return event
+
+    def record_pivot_verified(
+        self,
+        from_candidate_id: str,
+        to_candidate_id: str,
+        tool_invocation_id: str,
+        result: str = "success",
+        detail: str = "",
+    ) -> PivotEvent:
+        """Record proven, verified alternative pivot backed by tool execution ID (Finding B04)."""
+        if not tool_invocation_id or not tool_invocation_id.strip():
+            raise ValueError("PIVOT_VERIFIED requires a non-empty tool_invocation_id")
+        event = PivotEvent(
+            type="REDIRECT",
+            event="PIVOT_VERIFIED",
+            candidate_id=from_candidate_id,
+            to_candidate=to_candidate_id,
+            next_candidate=to_candidate_id,
+            pivot_executed=True,
+            pivot_status="PIVOT_VERIFIED",
+            tool_invocation_id=tool_invocation_id.strip(),
+            result=result,
+            detail=detail,
+            message=f"GAP-2 pivot from {from_candidate_id} to {to_candidate_id} verified with execution ID {tool_invocation_id}",
+        )
+        self.pivot_events.append(event)
+        self._tracer.log("PIVOT_VERIFIED", f"Pivot {from_candidate_id} -> {to_candidate_id} verified ({tool_invocation_id})")
+        return event

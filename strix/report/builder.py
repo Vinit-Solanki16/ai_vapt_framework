@@ -163,7 +163,7 @@ def render_html_report(run_data: Any) -> str:
             e
             for e in pivot_events
             if (e.get("type") in ("REDIRECT", "GAP2_PIVOT") or e.get("event") == "GAP2_PIVOT")
-            and e.get("pivot_executed", True) is not False
+            and e.get("pivot_executed") is True
             and (e.get("next_candidate") or e.get("to_candidate"))
         ]
     )
