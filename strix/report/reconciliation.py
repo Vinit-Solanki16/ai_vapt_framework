@@ -249,17 +249,16 @@ def enrich_candidates_from_execution(
                 cand["http_status"] = (
                     200 if "Process exited with code 0" in primary["output"] else None
                 )
-        else:
-            # C04 Fix: Do not fabricate synthetic curl commands or fake execution for unprobed candidates
-            # If the candidate already has legitimate tool execution details from an earlier stage, preserve them.
-            if not (cand.get("tool_invocation_id") and cand.get("tool_selected")):
-                cand["dispatched"] = False
-                cand["tool_selected"] = None
-                cand["tool_invocation_id"] = None
-                cand["sanitized_request"] = ""
-                cand["tool_result"] = ""
-                cand["is_duplicate_association"] = False
-                cand["http_status"] = None
+        # C04 Fix: Do not fabricate synthetic curl commands or fake execution for unprobed candidates
+        # If the candidate already has legitimate tool execution details from an earlier stage, preserve them.
+        elif not (cand.get("tool_invocation_id") and cand.get("tool_selected")):
+            cand["dispatched"] = False
+            cand["tool_selected"] = None
+            cand["tool_invocation_id"] = None
+            cand["sanitized_request"] = ""
+            cand["tool_result"] = ""
+            cand["is_duplicate_association"] = False
+            cand["http_status"] = None
 
         # Check if an actual confirmed finding exists for this candidate
         cand_text = (
@@ -341,15 +340,22 @@ def enrich_candidates_from_execution(
 
         # C05 Fix: Specific CORS verification semantics — populate ONLY from actual observed headers
         if "cors" in cid or "cors" in title:
-            observed_out = (primary.get("output", "") if primary else "") or str(cand.get("evidence", ""))
-            cors_header_match = re.search(r"(access-control-allow-[a-z\-]+:\s*[^\r\n]+)", observed_out, re.I)
+            observed_out = (primary.get("output", "") if primary else "") or str(
+                cand.get("evidence", "")
+            )
+            cors_header_match = re.search(
+                r"(access-control-allow-[a-z\-]+:\s*[^\r\n]+)", observed_out, re.I
+            )
             if cors_header_match:
                 observed_cors = cors_header_match.group(1).strip()
                 cand["cors_telemetry"] = {
                     "observed_header": observed_cors,
-                    "credentials_supported": "access-control-allow-credentials: true" in observed_out.lower(),
+                    "credentials_supported": "access-control-allow-credentials: true"
+                    in observed_out.lower(),
                     "sensitive_authenticated_data_accessible": False,
-                    "browser_behavior_tested": bool(primary and "exec_command" in str(primary.get("name"))),
+                    "browser_behavior_tested": bool(
+                        primary and "exec_command" in str(primary.get("name"))
+                    ),
                     "actual_impact_evidence": f"Observed header '{observed_cors}' from target response.",
                     "untested_aspects": "Cross-origin requests with authenticated session cookies were not executed.",
                 }

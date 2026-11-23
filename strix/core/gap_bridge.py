@@ -716,7 +716,9 @@ def record_outcome(
         "pivot_executed": False,
         "pivot_status": "PIVOT_DECIDED" if has_alternative else None,
         "next_candidate": next_entry if has_alternative else None,
-        "status": "abandoned" if (attempts >= st.threshold() and not has_alternative) else status_norm,
+        "status": "abandoned"
+        if (attempts >= st.threshold() and not has_alternative)
+        else status_norm,
         "reason": pivot_reason if pivot else None,
     }
 

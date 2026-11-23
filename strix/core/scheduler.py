@@ -8,14 +8,12 @@ unless an authorized, logged override is provided (Finding B03).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-import json
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class SchedulingViolationError(Exception):
@@ -57,7 +55,9 @@ class CandidateTicket:
 class CandidateScheduler:
     """Scheduler that manages priority-governed candidate dispatch."""
 
-    def __init__(self, run_id: str = "run-default", queue: list[dict[str, Any]] | None = None) -> None:
+    def __init__(
+        self, run_id: str = "run-default", queue: list[dict[str, Any]] | None = None
+    ) -> None:
         self.run_id = run_id
         self.tickets: dict[str, CandidateTicket] = {}
         self.tickets_by_candidate: dict[str, CandidateTicket] = {}
@@ -77,7 +77,9 @@ class CandidateScheduler:
             queue,
             key=lambda c: c.get("discovery_order", c.get("priority_rank", 0)),
         )
-        self.original_order = [str(c.get("id") or c.get("candidate_id")) for c in sorted_by_discovery]
+        self.original_order = [
+            str(c.get("id") or c.get("candidate_id")) for c in sorted_by_discovery
+        ]
         self.ranked_order = [str(c.get("id") or c.get("candidate_id")) for c in queue]
         self.ranking_changed = self.original_order != self.ranked_order
 
@@ -101,10 +103,7 @@ class CandidateScheduler:
 
     def dispatch_next(self) -> CandidateTicket | None:
         """Dispatch the highest priority pending candidate ticket."""
-        pending_tickets = [
-            t for t in self.tickets.values()
-            if t.status in ("ISSUED", "PENDING")
-        ]
+        pending_tickets = [t for t in self.tickets.values() if t.status in ("ISSUED", "PENDING")]
         if not pending_tickets:
             return None
 
@@ -138,9 +137,9 @@ class CandidateScheduler:
 
         # Find higher priority tickets that are still pending
         higher_priority_pending = [
-            t for t in self.tickets.values()
-            if t.dispatch_priority < ticket.dispatch_priority
-            and t.status in ("ISSUED", "PENDING")
+            t
+            for t in self.tickets.values()
+            if t.dispatch_priority < ticket.dispatch_priority and t.status in ("ISSUED", "PENDING")
         ]
 
         if higher_priority_pending:
@@ -171,7 +170,9 @@ class CandidateScheduler:
         self.dispatch_sequence.append(ticket.candidate_id)
         return True, ticket, "Authorized according to priority rank."
 
-    def record_tool_invocation(self, candidate_id_or_ticket_id: str, tool_invocation_id: str) -> bool:
+    def record_tool_invocation(
+        self, candidate_id_or_ticket_id: str, tool_invocation_id: str
+    ) -> bool:
         """Bind an executed security tool invocation ID to the candidate's ticket."""
         ticket = self.tickets.get(candidate_id_or_ticket_id)
         if ticket is None:
@@ -207,7 +208,6 @@ class CandidateScheduler:
             "dispatch_sequence": list(self.dispatch_sequence),
             "tickets": [t.to_dict() for t in self.tickets.values()],
             "overrides": [
-                t.to_dict() for t in self.tickets.values()
-                if t.override_reason is not None
+                t.to_dict() for t in self.tickets.values() if t.override_reason is not None
             ],
         }

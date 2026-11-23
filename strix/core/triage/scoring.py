@@ -18,7 +18,9 @@ def calculate_composite_score(
         where quality_weight: HIGH=1.0, MEDIUM=0.6, LOW=0.3
     """
     raw_cvss = float(candidate.get("cvss") or candidate.get("cvss_score") or 7.0)
-    base_prob = float(candidate.get("probability") or candidate.get("base_prob") or (raw_cvss / 10.0))
+    base_prob = float(
+        candidate.get("probability") or candidate.get("base_prob") or (raw_cvss / 10.0)
+    )
     exposure = float(candidate.get("exposure", 1.0))
     effective_prob = min(1.0, max(0.05, base_prob * exposure))
 

@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 
@@ -164,7 +164,9 @@ async def get_current_user_or_none(
         return None
 
     # 2. Session Cookie Authentication
-    session_id = request.cookies.get(SESSION_COOKIE_NAME) or request.cookies.get(ALT_SESSION_COOKIE_NAME)
+    session_id = request.cookies.get(SESSION_COOKIE_NAME) or request.cookies.get(
+        ALT_SESSION_COOKIE_NAME
+    )
     session = get_session(session_id)
     if session:
         # Enforce CSRF check on state-changing methods for external browser cookie sessions

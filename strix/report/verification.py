@@ -123,7 +123,16 @@ class VerificationBlock:
             return False
 
         # Reject generic placeholders
-        generic_placeholders = {"n/a", "none", "test", "vulnerable", "observed", "unknown", "null", "undefined"}
+        generic_placeholders = {
+            "n/a",
+            "none",
+            "test",
+            "vulnerable",
+            "observed",
+            "unknown",
+            "null",
+            "undefined",
+        }
         if req.lower() in generic_placeholders or len(req) < 10:
             return False
         if resp.lower() in generic_placeholders or len(resp) < 5:

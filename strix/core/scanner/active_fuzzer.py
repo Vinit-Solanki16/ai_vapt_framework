@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-import ssl
 import urllib.error
 import urllib.parse
 import urllib.request

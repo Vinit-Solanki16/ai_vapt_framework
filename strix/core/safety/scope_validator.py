@@ -288,9 +288,7 @@ def validate_web_target(
             ),
         )
 
-    authorized_hosts = [
-        str(h).lower().strip() for h in engagement.get("authorized_hosts", []) if h
-    ]
+    authorized_hosts = [str(h).lower().strip() for h in engagement.get("authorized_hosts", []) if h]
     owner_approval = engagement.get("owner_approval") is True or engagement.get("status") in (
         "approved",
         "active",

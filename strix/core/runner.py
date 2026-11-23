@@ -415,8 +415,11 @@ async def _investigate_gap1_candidates(
     base_url = _probe_target_url(target_url)
 
     from strix.core.scheduler import CandidateScheduler
+
     candidate_scheduler = CandidateScheduler(run_id=root_id)
-    candidate_scheduler.initialize([{"id": c.id, "priority_rank": c.rank} for c in gap_run.candidates.values()])
+    candidate_scheduler.initialize(
+        [{"id": c.id, "priority_rank": c.rank} for c in gap_run.candidates.values()]
+    )
 
     ordered = sorted(gap_run.candidates.values(), key=lambda c: (c.rank, c.id))
 
