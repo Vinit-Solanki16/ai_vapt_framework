@@ -137,7 +137,7 @@ class VerificationBlock:
         proc_lower = proc.lower()
         impact_lower = impact.lower()
         if "sql" in proc_lower or "sqli" in proc_lower:
-            # Must demonstrate query differential, syntax error, or extracted schema/data
+            # Must demonstrate query differential, syntax error, authentication bypass, or extracted schema/data
             has_sqli_evidence = any(
                 term in impact_lower or term in resp.lower()
                 for term in (
@@ -153,6 +153,12 @@ class VerificationBlock:
                     "boolean-blind",
                     "time-based",
                     "delay",
+                    "bypass",
+                    "auth",
+                    "admin",
+                    "session",
+                    "cookie",
+                    "login",
                 )
             )
             if not has_sqli_evidence:

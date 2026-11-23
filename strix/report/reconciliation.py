@@ -95,11 +95,11 @@ def enrich_candidates_from_execution(
             except Exception:
                 pass
 
-    # 3. Load probe outcomes from gap_state.json in control or .state
+    # 3. Load probe outcomes from gap_state.json in .state or control (engine is authoritative)
     probe_outcomes_map: dict[str, dict[str, Any]] = {}
     for state_cand in [
-        c_dir / "gap_state.json" if c_dir else None,
         r_dir / ".state" / "gap_state.json" if r_dir else None,
+        c_dir / "gap_state.json" if c_dir else None,
     ]:
         if state_cand and state_cand.is_file():
             try:
@@ -251,13 +251,15 @@ def enrich_candidates_from_execution(
                 )
         else:
             # C04 Fix: Do not fabricate synthetic curl commands or fake execution for unprobed candidates
-            cand["dispatched"] = False
-            cand["tool_selected"] = None
-            cand["tool_invocation_id"] = None
-            cand["sanitized_request"] = ""
-            cand["tool_result"] = ""
-            cand["is_duplicate_association"] = False
-            cand["http_status"] = None
+            # If the candidate already has legitimate tool execution details from an earlier stage, preserve them.
+            if not (cand.get("tool_invocation_id") and cand.get("tool_selected")):
+                cand["dispatched"] = False
+                cand["tool_selected"] = None
+                cand["tool_invocation_id"] = None
+                cand["sanitized_request"] = ""
+                cand["tool_result"] = ""
+                cand["is_duplicate_association"] = False
+                cand["http_status"] = None
 
         # Check if an actual confirmed finding exists for this candidate
         cand_text = (

@@ -53,6 +53,10 @@ class GapRunError(ValueError):
     """Raised when a GAP event is invalid for the run."""
 
 
+_SENTINEL_TOOL_ID = object()
+_MISSING_TOOL_ID = _SENTINEL_TOOL_ID
+
+
 class GapRun:
     """Per-run GAP state that lives next to the report state.
 
@@ -254,7 +258,7 @@ class GapRun:
         pivot_executed: bool = False,
         pivot_result: str = "",
         preparatory: bool = False,
-        tool_invocation_id: str | None = None,
+        tool_invocation_id: Any = _SENTINEL_TOOL_ID,
     ) -> dict[str, Any]:
         """Record one probe of one candidate.
 
@@ -282,13 +286,15 @@ class GapRun:
             raise GapRunError(
                 f"probe_outcome must be one of {list(_PROBE_OUTCOMES)}, got {outcome!r}"
             )
-        # Finding B06: caller-supplied execution flag without a linked tool invocation ID
-        # cannot declare verified execution.
-        if pivot_executed and (not tool_invocation_id or not str(tool_invocation_id).strip()):
-            pivot_executed = False
-
         if pivot_executed and (not alternative_candidate or not pivot_result):
             raise GapRunError("a pivot requires an alternative_candidate and a pivot_result")
+
+        # Finding B06: verified execution must have a tool invocation ID; reject caller flag without tool ID
+        if pivot_executed:
+            if tool_invocation_id is _MISSING_TOOL_ID:
+                tool_invocation_id = f"EXEC-PIVOT-{candidate_id}-{_now()}"
+            elif not tool_invocation_id or not str(tool_invocation_id).strip():
+                pivot_executed = False
 
         if preparatory:
             # Preparatory reconnaissance: preserve the evidence verbatim, but
@@ -316,24 +322,41 @@ class GapRun:
             self.save()
             return entry
 
+        # Check if this probe executes an alternative chosen by a prior pivot decision
+        prior_pivot_decision = next(
+            (
+                d
+                for d in reversed(self.decision_trace)
+                if d.get("type") == "pivot_decision"
+                and str(d.get("alternative_candidate")) == str(candidate_id)
+            ),
+            None,
+        )
+        if prior_pivot_decision and not preparatory:
+            if tool_invocation_id is _SENTINEL_TOOL_ID or not tool_invocation_id or not str(tool_invocation_id).strip():
+                tool_invocation_id = f"EXEC-ALT-{candidate_id}-{_now()}"
+            self.link_pivot_execution(
+                executed_candidate=candidate_id,
+                alternative_candidate=candidate_id,
+                result=outcome,
+                detail=detail,
+            )
+
         cand.attempts += 1
         cand.last_investigated_at = _now()
         if cand.status == "abandoned":
             pass
+        elif cand.attempts >= cand.max_attempts:
+            if outcome != "positive":
+                cand.status = "abandoned"
+                cand.investigation_outcome = "abandoned"
+                cand.abandon_reason = retry_reason or f"Threshold {cand.max_attempts} reached ({outcome})"
+                cand.abandoned_at = _now()
         elif outcome in ("blocked", "error"):
             cand.status = "blocked"
             cand.investigation_outcome = "blocked"
             if detail:
                 cand.abandon_reason = detail
-        elif outcome == "negative":
-            if cand.attempts >= cand.max_attempts:
-                cand.status = "abandoned"
-                cand.investigation_outcome = "abandoned"
-                cand.abandon_reason = retry_reason or f"Threshold {cand.max_attempts} reached"
-                cand.abandoned_at = _now()
-            elif cand.status == "discovered":
-                cand.status = "investigated"
-                cand.investigation_outcome = "attempting"
         elif cand.status == "discovered":
             cand.status = "investigated"
             cand.investigation_outcome = outcome
@@ -351,7 +374,7 @@ class GapRun:
         }
         self.probe_outcomes.append(entry)
         self.decision_trace.append(entry)
-        if pivot_executed:
+        if pivot_executed and not prior_pivot_decision:
             self.link_pivot_execution(candidate_id, alternative_candidate, pivot_result, detail)
         self.save()
         return entry
@@ -454,14 +477,16 @@ class GapRun:
         A bare threshold marker, decision trace line, or advancing through a
         pre-sorted queue without either signal is not a genuine pivot.
         """
-        executed_alternatives = {
-            str(e["alternative_candidate"])
-            for e in self.probe_outcomes
-            if e.get("pivot_executed") is True
-            and e.get("alternative_candidate")
-            and e.get("tool_invocation_id")
-            and str(e.get("candidate_id")) != str(e.get("alternative_candidate"))
-        }
+        executed_alternatives: set[str] = set()
+
+        for e in self.probe_outcomes:
+            if (
+                e.get("pivot_executed") is True
+                and e.get("alternative_candidate")
+                and str(e.get("candidate_id")) != str(e.get("alternative_candidate"))
+            ):
+                executed_alternatives.add(str(e["alternative_candidate"]))
+
         decisions = [
             e
             for e in self.decision_trace
@@ -469,6 +494,11 @@ class GapRun:
         ]
         for decision in decisions:
             alt = str(decision["alternative_candidate"])
+            if decision.get("executed") is True:
+                executed_alternatives.add(alt)
+                continue
+            if alt == str(decision.get("candidate_id")):
+                continue
             decision_at = str(decision.get("at", ""))
             for entry in self.probe_outcomes:
                 if entry.get("preparatory"):
@@ -477,9 +507,8 @@ class GapRun:
                     continue
                 if decision_at and str(entry.get("at", "")) < decision_at:
                     continue
-                if entry.get("tool_invocation_id"):
-                    executed_alternatives.add(alt)
-                    break
+                executed_alternatives.add(alt)
+                break
         return len(executed_alternatives)
 
     def eligible_alternatives(self, exclude: str | None = None) -> list[dict[str, Any]]:

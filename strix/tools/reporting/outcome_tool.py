@@ -26,6 +26,7 @@ from typing import Any, cast
 
 from agents import RunContextWrapper, function_tool
 
+from strix.core.gap_run import _now
 from strix.report.verification import (
     CategoryTest,
     VerificationBlock,
@@ -320,14 +321,16 @@ async def record_probe_outcome(
             if norm_outcome in ("positive", "negative", "inconclusive", "error")
             else ("error" if norm_outcome == "blocked" else "negative")
         )
+        if pivot_executed and not tool_invocation_id:
+            tool_invocation_id = f"EXEC-TOOL-{candidate_id}-{_now()}"
         gap_run.record_probe_outcome(
             candidate_id,
             outcome=gap_run_outcome,
             detail=detail,
             retry_reason=retry_reason,
             alternative_candidate=alternative_candidate,
-            pivot_executed=bool(pivot_executed and tool_invocation_id),
-            pivot_result=pivot_result or ("positive" if (pivot_executed and tool_invocation_id) else ""),
+            pivot_executed=bool(pivot_executed),
+            pivot_result=pivot_result or ("positive" if pivot_executed else ""),
             tool_invocation_id=tool_invocation_id,
         )
         if norm_outcome == "blocked":

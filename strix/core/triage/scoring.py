@@ -14,29 +14,22 @@ def calculate_composite_score(
     """Calculate the composite priority score for an action candidate.
 
     Formula:
-        FinalScore = (w_cvss * S_cvss) + (w_exposure * E_exp) + (w_ai * Q_ai) + base_prob
+        FinalScore = probability * (0.5 + 0.5 * quality_weight)
+        where quality_weight: HIGH=1.0, MEDIUM=0.6, LOW=0.3
     """
-    # 1. Normalized CVSS severity [0.0 - 1.0]
-    raw_cvss = float(candidate.get("cvss") or candidate.get("cvss_score") or 5.0)
-    s_cvss = min(1.0, max(0.0, raw_cvss / 10.0))
+    raw_cvss = float(candidate.get("cvss") or candidate.get("cvss_score") or 7.0)
+    base_prob = float(candidate.get("probability") or candidate.get("base_prob") or (raw_cvss / 10.0))
+    exposure = float(candidate.get("exposure", 1.0))
+    effective_prob = min(1.0, max(0.05, base_prob * exposure))
 
-    # 2. Asset exposure [0.0 - 1.0]
-    e_exp = float(candidate.get("exposure", 1.0))
-
-    # 3. AI Usability Rank boost
     if assessment.usability_rank == UsabilityRank.HIGH:
-        q_ai = 1.0
+        quality_weight = 1.0
     elif assessment.usability_rank == UsabilityRank.MEDIUM:
-        q_ai = 0.5
+        quality_weight = 0.6
     else:
-        q_ai = 0.0
+        quality_weight = 0.3
 
-    # Weights
-    w_cvss = 0.40
-    w_exp = 0.20
-    w_ai = 0.40
-
-    final_score = (w_cvss * s_cvss) + (w_exp * e_exp) + (w_ai * q_ai)
+    final_score = effective_prob * (0.5 + 0.5 * quality_weight)
     return round(final_score, 4)
 
 

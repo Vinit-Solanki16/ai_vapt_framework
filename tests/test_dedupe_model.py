@@ -116,9 +116,16 @@ def test_config_file_loads_dedupe_model(
 ) -> None:
     for key in (
         "STRIX_LLM",
+        "LLM_MODEL",
+        "STRIX_LLM_MODEL",
         "LLM_API_KEY",
         "OPENAI_API_KEY",
         "LLM_API_BASE",
+        "OPENAI_API_BASE",
+        "OPENAI_BASE_URL",
+        "LITELLM_BASE_URL",
+        "OLLAMA_API_BASE",
+        "OPENROUTER_API_BASE",
         "STRIX_DEDUPE_MODEL",
         "STRIX_DEDUPE_REASONING_EFFORT",
     ):

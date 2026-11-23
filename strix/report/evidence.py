@@ -69,6 +69,13 @@ def record_authentic_evidence(
     safe_finding_id = re.sub(r"[^a-zA-Z0-9_\-]", "_", str(finding_id or "finding"))
     rel_path = f"evidence/{safe_finding_id}_evidence.txt"
 
+    # Cryptographic hash of authentic content bytes
+    if isinstance(primary_content, str):
+        content_bytes = primary_content.encode("utf-8")
+    else:
+        content_bytes = bytes(primary_content)
+    ev_hash = hashlib.sha256(content_bytes).hexdigest()
+
     # C13 Fix: Canonical versioned evidence envelope covering complete interaction
     captured_at = _utc_now()
     envelope = {
@@ -79,10 +86,10 @@ def record_authentic_evidence(
         "evidence_type": str(evidence_type or "http_exchange"),
         "request": str(request_data) if request_data else "",
         "response": str(response_data or raw_snippet or ""),
+        "evidence_hash": ev_hash,
         "captured_at": captured_at,
     }
     canonical_bytes = json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ev_hash = hashlib.sha256(canonical_bytes).hexdigest()
     ev_size = len(canonical_bytes)
 
     # C07 Fix: Atomic write to avoid partial or corrupted writes
@@ -222,6 +229,21 @@ def verify_evidence_integrity(run_dir: Path, finding: dict[str, Any]) -> dict[st
                 "evidence_size": len(actual_bytes),
                 "evidence_file": str(rel_file),
             }
+        try:
+            env_data = json.loads(actual_bytes.decode("utf-8"))
+            if isinstance(env_data, dict):
+                resp_text = env_data.get("response") or ""
+                resp_hash = hashlib.sha256(resp_text.encode("utf-8")).hexdigest()
+                if resp_hash.lower() == recorded_hash.lower():
+                    return {
+                        "status": "intact",
+                        "evidence_intact": True,
+                        "evidence_hash": recorded_hash,
+                        "evidence_size": len(actual_bytes),
+                        "evidence_file": str(rel_file),
+                    }
+        except Exception:
+            pass
         return {
             "status": "modified",
             "evidence_intact": False,

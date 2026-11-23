@@ -78,7 +78,7 @@ class PivotEvent(BaseModel):
 
     timestamp: str = Field(default_factory=_utc_now)
     type: str = "GAP2_PIVOT"  # INIT, ADVANCE, REDIRECT, ABANDON, COMPLETE, GAP2_PIVOT
-    event: str | None = None
+    event: Any = None
     candidate_id: str | None = None
     attempt: int | None = None
     max_attempts: int | None = None
