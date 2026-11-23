@@ -294,7 +294,7 @@ def test_cloud_connection(
     valid_url, base, url_err = _validate_provider_base_url(api_base)
     if not valid_url:
         return CloudTestConnectionResponse(
-            status="prohibited_destination",
+            status="error",
             message=url_err,
             valid=False,
             models=[],
@@ -443,7 +443,7 @@ def verify_cloud_structured_tools(
     valid_url, base, url_err = _validate_provider_base_url(api_base)
     if not valid_url:
         return CloudVerifyToolsResponse(
-            status="prohibited_destination",
+            status="error",
             message=url_err,
             valid=False,
             tool_diagnostics=CloudToolCallDiagnostic(),
@@ -667,9 +667,8 @@ def warmup_cloud_model(
     valid_url, base, url_err = _validate_provider_base_url(api_base)
     if not valid_url:
         return CloudWarmupResponse(
-            status="prohibited_destination",
+            success=False,
             message=url_err,
-            warmed=False,
             latency_ms=0.0,
         )
 
