@@ -115,15 +115,16 @@ class WebSpider:
         self.scripts: set[str] = set()
         self.api_endpoints: set[str] = set()
 
-        self._ctx = ssl.create_default_context()
-        self._ctx.check_hostname = False
-        self._ctx.verify_mode = ssl.CERT_NONE
+        from strix.core.safety.http_transport import (
+            ScopedRedirectHandler,
+            create_scanner_ssl_context,
+        )
+
+        self._ctx = create_scanner_ssl_context()
         self._opener = urllib.request.build_opener(
             urllib.request.HTTPSHandler(context=self._ctx),
-            InScopeRedirectHandler(self.authorized_hosts),
+            ScopedRedirectHandler(self.authorized_hosts),
         )
-        self._ctx.check_hostname = False
-        self._ctx.verify_mode = ssl.CERT_NONE
 
     def crawl(self) -> dict[str, Any]:
         """Execute recursive breadth-first crawl across target application."""

@@ -349,9 +349,9 @@ class ActiveFuzzer:
         self.base_url = base_url.strip()
         self.scan_mode = (scan_mode or "quick").lower()
         self.timeout = timeout
-        self._ctx = ssl.create_default_context()
-        self._ctx.check_hostname = False
-        self._ctx.verify_mode = ssl.CERT_NONE
+        from strix.core.safety.http_transport import create_scanner_ssl_context
+
+        self._ctx = create_scanner_ssl_context()
 
     def probe_paths(self) -> list[dict[str, Any]]:
         """Probe sensitive administrative, configuration, and diagnostic endpoints concurrently."""

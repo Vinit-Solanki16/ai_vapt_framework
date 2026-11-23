@@ -245,42 +245,16 @@ def _probe_target_url(target_value: str) -> str:
 
 
 async def _http_probe(url: str) -> dict[str, Any]:
-    """Make one real HTTP GET request against ``url`` and return the result."""
+    """Make one real HTTP GET request against ``url`` with scope and bounded memory enforcement."""
+    from strix.core.safety.http_transport import execute_scoped_request
 
     def _fetch() -> dict[str, Any]:
-        req = urllib.request.Request(url, headers=dict(_PROBE_HEADERS))
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                body = resp.read().decode("utf-8", errors="replace")
-                return {
-                    "status": resp.status,
-                    "headers": {str(k).lower(): str(v) for k, v in resp.headers.items()},
-                    "body": body,
-                    "url": resp.geturl(),
-                    "error": None,
-                }
-        except urllib.error.HTTPError as exc:  # noqa: BLE001
-            body = ""
-            if exc.fp is not None:
-                try:
-                    body = exc.fp.read().decode("utf-8", errors="replace")
-                except Exception:
-                    body = ""
-            return {
-                "status": exc.code,
-                "headers": {},
-                "body": body,
-                "url": url,
-                "error": f"HTTP {exc.code}",
-            }
-        except Exception as exc:  # noqa: BLE001 - network failures are probe outcomes
-            return {
-                "status": 0,
-                "headers": {},
-                "body": "",
-                "url": url,
-                "error": str(exc) or exc.__class__.__name__,
-            }
+        return execute_scoped_request(
+            url=url,
+            method="GET",
+            headers=dict(_PROBE_HEADERS),
+            timeout=10,
+        )
 
     return await asyncio.to_thread(_fetch)
 

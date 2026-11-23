@@ -7,14 +7,18 @@ with zero hardcoded host assumptions and strict credential privacy.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
+import os
 import re
+import socket
 import ssl
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 from strix.interface.schemas import (
@@ -44,13 +48,51 @@ def _redact_secrets(text: str, custom_secrets: list[str] | None = None) -> str:
     return text
 
 
-def _normalize_base_url(api_base: str) -> str:
-    """Normalize base URL by stripping trailing slashes and ensuring valid scheme."""
+def _validate_provider_base_url(api_base: str) -> tuple[bool, str, str]:
+    """Validate provider endpoint scheme and protect against SSRF (A08 fix).
+
+    Rejects non-HTTP schemes, cloud instance metadata (169.254.169.254), and link-local ranges.
+    """
     base = (api_base or "").strip().rstrip("/")
     if not base:
-        return "https://api.openai.com/v1"
-    if not base.startswith("http://") and not base.startswith("https://"):
+        return True, "https://api.openai.com/v1", ""
+    if "://" in base:
+        scheme_prefix = base.split("://", 1)[0].lower()
+        if scheme_prefix not in ("http", "https"):
+            return False, base, f"Prohibited scheme '{scheme_prefix}'. Only http and https endpoints are authorized."
+    elif not base.startswith("http://") and not base.startswith("https://"):
         base = f"https://{base}"
+
+    parsed = urllib.parse.urlsplit(base)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in ("http", "https"):
+        return False, base, f"Prohibited scheme '{scheme}'. Only http and https endpoints are authorized."
+
+    host = (parsed.hostname or "").lower().strip()
+    if not host:
+        return False, base, "Provider base URL missing valid hostname."
+
+    port = parsed.port or (443 if scheme == "https" else 80)
+    try:
+        addr_info = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for _, _, _, _, sockaddr in addr_info:
+            ip_str = str(sockaddr[0])
+            ip_obj = ipaddress.ip_address(ip_str)
+
+            # Strictly block Cloud Metadata 169.254.169.254 and link-local ranges
+            if str(ip_obj) == "169.254.169.254" or ip_obj.is_link_local:
+                return False, base, f"Access to cloud metadata or link-local address {ip_str} is prohibited."
+    except socket.gaierror as e:
+        logger.debug("DNS resolution probe on provider endpoint %s: %s", host, e)
+    except Exception as e:
+        return False, base, f"Invalid provider endpoint address: {e}"
+
+    return True, base, ""
+
+
+def _normalize_base_url(api_base: str) -> str:
+    """Normalize base URL by stripping trailing slashes and ensuring valid scheme."""
+    valid, base, _ = _validate_provider_base_url(api_base)
     return base
 
 
@@ -72,11 +114,34 @@ def _build_headers(
     return headers
 
 
-def _create_ssl_context() -> ssl.SSLContext:
-    """Create permissive SSL context for testing diverse remote endpoints."""
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+def _create_ssl_context(
+    ca_bundle: str | None = None,
+    insecure_lab_override: bool = False,
+) -> ssl.SSLContext:
+    """Create TLS context validating hostnames and root CA certificates by default (A03 fix).
+
+    Supports custom CA bundle via ca_bundle or STRIX_CUSTOM_CA_BUNDLE.
+    Lab override allowed only when STRIX_INSECURE_PROVIDER_TLS=1 or explicitly set.
+    """
+    insecure_env = os.getenv("STRIX_INSECURE_PROVIDER_TLS", "0") == "1"
+    if insecure_lab_override or insecure_env:
+        logger.warning(
+            "SECURITY WARNING: Provider TLS verification is disabled by explicit lab override. "
+            "Never use this setting in production or with sensitive credentials."
+        )
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+
+    ca_path = ca_bundle or os.getenv("STRIX_CUSTOM_CA_BUNDLE") or os.getenv("SSL_CERT_FILE")
+    if ca_path and Path(ca_path).is_file():
+        ctx = ssl.create_default_context(cafile=str(ca_path))
+    else:
+        ctx = ssl.create_default_context()
+
+    ctx.check_hostname = True
+    ctx.verify_mode = ssl.CERT_REQUIRED
     return ctx
 
 
@@ -87,7 +152,15 @@ def discover_cloud_models(
     timeout: float = 6.0,
 ) -> dict[str, Any]:
     """Dynamically discover models exposed on the OpenAI-compatible endpoint."""
-    base = _normalize_base_url(api_base)
+    valid_url, base, url_err = _validate_provider_base_url(api_base)
+    if not valid_url:
+        return {
+            "valid": False,
+            "status": "prohibited_destination",
+            "message": url_err,
+            "models": [],
+        }
+
     models_url = f"{base}/models"
     headers = _build_headers(api_key, extra_headers)
     ctx = _create_ssl_context()
@@ -206,7 +279,15 @@ def test_cloud_connection(
     timeout: float = 12.0,
 ) -> CloudTestConnectionResponse:
     """Test reachability, model availability, and basic chat completion with latency diagnostics."""
-    base = _normalize_base_url(api_base)
+    valid_url, base, url_err = _validate_provider_base_url(api_base)
+    if not valid_url:
+        return CloudTestConnectionResponse(
+            status="prohibited_destination",
+            message=url_err,
+            valid=False,
+            models=[],
+        )
+
     chat_url = f"{base}/chat/completions"
     headers = _build_headers(api_key, extra_headers)
     ctx = _create_ssl_context()
@@ -316,6 +397,15 @@ def test_cloud_connection(
             models=discovered_models,
         )
     except Exception as exc:
+        exc_str = str(exc)
+        if "certificate verify failed" in exc_str.lower() or "sslcertverificationerror" in exc_str.lower():
+            return CloudTestConnectionResponse(
+                status="error",
+                message=f"TLS Certificate verification failed: {exc}",
+                valid=False,
+                models=discovered_models,
+                diagnostics={"tls_error": True, "detail": str(exc)},
+            )
         return CloudTestConnectionResponse(
             status="error",
             message=_redact_secrets(f"Connection test failed: {exc}"),
@@ -334,17 +424,16 @@ def verify_cloud_structured_tools(
     extra_headers: dict[str, str] | None = None,
     timeout: float = 16.0,
 ) -> CloudVerifyToolsResponse:
-    """Verify structured function/tool calling compatibility for autonomous Strix execution.
+    """Verify structured function/tool calling compatibility for autonomous Strix execution."""
+    valid_url, base, url_err = _validate_provider_base_url(api_base)
+    if not valid_url:
+        return CloudVerifyToolsResponse(
+            status="prohibited_destination",
+            message=url_err,
+            valid=False,
+            tool_diagnostics=CloudToolCallDiagnostic(),
+        )
 
-    Verifies:
-    1. Schema submission with tools and tool_choice='auto'
-    2. Tool call emission by model
-    3. Proper JSON argument serialization and parsing
-    4. Multi-turn continuation feeding tool result back to model
-    5. Tool error recovery handling
-    6. Streaming tool calling compatibility
-    """
-    base = _normalize_base_url(api_base)
     chat_url = f"{base}/chat/completions"
     headers = _build_headers(api_key, extra_headers)
     ctx = _create_ssl_context()
@@ -560,7 +649,15 @@ def warmup_cloud_model(
     timeout: float = 12.0,
 ) -> CloudWarmupResponse:
     """Send a lightweight, harmless warmup request to trigger GPU shader / weights cache prefill."""
-    base = _normalize_base_url(api_base)
+    valid_url, base, url_err = _validate_provider_base_url(api_base)
+    if not valid_url:
+        return CloudWarmupResponse(
+            status="prohibited_destination",
+            message=url_err,
+            warmed=False,
+            latency_ms=0.0,
+        )
+
     chat_url = f"{base}/chat/completions"
     headers = _build_headers(api_key, extra_headers)
     ctx = _create_ssl_context()

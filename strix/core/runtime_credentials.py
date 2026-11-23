@@ -75,10 +75,13 @@ def set_runtime_credential(
     api_key: str,
     model: str | None = None,
     api_base: str | None = None,
+    sync_to_environ: bool = False,
 ) -> None:
-    """Register an authenticated runtime credential in-memory and update active runtime environment.
+    """Register an authenticated runtime credential in-memory.
 
-    Frontend-entered keys take precedence over placeholder or absent .env keys.
+    Fixes finding A05:
+    - Never mutates shared global os.environ['LLM_API_KEY'] across providers.
+    - Preserves per-run credential isolation.
     """
     prov = (provider or "openrouter").lower().strip()
     clean_key = (api_key or "").strip()
@@ -87,56 +90,99 @@ def set_runtime_credential(
         if clean_key and not is_placeholder_credential(clean_key):
             _RUNTIME_CREDENTIALS[prov] = clean_key
 
-            # Synchronize to os.environ so LiteLLM and child subprocesses receive credentials
-            if prov == "openrouter":
-                os.environ["OPENROUTER_API_KEY"] = clean_key
-                os.environ["LLM_API_KEY"] = clean_key
-                os.environ["OPENAI_API_KEY"] = clean_key
-                os.environ["STRIX_LLM_PROVIDER"] = "openrouter"
-            elif prov == "anthropic":
-                os.environ["ANTHROPIC_API_KEY"] = clean_key
-                os.environ["LLM_API_KEY"] = clean_key
-                os.environ["STRIX_LLM_PROVIDER"] = "anthropic"
-            elif prov == "google":
-                os.environ["GEMINI_API_KEY"] = clean_key
-                os.environ["LLM_API_KEY"] = clean_key
-                os.environ["STRIX_LLM_PROVIDER"] = "google"
-            elif prov == "openai":
-                os.environ["OPENAI_API_KEY"] = clean_key
-                os.environ["LLM_API_KEY"] = clean_key
-                os.environ["STRIX_LLM_PROVIDER"] = "openai"
-            elif prov in ("cloud_hosted", "custom_cloud", "custom"):
-                os.environ["OPENAI_API_KEY"] = clean_key
-                os.environ["LLM_API_KEY"] = clean_key
-                os.environ["STRIX_LLM_PROVIDER"] = "cloud_hosted"
+            # Only set provider-specific env vars if sync_to_environ is explicitly requested
+            if sync_to_environ:
+                if prov == "openrouter":
+                    os.environ["OPENROUTER_API_KEY"] = clean_key
+                elif prov == "anthropic":
+                    os.environ["ANTHROPIC_API_KEY"] = clean_key
+                elif prov == "google":
+                    os.environ["GEMINI_API_KEY"] = clean_key
+                elif prov == "openai":
+                    os.environ["OPENAI_API_KEY"] = clean_key
 
         if api_base and str(api_base).strip():
             clean_base = str(api_base).strip().rstrip("/")
             _RUNTIME_BASE_URLS[prov] = clean_base
-            if prov in ("cloud_hosted", "custom_cloud", "custom"):
-                os.environ["OPENAI_BASE_URL"] = clean_base
-                os.environ["LLM_API_BASE"] = clean_base
-            elif prov == "ollama":
-                os.environ["OLLAMA_API_BASE"] = clean_base
-                os.environ["OLLAMA_HOST"] = clean_base
+            if sync_to_environ:
+                if prov in ("cloud_hosted", "custom_cloud", "custom"):
+                    os.environ["OPENAI_BASE_URL"] = clean_base
+                elif prov == "ollama":
+                    os.environ["OLLAMA_API_BASE"] = clean_base
 
         if model and str(model).strip():
             clean_model = str(model).strip()
             _RUNTIME_MODELS[prov] = clean_model
-            from strix.llm.router import format_openrouter_model
+            if sync_to_environ:
+                from strix.llm.router import format_openrouter_model
 
-            if prov == "openrouter":
-                os.environ["STRIX_LLM"] = format_openrouter_model(clean_model)
-            else:
-                os.environ["STRIX_LLM"] = clean_model
+                if prov == "openrouter":
+                    os.environ["STRIX_LLM"] = format_openrouter_model(clean_model)
+                else:
+                    os.environ["STRIX_LLM"] = clean_model
 
-        # Invalidate memoized Settings in loader so new load_settings() calls reflect changes
         try:
             from strix.config import loader
 
             loader._cached = None
         except Exception:
             pass
+
+
+def build_isolated_subprocess_env(
+    provider: str,
+    api_key: str | None = None,
+    model: str | None = None,
+    api_base: str | None = None,
+    base_env: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Build an isolated environment dictionary for a specific subprocess or run (A05 fix).
+
+    Ensures that parallel runs with different providers never leak keys or base URLs.
+    """
+    prov = (provider or "openrouter").lower().strip()
+    env = dict(base_env if base_env is not None else os.environ)
+
+    # Resolve active key specifically for this provider
+    key = api_key or get_runtime_credential(prov)
+    if key and not is_placeholder_credential(key):
+        env["LLM_API_KEY"] = key
+        if prov == "openrouter":
+            env["OPENROUTER_API_KEY"] = key
+            env["STRIX_LLM_PROVIDER"] = "openrouter"
+        elif prov == "anthropic":
+            env["ANTHROPIC_API_KEY"] = key
+            env["STRIX_LLM_PROVIDER"] = "anthropic"
+        elif prov == "google":
+            env["GEMINI_API_KEY"] = key
+            env["STRIX_LLM_PROVIDER"] = "google"
+        elif prov == "openai":
+            env["OPENAI_API_KEY"] = key
+            env["STRIX_LLM_PROVIDER"] = "openai"
+        elif prov in ("cloud_hosted", "custom_cloud", "custom"):
+            env["OPENAI_API_KEY"] = key
+            env["STRIX_LLM_PROVIDER"] = "cloud_hosted"
+
+    base = api_base or get_runtime_base_url(prov)
+    if base:
+        if prov in ("cloud_hosted", "custom_cloud", "custom"):
+            env["OPENAI_BASE_URL"] = base
+            env["LLM_API_BASE"] = base
+        elif prov == "ollama":
+            env["OLLAMA_API_BASE"] = base
+            env["OLLAMA_HOST"] = base
+
+    mdl = model or _RUNTIME_MODELS.get(prov)
+    if mdl:
+        from strix.llm.router import format_openrouter_model
+
+        if prov == "openrouter":
+            env["STRIX_LLM"] = format_openrouter_model(mdl)
+        else:
+            env["STRIX_LLM"] = mdl
+
+    env["STRIX_NO_PERSIST_CONFIG"] = "1"
+    return env
 
 
 def set_runtime_base_url(provider: str, base_url: str) -> None:
@@ -202,22 +248,23 @@ def get_runtime_credential(
         if mem_key and not is_placeholder_credential(mem_key):
             return mem_key
 
-    # 3. System environment variables
+    # 3. System environment variables (strictly provider-specific to prevent cross-leakage, A05 fix)
     env_key: str | None = None
     if prov == "openrouter":
-        env_key = (
-            os.environ.get("OPENROUTER_API_KEY")
-            or os.environ.get("LLM_API_KEY")
-            or os.environ.get("OPENAI_API_KEY")
-        )
+        env_key = os.environ.get("OPENROUTER_API_KEY")
     elif prov == "anthropic":
-        env_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("LLM_API_KEY")
+        env_key = os.environ.get("ANTHROPIC_API_KEY")
     elif prov == "google":
-        env_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("LLM_API_KEY")
+        env_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     elif prov == "openai":
-        env_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
-    else:
-        env_key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        env_key = os.environ.get("OPENAI_API_KEY")
+    elif prov in ("cloud_hosted", "custom_cloud", "custom"):
+        env_key = os.environ.get("CUSTOM_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
+
+    if not env_key:
+        active_prov = (os.environ.get("STRIX_LLM_PROVIDER") or "").lower().strip()
+        if active_prov == prov:
+            env_key = os.environ.get("LLM_API_KEY")
 
     if env_key and not is_placeholder_credential(env_key):
         return env_key
@@ -226,15 +273,20 @@ def get_runtime_credential(
     cli_cfg = _read_strix_cli_config()
     cli_key: str | None = None
     if prov == "openrouter":
-        cli_key = cli_cfg.get("OPENROUTER_API_KEY") or cli_cfg.get("LLM_API_KEY")
+        cli_key = cli_cfg.get("OPENROUTER_API_KEY")
     elif prov == "anthropic":
-        cli_key = cli_cfg.get("ANTHROPIC_API_KEY") or cli_cfg.get("LLM_API_KEY")
+        cli_key = cli_cfg.get("ANTHROPIC_API_KEY")
     elif prov == "google":
-        cli_key = cli_cfg.get("GEMINI_API_KEY") or cli_cfg.get("LLM_API_KEY")
+        cli_key = cli_cfg.get("GEMINI_API_KEY")
     elif prov == "openai":
-        cli_key = cli_cfg.get("OPENAI_API_KEY") or cli_cfg.get("LLM_API_KEY")
-    else:
-        cli_key = cli_cfg.get("LLM_API_KEY") or cli_cfg.get("OPENAI_API_KEY")
+        cli_key = cli_cfg.get("OPENAI_API_KEY")
+    elif prov in ("cloud_hosted", "custom_cloud", "custom"):
+        cli_key = cli_cfg.get("CUSTOM_LLM_API_KEY") or cli_cfg.get("OPENAI_API_KEY")
+
+    if not cli_key:
+        active_prov = (cli_cfg.get("STRIX_LLM_PROVIDER") or "").lower().strip()
+        if active_prov == prov:
+            cli_key = cli_cfg.get("LLM_API_KEY")
 
     if cli_key and not is_placeholder_credential(cli_key):
         return cli_key

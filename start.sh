@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -d, --daemon, --background  Run server in the background (default)"
             echo "  -f, --foreground            Run server in foreground"
             echo "  -p, --port <port>           Listen port (default: 8000 or STRIX_WEB_PORT)"
-            echo "  -h, --host <host>           Listen host (default: 0.0.0.0 or STRIX_WEB_HOST)"
+            echo "  -h, --host <host>           Listen host (default: 127.0.0.1 or STRIX_WEB_HOST)"
             exit 0
             ;;
         *)
@@ -100,7 +100,7 @@ if [ -f ".env" ]; then
 fi
 
 # Determine host and port
-HOST="${HOST_ARG:-${STRIX_WEB_HOST:-0.0.0.0}}"
+HOST="${HOST_ARG:-${STRIX_WEB_HOST:-127.0.0.1}}"
 PORT="${PORT_ARG:-${STRIX_WEB_PORT:-8000}}"
 
 # Activate virtualenv python

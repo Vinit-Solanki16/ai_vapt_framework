@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import subprocess
 import sys
 import threading
@@ -30,7 +31,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
-from fastapi import BackgroundTasks, Body, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +39,18 @@ from fastapi.staticfiles import StaticFiles
 from strix.core import gap_bridge
 from strix.core.paths import runs_base_dir
 from strix.core.triage.owasp_mapping import map_finding_to_owasp
+from strix.interface.auth import (
+    SESSION_COOKIE_NAME,
+    _is_loopback_client,
+    _load_or_create_operator_credentials,
+    create_session,
+    delete_session,
+    get_current_user_or_none,
+    get_session,
+    require_admin,
+    require_operator,
+    require_viewer,
+)
 from strix.interface.readiness import RuntimeReadinessResponse, check_runtime_readiness
 from strix.interface.schemas import (
     AnthropicValidateResponse,
@@ -79,11 +92,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# P0.2 CORS Hardening: Disallow wildcard origins with credentials
+allowed_origins_env = os.getenv("AI_VAPT_ALLOWED_ORIGINS") or os.getenv("STRIX_ALLOWED_ORIGINS")
+if allowed_origins_env:
+    ALLOWED_ORIGINS = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -1438,8 +1463,24 @@ def _sync_run_counters(run_entry: dict[str, Any]) -> None:
 
 @asynccontextmanager
 async def _app_lifespan(app_instance: FastAPI):
-    """Load persistent runs from disk on server startup."""
+    """Load persistent runs from disk and run safe Docker cleanup on server startup."""
     _load_runs_from_disk()
+    try:
+        from strix.runtime.docker_cleanup import reap_orphaned_containers_async
+
+        active_ids = {
+            rid
+            for rid, r in _RUNS.items()
+            if r.get("status") in ("running", "resuming", "starting")
+        }
+        # D03 fix: preserve running containers by default across restarts
+        reap_res = await reap_orphaned_containers_async(
+            active_run_ids=active_ids, dry_run=False, preserve_running=True
+        )
+        if reap_res.get("reaped", 0) > 0:
+            logger.info("Startup Docker cleanup reaped %d exited orphaned containers", reap_res["reaped"])
+    except Exception:
+        logger.debug("Startup Docker cleanup skipped", exc_info=True)
     yield
 
 
@@ -1447,12 +1488,112 @@ app.router.lifespan_context = _app_lifespan
 
 
 @app.get("/", response_class=FileResponse)
-async def serve_index():
-    """Serve the Single Page Application index.html."""
+async def serve_index(request: Request, response: Response):
+    """Serve the Single Page Application index.html with automatic loopback session bootstrap."""
     index_file = WEB_DIR / "index.html"
     if not index_file.is_file():
         raise HTTPException(status_code=404, detail="Web console assets not found")
-    return FileResponse(str(index_file), media_type="text/html")
+
+    from strix.interface.auth import (
+        SESSION_COOKIE_NAME,
+        _is_loopback_client,
+        create_session,
+        get_session,
+    )
+
+    resp = FileResponse(str(index_file), media_type="text/html")
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    session = get_session(session_id)
+    if not session and _is_loopback_client(request):
+        auto_sess = create_session(role="admin", user_id="local_operator")
+        resp.set_cookie(
+            SESSION_COOKIE_NAME,
+            auto_sess["session_id"],
+            httponly=True,
+            samesite="lax",
+            max_age=86400,
+        )
+    return resp
+
+
+@app.get("/auth/status")
+async def auth_status(
+    request: Request,
+    user: dict[str, Any] | None = Depends(get_current_user_or_none),
+):
+    """Return caller authentication status, role, and CSRF token."""
+    if user:
+        return {
+            "authenticated": True,
+            "user": user.get("user_id"),
+            "role": user.get("role"),
+            "csrf_token": user.get("csrf_token"),
+            "auth_method": user.get("auth_method"),
+        }
+    return {
+        "authenticated": False,
+        "user": None,
+        "role": "anonymous",
+        "csrf_token": None,
+        "auth_method": "none",
+    }
+
+
+@app.post("/auth/login")
+async def auth_login(req: dict[str, Any], response: Response):
+    """Login using operator or admin API key to establish a web session."""
+    key = str(req.get("key") or req.get("api_key") or req.get("token") or "").strip()
+    creds = _load_or_create_operator_credentials()
+    role = None
+    if key and secrets.compare_digest(key, creds.get("admin_key", "")):
+        role = "admin"
+    elif key and secrets.compare_digest(key, creds.get("operator_key", "")):
+        role = "operator"
+    elif key and secrets.compare_digest(key, creds.get("viewer_key", "")):
+        role = "viewer"
+
+    if not role:
+        raise HTTPException(status_code=401, detail="Invalid operator credential key.")
+
+    sess = create_session(role=role, user_id=f"user_{role}")
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        sess["session_id"],
+        httponly=True,
+        samesite="lax",
+        max_age=86400,
+    )
+    return {"authenticated": True, "role": role, "csrf_token": sess["csrf_token"]}
+
+
+@app.post("/auth/logout")
+async def auth_logout(request: Request, response: Response):
+    """Terminate the active web session and clear session cookie."""
+    sess_id = request.cookies.get(SESSION_COOKIE_NAME)
+    delete_session(sess_id)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return {"status": "logged_out"}
+
+
+@app.post("/system/docker/cleanup")
+async def trigger_docker_cleanup(
+    dry_run: bool = True,
+    preserve_running: bool = True,
+    force_running_reap: bool = False,
+    user: dict[str, Any] = Depends(require_admin),
+):
+    """Safely reap orphaned AI-VAPT sandbox containers (restricted to admin, D03 fix)."""
+    from strix.runtime.docker_cleanup import reap_orphaned_containers_async
+
+    active_ids = {
+        rid for rid, r in _RUNS.items() if r.get("status") in ("running", "resuming", "starting")
+    }
+    return await reap_orphaned_containers_async(
+        active_run_ids=active_ids,
+        dry_run=dry_run,
+        preserve_running=preserve_running,
+        force_running_reap=force_running_reap,
+    )
 
 
 @app.get("/health")
@@ -1630,6 +1771,7 @@ async def validate_google_provider(
     request: Request,
     body: dict[str, Any] | None = None,
     x_google_api_key: str | None = Header(None, alias="X-Google-API-Key"),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Validate runtime Google Gemini API key in-memory without disk persistence."""
     from strix.core.runtime_credentials import get_runtime_credential, set_runtime_credential
@@ -1669,6 +1811,7 @@ async def validate_openrouter_provider(
     request: Request,
     body: dict[str, Any] | None = None,
     x_openrouter_api_key: str | None = Header(None, alias="X-OpenRouter-API-Key"),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Validate runtime OpenRouter API key in-memory without disk persistence."""
     from strix.core.runtime_credentials import get_runtime_credential, set_runtime_credential
@@ -1712,6 +1855,7 @@ async def validate_anthropic_provider(
     request: Request,
     body: dict[str, Any] | None = None,
     x_anthropic_api_key: str | None = Header(None, alias="X-Anthropic-API-Key"),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Validate runtime Anthropic Claude API key in-memory without disk persistence."""
     from strix.core.runtime_credentials import get_runtime_credential, set_runtime_credential
@@ -1740,7 +1884,10 @@ async def validate_anthropic_provider(
 
 
 @app.post("/providers/ollama/validate", response_model=OllamaValidateResponse)
-async def validate_ollama_provider(body: dict[str, Any] | None = None):
+async def validate_ollama_provider(
+    body: dict[str, Any] | None = None,
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Probe local Ollama daemon and discover installed models."""
     base_url = (body.get("api_base") if body else None) or (body.get("base_url") if body else None)
     from strix.llm.provider_validation import validate_ollama_service
@@ -1749,7 +1896,10 @@ async def validate_ollama_provider(body: dict[str, Any] | None = None):
 
 
 @app.post("/providers/custom/validate", response_model=CustomEndpointValidateResponse)
-async def validate_custom_provider(body: dict[str, Any] | None = None):
+async def validate_custom_provider(
+    body: dict[str, Any] | None = None,
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Validate custom OpenAI-compatible endpoint and model."""
     base_url = (
         (body.get("api_base") if body else None)
@@ -1774,6 +1924,7 @@ async def validate_custom_provider(body: dict[str, Any] | None = None):
 async def validate_openai_provider(
     body: dict[str, Any] | None = None,
     x_api_key: str | None = Header(None, alias="Authorization"),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Validate OpenAI-compatible endpoint reachability and available models."""
     from strix.core.runtime_credentials import get_runtime_credential, set_runtime_credential
@@ -1974,7 +2125,7 @@ async def list_provider_models(provider: str):
 
 
 @app.get("/settings/llm")
-async def get_llm_settings():
+async def get_llm_settings(user: dict[str, Any] = Depends(require_admin)):
     """Retrieve currently active and persisted LLM configuration."""
     from strix.core.runtime_credentials import get_runtime_credential, get_runtime_model
 
@@ -2040,7 +2191,10 @@ async def get_llm_settings():
 
 
 @app.post("/settings/llm")
-async def update_llm_settings(payload: dict[str, Any] = Body(...)):
+async def update_llm_settings(
+    payload: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_admin),
+):
     """Save LLM configuration to ~/.strix/cli-config.json and update runtime environment."""
     from strix.core.runtime_credentials import set_runtime_base_url, set_runtime_credential
 
@@ -2175,14 +2329,17 @@ async def update_llm_settings(payload: dict[str, Any] = Body(...)):
 
 
 @app.get("/providers/cloud_hosted/profiles", response_model=list[CloudHostedProfileSafe])
-async def list_cloud_profiles():
+async def list_cloud_profiles(user: dict[str, Any] = Depends(require_viewer)):
     """List all saved Cloud Hosted provider profiles (safe, with credentials masked)."""
     profiles = _get_cloud_profiles()
     return [_profile_to_safe(p) for p in profiles]
 
 
 @app.post("/providers/cloud_hosted/profiles", response_model=CloudHostedProfileSafe)
-async def create_or_update_cloud_profile(profile: CloudHostedProfile):
+async def create_or_update_cloud_profile(
+    profile: CloudHostedProfile,
+    user: dict[str, Any] = Depends(require_admin),
+):
     """Save or update a Cloud Hosted provider profile."""
     data = profile.model_dump()
     saved = _save_cloud_profile(data)
@@ -2205,7 +2362,10 @@ async def create_or_update_cloud_profile(profile: CloudHostedProfile):
 
 
 @app.delete("/providers/cloud_hosted/profiles/{profile_id}")
-async def delete_cloud_profile_endpoint(profile_id: str):
+async def delete_cloud_profile_endpoint(
+    profile_id: str,
+    user: dict[str, Any] = Depends(require_admin),
+):
     """Delete a saved Cloud Hosted provider profile."""
     success = _delete_cloud_profile(profile_id)
     if not success:
@@ -2216,7 +2376,10 @@ async def delete_cloud_profile_endpoint(profile_id: str):
 @app.post(
     "/providers/cloud_hosted/profiles/{profile_id}/activate", response_model=CloudHostedProfileSafe
 )
-async def activate_cloud_profile_endpoint(profile_id: str):
+async def activate_cloud_profile_endpoint(
+    profile_id: str,
+    user: dict[str, Any] = Depends(require_admin),
+):
     """Set the specified Cloud Hosted profile as active."""
     profile = _set_active_cloud_profile(profile_id)
     if not profile:
@@ -2239,7 +2402,10 @@ async def activate_cloud_profile_endpoint(profile_id: str):
 
 
 @app.post("/providers/cloud_hosted/models")
-async def discover_cloud_models_endpoint(body: dict[str, Any] = Body(...)):
+async def discover_cloud_models_endpoint(
+    body: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Dynamically discover models on the cloud hosted OpenAI-compatible endpoint."""
     api_base = (body.get("api_base") or "").strip()
     api_key = (body.get("api_key") or "").strip()
@@ -2260,7 +2426,10 @@ async def discover_cloud_models_endpoint(body: dict[str, Any] = Body(...)):
 
 
 @app.post("/providers/cloud_hosted/validate", response_model=CloudTestConnectionResponse)
-async def validate_cloud_connection_endpoint(body: dict[str, Any] = Body(...)):
+async def validate_cloud_connection_endpoint(
+    body: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Test connection reachability, chat completion, and latency diagnostics."""
     api_base = (body.get("api_base") or "").strip()
     model = (body.get("model") or "").strip()
@@ -2284,7 +2453,10 @@ async def validate_cloud_connection_endpoint(body: dict[str, Any] = Body(...)):
 
 
 @app.post("/providers/cloud_hosted/verify_tools", response_model=CloudVerifyToolsResponse)
-async def verify_cloud_tools_endpoint(body: dict[str, Any] = Body(...)):
+async def verify_cloud_tools_endpoint(
+    body: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Verify structured function/tool calling compatibility for autonomous Strix agents."""
     api_base = (body.get("api_base") or "").strip()
     model = (body.get("model") or "").strip()
@@ -2308,7 +2480,10 @@ async def verify_cloud_tools_endpoint(body: dict[str, Any] = Body(...)):
 
 
 @app.post("/providers/cloud_hosted/warmup", response_model=CloudWarmupResponse)
-async def warmup_cloud_endpoint(body: dict[str, Any] = Body(...)):
+async def warmup_cloud_endpoint(
+    body: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Manual model warm-up action to prime inference cache."""
     api_base = (body.get("api_base") or "").strip()
     model = (body.get("model") or "").strip()
@@ -4377,15 +4552,25 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     engine_run_name,
                 ]
             custom_instruction = getattr(req, "instruction", None) or ""
+            secrets_to_mask: list[str] = []
+            if key and len(str(key)) > 4:
+                secrets_to_mask.append(str(key))
+            if cloud_key and len(str(cloud_key)) > 4 and str(cloud_key) != "none":
+                secrets_to_mask.append(str(cloud_key))
+
             if auth_session and auth_session.authenticated:
-                sub_env["STRIX_AUTH_TOKEN"] = auth_session.token or ""
+                tok = auth_session.token or ""
+                sub_env["STRIX_AUTH_TOKEN"] = tok
+                sub_env["STRIX_TARGET_AUTH_TOKEN"] = tok
                 sub_env["STRIX_AUTH_HEADER"] = auth_session.header_name or "Authorization"
                 sub_env["STRIX_AUTH_USERNAME"] = auth_session.username or ""
                 sub_env["STRIX_AUTH_ROLE"] = auth_session.role or "customer"
+                if tok and len(tok) > 4:
+                    secrets_to_mask.append(tok)
                 auth_note = (
                     f"Authentication verified for target {sandbox_target_url}.\n"
                     f"Test Account: {auth_session.username} (Role: {auth_session.role or 'customer'}).\n"
-                    f"Include 'Authorization: Bearer {auth_session.token}' for authenticated endpoints like /api/Users and /api/BasketItems.\n"
+                    f"Authenticated session available via environment: use header '${auth_session.header_name or 'Authorization'}: Bearer <redacted>' for authenticated endpoints. Refer to env var STRIX_AUTH_TOKEN.\n"
                     f"Never disclose raw credential strings or unredacted tokens in report outputs."
                 )
                 custom_instruction = f"{custom_instruction}\n\n{auth_note}".strip()
@@ -4430,12 +4615,20 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     run_entry["last_progress_at"] = _utc_now()
                     return current_turn
 
+            def _mask_line(line: str) -> str:
+                if not line or not secrets_to_mask:
+                    return line
+                for s in secrets_to_mask:
+                    if s and s in line:
+                        line = line.replace(s, "[REDACTED]")
+                return line
+
             # Background reader for stdout
             def _drain_stdout(pipe):
                 nonlocal underlying_run_name, productive_turns, last_progress_time
                 try:
                     for raw_out in iter(pipe.readline, ""):
-                        clean_out = ansi_re.sub("", raw_out).strip()
+                        clean_out = _mask_line(ansi_re.sub("", raw_out).strip())
                         if not clean_out:
                             continue
                         last_stdout_lines.append(clean_out)
@@ -4488,7 +4681,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             def _drain_stderr(pipe):
                 try:
                     for raw_err in iter(pipe.readline, ""):
-                        clean_err = ansi_re.sub("", raw_err).strip()
+                        clean_err = _mask_line(ansi_re.sub("", raw_err).strip())
                         if clean_err:
                             stderr_lines.append(clean_err)
                             if len(stderr_lines) > 50:
@@ -6549,11 +6742,13 @@ async def create_run(
     x_openrouter_api_key: str | None = Header(None, alias="X-OpenRouter-API-Key"),
     x_anthropic_api_key: str | None = Header(None, alias="X-Anthropic-API-Key"),
     x_openai_api_key: str | None = Header(None, alias="X-OpenAI-API-Key"),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Launch a new assessment run in the background."""
     global _CURRENT_ACTIVE_RUN_ID
     if req.mode in ("web", "autonomous", "web_controlled", "lightweight", "in_process"):
-        if not (req.target_url or req.target):
+        target_candidate = req.target_url or req.target
+        if not target_candidate:
             raise HTTPException(
                 status_code=400,
                 detail="Target URL is required for live security assessment.",
@@ -6562,6 +6757,18 @@ async def create_run(
             raise HTTPException(
                 status_code=400,
                 detail="Explicit operator scope acknowledgement is required to assess target.",
+            )
+        from strix.core.safety.scope_validator import validate_web_target
+
+        scope_res = validate_web_target(
+            target_candidate,
+            operator_scope_confirmed=req.target_scope_acknowledged,
+            engagement_id=req.engagement_id,
+        )
+        if not scope_res.authorized:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Target '{target_candidate}' is not authorized. {scope_res.message}",
             )
 
     if req.mode == "autonomous":
@@ -6784,7 +6991,10 @@ async def create_run(
 
 
 @app.post("/runs/{run_id}/stop")
-async def stop_run(run_id: str):
+async def stop_run(
+    run_id: str,
+    user: dict[str, Any] = Depends(require_operator),
+):
     """Gracefully abort or stop a running assessment."""
     run = _RUNS.get(run_id)
     if not run:
@@ -6828,7 +7038,7 @@ async def stop_run(run_id: str):
 
 
 @app.get("/runs")
-async def list_runs():
+async def list_runs(user: dict[str, Any] = Depends(require_viewer)):
     """List recent runs from memory and persistent disk store."""
     _load_runs_from_disk()
     runs = list(_RUNS.values())
@@ -6837,7 +7047,10 @@ async def list_runs():
 
 
 @app.get("/runs/{run_id}", response_model=RunStatus)
-async def get_run_status(run_id: str):
+async def get_run_status(
+    run_id: str,
+    user: dict[str, Any] = Depends(require_viewer),
+):
     """Retrieve detailed state, decision trace, and candidates for a run."""
     run = _RUNS.get(run_id)
     if not run:
@@ -6893,6 +7106,7 @@ async def resume_run(
     run_id: str,
     background_tasks: BackgroundTasks,
     req: ResumeRunRequest | None = None,
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Resume an interrupted, provider-blocked, or partial assessment."""
     from strix.core.runtime_credentials import (
@@ -7009,7 +7223,12 @@ async def resume_run(
 
 
 @app.get("/runs/{run_id}/stream")
-async def stream_run_events(run_id: str, request: Request, after_seq: int = 0):
+async def stream_run_events(
+    run_id: str,
+    request: Request,
+    after_seq: int = 0,
+    user: dict[str, Any] = Depends(require_viewer),
+):
     """Stream live assessment events, terminal traces, and state updates via SSE with monotonic sequence IDs."""
     run = _RUNS.get(run_id)
     if not run:
@@ -7152,6 +7371,7 @@ async def get_run_report(
     run_id: str,
     format: str = "json",
     download: bool | None = False,
+    user: dict[str, Any] = Depends(require_viewer),
 ):
     """Generate or retrieve assessment report (HTML, JSON, PDF, SARIF, or Markdown)."""
     run = _RUNS.get(run_id)
@@ -7292,13 +7512,16 @@ async def get_run_report(
 
 
 @app.get("/engagements")
-async def list_engagements():
+async def list_engagements(user: dict[str, Any] = Depends(require_viewer)):
     """List authorized engagement profiles."""
     return list(_ENGAGEMENTS.values())
 
 
 @app.post("/engagements")
-async def create_engagement(profile: dict[str, Any] = Body(...)):
+async def create_engagement(
+    profile: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_admin),
+):
     """Create a new authorized engagement profile."""
     eng_id = profile.get("id") or f"eng-{uuid.uuid4().hex[:6]}"
     profile["id"] = eng_id

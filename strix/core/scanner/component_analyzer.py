@@ -103,9 +103,9 @@ def analyze_page_components(
     components: list[dict[str, Any]] = []
     seen = set()
 
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    from strix.core.safety.http_transport import create_scanner_ssl_context
+
+    ctx = create_scanner_ssl_context()
 
     # 1. Extract script tags
     script_srcs = re.findall(r'<script\b[^>]*\bsrc=["\']([^"\']+)["\']', html_body, re.IGNORECASE)
