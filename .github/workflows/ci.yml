@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+      - ai-vapt-full-application
+      - ai-vapt-release
+      - "fix/*"
   workflow_dispatch:
 
 permissions:
