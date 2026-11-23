@@ -214,12 +214,11 @@ def enrich_candidates_from_execution(
             or cand.get("timestamp")
             or _utc_now()
         )
-        cand["dispatched"] = True
-
         exec_calls = [c for c in matched_calls if c["name"] == "exec_command"]
         primary = exec_calls[-1] if exec_calls else (matched_calls[0] if matched_calls else None)
 
         if primary:
+            cand["dispatched"] = True
             call_id = primary["call_id"]
             cand["tool_selected"] = primary["name"]
             cand["tool_invocation_id"] = call_id
@@ -250,11 +249,15 @@ def enrich_candidates_from_execution(
                 cand["http_status"] = (
                     200 if "Process exited with code 0" in primary["output"] else None
                 )
-        elif not cand.get("tool_selected"):
-            cand["tool_selected"] = "exec_command"
-            cand["sanitized_request"] = f"curl -s http://target{endpoint}"
-            cand["tool_result"] = "Probe execution recorded in telemetry"
+        else:
+            # C04 Fix: Do not fabricate synthetic curl commands or fake execution for unprobed candidates
+            cand["dispatched"] = False
+            cand["tool_selected"] = None
+            cand["tool_invocation_id"] = None
+            cand["sanitized_request"] = ""
+            cand["tool_result"] = ""
             cand["is_duplicate_association"] = False
+            cand["http_status"] = None
 
         # Check if an actual confirmed finding exists for this candidate
         cand_text = (
@@ -285,19 +288,12 @@ def enrich_candidates_from_execution(
             )
         )
 
+        # C06 Fix: Match candidate to finding strictly by exact candidate ID and explicit verified state
         has_verified_vuln = any(
             isinstance(f, dict)
-            and (
-                f.get("candidate_id") == cid
-                or (
-                    f.get("title")
-                    and (
-                        title in str(f.get("title", "")).lower()
-                        or str(f.get("title", "")).lower() in title
-                    )
-                )
-            )
-            and f.get("verified", True) is not False
+            and f.get("candidate_id") == cid
+            and f.get("verified") is True
+            and str(f.get("verification_state", "")).strip().lower() == "verified"
             for f in (findings or [])
         )
 
@@ -308,7 +304,7 @@ def enrich_candidates_from_execution(
             cand["evidence_detail"] = cov_match.get("evidence", "")
             cov_outcome = cov_match.get("outcome", "")
             cand["verification_procedure"] = (
-                f"Empirical HTTP probe and negative space ledger verification via {cand['tool_selected']}"
+                f"Empirical HTTP probe and negative space ledger verification via {cand.get('tool_selected') or 'passive'}"
             )
             if cov_outcome in ("no_issue_found", "ruled_out"):
                 cand["verification_contract"] = "VAPT Negative Proof Contract (Non-Vulnerable)"
@@ -341,16 +337,29 @@ def enrich_candidates_from_execution(
                 f"Negative outcome recorded: {po_match.get('detail', '')[:120]}"
             )
 
-        # Specific CORS verification semantics
+        # C05 Fix: Specific CORS verification semantics — populate ONLY from actual observed headers
         if "cors" in cid or "cors" in title:
-            cand["cors_telemetry"] = {
-                "observed_header": "Access-Control-Allow-Origin: *",
-                "credentials_supported": False,
-                "sensitive_authenticated_data_accessible": False,
-                "browser_behavior_tested": True,
-                "actual_impact_evidence": "Wildcard origin header observed on public unauthenticated endpoints; Access-Control-Allow-Credentials flag absent.",
-                "untested_aspects": "Cross-origin requests with authenticated session cookies were not executed.",
-            }
+            observed_out = (primary.get("output", "") if primary else "") or str(cand.get("evidence", ""))
+            cors_header_match = re.search(r"(access-control-allow-[a-z\-]+:\s*[^\r\n]+)", observed_out, re.I)
+            if cors_header_match:
+                observed_cors = cors_header_match.group(1).strip()
+                cand["cors_telemetry"] = {
+                    "observed_header": observed_cors,
+                    "credentials_supported": "access-control-allow-credentials: true" in observed_out.lower(),
+                    "sensitive_authenticated_data_accessible": False,
+                    "browser_behavior_tested": bool(primary and "exec_command" in str(primary.get("name"))),
+                    "actual_impact_evidence": f"Observed header '{observed_cors}' from target response.",
+                    "untested_aspects": "Cross-origin requests with authenticated session cookies were not executed.",
+                }
+            else:
+                cand["cors_telemetry"] = {
+                    "observed_header": None,
+                    "credentials_supported": False,
+                    "sensitive_authenticated_data_accessible": False,
+                    "browser_behavior_tested": False,
+                    "actual_impact_evidence": "No CORS headers observed in target response.",
+                    "untested_aspects": "Target did not emit Access-Control headers in probed response.",
+                }
 
         # Attempt and retry accounting
         raw_att = cand.get("attempts", 0)

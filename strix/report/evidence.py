@@ -14,7 +14,10 @@ import datetime as _dt
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
+import re
+import tempfile
 from typing import Any
 
 
@@ -41,11 +44,14 @@ def record_authentic_evidence(
     raw_snippet: str | None = None,
     evidence_type: str = "http_exchange",
     title: str = "",
+    target: str = "",
 ) -> dict[str, Any]:
     """Store authentic evidence artifact on disk and compute its genuine SHA-256 hash.
 
-    Returns evidence metadata dictionary to attach to finding records.
-    Never generates a successful hash if no evidence content exists.
+    Enforces C07, C08, and C13:
+    - Path containment and finding ID sanitization to prevent traversal outside evidence dir.
+    - Versioned canonical evidence envelope hashing request, response, tool, target, and timestamp.
+    - Atomic write with tempfile and sync; returns evidence_intact=False on write failure.
     """
     primary_content = response_data or raw_snippet or request_data
     if not primary_content or not str(primary_content).strip():
@@ -59,42 +65,87 @@ def record_authentic_evidence(
             "evidence_intact": False,
         }
 
-    if isinstance(primary_content, str):
-        ev_bytes = primary_content.encode("utf-8")
-    else:
-        ev_bytes = bytes(primary_content)
+    # C08 Fix: Path containment & finding ID sanitization
+    safe_finding_id = re.sub(r"[^a-zA-Z0-9_\-]", "_", str(finding_id or "finding"))
+    rel_path = f"evidence/{safe_finding_id}_evidence.txt"
 
-    ev_hash = hashlib.sha256(ev_bytes).hexdigest()
-    ev_size = len(ev_bytes)
+    # C13 Fix: Canonical versioned evidence envelope covering complete interaction
+    captured_at = _utc_now()
+    envelope = {
+        "version": "1.0",
+        "finding_id": safe_finding_id,
+        "title": str(title or ""),
+        "target": str(target or ""),
+        "evidence_type": str(evidence_type or "http_exchange"),
+        "request": str(request_data) if request_data else "",
+        "response": str(response_data or raw_snippet or ""),
+        "captured_at": captured_at,
+    }
+    canonical_bytes = json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ev_hash = hashlib.sha256(canonical_bytes).hexdigest()
+    ev_size = len(canonical_bytes)
 
-    # Persist artifact file to run_dir/evidence/
-    evidence_dir = run_dir / "evidence"
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-    rel_path = f"evidence/{finding_id}_evidence.txt"
-    evidence_file = run_dir / rel_path
-
+    # C07 Fix: Atomic write to avoid partial or corrupted writes
+    evidence_written = False
     try:
-        evidence_file.write_bytes(ev_bytes)
-        # Store metadata sidecar
-        meta_file = evidence_dir / f"{finding_id}_meta.json"
-        meta_file.write_text(
-            json.dumps(
-                {
-                    "finding_id": finding_id,
-                    "title": title,
-                    "evidence_hash": ev_hash,
-                    "evidence_size": ev_size,
-                    "evidence_type": evidence_type,
-                    "evidence_file": rel_path,
-                    "captured_at": _utc_now(),
-                    "request": str(request_data) if request_data else None,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+        evidence_dir = (run_dir / "evidence").resolve()
+        evidence_file = (run_dir / rel_path).resolve()
+        if not evidence_file.is_relative_to(evidence_dir):
+            logger.error("Path traversal attempt detected for finding_id '%s'", finding_id)
+            return {
+                "evidence_hash": None,
+                "evidence_size": 0,
+                "evidence_file": None,
+                "evidence_type": "traversal_rejected",
+                "evidence_hash_type": "error",
+                "evidence_timestamp": _utc_now(),
+                "evidence_intact": False,
+            }
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("wb", dir=evidence_dir, delete=False) as tf:
+            tf.write(canonical_bytes)
+            tf.flush()
+            os.fsync(tf.fileno())
+            temp_path = Path(tf.name)
+        temp_path.replace(evidence_file)
+
+        # Write metadata sidecar atomically
+        meta_file = (evidence_dir / f"{safe_finding_id}_meta.json").resolve()
+        meta_bytes = json.dumps(
+            {
+                "finding_id": safe_finding_id,
+                "title": title,
+                "evidence_hash": ev_hash,
+                "evidence_size": ev_size,
+                "evidence_type": evidence_type,
+                "evidence_file": rel_path,
+                "captured_at": captured_at,
+                "envelope": envelope,
+            },
+            indent=2,
+        ).encode("utf-8")
+        with tempfile.NamedTemporaryFile("wb", dir=evidence_dir, delete=False) as tf:
+            tf.write(meta_bytes)
+            tf.flush()
+            os.fsync(tf.fileno())
+            temp_meta = Path(tf.name)
+        temp_meta.replace(meta_file)
+
+        evidence_written = evidence_file.is_file() and evidence_file.stat().st_size == ev_size
     except Exception as exc:
         logger.warning("Failed to persist evidence artifact for %s: %s", finding_id, exc)
+        evidence_written = False
+
+    if not evidence_written:
+        return {
+            "evidence_hash": ev_hash,
+            "evidence_size": 0,
+            "evidence_file": None,
+            "evidence_type": evidence_type,
+            "evidence_hash_type": "authentic_sha256",
+            "evidence_timestamp": captured_at,
+            "evidence_intact": False,
+        }
 
     return {
         "evidence_hash": ev_hash,
@@ -102,7 +153,7 @@ def record_authentic_evidence(
         "evidence_file": rel_path,
         "evidence_type": evidence_type,
         "evidence_hash_type": "authentic_sha256",
-        "evidence_timestamp": _utc_now(),
+        "evidence_timestamp": captured_at,
         "evidence_intact": True,
     }
 

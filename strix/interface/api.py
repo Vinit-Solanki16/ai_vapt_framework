@@ -287,23 +287,15 @@ def _generate_markdown_report(run_data: dict[str, Any]) -> str:
     candidate_acct = run_data.get("candidate_accounting") or {}
 
     def _is_finding_verified(f: dict[str, Any]) -> bool:
+        # C12 Fix: Single canonical truth model across all serializers.
+        # A finding is confirmed/verified ONLY when explicitly verified.
+        # Never promote unverified candidates based on mere presence of a legacy hash or snippet.
         if (
             f.get("verified") is True
             or str(f.get("verification_state", "")).strip().lower() == "verified"
         ):
             return True
-        if f.get("verified") is False or str(f.get("verification_state", "")).strip().lower() in (
-            "unconfirmed",
-            "candidate",
-            "inconclusive",
-            "blocked",
-            "false_positive",
-            "under_investigation",
-            "discovered",
-        ):
-            return False
-        # Legacy record fallback: if finding carries cryptographic proof/snippet without negative flag
-        return bool(f.get("evidence_hash") or f.get("evidence_snippet"))
+        return False
 
     verified_findings = [f for f in findings if _is_finding_verified(f)]
     unconfirmed_candidates = [f for f in findings if not _is_finding_verified(f)]
