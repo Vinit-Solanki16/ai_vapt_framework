@@ -50,7 +50,9 @@ def get_engagement(engagement_id: str | None) -> dict[str, Any] | None:
         try:
             data = json.loads(ENGAGEMENT_FILE.read_text(encoding="utf-8"))
             if isinstance(data, dict) and eid in data:
-                return data[eid]
+                val = data[eid]
+                if isinstance(val, dict):
+                    return val
         except Exception as exc:
             logger.debug("Failed reading engagements file: %s", exc)
     return None

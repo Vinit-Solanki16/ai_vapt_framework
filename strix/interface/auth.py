@@ -197,7 +197,7 @@ async def get_current_user_or_none(
     return None
 
 
-def require_role(allowed_roles: set[str]):
+def require_role(allowed_roles: set[str]) -> Any:
     """FastAPI dependency factory enforcing specified RBAC roles."""
 
     async def _dependency(

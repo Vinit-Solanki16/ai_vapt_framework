@@ -90,6 +90,7 @@ class PivotEvent(BaseModel):
     pivot_status: str | None = None
     tool_invocation_id: str | None = None
     result: str | None = None
+    detail: str | None = None
     message: str | None = None
 
     @model_validator(mode="before")

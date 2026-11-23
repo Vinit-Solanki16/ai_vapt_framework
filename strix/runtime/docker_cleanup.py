@@ -46,7 +46,7 @@ def is_container_owned_by_app(container: Any) -> bool:
     """Return True only if the container possesses explicit AI-VAPT ownership labels."""
     try:
         # Check image tag safety first
-        image_tags = []
+        image_tags: list[str] = []
         try:
             image = getattr(container, "image", None)
             if image:
