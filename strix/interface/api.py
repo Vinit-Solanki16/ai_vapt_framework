@@ -1559,7 +1559,9 @@ async def _app_lifespan(app_instance: FastAPI):
             active_run_ids=active_ids, dry_run=False, preserve_running=True
         )
         if reap_res.get("reaped", 0) > 0:
-            logger.info("Startup Docker cleanup reaped %d exited orphaned containers", reap_res["reaped"])
+            logger.info(
+                "Startup Docker cleanup reaped %d exited orphaned containers", reap_res["reaped"]
+            )
     except Exception:
         logger.debug("Startup Docker cleanup skipped", exc_info=True)
     yield
@@ -1577,9 +1579,7 @@ async def serve_index(request: Request, response: Response):
 
     from strix.interface.auth import (
         SESSION_COOKIE_NAME,
-        _is_loopback_client,
         create_session,
-        get_session,
     )
 
     resp = FileResponse(str(index_file), media_type="text/html")
@@ -4201,12 +4201,14 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             ]
             run_entry["candidates"] = candidates
             # Record original discovery order and ranked order (Finding B02)
-            discovery_sorted = sorted(candidates, key=lambda c: c.get("discovery_order", c.get("priority_rank", 0)))
+            discovery_sorted = sorted(
+                candidates, key=lambda c: c.get("discovery_order", c.get("priority_rank", 0))
+            )
             original_order = [c.get("id") for c in discovery_sorted]
             ranked_order = [c.get("id") for c in candidates]
             run_entry["original_candidates_order"] = original_order
             run_entry["ranked_candidates_order"] = ranked_order
-            run_entry["ranking_changed"] = (original_order != ranked_order)
+            run_entry["ranking_changed"] = original_order != ranked_order
             detected_tech = "generic_web"
             if candidates and "detected_tech" in candidates[0]:
                 detected_tech = candidates[0]["detected_tech"]
@@ -4341,7 +4343,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             )
             original_order = [c.get("id") for c in discovery_sorted]
         ranked_order = [c.get("id") for c in gap1_candidates]
-        ranking_changed = (original_order != ranked_order)
+        ranking_changed = original_order != ranked_order
         run_entry["original_candidates_order"] = original_order
         run_entry["ranked_candidates_order"] = ranked_order
         run_entry["ranking_changed"] = ranking_changed
@@ -5154,8 +5156,14 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             if t_line.strip() and t_line not in seen_gap_traces:
                                 seen_gap_traces.add(t_line)
                                 t_obj = json.loads(t_line)
-                                if t_obj.get("event") in ("GAP2_PIVOT", "PIVOT_VERIFIED", "REDIRECT"):
-                                    next_c = t_obj.get("next_candidate") or t_obj.get("to_candidate")
+                                if t_obj.get("event") in (
+                                    "GAP2_PIVOT",
+                                    "PIVOT_VERIFIED",
+                                    "REDIRECT",
+                                ):
+                                    next_c = t_obj.get("next_candidate") or t_obj.get(
+                                        "to_candidate"
+                                    )
                                     run_entry["pivot_events"].append(t_obj)
                                     engine.log(
                                         "PIVOT",

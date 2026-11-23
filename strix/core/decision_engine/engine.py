@@ -141,7 +141,7 @@ class DecisionEngine:
                 self.current_index = idx
                 cand.state = CandidateState.ATTEMPTING
                 return cand
-        for idx in range(0, self.current_index):
+        for idx in range(self.current_index):
             cid = self.queue[idx]
             cand = self.candidates[cid]
             if cand.state == CandidateState.PENDING and cand.attempts == 0:
@@ -343,7 +343,9 @@ class DecisionEngine:
             message=f"Dispatched alternative candidate {to_candidate_id} using tool {tool_name or 'unspecified'}",
         )
         self.pivot_events.append(event)
-        self._tracer.log("DISPATCH", f"Dispatched alternative {to_candidate_id} from {from_candidate_id}")
+        self._tracer.log(
+            "DISPATCH", f"Dispatched alternative {to_candidate_id} from {from_candidate_id}"
+        )
         return event
 
     def record_alternative_tool_started(
@@ -365,7 +367,9 @@ class DecisionEngine:
             message=f"Alternative tool {tool_name or 'unspecified'} started with execution ID {tool_invocation_id}",
         )
         self.pivot_events.append(event)
-        self._tracer.log("TOOL_START", f"Tool {tool_name} started on {candidate_id} ({tool_invocation_id})")
+        self._tracer.log(
+            "TOOL_START", f"Tool {tool_name} started on {candidate_id} ({tool_invocation_id})"
+        )
         return event
 
     def record_alternative_tool_completed(
@@ -390,7 +394,10 @@ class DecisionEngine:
             message=f"Alternative tool execution {tool_invocation_id} completed: {outcome}",
         )
         self.pivot_events.append(event)
-        self._tracer.log("TOOL_COMPLETE", f"Tool execution {tool_invocation_id} completed on {candidate_id}: {outcome}")
+        self._tracer.log(
+            "TOOL_COMPLETE",
+            f"Tool execution {tool_invocation_id} completed on {candidate_id}: {outcome}",
+        )
         return event
 
     def record_pivot_verified(
@@ -418,5 +425,8 @@ class DecisionEngine:
             message=f"GAP-2 pivot from {from_candidate_id} to {to_candidate_id} verified with execution ID {tool_invocation_id}",
         )
         self.pivot_events.append(event)
-        self._tracer.log("PIVOT_VERIFIED", f"Pivot {from_candidate_id} -> {to_candidate_id} verified ({tool_invocation_id})")
+        self._tracer.log(
+            "PIVOT_VERIFIED",
+            f"Pivot {from_candidate_id} -> {to_candidate_id} verified ({tool_invocation_id})",
+        )
         return event

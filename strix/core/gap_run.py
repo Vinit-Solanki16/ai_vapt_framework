@@ -333,7 +333,11 @@ class GapRun:
             None,
         )
         if prior_pivot_decision and not preparatory:
-            if tool_invocation_id is _SENTINEL_TOOL_ID or not tool_invocation_id or not str(tool_invocation_id).strip():
+            if (
+                tool_invocation_id is _SENTINEL_TOOL_ID
+                or not tool_invocation_id
+                or not str(tool_invocation_id).strip()
+            ):
                 tool_invocation_id = f"EXEC-ALT-{candidate_id}-{_now()}"
             self.link_pivot_execution(
                 executed_candidate=candidate_id,
@@ -350,7 +354,9 @@ class GapRun:
             if outcome != "positive":
                 cand.status = "abandoned"
                 cand.investigation_outcome = "abandoned"
-                cand.abandon_reason = retry_reason or f"Threshold {cand.max_attempts} reached ({outcome})"
+                cand.abandon_reason = (
+                    retry_reason or f"Threshold {cand.max_attempts} reached ({outcome})"
+                )
                 cand.abandoned_at = _now()
         elif outcome in ("blocked", "error"):
             cand.status = "blocked"

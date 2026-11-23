@@ -15,28 +15,24 @@ from __future__ import annotations
 
 import os
 import ssl
-import sys
+
 import pytest
 from fastapi.testclient import TestClient
 
-from strix.interface.api import app
-from strix.core.safety.scope_validator import validate_web_target
-from strix.core.safety.http_transport import (
-    create_scanner_ssl_context,
-    ScopedRedirectHandler,
-    execute_scoped_request,
-)
-from strix.llm.cloud_provider import _validate_provider_base_url, test_cloud_connection
 from strix.core.runtime_credentials import (
-    set_runtime_credential,
-    get_runtime_credential,
     build_isolated_subprocess_env,
+    set_runtime_credential,
 )
+from strix.core.safety.http_transport import (
+    ScopedRedirectHandler,
+    create_scanner_ssl_context,
+)
+from strix.core.safety.scope_validator import validate_web_target
+from strix.interface.api import app
 from strix.interface.auth import (
     _load_or_create_operator_credentials,
-    create_session,
-    SESSION_COOKIE_NAME,
 )
+from strix.llm.cloud_provider import _validate_provider_base_url, test_cloud_connection
 
 
 @pytest.fixture

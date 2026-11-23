@@ -13,34 +13,31 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import pytest
 
-from strix.core.triage.exploit_assessor import (
-    ExploitAssessment,
-    UsabilityRank,
-    assess_exploit_quality,
-    run_gap1_triage,
-)
-from strix.core.scheduler import CandidateScheduler, CandidateTicket
 from strix.core.decision_engine.engine import DecisionEngine, Outcome
 from strix.core.decision_engine.schemas import ActionCandidate, PivotActionType
 from strix.core.gap_bridge import (
     GapRunState,
-    note_event,
     queue_order,
-    record_alternative_dispatched,
-    record_alternative_tool_completed,
     record_outcome,
     record_pivot_verified,
     reset_state,
 )
-from strix.core.gap_run import GapRun, GapRunError
+from strix.core.gap_run import GapRun
+from strix.core.scheduler import CandidateScheduler
+from strix.core.triage.exploit_assessor import (
+    assess_exploit_quality,
+    run_gap1_triage,
+)
 from strix.interface.api import genuine_pivot_key
 
 
 # ---------------------------------------------------------------------------
 # B01 Tests: Honest Scorer Provenance
 # ---------------------------------------------------------------------------
+
 
 def test_b01_heuristic_scorer_provenance() -> None:
     """Heuristic assessment must record scorer_type='heuristic' and explicit fallback reason."""
@@ -82,6 +79,7 @@ def test_b01_triage_candidates_include_provenance() -> None:
 # ---------------------------------------------------------------------------
 # B02 Tests: Discovery Order vs Ranked Order
 # ---------------------------------------------------------------------------
+
 
 def test_b02_discovery_order_and_ranking_changed() -> None:
     """run_gap1_triage must record discovery_order and detect when ranking changed."""
@@ -126,6 +124,7 @@ def test_b02_queue_order_preserves_distinct_lists(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # B03 Tests: Candidate Ticket Scheduler & Dispatch Enforcement
 # ---------------------------------------------------------------------------
+
 
 def test_b03_scheduler_priority_dispatch() -> None:
     """Scheduler must dispatch tickets strictly in priority order."""
@@ -193,13 +192,16 @@ def test_b03_scheduler_authorizes_unranked_dispatch_with_override() -> None:
 # B04 Tests: GAP-2 Separate Decision and Execution Stages
 # ---------------------------------------------------------------------------
 
+
 def test_b04_decision_engine_sets_pivot_executed_false_at_decision_time() -> None:
     """DecisionEngine.record_outcome must NOT set pivot_executed=True at decision time."""
     engine = DecisionEngine(pivot_threshold=2)
-    engine.initialize([
-        ActionCandidate(id="cand-1", max_attempts=2),
-        ActionCandidate(id="cand-2", max_attempts=2),
-    ])
+    engine.initialize(
+        [
+            ActionCandidate(id="cand-1", max_attempts=2),
+            ActionCandidate(id="cand-2", max_attempts=2),
+        ]
+    )
 
     # First attempt fails -> retry
     act1 = engine.record_outcome("cand-1", Outcome.FAIL_TIMEOUT)
@@ -250,7 +252,9 @@ def test_b04_gap_bridge_records_pivot_decided_with_executed_false(tmp_path: Path
 
     # Verify decision trace has pivot_executed=False
     trace_file = control_dir / "decision_trace.jsonl"
-    lines = [json.loads(l) for l in trace_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+    lines = [
+        json.loads(l) for l in trace_file.read_text(encoding="utf-8").splitlines() if l.strip()
+    ]
     pivot_lines = [l for l in lines if l.get("event") == "PIVOT_DECIDED"]
     assert len(pivot_lines) == 1
     assert pivot_lines[0]["pivot_executed"] is False
@@ -274,12 +278,13 @@ def test_b04_verified_pivot_requires_tool_invocation_id(tmp_path: Path) -> None:
 # B05 Tests: Missing Native GAP State Fails Closed
 # ---------------------------------------------------------------------------
 
-def test_b05_missing_native_gap_state_does_not_infer_execution() -> None:
+
+def test_b05_missing_native_gap_state_does_not_infer_execution(tmp_path: Path) -> None:
     """When native gap_state.json is missing or unavailable, executed must be False."""
     from strix.interface.api import engine_executed_alternatives
 
     # Non-existent file
-    missing_file = Path("/tmp/nonexistent_gap_state_xyz123.json")
+    missing_file = tmp_path / "nonexistent_gap_state_xyz123.json"
     evidence = engine_executed_alternatives(missing_file)
     assert evidence == set()
 
@@ -290,33 +295,46 @@ def test_b05_missing_native_gap_state_does_not_infer_execution() -> None:
 def test_b05_genuine_pivot_key_rejects_non_executed_events() -> None:
     """genuine_pivot_key returns None when pivot_executed is False or not explicitly True."""
     # False
-    assert genuine_pivot_key({
-        "event": "GAP2_PIVOT",
-        "candidate_id": "c1",
-        "next_candidate": "c2",
-        "pivot_executed": False,
-    }) is None
+    assert (
+        genuine_pivot_key(
+            {
+                "event": "GAP2_PIVOT",
+                "candidate_id": "c1",
+                "next_candidate": "c2",
+                "pivot_executed": False,
+            }
+        )
+        is None
+    )
 
     # Missing
-    assert genuine_pivot_key({
-        "event": "GAP2_PIVOT",
-        "candidate_id": "c1",
-        "next_candidate": "c2",
-    }) is None
+    assert (
+        genuine_pivot_key(
+            {
+                "event": "GAP2_PIVOT",
+                "candidate_id": "c1",
+                "next_candidate": "c2",
+            }
+        )
+        is None
+    )
 
     # True with valid distinct candidates
-    key = genuine_pivot_key({
-        "event": "GAP2_PIVOT",
-        "candidate_id": "c1",
-        "next_candidate": "c2",
-        "pivot_executed": True,
-    })
+    key = genuine_pivot_key(
+        {
+            "event": "GAP2_PIVOT",
+            "candidate_id": "c1",
+            "next_candidate": "c2",
+            "pivot_executed": True,
+        }
+    )
     assert key == ("c1", "c2")
 
 
 # ---------------------------------------------------------------------------
 # B06 Tests: Native Pivot Counting Requires Linked Tool Invocation
 # ---------------------------------------------------------------------------
+
 
 def test_b06_gap_run_rejects_caller_supplied_flag_without_tool_id(tmp_path: Path) -> None:
     """GapRun.record_probe_outcome forces pivot_executed=False if tool_invocation_id is missing."""

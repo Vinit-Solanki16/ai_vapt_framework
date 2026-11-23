@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-import pytest
+
 import yaml
 
 from strix.runtime.docker_cleanup import reap_orphaned_containers
@@ -22,6 +22,7 @@ from strix.runtime.docker_cleanup import reap_orphaned_containers
 # D01 Tests: Candidate Finding Linkage
 # ---------------------------------------------------------------------------
 
+
 def test_d01_unrelated_findings_do_not_validate_candidate() -> None:
     """A run with candidate A confirmed and B merely observed must never treat B as confirmed."""
     from strix.report.reconciliation import reconcile_all
@@ -30,7 +31,12 @@ def test_d01_unrelated_findings_do_not_validate_candidate() -> None:
         "run_id": "run-d01-test",
         "candidates": [
             {"id": "cand-a", "title": "SQL Injection", "endpoint": "/sqli", "state": "VALIDATED"},
-            {"id": "cand-b", "title": "Directory Traversal", "endpoint": "/lfi", "state": "PENDING"},
+            {
+                "id": "cand-b",
+                "title": "Directory Traversal",
+                "endpoint": "/lfi",
+                "state": "PENDING",
+            },
         ],
         "findings": [
             {
@@ -41,9 +47,7 @@ def test_d01_unrelated_findings_do_not_validate_candidate() -> None:
                 "verified": True,
             }
         ],
-        "tool_calls": [
-            {"tool": "exec_command", "args": {"command": "curl http://127.0.0.1/sqli"}}
-        ],
+        "tool_calls": [{"tool": "exec_command", "args": {"command": "curl http://127.0.0.1/sqli"}}],
     }
 
     reconciled = reconcile_all(run_data)
@@ -64,9 +68,12 @@ def test_d01_unrelated_findings_do_not_validate_candidate() -> None:
 # D02 Tests: SVG DOM Safety & No Inline Onclick Injection
 # ---------------------------------------------------------------------------
 
+
 def test_d02_svg_renderer_avoids_inline_onclick() -> None:
     """app.js must not interpolate raw candidate IDs into SVG innerHTML onclick handlers."""
-    app_js_path = Path(__file__).resolve().parent.parent / "strix" / "interface" / "web" / "js" / "app.js"
+    app_js_path = (
+        Path(__file__).resolve().parent.parent / "strix" / "interface" / "web" / "js" / "app.js"
+    )
     assert app_js_path.is_file(), f"Missing app.js at {app_js_path}"
     content = app_js_path.read_text(encoding="utf-8")
 
@@ -82,6 +89,7 @@ def test_d02_svg_renderer_avoids_inline_onclick() -> None:
 # ---------------------------------------------------------------------------
 # D03 Tests: Docker Cleanup Preserves Running Containers
 # ---------------------------------------------------------------------------
+
 
 def test_d03_running_sandboxes_preserved_by_default() -> None:
     """reap_orphaned_containers must preserve running containers by default."""
@@ -99,6 +107,7 @@ def test_d03_running_sandboxes_preserved_by_default() -> None:
 # ---------------------------------------------------------------------------
 # D04 Tests: CI Workflow Branch Triggers
 # ---------------------------------------------------------------------------
+
 
 def test_d04_ci_workflow_branch_triggers() -> None:
     """ci.yml must trigger on main, ai-vapt-full-application, ai-vapt-release, and fix/*."""
@@ -120,6 +129,7 @@ def test_d04_ci_workflow_branch_triggers() -> None:
 # ---------------------------------------------------------------------------
 # D05 Tests: Release Metadata Alignment & Fixture Sanitization
 # ---------------------------------------------------------------------------
+
 
 def test_d05_release_metadata_alignment() -> None:
     """pyproject.toml, README.md, and CHANGELOG.md must consistently reference v1.7.0."""

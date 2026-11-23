@@ -59,14 +59,22 @@ def _validate_provider_base_url(api_base: str) -> tuple[bool, str, str]:
     if "://" in base:
         scheme_prefix = base.split("://", 1)[0].lower()
         if scheme_prefix not in ("http", "https"):
-            return False, base, f"Prohibited scheme '{scheme_prefix}'. Only http and https endpoints are authorized."
+            return (
+                False,
+                base,
+                f"Prohibited scheme '{scheme_prefix}'. Only http and https endpoints are authorized.",
+            )
     elif not base.startswith("http://") and not base.startswith("https://"):
         base = f"https://{base}"
 
     parsed = urllib.parse.urlsplit(base)
     scheme = (parsed.scheme or "").lower()
     if scheme not in ("http", "https"):
-        return False, base, f"Prohibited scheme '{scheme}'. Only http and https endpoints are authorized."
+        return (
+            False,
+            base,
+            f"Prohibited scheme '{scheme}'. Only http and https endpoints are authorized.",
+        )
 
     host = (parsed.hostname or "").lower().strip()
     if not host:
@@ -81,7 +89,11 @@ def _validate_provider_base_url(api_base: str) -> tuple[bool, str, str]:
 
             # Strictly block Cloud Metadata 169.254.169.254 and link-local ranges
             if str(ip_obj) == "169.254.169.254" or ip_obj.is_link_local:
-                return False, base, f"Access to cloud metadata or link-local address {ip_str} is prohibited."
+                return (
+                    False,
+                    base,
+                    f"Access to cloud metadata or link-local address {ip_str} is prohibited.",
+                )
     except socket.gaierror as e:
         logger.debug("DNS resolution probe on provider endpoint %s: %s", host, e)
     except Exception as e:
@@ -398,7 +410,10 @@ def test_cloud_connection(
         )
     except Exception as exc:
         exc_str = str(exc)
-        if "certificate verify failed" in exc_str.lower() or "sslcertverificationerror" in exc_str.lower():
+        if (
+            "certificate verify failed" in exc_str.lower()
+            or "sslcertverificationerror" in exc_str.lower()
+        ):
             return CloudTestConnectionResponse(
                 status="error",
                 message=f"TLS Certificate verification failed: {exc}",

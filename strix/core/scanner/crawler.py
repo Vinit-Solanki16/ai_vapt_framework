@@ -12,7 +12,6 @@ from __future__ import annotations
 import collections
 import logging
 import re
-import ssl
 import urllib.parse
 import urllib.request
 from typing import Any

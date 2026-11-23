@@ -19,18 +19,15 @@ Verifies Phase P1 Evidence Truth, Verification, Completion Gate, and Reporting C
 from __future__ import annotations
 
 import json
-from pathlib import Path
-import pytest
-
 from types import SimpleNamespace
 
 from strix.core.runner import _analyze_probe
-from strix.report.verification import VerificationBlock, VerificationState
 from strix.core.scanner.passive_rules import run_passive_rules
-from strix.report.reconciliation import enrich_candidates_from_execution
-from strix.report.evidence import record_authentic_evidence, verify_evidence_integrity
-from strix.tools.finish.tool import _evaluate_completion_gate, _do_finish
 from strix.interface.api import _generate_markdown_report, execution_evidence_from_run
+from strix.report.evidence import record_authentic_evidence
+from strix.report.reconciliation import enrich_candidates_from_execution
+from strix.report.verification import VerificationBlock, VerificationState
+from strix.tools.finish.tool import _do_finish, _evaluate_completion_gate
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +94,7 @@ def test_c02_verification_contract_requires_impact():
     vb_valid = VerificationBlock(
         verification_state="verified",
         reproducible_request="GET /api/Users HTTP/1.1\nHost: target\nAuthorization: Bearer test",
-        verification_response="HTTP/1.1 200 OK\n[{\"id\": 1, \"email\": \"admin@juice-sh.op\"}]",
+        verification_response='HTTP/1.1 200 OK\n[{"id": 1, "email": "admin@juice-sh.op"}]',
         verification_procedure="Executed authenticated enumeration request against /api/Users",
         demonstrated_impact="Full horizontal privilege escalation exposing all user emails and password hashes",
         evidence_timestamp="2026-11-23 20:00:00 UTC",
@@ -111,7 +108,9 @@ def test_c02_verification_contract_requires_impact():
 # ---------------------------------------------------------------------------
 def test_c03_passive_rules_emit_observations():
     """Passive rules must flag candidates as observations requiring active verification."""
-    html_with_redirect = '<html><body><a href="/login?redirect=http://example.com">Login</a></body></html>'
+    html_with_redirect = (
+        '<html><body><a href="/login?redirect=http://example.com">Login</a></body></html>'
+    )
     candidates, summary = run_passive_rules(
         target_url="http://127.0.0.1:8080",
         headers={"Server": "nginx/1.18.0"},
@@ -277,9 +276,9 @@ def test_c10_finish_scan_persistence_failure(monkeypatch):
 
     class BrokenReportState:
         def update_scan_final_fields(self, *args, **kwargs):
-            raise IOError("Simulated disk full")
+            raise OSError("Simulated disk full")
 
-    monkeypatch.setattr(state, "get_global_report_state", lambda: BrokenReportState())
+    monkeypatch.setattr(state, "get_global_report_state", BrokenReportState)
 
     res = _do_finish(
         parent_id=None,
