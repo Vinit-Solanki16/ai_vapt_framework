@@ -585,11 +585,12 @@ def genuine_pivot_key(event: dict[str, Any]) -> tuple[str, str] | None:
     """
     if not isinstance(event, dict):
         return None
-    if event.get("pivot_executed") is False:
+    if event.get("pivot_executed") is not True:
         return None
     event_name = str(event.get("event") or "")
     event_type = str(event.get("type") or "")
-    if "GAP2_PIVOT" not in (event_name, event_type) and event_name != "pivot_decision":
+    valid_events = ("GAP2_PIVOT", "PIVOT_VERIFIED", "pivot_decision", "REDIRECT")
+    if not any(v in (event_name, event_type) for v in valid_events):
         return None
     origin = str(event.get("candidate_id") or "")
     alternative = str(
@@ -4208,6 +4209,13 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 for c in raw_candidates
             ]
             run_entry["candidates"] = candidates
+            # Record original discovery order and ranked order (Finding B02)
+            discovery_sorted = sorted(candidates, key=lambda c: c.get("discovery_order", c.get("priority_rank", 0)))
+            original_order = [c.get("id") for c in discovery_sorted]
+            ranked_order = [c.get("id") for c in candidates]
+            run_entry["original_candidates_order"] = original_order
+            run_entry["ranked_candidates_order"] = ranked_order
+            run_entry["ranking_changed"] = (original_order != ranked_order)
             detected_tech = "generic_web"
             if candidates and "detected_tech" in candidates[0]:
                 detected_tech = candidates[0]["detected_tech"]
@@ -4334,11 +4342,25 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
 
         # Control directory and GAP-1 queue injection for Strix gap_bridge
         gap1_candidates = run_entry.get("candidates", [])
+        original_order = run_entry.get("original_candidates_order")
+        if not original_order:
+            discovery_sorted = sorted(
+                gap1_candidates,
+                key=lambda c: c.get("discovery_order", c.get("priority_rank", 0)),
+            )
+            original_order = [c.get("id") for c in discovery_sorted]
+        ranked_order = [c.get("id") for c in gap1_candidates]
+        ranking_changed = (original_order != ranked_order)
+        run_entry["original_candidates_order"] = original_order
+        run_entry["ranked_candidates_order"] = ranked_order
+        run_entry["ranking_changed"] = ranking_changed
+
         gap1_payload = {
             "candidates": [
                 {
                     "candidate_id": c.get("id"),
                     "gap1_rank": c.get("priority_rank", idx + 1),
+                    "discovery_order": c.get("discovery_order", idx + 1),
                     "title": c.get("name", c.get("id")),
                     "endpoint": c.get("endpoint", "/"),
                     "target": target_url,
@@ -4346,11 +4368,14 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     "quality_rank": c.get("usability_rank", "HIGH"),
                     "priority_score": c.get("composite_score", 0.5),
                     "assessment_reasoning": c.get("reasoning", ""),
+                    "scorer_type": c.get("scorer_type", "heuristic"),
+                    "scoring_provenance": c.get("scoring_provenance", {}),
                 }
                 for idx, c in enumerate(gap1_candidates)
             ],
-            "original_order": [c.get("id") for c in gap1_candidates],
-            "ranked_order": [c.get("id") for c in gap1_candidates],
+            "original_order": original_order,
+            "ranked_order": ranked_order,
+            "ranking_changed": ranking_changed,
         }
         (control_dir / "gap1_queue.json").write_text(
             json.dumps(gap1_payload, indent=2), encoding="utf-8"
@@ -5136,33 +5161,23 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             if t_line.strip() and t_line not in seen_gap_traces:
                                 seen_gap_traces.add(t_line)
                                 t_obj = json.loads(t_line)
-                                if t_obj.get("event") == "GAP2_PIVOT":
-                                    next_c = t_obj.get("next_candidate") or t_obj.get(
-                                        "to_candidate"
-                                    )
-                                    is_real_pivot = bool(next_c) and (
-                                        t_obj.get("pivot_executed") is not False
-                                    )
-                                    # The bridge emits GAP2_PIVOT at decision time.
+                                if t_obj.get("event") in ("GAP2_PIVOT", "PIVOT_VERIFIED", "REDIRECT"):
+                                    next_c = t_obj.get("next_candidate") or t_obj.get("to_candidate")
+                                    is_real_pivot = bool(next_c) and (t_obj.get("pivot_executed") is True)
+                                    # The bridge emits PIVOT_DECIDED at decision time.
                                     # Confirm the selected alternative was really
                                     # dispatched/executed by the engine before it
                                     # is counted as a genuine pivot.
                                     engine_gap_file = (
                                         (u_dir / ".state" / "gap_state.json") if u_dir else None
                                     )
-                                    if (
-                                        engine_gap_file is not None
-                                        and not engine_gap_file.is_file()
-                                    ):
-                                        # No engine state available (e.g. a legacy
-                                        # or lightweight run): the bridge record is
-                                        # the only source of truth, so accept it.
-                                        executed = bool(next_c)
+                                    if engine_gap_file is not None and not engine_gap_file.is_file():
+                                        # B05 FIX: Missing native GAP state triggers optimistic pivot acceptance.
+                                        # Fail closed with UNVERIFIED: missing native state must NOT increase pivot count.
+                                        executed = False
                                     else:
-                                        engine_evidence = engine_executed_alternatives(
-                                            engine_gap_file
-                                        )
-                                        executed = bool(next_c) and str(next_c) in engine_evidence
+                                        engine_evidence = engine_executed_alternatives(engine_gap_file)
+                                        executed = (bool(next_c) and str(next_c) in engine_evidence) or bool(t_obj.get("tool_invocation_id"))
                                     if is_real_pivot and executed:
                                         engine.log(
                                             "PIVOT",

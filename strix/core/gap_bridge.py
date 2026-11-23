@@ -609,7 +609,7 @@ def record_outcome(
                 or f"GAP-2 threshold reached for {candidate_id} after {attempts} failed attempts; pivoted to {next_cid}"
             )
             note_event(
-                "GAP2_PIVOT",
+                "PIVOT_DECIDED",
                 candidate_id=candidate_id,
                 outcome="REDIRECT",
                 attempts=attempts,
@@ -618,8 +618,9 @@ def record_outcome(
                 to_candidate=next_cid,
                 reason=pivot_reason,
                 probe_outcome=status_norm,
-                pivot_executed=True,
-                result=f"Pivoted to {next_cid}",
+                pivot_executed=False,
+                pivot_status="PIVOT_DECIDED",
+                result=f"Decided pivot to {next_cid} (pending execution)",
                 message=pivot_reason,
                 directory=st.directory,
             )
@@ -653,19 +654,82 @@ def record_outcome(
         }
     )
     st.save()
-    executed_pivot = bool(pivot and next_entry and (next_entry or {}).get("candidate_id"))
+    has_alternative = bool(pivot and next_entry and (next_entry or {}).get("candidate_id"))
     return {
         "candidate_id": candidate_id,
         "attempts": attempts,
         "threshold": st.threshold(),
-        "pivot": executed_pivot,
-        "pivot_executed": executed_pivot,
-        "next_candidate": next_entry if executed_pivot else None,
-        "status": "abandoned"
-        if (attempts >= st.threshold() and not executed_pivot)
-        else status_norm,
+        "pivot": has_alternative,
+        "pivot_executed": False,
+        "pivot_status": "PIVOT_DECIDED" if has_alternative else None,
+        "next_candidate": next_entry if has_alternative else None,
+        "status": "abandoned" if (attempts >= st.threshold() and not has_alternative) else status_norm,
         "reason": pivot_reason if pivot else None,
     }
+
+
+def record_alternative_dispatched(
+    from_candidate_id: str,
+    to_candidate_id: str,
+    tool_name: str | None = None,
+    directory: Path | None = None,
+) -> dict[str, Any]:
+    """Record that an alternative candidate has been dispatched (Finding B04)."""
+    return note_event(
+        "ALTERNATIVE_DISPATCHED",
+        candidate_id=from_candidate_id,
+        to_candidate=to_candidate_id,
+        next_candidate=to_candidate_id,
+        pivot_executed=False,
+        pivot_status="ALTERNATIVE_DISPATCHED",
+        tool_name=tool_name,
+        directory=directory,
+    )
+
+
+def record_alternative_tool_completed(
+    candidate_id: str,
+    tool_invocation_id: str,
+    outcome: str = "completed",
+    detail: str = "",
+    directory: Path | None = None,
+) -> dict[str, Any]:
+    """Record completion of an alternative tool execution (Finding B04)."""
+    return note_event(
+        "ALTERNATIVE_TOOL_COMPLETED",
+        candidate_id=candidate_id,
+        tool_invocation_id=tool_invocation_id,
+        pivot_executed=False,
+        pivot_status="ALTERNATIVE_TOOL_COMPLETED",
+        result=outcome,
+        detail=detail,
+        directory=directory,
+    )
+
+
+def record_pivot_verified(
+    from_candidate_id: str,
+    to_candidate_id: str,
+    tool_invocation_id: str,
+    result: str = "success",
+    detail: str = "",
+    directory: Path | None = None,
+) -> dict[str, Any]:
+    """Record that an alternative pivot has been verified with genuine tool execution (Finding B04)."""
+    if not tool_invocation_id or not tool_invocation_id.strip():
+        raise ValueError("record_pivot_verified requires a non-empty tool_invocation_id")
+    return note_event(
+        "PIVOT_VERIFIED",
+        candidate_id=from_candidate_id,
+        to_candidate=to_candidate_id,
+        next_candidate=to_candidate_id,
+        pivot_executed=True,
+        pivot_status="PIVOT_VERIFIED",
+        tool_invocation_id=tool_invocation_id.strip(),
+        result=result,
+        detail=detail,
+        directory=directory,
+    )
 
 
 def record_probe_result(
