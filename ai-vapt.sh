@@ -343,6 +343,21 @@ cmd_stop() {
 
     cleanup_stale_pid_files
 
+    # Run Docker container cleanup backstop for orphaned sandbox containers
+    local python_bin
+    python_bin=$(resolve_python 2>/dev/null || true)
+    if [ -n "$python_bin" ] && command -v docker >/dev/null 2>&1; then
+        "$python_bin" -c '
+from strix.runtime.docker_cleanup import reap_orphaned_containers
+try:
+    res = reap_orphaned_containers(min_age_seconds=0)
+    if res.get("reaped", 0) > 0:
+        print(f"Cleaned up {res[\"reaped\"]} residual sandbox containers.")
+except Exception:
+    pass
+' 2>/dev/null || true
+    fi
+
     if [ "$stopped" = true ]; then
         echo -e "\n${GREEN}● AI-VAPT service is stopped.${RESET}"
         echo -e "• Historical assessment data in ${BOLD}strix_runs/${RESET} is fully preserved."

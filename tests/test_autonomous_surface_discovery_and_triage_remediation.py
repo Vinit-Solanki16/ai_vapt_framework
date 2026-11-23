@@ -125,7 +125,8 @@ def test_run_status_schema_supports_stopped_and_dict_traces():
 
 def test_run_fd0f5ec4_reconciliation_validates_cleanly():
     """Verify run-fd0f5ec4 deserializes cleanly via RunStatus without HTTP 500."""
-    run_file = Path("strix_runs/run-fd0f5ec4/run.json")
+    fixture_file = Path(__file__).resolve().parent / "fixtures" / "run-fd0f5ec4" / "run.json"
+    run_file = fixture_file if fixture_file.is_file() else Path("strix_runs/run-fd0f5ec4/run.json")
     if run_file.is_file():
         run_data = json.loads(run_file.read_text(encoding="utf-8"))
         reconciled = reconcile_all(run_data, run_dir=run_file.parent)

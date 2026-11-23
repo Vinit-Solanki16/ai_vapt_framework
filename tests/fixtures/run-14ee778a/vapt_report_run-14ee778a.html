@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-VAPT Security Audit Report - run-14ee778a</title>
+    <style>
+        :root {
+            --bg-page: #0b0f19;
+            --bg-surface: #111827;
+            --bg-code: #030712;
+            --text-primary: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #1f2937;
+            --primary: #38bdf8;
+            --primary-dark: #0284c7;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2.5rem 1.5rem;
+            max-width: 1200px;
+            margin: auto;
+        }
+        h1, h2, h3 { color: var(--primary); font-weight: 700; margin-top: 1.75rem; margin-bottom: 0.75rem; }
+        .header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .header h1 { margin: 0 0 0.5rem 0; font-size: 1.8rem; display: flex; align-items: center; gap: 0.75rem; }
+        .header p { margin: 0; color: var(--text-muted); font-size: 0.95rem; }
+        
+        .jump-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            padding: 0.75rem 1rem;
+            background: #111827;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .jump-nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.3rem 0.65rem;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.1);
+            transition: all 0.2s ease;
+        }
+        .jump-nav a:hover { background: rgba(56, 189, 248, 0.25); text-decoration: underline; }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .meta-card {
+            background: var(--bg-surface);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .meta-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+        .meta-value { font-size: 1.35rem; font-weight: 700; margin-top: 0.35rem; color: #f8fafc; }
+        
+        .severity-bar {
+            display: flex;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 1.5rem 0 0.5rem 0;
+            background: #1f2937;
+        }
+        .sev-crit-bar { background: #ef4444; width: 0.0%; }
+        .sev-high-bar { background: #f97316; width: 0.0%; }
+        .sev-med-bar  { background: #f59e0b; width: 0.0%; }
+        .sev-low-bar  { background: #3b82f6; width: 0.0%; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2.5rem;
+            background: var(--bg-surface);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { background: #1e293b; color: #e2e8f0; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        tr:hover td { background: #1a2234; }
+        .mono-sub { color: #94a3b8; font-family: monospace; display: block; }
+        .cvss-val { color: #f8fafc; }
+        .comp-val { color: var(--primary); font-family: monospace; }
+        .reason-cell { font-size: 0.85rem; color: #cbd5e1; }
+        
+        .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+        .badge-crit { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .badge-high { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .badge-med, .badge-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .badge-low  { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); }
+        .badge-cyan { background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.4); }
+        .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+        .badge-cve { background: #1e1b4b; color: #a5b4fc; padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; border: 1px solid #3730a3; }
+        .badge-cwe { background: #142e2a; color: #5eead4; padding: 0.2rem 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; border: 1px solid #115e59; }
+        .hash-code { font-family: monospace; font-size: 0.75rem; color: #38bdf8; background: #0f172a; padding: 0.2rem 0.4rem; border-radius: 3px; }
+
+        .mitigation-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--primary);
+            padding: 1.5rem;
+            margin-bottom: 1.75rem;
+            border-radius: 6px;
+        }
+        .mitigation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+        .mitigation-header h3 { margin: 0; color: #f8fafc; font-size: 1.15rem; }
+        .badge-cluster { display: flex; gap: 0.5rem; align-items: center; }
+        .code-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-top: 0.75rem; }
+        .retest-title { color: #34d399; margin-top: 0.75rem; }
+        .code-block {
+            background: var(--bg-code);
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin: 0.35rem 0 0.75rem 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .cmd-block {
+            background: var(--bg-code);
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #7dd3fc;
+            display: block;
+            border: 1px solid var(--border);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .trace-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 2.5rem;
+        }
+        .trace-row { padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #94a3b8; word-break: break-all; }
+        .trace-row:last-child { border-bottom: none; }
+
+        /* Professional Executive PDF & Print Optimization */
+        @media print {
+            @page {
+                margin: 1.0cm 1.2cm;
+                size: A4 portrait;
+            }
+            *, *::before, *::after {
+                box-sizing: border-box !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                padding: 0 !important;
+                font-size: 8pt !important;
+                line-height: 1.35 !important;
+                max-width: 100% !important;
+            }
+            .no-print { display: none !important; }
+            .header {
+                background: #f8fafc !important;
+                color: #0f172a !important;
+                border: 1.5pt solid #cbd5e1 !important;
+                border-left: 6pt solid #0284c7 !important;
+                padding: 10pt 14pt !important;
+                box-shadow: none !important;
+                margin-bottom: 12pt !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .header h1 { color: #0369a1 !important; font-size: 13pt !important; margin: 0 0 4pt 0 !important; }
+            .header p { color: #475569 !important; font-size: 8pt !important; margin: 0 !important; }
+            
+            h1, h2, h3, h4 {
+                color: #0369a1 !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            h2 {
+                font-size: 10.5pt !important;
+                margin: 14pt 0 6pt 0 !important;
+                border-bottom: 1.5pt solid #cbd5e1 !important;
+                padding-bottom: 3pt !important;
+            }
+            h3 {
+                font-size: 9pt !important;
+                margin: 0 0 3pt 0 !important;
+            }
+            
+            .meta-grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 6pt !important;
+                margin-bottom: 10pt !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .meta-card {
+                background: #f8fafc !important;
+                border: 1pt solid #cbd5e1 !important;
+                color: #0f172a !important;
+                padding: 6pt 8pt !important;
+                border-radius: 4pt !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .meta-label { font-size: 6.5pt !important; color: #64748b !important; }
+            .meta-value { font-size: 10.5pt !important; color: #0f172a !important; margin-top: 2pt !important; }
+            .severity-bar { background: #e2e8f0 !important; height: 8pt !important; margin: 4pt 0 !important; }
+            
+            table {
+                background: #ffffff !important;
+                border: 1pt solid #cbd5e1 !important;
+                font-size: 7.5pt !important;
+                margin-bottom: 12pt !important;
+                page-break-inside: auto !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            th {
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+                border-bottom: 1.5pt solid #cbd5e1 !important;
+                padding: 4pt 6pt !important;
+                font-size: 7pt !important;
+            }
+            td {
+                border-bottom: 0.5pt solid #e2e8f0 !important;
+                color: #1e293b !important;
+                padding: 4pt 6pt !important;
+                font-size: 7.5pt !important;
+            }
+            .badge {
+                font-size: 6.5pt !important;
+                padding: 1pt 3.5pt !important;
+                border-radius: 2pt !important;
+            }
+            .badge-cve {
+                font-size: 6.5pt !important;
+                padding: 1pt 3pt !important;
+                background: #e0e7ff !important;
+                color: #3730a3 !important;
+                border: 0.5pt solid #c7d2fe !important;
+            }
+            .badge-cwe {
+                font-size: 6.5pt !important;
+                padding: 1pt 3pt !important;
+                background: #ccfbf1 !important;
+                color: #0f766e !important;
+                border: 0.5pt solid #99f6e4 !important;
+            }
+
+            .mitigation-card {
+                background: #f8fafc !important;
+                border: 1pt solid #cbd5e1 !important;
+                border-left: 4pt solid #0284c7 !important;
+                color: #0f172a !important;
+                padding: 8pt 10pt !important;
+                margin-bottom: 8pt !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                border-radius: 4pt !important;
+            }
+            .mitigation-header {
+                margin-bottom: 4pt !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+            }
+            .mitigation-header h3 {
+                color: #0f172a !important;
+                font-size: 8.5pt !important;
+                margin: 0 !important;
+            }
+            .code-title {
+                color: #0369a1 !important;
+                font-size: 7.5pt !important;
+                font-weight: 700 !important;
+                margin-top: 4pt !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .retest-title {
+                color: #059669 !important;
+                font-size: 7.5pt !important;
+                font-weight: 700 !important;
+                margin-top: 4pt !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .code-block, .cmd-block {
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+                border: 0.5pt solid #cbd5e1 !important;
+                font-size: 6.8pt !important;
+                line-height: 1.25 !important;
+                padding: 4pt 6pt !important;
+                margin: 2pt 0 5pt 0 !important;
+                border-radius: 3pt !important;
+                white-space: pre-wrap !important;
+                word-break: break-all !important;
+                overflow: hidden !important;
+                scrollbar-width: none !important;
+            }
+            .code-block::-webkit-scrollbar, .cmd-block::-webkit-scrollbar {
+                display: none !important;
+            }
+
+            .trace-box {
+                background: #f8fafc !important;
+                border: 1pt solid #cbd5e1 !important;
+                color: #334155 !important;
+                font-size: 7pt !important;
+                line-height: 1.3 !important;
+                padding: 6pt 8pt !important;
+                max-height: none !important;
+                overflow: visible !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .trace-row {
+                color: #475569 !important;
+                border-bottom: 0.5pt solid #e2e8f0 !important;
+                padding: 1.5pt 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ AI-VAPT Autonomous Security Audit Report</h1>
+        <p>Cryptographically Verified Vulnerability Assessment, GAP-1 Triage Queue & GAP-2 Pivoting Audit Trail</p>
+    </div>
+
+    <!-- Quick Jump Navigation -->
+    <div class="jump-nav no-print">
+        <span style="color:#94a3b8; font-size:0.85rem; font-weight:700; align-self:center; margin-right:0.25rem;">NAVIGATE:</span>
+        <a href="#summary">🎯 Summary</a>
+        <a href="#findings">🚨 Findings Table</a>
+        <a href="#matrix">📊 Category Matrix</a>
+        <a href="#ports">🌐 Open Ports</a>
+        <a href="#components">📦 Components (SCA)</a>
+        <a href="#mitigations">🔧 Remediation Roadmap</a>
+        <a href="#gap1">📈 GAP-1 Triage</a>
+        <a href="#gap2">🌲 GAP-2 Trace</a>
+    </div>
+
+    <!-- Engagement Integrity Notice -->
+    <div style="background:rgba(16, 185, 129, 0.08); border:1px solid #059669; border-radius:8px; padding:0.85rem 1.25rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.85rem;">
+        <span style="font-size:1.5rem;">🔒</span>
+        <div>
+            <strong style="color:#34d399; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">Engagement Verification & Integrity Notice:</strong>
+            <div style="color:#cbd5e1; font-size:0.85rem; margin-top:0.2rem;">LIVE ACTIVE VAPT — Verified against authorized target endpoint (127.0.0.1) with non-destructive cryptographic evidence.</div>
+        </div>
+    </div>
+
+    
+        <div style="background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.3); border-radius:8px; padding:0.85rem 1.25rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+            <div>
+                <strong style="color:#38bdf8; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">🕷️ Web Spider Surface Profiling:</strong>
+                <span style="color:#cbd5e1; font-size:0.85rem; margin-left:0.5rem;">Crawled internal attack surface, mapped form targets and parameter vectors.</span>
+            </div>
+            <div style="display:flex; gap:1.25rem; font-size:0.85rem; font-family:monospace;">
+                <span style="color:#f8fafc;">Routes: <strong style="color:#38bdf8;">87</strong></span>
+                <span style="color:#f8fafc;">Forms: <strong style="color:#38bdf8;">2</strong></span>
+                <span style="color:#f8fafc;">Parameters: <strong style="color:#38bdf8;">9</strong></span>
+            </div>
+        </div>
+        
+
+    <!-- Executive Meta Grid -->
+    <div class="meta-grid" id="summary">
+        <div class="meta-card">
+            <div class="meta-label">Run Reference</div>
+            <div class="meta-value" style="font-family:monospace; font-size:1.1rem; color:#38bdf8;">run-14ee778a</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Assessment Started</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">2026-11-17 07:35:34 UTC</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Total Duration</div>
+            <div class="meta-value" style="font-size:1.1rem; font-family:monospace; color:#38bdf8;">00:16:38</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Assessment Status</div>
+            <div class="meta-value" style="color:#10b981;">COMPLETED</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Target Scope & IP</div>
+            <div class="meta-value" style="font-size:0.95rem; word-break:break-all;">http://127.0.0.1:3000/#/<br><small style="font-size:0.8rem; color:#94a3b8; font-weight:normal;">(127.0.0.1)</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Verified Findings</div>
+            <div class="meta-value" style="color:#ef4444;">0 <small style="font-size:0.75rem; color:#94a3b8;">(0 total)</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Evidence Tier</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">OBSERVED_EXTERNAL</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">GAP-1 Triage</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">8/8 <small style="font-size:0.75rem; color:#94a3b8;">investigated</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Execution Mode</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#38bdf8;">Autonomous Multi-Agent Core (Docker)</div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">GAP-2 Dynamic Pivots</div>
+            <div class="meta-value" style="color:#f59e0b;">0 <small style="font-size:0.75rem; color:#94a3b8;">(1 abandoned; queue exhausted)</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Execution Turns</div>
+            <div class="meta-value" style="font-size:0.95rem; color:#f8fafc;">43 / 500 <small style="font-size:0.75rem; color:#94a3b8;">turns used</small></div>
+        </div>
+        <div class="meta-card">
+            <div class="meta-label">Assessment Lifecycle</div>
+            <div class="meta-value" style="font-size:0.85rem; color:#f8fafc;">Run process completed — 43 of 500 turns used.</div>
+        </div>
+    </div>
+
+    <!-- Severity Distribution Summary -->
+    <div style="background:#111827; border:1px solid #1f2937; padding:1.25rem; border-radius:8px; margin-bottom:2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <strong style="color:#f8fafc; font-size:0.95rem;">Severity Distribution Breakdown</strong>
+            <div style="display:flex; gap:1rem; font-size:0.85rem;">
+                <span style="color:#ef4444; font-weight:700;">Critical: 0</span>
+                <span style="color:#f97316; font-weight:700;">High: 0</span>
+                <span style="color:#f59e0b; font-weight:700;">Medium: 0</span>
+                <span style="color:#3b82f6; font-weight:700;">Low: 0</span>
+            </div>
+        </div>
+        <div class="severity-bar">
+            <div class="sev-crit-bar"></div>
+            <div class="sev-high-bar"></div>
+            <div class="sev-med-bar"></div>
+            <div class="sev-low-bar"></div>
+        </div>
+    </div>
+
+    <!-- Section 1: Findings Table -->
+    <h2 id="findings">1. Confirmed Vulnerability Findings & Cryptographic PoC Evidence</h2>
+    <p style="color:#94a3b8; font-size:0.85rem; margin-top:-0.5rem; margin-bottom:1rem; line-height:1.5;">
+        All findings below were actively confirmed with non-destructive verification against the target and cryptographically hashed using SHA-256.<br>
+        <span style="color:#cbd5e1;"><em>Note on Vulnerability Taxonomy:</em> Architectural and web configuration weaknesses (e.g. missing HTTP hardening headers, insecure cookie flags, missing CSRF tokens, permissive CSP) are categorized under authoritative <strong>Common Weakness Enumerations (CWE)</strong> and <strong>OWASP Top 10</strong> standards. <strong>CVE Identifiers</strong> are strictly reserved for verified Common Vulnerabilities and Exposures in third-party COTS software components.</span>
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Vulnerability Title & Location</th>
+                <th>Severity</th>
+                <th>CVSS</th>
+                <th>CVE Reference</th>
+                <th>CWE Identifier</th>
+                <th>OWASP Classification</th>
+                <th>SHA-256 Proof Hash</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan='7'>No confirmed vulnerabilities identified.</td></tr>
+        </tbody>
+    </table>
+
+    <!-- Section 2: Scan Coverage & Vulnerability Category Matrix -->
+    <h2 id="matrix">2. Scan Capabilities & Vulnerability Category Matrix</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
+        Audit coverage across 3 of 8 test categories (10 of 88 test routines evaluated; 5 categories not tested):
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Vulnerability Category</th>
+                <th>Total Rules</th>
+                <th>Execution Capability</th>
+                <th>Findings Identified</th>
+                <th>Audit Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Version-based vulnerability detection</strong></td>
+                <td>3 executed <small style='color:#64748b;'>(12 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">SCA &amp; CVE Fingerprinting</span></td>
+                <td><strong style="color:#38bdf8;">0 finding(s)</strong></td>
+                <td><span class="badge badge-cyan">PARTIALLY TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>Common configuration issues</strong></td>
+                <td>6 executed <small style='color:#64748b;'>(22 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Passive HTTP &amp; Port Recon</span></td>
+                <td><strong style="color:#38bdf8;">0 finding(s)</strong></td>
+                <td><span class="badge badge-cyan">PARTIALLY TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>XSS testing using real browsers</strong></td>
+                <td>1 executed <small style='color:#64748b;'>(8 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">DOM Analysis &amp; Active Injection</span></td>
+                <td><strong style="color:#38bdf8;">0 finding(s)</strong></td>
+                <td><span class="badge badge-cyan">PARTIALLY TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>SQL Injection</strong></td>
+                <td>0 executed <small style='color:#64748b;'>(14 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Active SQL Syntax Injection</span></td>
+                <td><strong style="color:#94a3b8;">0 finding(s)</strong></td>
+                <td><span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>Server-Side Request Forgery (SSRF)</strong></td>
+                <td>0 executed <small style='color:#64748b;'>(8 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Loopback &amp; Redirect Auditing</span></td>
+                <td><strong style="color:#94a3b8;">0 finding(s)</strong></td>
+                <td><span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>Server-Side Template Injection</strong></td>
+                <td>0 executed <small style='color:#64748b;'>(8 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Active Expression Probing</span></td>
+                <td><strong style="color:#94a3b8;">0 finding(s)</strong></td>
+                <td><span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>Client-Side Prototype Pollution</strong></td>
+                <td>0 executed <small style='color:#64748b;'>(6 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Client Script Pattern Analysis</span></td>
+                <td><strong style="color:#94a3b8;">0 finding(s)</strong></td>
+                <td><span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span></td>
+            </tr>
+<tr>
+                <td><strong>Python, Javascript, PHP Code Injection</strong></td>
+                <td>0 executed <small style='color:#64748b;'>(10 configured)</small></td>
+                <td><span style="font-size:0.8rem; color:#94a3b8;">Active Runtime Execution Probing</span></td>
+                <td><strong style="color:#94a3b8;">0 finding(s)</strong></td>
+                <td><span class="badge" style="background:rgba(148, 163, 184, 0.15); color:#94a3b8; border:1px solid #475569;">NOT TESTED</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section 3: Network Surface & Open Port Reconnaissance -->
+    <h2 id="ports">3. Target Network Surface & Open Port Reconnaissance</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
+        Non-destructive TCP socket connection reconnaissance across standard, administrative, database, and telephony listening daemons:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Listening Port & Protocol</th>
+                <th>Service Name</th>
+                <th>Socket State</th>
+                <th>Exposure Severity</th>
+                <th>Security Implication & Exposure Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background:rgba(15, 23, 42, 0.8);"><td colspan="6" style="padding:8px 12px; font-weight:700; color:#38bdf8; font-size:0.8rem; letter-spacing:0.05em; text-transform:uppercase;">
+        Target Application Exposed Ports
+    </td></tr>
+<tr>
+                    <td><strong style="font-family:monospace; color:#38bdf8;">Port 3000/TCP</strong></td>
+                    <td><strong>HTTP Web Service</strong><br><small style='color:#38bdf8;'>Fingerprint: HTTP/Web Service</small></td>
+                    <td><span class="badge badge-emerald">CONFIRMED</span></td>
+                    <td><span class="badge badge-emerald">OPEN</span></td>
+                    <td><span class="badge badge-low">LOW (INFO)</span></td>
+                    <td style="font-size:0.85rem; color:#cbd5e1;">Target web application service.</td>
+                </tr>
+        <tr style="background:rgba(30, 41, 59, 0.6);"><td colspan="6" style="padding:8px 12px; font-weight:700; color:#94a3b8; font-size:0.8rem; letter-spacing:0.05em; text-transform:uppercase;">
+            Out-of-Scope Environmental Host Network Listeners (Non-Target Handshakes — Informational Only)
+        </td></tr>
+        <tr>
+                    <td><strong style="font-family:monospace; color:#38bdf8;">Port 8000/TCP</strong></td>
+                    <td>Unfingerprinted TCP Listener<br><small style='color:#94a3b8;'>Conventional Guess: HTTP-Dev</small></td>
+                    <td><span class="badge badge-amber">UNCONFIRMED</span></td>
+                    <td><span class="badge badge-emerald">OPEN</span></td>
+                    <td><span class="badge badge-low">INFO</span></td>
+                    <td style="font-size:0.85rem; color:#cbd5e1;">Host network listener observed on TCP port 8000. Application protocol unconfirmed.</td>
+                </tr>
+<tr>
+                    <td><strong style="font-family:monospace; color:#38bdf8;">Port 9090/TCP</strong></td>
+                    <td>Unfingerprinted TCP Listener<br><small style='color:#94a3b8;'>Conventional Guess: Prometheus/Cockpit</small></td>
+                    <td><span class="badge badge-amber">UNCONFIRMED</span></td>
+                    <td><span class="badge badge-emerald">OPEN</span></td>
+                    <td><span class="badge badge-low">INFO</span></td>
+                    <td style="font-size:0.85rem; color:#cbd5e1;">Host network listener observed on TCP port 9090. Application protocol unconfirmed.</td>
+                </tr>
+        
+        </tbody>
+    </table>
+
+    <!-- Section 4: Software Component Analysis (SCA) & Library Inventory -->
+    <h2 id="components">4. Software Component Analysis (SCA) & Library Inventory</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
+        Client-side JavaScript libraries and third-party frameworks detected in page source cross-referenced with National Vulnerability Database (NVD) CVEs:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Library Component</th>
+                <th>Detected Version</th>
+                <th>Source Asset Location</th>
+                <th>Security Status</th>
+                <th>Authoritative Public CVE References</th>
+                <th>Recommended Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Angular</strong></td>
+                <td><code style="color:#38bdf8;">v17.0.0</code></td>
+                <td><small class="mono-sub">polyfills.js</small></td>
+                <td><span class="badge badge-emerald">SECURE VERSION</span></td>
+                <td><span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155;">N/A (No Known CVEs)</span></td>
+                <td style="font-size:0.85rem; color:#cbd5e1;">Ensure third-party libraries receive security patches.</td>
+            </tr>
+<tr>
+                <td><strong>Cookieconsent</strong></td>
+                <td><code style="color:#38bdf8;">v3.1.0</code></td>
+                <td><small class="mono-sub">scripts.js</small></td>
+                <td><span class="badge badge-emerald">SECURE VERSION</span></td>
+                <td><span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155;">N/A (No Known CVEs)</span></td>
+                <td style="font-size:0.85rem; color:#cbd5e1;">Ensure third-party libraries receive security patches.</td>
+            </tr>
+<tr>
+                <td><strong>Express</strong></td>
+                <td><code style="color:#38bdf8;">v4.19.2</code></td>
+                <td><small class="mono-sub">HTTP Backend Infrastructure (Node.js/Express)</small></td>
+                <td><span class="badge badge-emerald">SECURE VERSION</span></td>
+                <td><span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155;">N/A (No Known CVEs)</span></td>
+                <td style="font-size:0.85rem; color:#cbd5e1;">Disable X-Powered-By header and apply standard framework security updates.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section 5: Tailored Remediation Roadmap -->
+    <h2 id="mitigations">5. Tailored Remediation Roadmap & Server Hardening Patches</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1.5rem;">
+        Concrete, tailored configuration snippets and code-level patches for each identified vulnerability:
+    </p>
+    <div class="mitigation-card" style="border-left-color: #38bdf8;" id="mitigation-recom-1">
+                    <div class="mitigation-header">
+                        <h3>1. Defensive Hardening Recommendation: Sensitive Directory Information Disclosure (robots.txt)</h3>
+                        <div class="badge-cluster">
+                            <span class="badge badge-low">PREVENTATIVE</span>
+                            <span class="badge" style="background:rgba(148, 163, 184, 0.1); color:#94a3b8; border:1px solid #334155; font-size:0.75rem;">CWE-based Weakness</span>
+                            <span class="badge-cwe">CWE-200</span>
+                        </div>
+                    </div>
+                    <p><strong>OWASP Taxonomy:</strong> A05:2021 - Security Misconfiguration</p>
+                    <p><strong>Preventative Impact:</strong> Direct listing of administrative portals, staging subdirectories, and restricted paths in robots.txt guides attacker reconnaissance.</p>
+                    <div class="code-title">Server Hardening Configuration & Code Patch:</div>
+                    <pre class="code-block"><code># Nginx Access Control for Administrative Paths:
+location ~* ^/(admin|staging|private)/ {
+    allow 10.0.0.0/8;
+    deny all;
+    auth_basic &quot;Restricted Area&quot;;
+    auth_basic_user_file /etc/nginx/.htpasswd;
+}</code></pre>
+                    <div class="code-title retest-title">Verification Procedure:</div>
+                    <code class="cmd-block">curl -s -k &quot;https://&lt;target&gt;/robots.txt&quot;</code>
+                </div>
+<div class="mitigation-card" style="border-left-color: #38bdf8;" id="mitigation-recom-2">
+                    <div class="mitigation-header">
+                        <h3>2. Defensive Hardening Recommendation: Sensitive Directory Information Disclosure (robots.txt)</h3>
+                        <div class="badge-cluster">
+                            <span class="badge badge-low">PREVENTATIVE</span>
+                            <span class="badge" style="background:rgba(148, 163, 184, 0.1); color:#94a3b8; border:1px solid #334155; font-size:0.75rem;">CWE-based Weakness</span>
+                            <span class="badge-cwe">CWE-200</span>
+                        </div>
+                    </div>
+                    <p><strong>OWASP Taxonomy:</strong> A05:2021 - Security Misconfiguration</p>
+                    <p><strong>Preventative Impact:</strong> Direct listing of administrative portals, staging subdirectories, and restricted paths in robots.txt guides attacker reconnaissance.</p>
+                    <div class="code-title">Server Hardening Configuration & Code Patch:</div>
+                    <pre class="code-block"><code># Nginx Access Control for Administrative Paths:
+location ~* ^/(admin|staging|private)/ {
+    allow 10.0.0.0/8;
+    deny all;
+    auth_basic &quot;Restricted Area&quot;;
+    auth_basic_user_file /etc/nginx/.htpasswd;
+}</code></pre>
+                    <div class="code-title retest-title">Verification Procedure:</div>
+                    <code class="cmd-block">curl -s -k &quot;https://&lt;target&gt;/robots.txt&quot;</code>
+                </div>
+<div class="mitigation-card" style="border-left-color: #38bdf8;" id="mitigation-recom-3">
+                    <div class="mitigation-header">
+                        <h3>3. Defensive Hardening Recommendation: Missing Security Hardening Headers</h3>
+                        <div class="badge-cluster">
+                            <span class="badge badge-low">PREVENTATIVE</span>
+                            <span class="badge" style="background:rgba(148, 163, 184, 0.1); color:#94a3b8; border:1px solid #334155; font-size:0.75rem;">CWE-based Weakness</span>
+                            <span class="badge-cwe">CWE-693</span>
+                        </div>
+                    </div>
+                    <p><strong>OWASP Taxonomy:</strong> A05:2021 - Security Misconfiguration</p>
+                    <p><strong>Preventative Impact:</strong> Absence of defensive response headers leaves application exposed to clickjacking, MIME-type confusion sniffing, and protocol downgrade attacks.</p>
+                    <div class="code-title">Server Hardening Configuration & Code Patch:</div>
+                    <pre class="code-block"><code># Nginx Defensive Header Block:
+add_header X-Frame-Options SAMEORIGIN always;
+add_header X-Content-Type-Options nosniff always;
+add_header X-XSS-Protection &quot;1; mode=block&quot; always;
+add_header Referrer-Policy &quot;strict-origin-when-cross-origin&quot; always;
+add_header Strict-Transport-Security &quot;max-age=31536000; includeSubDomains&quot; always;</code></pre>
+                    <div class="code-title retest-title">Verification Procedure:</div>
+                    <code class="cmd-block">curl -s -k -I &quot;https://&lt;target&gt;/&quot; | grep -E &quot;(X-Frame-Options|X-Content-Type-Options|Strict-Transport-Security)&quot;</code>
+                </div>
+
+    <!-- Section 6: GAP-1 Triage Prioritization -->
+    <h2 id="gap1">6. GAP-1 Exploit Quality Prioritization & Candidate Queue</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
+        Candidate vulnerabilities ranked according to composite priority score:
+        <em>Score = (w_cvss &times; S_cvss) + (w_exp &times; E_exp) + (w_ai &times; Q_ai)</em>
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Candidate & Target Vector</th>
+                <th>Severity & CVSS</th>
+                <th>Usability Rank</th>
+                <th>Composite Score</th>
+                <th>Status</th>
+                <th>AI Triage Reasoning</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>#1</strong></td>
+                <td><strong>Robots Exclusion Protocol Information Disclosure</strong><br><small class="mono-sub">/robots.txt</small></td>
+                <td>LOW (CVSS 3.1)</td>
+                <td><span class="badge badge-emerald">HIGH</span></td>
+                <td><strong class="comp-val">0.7240</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Direct HTTP GET reveals internal configuration or sensitive directories.</td>
+            </tr>
+<tr>
+                <td><strong>#2</strong></td>
+                <td><strong>Sensitive Directory and Endpoint Information Disclosure</strong><br><small class="mono-sub">/robots.txt</small></td>
+                <td>LOW (CVSS 3.5)</td>
+                <td><span class="badge badge-emerald">HIGH</span></td>
+                <td><strong class="comp-val">0.7200</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Direct HTTP GET reveals internal configuration or sensitive directories.</td>
+            </tr>
+<tr>
+                <td><strong>#3</strong></td>
+                <td><strong>Security Policy Disclosure (security.txt)</strong><br><small class="mono-sub">/.well-known/security.txt</small></td>
+                <td>INFO (CVSS 0.0)</td>
+                <td><span class="badge badge-amber">MEDIUM</span></td>
+                <td><strong class="comp-val">0.6000</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Standard exploit payload syntax valid with moderate noise profile and verified endpoint access.</td>
+            </tr>
+<tr>
+                <td><strong>#4</strong></td>
+                <td><strong>Permissive Cross-Origin Resource Sharing (CORS) Policy</strong><br><small class="mono-sub">/</small></td>
+                <td>MEDIUM (CVSS 4.8)</td>
+                <td><span class="badge badge-amber">MEDIUM</span></td>
+                <td><strong class="comp-val">0.5520</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Permissive CORS policy allows unauthorized origin cross-domain access.</td>
+            </tr>
+<tr>
+                <td><strong>#5</strong></td>
+                <td><strong>API Documentation Disclosure</strong><br><small class="mono-sub">/api-docs</small></td>
+                <td>LOW (CVSS 3.5)</td>
+                <td><span class="badge badge-amber">MEDIUM</span></td>
+                <td><strong class="comp-val">0.5400</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Standard exploit payload syntax valid with moderate noise profile and verified endpoint access.</td>
+            </tr>
+<tr>
+                <td><strong>#6</strong></td>
+                <td><strong>Client-Side Insecure JavaScript Processing</strong><br><small class="mono-sub">/</small></td>
+                <td>LOW (CVSS 3.5)</td>
+                <td><span class="badge badge-amber">MEDIUM</span></td>
+                <td><strong class="comp-val">0.4800</strong></td>
+                <td><span class="badge badge-rose">ABANDONED</span></td>
+                <td class="reason-cell">Client-side DOM sink (e.g. innerHTML) identified in page scripts; viability depends on user-controlled input reaching the execution sink.</td>
+            </tr>
+<tr>
+                <td><strong>#7</strong></td>
+                <td><strong>Missing Security Hardening Headers</strong><br><small class="mono-sub">/</small></td>
+                <td>LOW (CVSS 3.5)</td>
+                <td><span class="badge badge-purple">LOW</span></td>
+                <td><strong class="comp-val">0.3400</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">Passive HTTP response header audit notes missing defensive directives (hardening observation); no active exploit demonstrated.</td>
+            </tr>
+<tr>
+                <td><strong>#8</strong></td>
+                <td><strong>Content Security Policy (CSP) Header Not Set</strong><br><small class="mono-sub">/</small></td>
+                <td>LOW (CVSS 3.1)</td>
+                <td><span class="badge badge-purple">LOW</span></td>
+                <td><strong class="comp-val">0.2640</strong></td>
+                <td><span class="badge badge-cyan">VALIDATED OBSERVATION</span></td>
+                <td class="reason-cell">HTTP header inspection notes absence of Content-Security-Policy (hardening observation); no executable XSS payload demonstrated.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section 7: GAP-2 Bounded Dynamic Decision-Pivoting Trail -->
+    <h2 id="gap2">7. GAP-2 Bounded Dynamic Pivoting (k=2) & Audit Trace</h2>
+    <p style="color:#94a3b8; font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem;">
+        Chronological audit log showing state machine transitions, attempt limits, failure detection, and automatic route abandonment:
+    </p>
+    <div class="trace-box">
+        <div class="trace-row">[13:05:36] [INIT] Queue initialized with 8 candidates (threshold k=2)</div>
+<div class="trace-row">[13:05:36] [DISPATCH] Targeting candidate sensitive-path-robotstxt</div>
+<div class="trace-row">[13:05:36] [INIT] [TURN 1/500] Initializing VAPT scan on http://127.0.0.1:3000/#/ (Mode: AUTONOMOUS, Scan Depth: DEEP, Limit: 500 turns, Threshold k=2)</div>
+<div class="trace-row">[13:05:36] [SPIDER] [TURN 2/500] Web Spider: discovered 87 route(s), 2 form(s), 9 parameter(s)</div>
+<div class="trace-row">[13:05:37] [RECON] [TURN 3/500] Identified runtime stack: GENERIC_WEB | Audited 3 network port(s), 3 component library(ies)</div>
+<div class="trace-row">[13:05:37] [TRIAGE] [TURN 4/500] GAP-1 prioritized 8 candidate vector(s) across target attack surface</div>
+<div class="trace-row">[13:05:38] [AUTONOMOUS] [TURN 1/500] Spawning AI-VAPT Multi-Agent Autonomous Pentest Engine against http://127.0.0.1:3000/#/ (Limit: 500 turns, Depth: DEEP)</div>
+<div class="trace-row">[13:05:38] [SANDBOX] Rewrote loopback target http://127.0.0.1:3000/#/ -&gt; http://host.docker.internal:3000/#/ for Docker sandbox reachability</div>
+<div class="trace-row">[13:05:51] [SANDBOX] Attached autonomous scan run directory: run-14ee778a</div>
+<div class="trace-row">[13:05:53] [TURN] [TURN 1/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:07:37] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:07:37] [TURN] [TURN 2/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:07:43] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:07:43] [TURN] [TURN 3/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:08:02] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:08:02] [TURN] [TURN 4/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:08:14] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:08:14] [TURN] [TURN 5/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:08:21] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:08:22] [TURN] [TURN 6/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:08:29] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:08:29] [TURN] [TURN 7/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:08:36] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:08:37] [TURN] [TURN 8/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:09:04] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:09:04] [TURN] [TURN 9/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:09:26] [COVERAGE] Coverage updated: 0 surface(s) audited</div>
+<div class="trace-row">[13:09:26] [TURN] [TURN 10/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:09:37] [COVERAGE] Coverage updated: 1 surface(s) audited</div>
+<div class="trace-row">[13:09:37] [COVERAGE] Coverage updated: 1 surface(s) audited</div>
+<div class="trace-row">[13:09:37] [TURN] [TURN 11/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:09:45] [COVERAGE] Coverage updated: 1 surface(s) audited</div>
+<div class="trace-row">[13:09:45] [TURN] [TURN 12/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:01] [COVERAGE] Coverage updated: 1 surface(s) audited</div>
+<div class="trace-row">[13:10:01] [TURN] [TURN 13/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:10] [COVERAGE] Coverage updated: 2 surface(s) audited</div>
+<div class="trace-row">[13:10:10] [COVERAGE] Coverage updated: 2 surface(s) audited</div>
+<div class="trace-row">[13:10:10] [TURN] [TURN 14/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:18] [COVERAGE] Coverage updated: 2 surface(s) audited</div>
+<div class="trace-row">[13:10:18] [TURN] [TURN 15/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:35] [COVERAGE] Coverage updated: 2 surface(s) audited</div>
+<div class="trace-row">[13:10:35] [TURN] [TURN 16/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:46] [COVERAGE] Coverage updated: 3 surface(s) audited</div>
+<div class="trace-row">[13:10:46] [COVERAGE] Coverage updated: 3 surface(s) audited</div>
+<div class="trace-row">[13:10:46] [TURN] [TURN 17/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:10:55] [COVERAGE] Coverage updated: 3 surface(s) audited</div>
+<div class="trace-row">[13:10:55] [TURN] [TURN 18/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:11:26] [COVERAGE] Coverage updated: 3 surface(s) audited</div>
+<div class="trace-row">[13:11:27] [TURN] [TURN 19/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:11:41] [COVERAGE] Coverage updated: 3 surface(s) audited</div>
+<div class="trace-row">[13:11:41] [TURN] [TURN 20/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:11:52] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:11:52] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:11:52] [TURN] [TURN 21/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:12:02] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:12:02] [TURN] [TURN 22/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:12:10] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:12:11] [TURN] [TURN 23/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:12:20] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:12:20] [TURN] [TURN 24/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:12:38] [COVERAGE] Coverage updated: 4 surface(s) audited</div>
+<div class="trace-row">[13:12:38] [TURN] [TURN 25/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:12:48] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:12:48] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:12:48] [TURN] [TURN 26/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:13:00] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:13:00] [TURN] [TURN 27/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:13:12] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:13:12] [TURN] [TURN 28/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:13:20] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:13:20] [TURN] [TURN 29/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:13:54] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:13:54] [TURN] [TURN 30/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:14:13] [COVERAGE] Coverage updated: 5 surface(s) audited</div>
+<div class="trace-row">[13:14:13] [TURN] [TURN 31/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:14:25] [COVERAGE] Coverage updated: 6 surface(s) audited</div>
+<div class="trace-row">[13:14:25] [COVERAGE] Coverage updated: 6 surface(s) audited</div>
+<div class="trace-row">[13:14:25] [TURN] [TURN 32/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:14:35] [COVERAGE] Coverage updated: 6 surface(s) audited</div>
+<div class="trace-row">[13:14:35] [TURN] [TURN 33/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:14:54] [COVERAGE] Coverage updated: 6 surface(s) audited</div>
+<div class="trace-row">[13:14:54] [TURN] [TURN 34/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:15:06] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:15:06] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:15:06] [TURN] [TURN 35/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:15:22] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:15:23] [TURN] [TURN 36/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:15:31] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:15:31] [TURN] [TURN 37/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:17:09] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:17:09] [TURN] [TURN 38/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:17:28] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:17:28] [TURN] [TURN 39/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:17:41] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:17:41] [TURN] [TURN 40/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:18:41] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:18:41] [TURN] [TURN 41/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:19:47] [COVERAGE] Coverage updated: 7 surface(s) audited</div>
+<div class="trace-row">[13:19:47] [TURN] [TURN 42/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:20:03] [COVERAGE] Coverage updated: 8 surface(s) audited</div>
+<div class="trace-row">[13:20:03] [COVERAGE] Coverage updated: 8 surface(s) audited</div>
+<div class="trace-row">[13:20:03] [TURN] [TURN 43/500] Active agent: Root Agent</div>
+<div class="trace-row">[13:20:03] [PIVOT] [GAP-2 PIVOT] Bounded threshold reached for client-js-attacks; pivoted to None</div>
+<div class="trace-row">[13:22:08] [COVERAGE] Coverage updated: 8 surface(s) audited</div>
+<div class="trace-row">[13:22:08] [COVERAGE] Coverage updated: 8 surface(s) audited</div>
+<div class="trace-row">[13:22:10] [COVERAGE] Coverage updated: 8 surface(s) audited</div>
+<div class="trace-row">[13:22:11] [AGENT] AI-VAPT Framework  ·  Autonomous Security Assessment Platform</div>
+    </div>
+
+    <hr style="border-color: #1f2937; margin-top: 3.5rem;">
+    <p style="font-size: 0.85rem; color: #64748b; text-align: center;">
+        AI-VAPT Autonomous Operations Engine • Cryptographically Verified Output • Generated 2026-11-17 13:05:34 IST
+    </p>
+</body>
+</html>

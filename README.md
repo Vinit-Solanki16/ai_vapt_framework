@@ -146,7 +146,7 @@ AI-VAPT supports a multi-provider LLM routing architecture:
 | **Local Ollama** | Qwen 2.5 Coder, Llama 3.1 | Connects to `http://localhost:11434` (zero external network egress) |
 
 > [!TIP]
-> **In-Memory Security:** Keys entered in the Web Console are stored in process memory only (`runtime_credentials.py`) and are never written to disk or logged.
+> **Credential handling:** Keys supplied per assessment (`assessor_api_key` / `X-*-API-Key`) are held in process memory only (`runtime_credentials.py`) and engine subprocesses no longer persist them. Keys saved through **Settings → AI Models** are intentionally stored in `~/.strix/cli-config.json` (mode 0600) so they survive restarts; this is a deliberate, operator-initiated save, not a per-run side effect.
 
 ---
 

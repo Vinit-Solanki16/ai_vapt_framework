@@ -138,13 +138,16 @@ def _apply_log_limits(create_kwargs: dict[str, Any]) -> None:
 
 
 def _apply_run_labels(create_kwargs: dict[str, Any]) -> None:
-    run_id = os.getenv("STRIX_RUN_ID")
-    if not run_id:
-        return
     labels = create_kwargs.setdefault("labels", {})
     if not isinstance(labels, dict):
         return
-    labels["strix-run-id"] = run_id
+    labels["app"] = "ai-vapt"
+    labels["ai-vapt-managed"] = "true"
+    labels["strix-managed"] = "true"
+    run_id = os.getenv("STRIX_RUN_ID") or os.getenv("AI_VAPT_RUN_ID")
+    if run_id:
+        labels["strix-run-id"] = run_id
+        labels["ai-vapt-run-id"] = run_id
     run_type = os.getenv("STRIX_RUN_TYPE")
     if run_type:
         labels["strix-run-type"] = run_type

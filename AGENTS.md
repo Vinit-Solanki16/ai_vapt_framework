@@ -1,69 +1,113 @@
-# Strix — Agent Guide
+# AI-VAPT — Agent Guide
 
-Strix is an open-source autonomous AI pentesting tool. This file is for AI coding agents that want to **use** Strix (run security scans) or **contribute** to it.
+AI-VAPT is an autonomous AI-powered vulnerability assessment and penetration testing platform. This guide provides AI coding agents and autonomous tools with instructions on how to **use**, **operate**, and **contribute** to AI-VAPT safely and effectively.
 
-## Using Strix from an agent
+---
 
-Install the agent skills for step-by-step workflows:
+## 1. Operating AI-VAPT from an Agent
 
-```bash
-npx skills add usestrix/strix
-```
+### 1.1 Architecture & Runtime Components
+- **FastAPI Control Gateway & Web Console:** `strix/interface/api.py` and `strix/interface/web/`.
+- **Core Orchestrator & Multi-Agent Graph:** `strix/core/runner.py` and `strix/agents/`.
+- **GAP-1 Prioritization & Candidate Triage:** `strix/core/decision_engine/engine.py` and `strix/core/gap_bridge.py`.
+- **GAP-2 Adaptive Pivoting ($k \le 2$):** `strix/core/gap_run.py`.
+- **Docker Sandbox Runtime:** `strix/runtime/` with sandbox container `ghcr.io/usestrix/strix-sandbox:1.3.0`.
+- **Docker Cleanup Backstop:** `strix/runtime/docker_cleanup.py` (auto-reaping orphaned containers).
+- **Multi-Provider AI Router:** `strix/llm/` supporting Cloud-Hosted (OpenAI-compatible), Ollama, OpenRouter, Anthropic, and Google.
 
-- `penetration-testing-with-strix` — run a headless pentest against code, URLs, domains, or IPs and read results (covers both run modes below)
-- `managed-pentesting-with-strix` — drive the managed app.strix.ai platform via REST (no local Docker/LLM needed)
-- `fix-security-vulnerabilities-with-strix` — remediate findings and re-run Strix to verify
-- `ci-security-scanning-with-strix` — add PR scanning to CI/CD (self-hosted CLI or managed app)
+### 1.2 Running an Assessment
+To run an authorized assessment programmatically:
 
-Target-specific workflows built on the same engine:
+1. **Start the Web Operations Console / Gateway:**
+   ```bash
+   ./ai-vapt.sh start --port 8000
+   ```
+   Verify health:
+   ```bash
+   curl -s http://127.0.0.1:8000/health
+   # Returns: {"status":"ok","service":"ai-vapt-gateway"}
+   ```
 
-- `application-security-testing` — whole-product AppSec review: pick the right test per asset, then rank the results
-- `web-app-penetration-testing` — black-box pentest of a live web app or staging site
-- `api-security-testing` — REST/GraphQL APIs and the OWASP API Security Top 10 (BOLA/IDOR, authz)
-- `owasp-top-10-testing` — systematic OWASP Top 10 assessment with honest per-category coverage
-- `find-security-vulnerabilities-in-code` — white-box review of a repo or working tree
+2. **Trigger an Assessment via API:**
+   ```bash
+   curl -X POST http://127.0.0.1:8000/runs \
+     -H "Content-Type: application/json" \
+     -d '{
+       "target": "http://localhost:3000",
+       "scan_mode": "quick",
+       "assessor_provider": "cloud_hosted",
+       "assessor_model": "kaggle-model",
+       "target_scope_acknowledged": true
+     }'
+   ```
 
-**Two ways to run, same engine — pick per situation:**
+3. **Or run headlessly from CLI:**
+   ```bash
+   uv run strix -n -t http://localhost:3000 --scan-mode quick --max-budget 10
+   ```
 
-- **Open-source CLI (self-hosted):** free, fully local, BYO LLM key, needs Docker. Best for local dev loops, air-gapped/offline, and full control.
+### 1.3 Interpreting Exit Codes
+AI-VAPT uses standard security-scanner exit codes:
+- **`0` (Clean):** Scan completed successfully with zero verified vulnerabilities.
+- **`1` (Fatal Error):** Unhandled execution error or process failure.
+- **`2` (Vulnerabilities Found):** Scan completed successfully and verified security vulnerabilities were identified. This indicates successful finding discovery, **not** a process crash.
+
+### 1.4 Assessment Deliverables
+Every completed run generates audit artifacts in `strix_runs/<run-id>/`:
+- `penetration_test_report.md` — Human-readable markdown report.
+- `vapt_report_<run-id>.html` — Interactive executive HTML report with SHA-256 evidence digests.
+- `vapt_report_<run-id>.pdf` — Executive summary PDF report.
+- `findings.sarif` — OASIS SARIF v2.1.0 report for CI/CD ingestion.
+- `vulnerabilities.json` & `vulnerabilities.csv` — Machine-readable findings.
+- `run.json` — Comprehensive execution telemetry and turn accounting.
+
+---
+
+## 2. Docker Sandbox & Cleanup Lifecycle
+
+- Sandbox containers execute inside isolated Docker environments with network capability restrictions.
+- Every container created carries explicit AI-VAPT labels:
+  - `app: ai-vapt`
+  - `ai-vapt-managed: true`
+  - `strix-managed: true`
+  - `strix-run-id: <run-id>`
+- **Cleanup Backstop:** If a process is terminated abruptly (SIGKILL or host shutdown), orphaned containers are safely cleaned up on server restart or via:
   ```bash
-  curl -sSL https://strix.ai/install | bash        # install
-  export STRIX_LLM="openrouter/z-ai/glm-5.3"        # any LiteLLM model id, or vercel_ai_gateway/zai/glm-5.3
-  export LLM_API_KEY="<key>"
-  strix -n -t ./ --scan-mode quick --max-budget 10  # headless scan; always use -n
+  curl -X POST http://127.0.0.1:8000/system/docker/cleanup
   ```
-  - Requires Docker running. Scans take minutes (`quick`) to hours (`deep`) — run in the background.
-  - Exit codes (headless): `0` clean, `1` fatal error, `2` vulnerabilities found. A `0` only covers what was analyzed — check `run.json` (`status`, `llm_usage.cost` vs the budget) before calling a run clean.
-  - Artifacts in `strix_runs/<run-name>/`: `penetration_test_report.md`, `vulnerabilities/*.md`, `vulnerabilities.json`, `findings.sarif` (SARIF 2.1.0), `run.json`.
+  The cleanup reaper strictly inspects AI-VAPT ownership labels, preserves active assessments, and never touches unrelated host containers (e.g. databases, testbeds).
 
-- **Managed cloud (app.strix.ai):** no Docker, no LLM key, no local install; adds team dashboards, scheduling, PR reviews, and downloadable PDF/DOCX reports (Enterprise plan). Best in sandboxed/CI environments and for teams. Use it when local infra isn't available.
+---
+
+## 3. Contributing to AI-VAPT
+
+### 3.1 Prerequisites & Development Environment
+- Python 3.12+ managed with `uv`.
+- Docker Engine running locally or via remote TLS socket.
+- Setup dependencies:
   ```bash
-  strix cloud login --scopes scans:read scans:write uploads:write billing:read
-  strix cloud domains add --domain example.com --asset-type web_app
-  strix cloud scans start --engagement-type live_test --domain-ids <uuid> --wait
-  strix cloud scans start --source . --dry-run --show-files --json  # review + capture source.archive_sha256
-  SOURCE_SHA256="<reviewed source.archive_sha256>"
-  strix cloud scans start --source . --approve-sha256 "$SOURCE_SHA256" --wait
-  strix cloud vulns list --severity critical
-  strix cloud billing topup --credits 20 --yes  # explicit approval after exit code 5
+  uv sync
   ```
-  - Account setup runs from the CLI too: `strix cloud workspaces list|create|use` (`workspace` is an alias and `use` accepts a displayed number, name, or ID), `strix cloud session scopes|scopes set`, `strix cloud org members invite`, `strix cloud billing subscribe --plan strix_cloud`, `strix cloud billing portal`, `strix cloud integrations install github`, and `strix cloud domains verify <id>`. Workspace switching preserves the server-side profile and can never widen past the login ceiling; ordinary switches do not reprompt. The last four end at a person: the command prints a link or a DNS record for the user to open or add, and it never completes the payment, installation, or DNS change for them.
-  - Every REST operation has a `strix cloud <resource> <verb>` command. Run `strix cloud` to list them. Output is JSON when stdout is not a terminal (or with `--json`), and there are no prompts without a TTY. Binary downloads are the exception: redirect raw bytes intentionally, or combine `--output FILE --json` for structured download metadata. Exit codes: `0` success, `1` error, `2` usage, `4` auth or plan limit, `5` payment required. `--token` or `STRIX_API_TOKEN` is a stateless override and never replaces stored auth; set `--workspace-id`/`STRIX_WORKSPACE_ID` for an override CLI session. `--data` adds extra request fields as JSON, and accepts `@file` or `-` for standard input.
-  - Local source uploads require `uploads:write`. For an agent/CI handoff, review `scans start --source . --dry-run --show-files --json`, capture `source.archive_sha256`, then rerun with the same `--source`, `--exclude`, and `--include-*` selection flags plus `--approve-sha256 HASH`. A changed snapshot is rejected. `--yes` approves only the snapshot built in that invocation, so reserve it for a deliberate human or one-shot approval rather than a digest-bound two-step handoff.
-  - Git ignores, hidden files, `.git`, symlinks, dependency/build output, secret-like filenames, and nested archives are excluded by default; `.strixignore` and `--exclude` narrow the manifest further (a trailing `/` excludes a directory subtree). Limits: 20,000 files, 25 MiB/file, 250 MiB expanded, 50 MiB compressed. Source-only infers `code_review`; source plus a domain infers `live_test`.
-  - The temporary local archive is always removed. A staged upload is deleted after a definitive rejection, but retained when a network error, `5xx`, malformed success response, or interruption leaves the scan launch ambiguous. JSON reports its `upload_id` with `launch_outcome_unknown: true`, or with `cleanup_unknown: true` when automatic deletion cannot be confirmed. Check `scans list` before retrying; if no scan is linked, run `uploads delete UPLOAD_ID`.
-  - Non-Enterprise scans consume the scope estimate (a default-tier source-only review currently starts at 60 credits); Enterprise scans are plan-included. A rejected launch does not consume credits.
-  - Human output is compact and numbered; non-TTY output and `--json` retain full records. Enable tab completion with `source <(strix completions zsh)` (or `bash`), or `strix completions fish | source`.
-  - The REST API works directly too: https://docs.app.strix.ai (OpenAPI: https://docs.app.strix.ai/openapi.json).
 
-- CLI docs index for LLMs: https://docs.strix.ai/llms.txt (full: https://docs.strix.ai/llms-full.txt). Managed API docs for LLMs: https://docs.app.strix.ai/llms.txt.
-- Only scan targets the user is authorized to test.
+### 3.2 Quality Gates & Verification
+Before submitting changes or preparing releases, ensure all gates pass:
+- **Fast Linting & Formatting:**
+  ```bash
+  uv run ruff check .
+  uv run ruff format --check .
+  ```
+- **Type Checking:**
+  ```bash
+  uv run mypy strix/
+  ```
+- **Security Audit:**
+  ```bash
+  uv run bandit -r strix/ -c pyproject.toml
+  ```
+- **Automated Tests:**
+  ```bash
+  uv run pytest
+  ```
 
-## Contributing to this repo
-
-- Python 3.12+, managed with `uv`. Install dev deps: `make dev-install`.
-- Lint/format/type-check/security, all in one: `make check-all` (ruff, mypy, bandit).
-- Tests: `uv run pytest`.
-- Run from source: `uv run strix --target <target>`.
-- Layout: `strix/agents` (agent graph + prompts), `strix/tools` (proxy, browser, terminal, scanners), `strix/runtime` (Docker sandbox), `strix/report` (findings, SARIF), `strix/skills` (internal knowledge packs the pentest agents load — different from the consumer skills in `skills/`), `strix/interface` (CLI/TUI), `containers/` (sandbox image).
-- Pre-commit hooks: `make pre-commit` (or `uv run pre-commit install`).
+### 3.3 Target Authorization Rule
+> **MANDATORY SAFETY BOUNDARY:** Never execute scans against unauthorized targets. Only assess systems that you own or have explicit written authorization to test.

@@ -127,11 +127,13 @@ def test_criterion_4_and_5_startup_recovery(tmp_path, monkeypatch):
     run_a = base / "run-completed-ok"
     run_a.mkdir()
     (run_a / "run.json").write_text(
-        json.dumps({
-            "run_id": "run-completed-ok",
-            "status": "completed",
-            "events": [{"event": "RUN_COMPLETED"}],
-        }),
+        json.dumps(
+            {
+                "run_id": "run-completed-ok",
+                "status": "completed",
+                "events": [{"event": "RUN_COMPLETED"}],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -140,13 +142,15 @@ def test_criterion_4_and_5_startup_recovery(tmp_path, monkeypatch):
     run_b.mkdir()
     (run_b / "penetration_test_report.md").write_text("# Report", encoding="utf-8")
     (run_b / "run.json").write_text(
-        json.dumps({
-            "run_id": "run-failed-with-report",
-            "status": "failed_agent",
-            "exit_code": 1,
-            "error": "Syntax error in target prompt",
-            "events": [{"event": "RUN_FAILED_AGENT"}],
-        }),
+        json.dumps(
+            {
+                "run_id": "run-failed-with-report",
+                "status": "failed_agent",
+                "exit_code": 1,
+                "error": "Syntax error in target prompt",
+                "events": [{"event": "RUN_FAILED_AGENT"}],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -154,11 +158,13 @@ def test_criterion_4_and_5_startup_recovery(tmp_path, monkeypatch):
     run_c = base / "run-paused-limit"
     run_c.mkdir()
     (run_c / "run.json").write_text(
-        json.dumps({
-            "run_id": "run-paused-limit",
-            "status": "paused_execution_limit",
-            "events": [{"event": "RUN_PAUSED_EXECUTION_LIMIT"}],
-        }),
+        json.dumps(
+            {
+                "run_id": "run-paused-limit",
+                "status": "paused_execution_limit",
+                "events": [{"event": "RUN_PAUSED_EXECUTION_LIMIT"}],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -220,7 +226,13 @@ async def test_criterion_8_resume_preserves_state(client):
         "pivot_events": [{"type": "GAP2_PIVOT", "candidate_id": "c1", "to_candidate": "c2"}],
         "findings": [{"id": "v1", "title": "PHPInfo", "verification_state": "verified"}],
         "events": [],
-        "execution_segments": [{"started_at": "2026-11-12T10:00:00+00:00", "ended_at": "2026-11-12T10:30:00+00:00", "duration_seconds": 1800.0}],
+        "execution_segments": [
+            {
+                "started_at": "2026-11-12T10:00:00+00:00",
+                "ended_at": "2026-11-12T10:30:00+00:00",
+                "duration_seconds": 1800.0,
+            }
+        ],
     }
 
     res = client.post(f"/runs/{run_id}/resume", json={"model": "deepseek/deepseek-chat"})
@@ -349,9 +361,23 @@ def test_criterion_14_and_15_gap1_and_gap2_counter_derivation():
             {"id": "c4", "state": "PENDING", "attempts": 0},
         ],
         "pivot_events": [
-            {"type": "GAP2_PIVOT", "candidate_id": "c2", "to_candidate": "c3", "pivot_executed": True},
-            {"type": "GAP2_PIVOT", "candidate_id": "c3", "to_candidate": "c4", "pivot_executed": False},  # not executed
-            {"event": "GAP2_PIVOT", "candidate_id": "c1", "next_candidate": "c2"},  # executed legacy
+            {
+                "type": "GAP2_PIVOT",
+                "candidate_id": "c2",
+                "to_candidate": "c3",
+                "pivot_executed": True,
+            },
+            {
+                "type": "GAP2_PIVOT",
+                "candidate_id": "c3",
+                "to_candidate": "c4",
+                "pivot_executed": False,
+            },  # not executed
+            {
+                "event": "GAP2_PIVOT",
+                "candidate_id": "c1",
+                "next_candidate": "c2",
+            },  # executed legacy
         ],
         "findings": [],
         "progress": {},
@@ -401,6 +427,7 @@ def test_criterion_16_segmented_duration_accounting():
     # Finalize segment 2 (25 mins active)
     # Mock _utc_now to end_time
     import strix.interface.api as api_mod
+
     orig_utc_now = api_mod._utc_now
     api_mod._utc_now = lambda: end_time
     try:
@@ -436,12 +463,14 @@ def test_criterion_17_multi_agent_turn_accounting(tmp_path, monkeypatch):
     )
     (run_dir / "strix.log").write_text(log_content, encoding="utf-8")
     (run_dir / "run.json").write_text(
-        json.dumps({
-            "run_id": "run-turn-test",
-            "status": "completed",
-            "max_turns": 100,
-            "turns_consumed": 999,  # Inflated by ping-pong
-        }),
+        json.dumps(
+            {
+                "run_id": "run-turn-test",
+                "status": "completed",
+                "max_turns": 100,
+                "turns_consumed": 999,  # Inflated by ping-pong
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -467,7 +496,12 @@ def test_criterion_18_presentation_consistency():
             {"id": "c2", "name": "Candidate 2", "state": "NOT_TESTED", "attempts": 0},
         ],
         "pivot_events": [
-            {"type": "GAP2_PIVOT", "candidate_id": "c1", "to_candidate": "c2", "pivot_executed": True}
+            {
+                "type": "GAP2_PIVOT",
+                "candidate_id": "c1",
+                "to_candidate": "c2",
+                "pivot_executed": True,
+            }
         ],
         "findings": [
             {
@@ -497,7 +531,9 @@ def test_criterion_18_presentation_consistency():
     assert "00:55:09" in html_out  # 3309s formatted as HH:MM:SS
 
     # 3. PDF duration formatting
-    pdf_dur = _duration(run_entry["start_time"], run_entry["end_time"], run_entry["active_duration_seconds"])
+    pdf_dur = _duration(
+        run_entry["start_time"], run_entry["end_time"], run_entry["active_duration_seconds"]
+    )
     assert pdf_dur == "55m 9s"
 
 
@@ -540,11 +576,14 @@ def test_criterion_20_load_runs_idempotent_no_disk_mutation(tmp_path, monkeypatc
     run_dir = base / "run-idempotency-test"
     run_dir.mkdir()
     run_json = run_dir / "run.json"
-    initial_content = json.dumps({
-        "run_id": "run-idempotency-test",
-        "status": "completed",
-        "events": [{"event": "RUN_COMPLETED"}],
-    }, indent=2)
+    initial_content = json.dumps(
+        {
+            "run_id": "run-idempotency-test",
+            "status": "completed",
+            "events": [{"event": "RUN_COMPLETED"}],
+        },
+        indent=2,
+    )
     run_json.write_text(initial_content, encoding="utf-8")
     initial_mtime = run_json.stat().st_mtime_ns
 

@@ -1,0 +1,13 @@
+id,title,severity,cvss_score,cwe_id,owasp_category,location,target,remediation_summary
+vuln-0001,PHPInfo Diagnostic Configuration Disclosure,HIGH,7.5,CWE-497,A01:2021 - Broken Access Control,https://pentest-ground.com:4280/phpinfo.php,https://pentest-ground.com:4280/phpinfo.php,"1. Restrict access to phpinfo.php endpoint through authentication or IP filtering
+2. Remove or disable phpinfo() calls from production code
+3. Implement proper access controls for sensitive diagnostic endpoints"
+vuln-0002,Reflected Cross-Site Scripting (XSS) in name parameter,MEDIUM,5.4,CWE-79,A03:2021 - Injection,https://pentest-ground.com:4280/vulnerabilities/xss_r/,https://pentest-ground.com:4280/vulnerabilities/xss_r/,"1. Implement proper output encoding for all user-controllable data before rendering it in HTML
+2. Use a Content Security Policy (CSP) to prevent inline script execution
+3. Validate and sanitize all input parameters
+4. Implement proper XSS protection mechanisms like HTML escaping"
+vuln-0003,Path Traversal / Local File Inclusion in File Inclusion Vulnerability,HIGH,7.5,CWE-98,A01:2021 - Broken Access Control,https://pentest-ground.com:4280/vulnerabilities/fi/,https://pentest-ground.com:4280/vulnerabilities/fi/,"1. Implement proper input validation and sanitization for file inclusion parameters
+2. Use a whitelist approach to restrict which files can be included
+3. Set appropriate security levels in DVWA to prevent exploitation
+4. Avoid direct file inclusion based on user input
+5. Implement proper access controls for sensitive file operations"

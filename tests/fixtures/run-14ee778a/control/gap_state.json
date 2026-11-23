@@ -1,0 +1,96 @@
+{
+  "attempts": {
+    "sensitive-path-robotstxt": 1,
+    "robots-txt-exposure": 1,
+    "sensitive-path-wellknownsecuritytxt": 1,
+    "cors-misconfiguration": 1,
+    "sensitive-path-apidocs": 1,
+    "missing-security-headers": 1,
+    "csp-bypass": 1,
+    "client-js-attacks": 2
+  },
+  "exhausted": [
+    "client-js-attacks"
+  ],
+  "completed": [
+    "cors-misconfiguration",
+    "csp-bypass",
+    "missing-security-headers",
+    "robots-txt-exposure",
+    "sensitive-path-apidocs",
+    "sensitive-path-robotstxt",
+    "sensitive-path-wellknownsecuritytxt"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "status": "positive",
+      "detail": "The robots.txt file reveals sensitive directory information by disallowing access to /ftp, which indicates the application has FTP functionality or related endpoints that should not be publicly accessible.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:39:26.167375+00:00"
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "status": "positive",
+      "detail": "The robots.txt file reveals sensitive directory information by disallowing access to /ftp, which indicates the application has FTP functionality or related endpoints that should not be publicly accessible. This is a direct disclosure of internal configuration.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:40:01.316096+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-wellknownsecuritytxt",
+      "status": "positive",
+      "detail": "The security.txt file is publicly accessible and reveals sensitive information including contact email, encryption keys location, acknowledgments page, hiring page, and CSAF data. This is a disclosure of organizational security policy details that should not be publicly exposed.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:40:34.867541+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "positive",
+      "detail": "The application returns 'Access-Control-Allow-Origin: *' header, which allows any origin to access resources. This permissive CORS policy can lead to cross-origin data leakage and unauthorized cross-domain access.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:41:40.999059+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-apidocs",
+      "status": "positive",
+      "detail": "The API documentation is publicly accessible at /api-docs/ and uses Swagger UI. This disclosure provides attackers with detailed information about the application's APIs, endpoints, parameters, and data structures which can be used for further attacks.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:42:37.769474+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "positive",
+      "detail": "The application is missing several important security headers including Content-Security-Policy, which helps prevent XSS attacks. It only includes X-Content-Type-Options: nosniff and X-Frame-Options: SAMEORIGIN, but lacks other critical headers like Strict-Transport-Security, Referrer-Policy, and Content-Security-Policy.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:44:13.129593+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "positive",
+      "detail": "The application does not set a Content-Security-Policy header, which leaves it vulnerable to Cross-Site Scripting (XSS) attacks. This is a critical security misconfiguration that allows attackers to inject malicious scripts into the application.",
+      "report_id": "",
+      "timestamp": "2026-11-17T07:44:54.179244+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "The client-side JavaScript processing was not fully analyzed for potential DOM-based XSS or other vulnerabilities. This is a known area of concern in the OWASP Juice Shop but requires more detailed analysis to confirm specific vulnerabilities. The application's intentionally insecure design makes it a good target for security testing, but this particular vulnerability has not been fully verified.",
+      "reason": "The client-side JavaScript processing was not fully analyzed for potential DOM-based XSS or other vulnerabilities. This is a known area of concern in the OWASP Juice Shop but requires more detailed analysis to confirm specific vulnerabilities. The application's intentionally insecure design makes it a good target for security testing, but this particular vulnerability has not been fully verified.",
+      "next_candidate": null,
+      "timestamp": "2026-11-17T07:49:47.033805+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "Client-side JavaScript processing analysis incomplete - requires more detailed examination of DOM sinks and input handling",
+      "reason": "Client-side JavaScript processing analysis incomplete - requires more detailed examination of DOM sinks and input handling",
+      "next_candidate": null,
+      "timestamp": "2026-11-17T07:50:03.670171+00:00"
+    }
+  ]
+}

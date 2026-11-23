@@ -210,7 +210,8 @@ def test_evidence_domain_isolation_prevents_csp_cors_cross_contamination() -> No
         },
     ]
 
-    run_dir = Path("strix_runs/run-14ee778a")
+    fixtures_run_dir = Path(__file__).resolve().parent / "fixtures" / "run-14ee778a"
+    run_dir = fixtures_run_dir if fixtures_run_dir.is_dir() else Path("strix_runs/run-14ee778a")
     if run_dir.exists():
         enriched = enrich_candidates_from_execution(candidates, run_dir=run_dir, findings=[])
         csp = next(c for c in enriched if c["id"] == "cand-csp")
@@ -224,7 +225,8 @@ def test_evidence_domain_isolation_prevents_csp_cors_cross_contamination() -> No
 
 def test_duplicate_tool_invocations_tracked_truthfully() -> None:
     """When multiple candidates evaluate output from a single curl call, duplicate associations are counted."""
-    run_dir = Path("strix_runs/run-14ee778a")
+    fixtures_run_dir = Path(__file__).resolve().parent / "fixtures" / "run-14ee778a"
+    run_dir = fixtures_run_dir if fixtures_run_dir.is_dir() else Path("strix_runs/run-14ee778a")
     if not run_dir.exists():
         pytest.skip("run-14ee778a fixture directory not available")
 
@@ -365,7 +367,8 @@ An external assessment of the OWASP Juice Shop application identified multiple c
 
 def test_reconcile_run_directory_run_14ee778a_produces_zero_validation_errors() -> None:
     """Running reconcile_run_directory on run-14ee778a completes cleanly with zero consistency errors."""
-    run_dir = Path("strix_runs/run-14ee778a")
+    fixtures_run_dir = Path(__file__).resolve().parent / "fixtures" / "run-14ee778a"
+    run_dir = fixtures_run_dir if fixtures_run_dir.is_dir() else Path("strix_runs/run-14ee778a")
     if not run_dir.exists():
         pytest.skip("run-14ee778a fixture directory not available")
 

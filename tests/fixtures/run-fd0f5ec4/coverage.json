@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-17 12:46:17 UTC",
+  "run_id": "run-fd0f5ec4",
+  "run_name": "run-fd0f5ec4",
+  "scope": {
+    "targets": [
+      {
+        "type": "web_application",
+        "details": {
+          "target_url": "http://host.docker.internal:3000/#/"
+        },
+        "original": "http://host.docker.internal:3000/#/"
+      }
+    ],
+    "scan_mode": "deep",
+    "scope_mode": "auto",
+    "diff_scope": {
+      "active": false,
+      "mode": "auto"
+    },
+    "instruction": ""
+  },
+  "summary": {
+    "surfaces_reviewed": 8,
+    "outcomes": {
+      "reported": 7,
+      "needs_follow_up": 1
+    },
+    "findings_filed": 0,
+    "gaps": 1
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "17949214",
+        "agent_name": "Root Agent",
+        "status": "running",
+        "skills": [],
+        "task": "\n\nURLs: - http://host.docker.internal:3000/#/\n\n## AI_VAPT GAP-1 prioritized candidate queue\n\nAI_VAPT assessed and ranked these authorized candidates before this run.\nWork through them in this exact order unless a candidate is proven\nineligible. Candidate ids are stable identifiers used by GAP-2 attempt\ntracking. After each candidate, record the result and move on.\n\n1. [sensitive-path-robotstxt] Robots Exclusion Protocol Information Disclosure | endpoint=/robots.txt | method=GET | quality=HIGH | priority=0.724 | reasoning=Direct HTTP GET reveals internal configuration or sensitive directories.\n2. [robots-txt-exposure] Sensitive Directory and Endpoint Information Disclosure | endpoint=/robots.txt | method=GET | quality=HIGH | priority=0.72 | reasoning=Direct HTTP GET reveals internal configuration or sensitive directories.\n3. [sensitive-path-wellknownsecuritytxt] Security Policy Disclosure (security.txt) | endpoint=/.well-known/security.txt | method=GET | quality=MEDIUM | priority=0.6 | reasoning=Standard exploit payload syntax valid with moderate noise profile and verified endpoint access.\n4. [cors-misconfiguration] Permissive Cross-Origin Resource Sharing (CORS) Policy | endpoint=/ | method=GET | quality=MEDIUM | priority=0.552 | reasoning=Permissive CORS policy allows unauthorized origin cross-domain access.\n5. [sensitive-path-apidocs] API Documentation Disclosure | endpoint=/api-docs | method=GET | quality=MEDIUM | priority=0.54 | reasoning=Standard exploit payload syntax valid with moderate noise profile and verified endpoint access.\n6. [client-js-attacks] Client-Side Insecure JavaScript Processing | endpoint=/ | method=GET | quality=MEDIUM | priority=0.48 | reasoning=Client-side DOM sink (e.g. innerHTML) identified in page scripts; viability depends on user-controlled input reaching the execution sink.\n7. [missing-security-headers] Missing Security Hardening Headers | endpoint=/ | method=GET | quality=LOW | priority=0.34 | reasoning=Passive HTTP response header audit notes missing defensive directives (hardening observation); no active exploit demonstrated.\n8. [csp-bypass] Content Security Policy (CSP) Header Not Set | endpoint=/ | method=GET | quality=LOW | priority=0.264 | reasoning=HTTP header inspection notes absence of Content-Security-Policy (hardening observation); no executable XSS payload demonstrated.\n\nIf one candidate fails verification repeatedly (threshold 2), abandon it and pivot to the next ranked candidate.\nDo not keep retrying an exhausted route.\n\n### Investigation & Outcome Recording Instructions:\n1. Work through the candidates in prioritized order.\n2. If you confirm a vulnerability: call `create_vulnerability_report` (include the candidate endpoint and title). This records a POSITIVE outcome in GAP-2 and marks the candidate complete.\n3. If an attack surface is verified clean, safe, or not vulnerable: call `record_coverage(surface=endpoint, risk_area=title, outcome='no_issue_found', evidence=...)`. This records a NEGATIVE outcome in GAP-2 and marks the candidate complete.\n4. If an initial probe is inconclusive or requires follow-up: call `record_coverage(surface=endpoint, risk_area=title, outcome='needs_follow_up', evidence=...)`. If a candidate reaches 2 inconclusive attempts, GAP-2 triggers an automatic PIVOT.\n5. When GAP-2 signals a PIVOT, abandon the current candidate immediately and proceed to the next ranked candidate.\n6. The completion gate requires all GAP-1 candidates to be investigated or ruled out before `finish_scan` can succeed.",
+        "is_root": true
+      }
+    ],
+    "skills_exercised": [],
+    "findings_filed": 0,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": false,
+    "scan_status": "stopped",
+    "exit_reason": "user_exit",
+    "caveats": [
+      "The scan ended with status 'stopped' rather than completing, so coverage reflects only the work finished before it stopped.",
+      "1 agent(s) did not finish cleanly (Root Agent); any surface they held is under-covered.",
+      "The run terminated via 'user_exit' rather than the root agent finishing, so remaining scope was not reached."
+    ]
+  },
+  "entries": [
+    {
+      "surface": "/robots.txt",
+      "risk_area": "Robots Exclusion Protocol Information Disclosure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The /robots.txt file is accessible and reveals internal configuration information. It contains \"Disallow: /ftp\" which exposes a sensitive path that should not be publicly disclosed.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:43:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/robots.txt",
+      "risk_area": "Sensitive Directory and Endpoint Information Disclosure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The /robots.txt file exposes sensitive directory information by disallowing access to /ftp path, which is a disclosure of internal configuration.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:43:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/.well-known/security.txt",
+      "risk_area": "Security Policy Disclosure (security.txt)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The /.well-known/security.txt file is accessible and reveals security policy information including contact details, encryption keys, and other sensitive metadata that could be used for further attacks.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:43:57 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/",
+      "risk_area": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The application has a permissive CORS policy with 'Access-Control-Allow-Origin: *' which allows any origin to make cross-origin requests. This can enable CSRF attacks and unauthorized data access.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:44:10 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api-docs",
+      "risk_area": "API Documentation Disclosure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The /api-docs endpoint is accessible and provides comprehensive API documentation that could be used by attackers to understand the application's endpoints, parameters, and data structures.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:44:23 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/",
+      "risk_area": "Missing Security Hardening Headers",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The application is missing several security-hardening headers including Content-Security-Policy, X-XSS-Protection, and Strict-Transport-Security which could make it vulnerable to various client-side attacks.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:44:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/",
+      "risk_area": "Content Security Policy (CSP) Header Not Set",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "The application is missing Content-Security-Policy header which could make it vulnerable to XSS attacks and other client-side vulnerabilities.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:44:47 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/",
+      "risk_area": "Client-Side Insecure JavaScript Processing",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "Initial analysis of client-side JavaScript did not reveal any obvious DOM-based XSS sinks (innerHTML, document.write, eval, etc.). Further dynamic analysis may be required to confirm if there are any client-side vulnerabilities.",
+      "recorded_by": "Root Agent",
+      "recorded_at": "2026-11-17 12:45:14 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "needs_follow_up",
+      "surface": "/",
+      "risk_area": "Client-Side Insecure JavaScript Processing",
+      "detail": "Initial analysis of client-side JavaScript did not reveal any obvious DOM-based XSS sinks (innerHTML, document.write, eval, etc.). Further dynamic analysis may be required to confirm if there are any client-side vulnerabilities."
+    }
+  ]
+}

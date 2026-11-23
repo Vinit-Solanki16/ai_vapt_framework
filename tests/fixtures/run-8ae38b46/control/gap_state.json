@@ -1,0 +1,74 @@
+{
+  "attempts": {
+    "sensitive-path-robotstxt": 1,
+    "robots-txt-exposure": 1,
+    "sensitive-path-wellknownsecuritytxt": 1,
+    "cors-misconfiguration": 1,
+    "sensitive-path-apidocs": 1,
+    "client-js-attacks": 1,
+    "missing-security-headers": 1,
+    "csp-bypass": 1
+  },
+  "exhausted": [],
+  "completed": [
+    "client-js-attacks",
+    "cors-misconfiguration",
+    "csp-bypass",
+    "missing-security-headers",
+    "robots-txt-exposure",
+    "sensitive-path-apidocs",
+    "sensitive-path-robotstxt",
+    "sensitive-path-wellknownsecuritytxt"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "status": "negative",
+      "detail": "The robots.txt file only disallows the /ftp path, which is a standard practice and not sensitive information disclosure. No internal configuration or sensitive directories are exposed.",
+      "timestamp": "2026-11-16T19:39:28.908543+00:00"
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "status": "negative",
+      "detail": "The robots.txt file only disallows the /ftp path, which is a standard practice and not sensitive information disclosure. No internal configuration or sensitive directories are exposed.",
+      "timestamp": "2026-11-16T19:39:42.888551+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-wellknownsecuritytxt",
+      "status": "negative",
+      "detail": "The security.txt file is publicly accessible and contains standard security policy information including contact details, encryption keys, acknowledgments, and job openings. This is expected behavior for a security-conscious application and not a vulnerability.",
+      "timestamp": "2026-11-16T19:39:59.471272+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "negative",
+      "detail": "The application sets Access-Control-Allow-Origin: * which is permissive CORS configuration. However, this is not necessarily a vulnerability in itself as it's commonly used for public APIs and the app appears to be an intentionally insecure demo application (OWASP Juice Shop). The permissiveness allows all origins to access the resources, but since this is a demo environment with no sensitive data, this doesn't constitute a security risk.",
+      "timestamp": "2026-11-16T19:40:19.733623+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-apidocs",
+      "status": "negative",
+      "detail": "The API documentation is publicly accessible but this is standard practice for development environments and APIs. The Swagger UI documentation is intended to be available for developers to understand the API endpoints, and it's common for such documentation to be exposed in non-production environments.",
+      "timestamp": "2026-11-16T19:40:35.524186+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "negative",
+      "detail": "While the application is an insecure demo (OWASP Juice Shop), no specific client-side vulnerabilities were found in the main page HTML. The JavaScript processing appears to be standard for a frontend application without direct DOM sinks that would enable XSS.",
+      "timestamp": "2026-11-16T19:40:52.125895+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "negative",
+      "detail": "The application is missing several security headers like Content-Security-Policy, X-XSS-Protection, and others. However, since this is the OWASP Juice Shop - an intentionally insecure demo application designed for security training - these missing headers are expected behavior rather than a vulnerability.",
+      "timestamp": "2026-11-16T19:41:08.791009+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "negative",
+      "detail": "The Content-Security-Policy header is not set, which would normally be a security concern. However, since this is the OWASP Juice Shop - an intentionally insecure demo application designed for security training and education - the absence of CSP headers is expected behavior rather than a vulnerability.",
+      "timestamp": "2026-11-16T19:41:26.492968+00:00"
+    }
+  ]
+}

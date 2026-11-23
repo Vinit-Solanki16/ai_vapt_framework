@@ -1,0 +1,1036 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "AI-VAPT",
+          "informationUri": "https://github.com/Vinit-Solanki16/ai_vapt_framework",
+          "rules": [
+            {
+              "id": "vuln-0001",
+              "name": "PHPInfo Diagnostic Configuration Disclosure",
+              "shortDescription": {
+                "text": "PHPInfo Diagnostic Configuration Disclosure"
+              },
+              "fullDescription": {
+                "text": "The /phpinfo.php endpoint exposes sensitive server environment information without authentication, potentially allowing attackers to gather detailed configuration data."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The /phpinfo.php endpoint exposes sensitive server environment information without authentication, potentially allowing attackers to gather detailed configuration data.\n\nAn attacker can access detailed PHP configuration, system information, and environment variables that could aid in further exploitation attempts.\n\n1. Restrict access to phpinfo.php endpoint through authentication or IP filtering\n2. Remove or disable phpinfo() calls from production code\n3. Implement proper access controls for sensitive diagnostic endpoints",
+                "markdown": "The /phpinfo.php endpoint exposes sensitive server environment information without authentication, potentially allowing attackers to gather detailed configuration data.\n\nAn attacker can access detailed PHP configuration, system information, and environment variables that could aid in further exploitation attempts.\n\n1. Restrict access to phpinfo.php endpoint through authentication or IP filtering\n2. Remove or disable phpinfo() calls from production code\n3. Implement proper access controls for sensitive diagnostic endpoints"
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "vuln-0002",
+              "name": "Reflected Cross-Site Scripting (XSS) in name parameter",
+              "shortDescription": {
+                "text": "Reflected Cross-Site Scripting (XSS) in name parameter"
+              },
+              "fullDescription": {
+                "text": "The /vulnerabilities/xss_r/ endpoint reflects user input from the 'name' parameter without proper sanitization, allowing for reflected XSS attacks."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "help": {
+                "text": "The /vulnerabilities/xss_r/ endpoint reflects user input from the 'name' parameter without proper sanitization, allowing for reflected XSS attacks.\n\nAn attacker can inject malicious JavaScript code that will execute in the victim's browser when they visit the page with the crafted URL, potentially leading to session hijacking or other client-side attacks.\n\n1. Implement proper output encoding for all user-controllable data before rendering it in HTML\n2. Use a Content Security Policy (CSP) to prevent inline script execution\n3. Validate and sanitize all input parameters\n4. Implement proper XSS protection mechanisms like HTML escaping",
+                "markdown": "The /vulnerabilities/xss_r/ endpoint reflects user input from the 'name' parameter without proper sanitization, allowing for reflected XSS attacks.\n\nAn attacker can inject malicious JavaScript code that will execute in the victim's browser when they visit the page with the crafted URL, potentially leading to session hijacking or other client-side attacks.\n\n1. Implement proper output encoding for all user-controllable data before rendering it in HTML\n2. Use a Content Security Policy (CSP) to prevent inline script execution\n3. Validate and sanitize all input parameters\n4. Implement proper XSS protection mechanisms like HTML escaping"
+              },
+              "properties": {
+                "security-severity": "5.4",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "vuln-0003",
+              "name": "Path Traversal / Local File Inclusion in File Inclusion Vulnerability",
+              "shortDescription": {
+                "text": "Path Traversal / Local File Inclusion in File Inclusion Vulnerability"
+              },
+              "fullDescription": {
+                "text": "The /vulnerabilities/fi/ endpoint in Damn Vulnerable Web Application (DVWA) is vulnerable to Path Traversal and Local File Inclusion attacks when the security level is set to 'low'. The application directly includes files based on user input without proper validation."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "The /vulnerabilities/fi/ endpoint in Damn Vulnerable Web Application (DVWA) is vulnerable to Path Traversal and Local File Inclusion attacks when the security level is set to 'low'. The application directly includes files based on user input without proper validation.\n\nAn attacker can potentially include arbitrary files from the server filesystem, which could lead to information disclosure or further exploitation depending on the file inclusion mechanism.\n\n1. Implement proper input validation and sanitization for file inclusion parameters\n2. Use a whitelist approach to restrict which files can be included\n3. Set appropriate security levels in DVWA to prevent exploitation\n4. Avoid direct file inclusion based on user input\n5. Implement proper access controls for sensitive file operations",
+                "markdown": "The /vulnerabilities/fi/ endpoint in Damn Vulnerable Web Application (DVWA) is vulnerable to Path Traversal and Local File Inclusion attacks when the security level is set to 'low'. The application directly includes files based on user input without proper validation.\n\nAn attacker can potentially include arbitrary files from the server filesystem, which could lead to information disclosure or further exploitation depending on the file inclusion mechanism.\n\n1. Implement proper input validation and sanitization for file inclusion parameters\n2. Use a whitelist approach to restrict which files can be included\n3. Set appropriate security levels in DVWA to prevent exploitation\n4. Avoid direct file inclusion based on user input\n5. Implement proper access controls for sensitive file operations"
+              },
+              "properties": {
+                "security-severity": "7.5",
+                "tags": [
+                  "security",
+                  "stride:T",
+                  "stride:I"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/open-tcp-port-6379-redis",
+              "name": "Open TCP Port: 6379 (Redis)",
+              "shortDescription": {
+                "text": "Coverage: Open TCP Port: 6379 (Redis)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface.",
+                "markdown": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/open-tcp-port-7001-weblogic",
+              "name": "Open TCP Port: 7001 (WebLogic)",
+              "shortDescription": {
+                "text": "Coverage: Open TCP Port: 7001 (WebLogic)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Open TCP Port: 7001 (WebLogic) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Open TCP Port: 7001 (WebLogic) across the assessed attack surface.",
+                "markdown": "Coverage of Open TCP Port: 7001 (WebLogic) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/open-tcp-port-9000-sonarqube-php-fpm",
+              "name": "Open TCP Port: 9000 (SonarQube/PHP-FPM)",
+              "shortDescription": {
+                "text": "Coverage: Open TCP Port: 9000 (SonarQube/PHP-FPM)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Open TCP Port: 9000 (SonarQube/PHP-FPM) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Open TCP Port: 9000 (SonarQube/PHP-FPM) across the assessed attack surface.",
+                "markdown": "Coverage of Open TCP Port: 9000 (SonarQube/PHP-FPM) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+              "name": "Robots Exclusion Protocol Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Robots Exclusion Protocol Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+              "name": "Sensitive Directory and Endpoint Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Sensitive Directory and Endpoint Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/missing-anti-clickjacking-header-x-frame-options",
+              "name": "Missing Anti-Clickjacking Header (X-Frame-Options)",
+              "shortDescription": {
+                "text": "Coverage: Missing Anti-Clickjacking Header (X-Frame-Options)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Missing Anti-Clickjacking Header (X-Frame-Options) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Missing Anti-Clickjacking Header (X-Frame-Options) across the assessed attack surface.",
+                "markdown": "Coverage of Missing Anti-Clickjacking Header (X-Frame-Options) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/content-security-policy-csp-header-not-set",
+              "name": "Content Security Policy (CSP) Header Not Set",
+              "shortDescription": {
+                "text": "Coverage: Content Security Policy (CSP) Header Not Set"
+              },
+              "fullDescription": {
+                "text": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface.",
+                "markdown": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/x-content-type-options-header-missing",
+              "name": "X-Content-Type-Options Header Missing",
+              "shortDescription": {
+                "text": "Coverage: X-Content-Type-Options Header Missing"
+              },
+              "fullDescription": {
+                "text": "Coverage of X-Content-Type-Options Header Missing across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of X-Content-Type-Options Header Missing across the assessed attack surface.",
+                "markdown": "Coverage of X-Content-Type-Options Header Missing across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/strict-transport-security-hsts-header-not-set",
+              "name": "Strict-Transport-Security (HSTS) Header Not Set",
+              "shortDescription": {
+                "text": "Coverage: Strict-Transport-Security (HSTS) Header Not Set"
+              },
+              "fullDescription": {
+                "text": "Coverage of Strict-Transport-Security (HSTS) Header Not Set across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Strict-Transport-Security (HSTS) Header Not Set across the assessed attack surface.",
+                "markdown": "Coverage of Strict-Transport-Security (HSTS) Header Not Set across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/cookie-missing-httponly-flag",
+              "name": "Cookie Missing HttpOnly Flag",
+              "shortDescription": {
+                "text": "Coverage: Cookie Missing HttpOnly Flag"
+              },
+              "fullDescription": {
+                "text": "Coverage of Cookie Missing HttpOnly Flag across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Cookie Missing HttpOnly Flag across the assessed attack surface.",
+                "markdown": "Coverage of Cookie Missing HttpOnly Flag across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/cookie-without-secure-flag",
+              "name": "Cookie Without Secure Flag",
+              "shortDescription": {
+                "text": "Coverage: Cookie Without Secure Flag"
+              },
+              "fullDescription": {
+                "text": "Coverage of Cookie Without Secure Flag across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Cookie Without Secure Flag across the assessed attack surface.",
+                "markdown": "Coverage of Cookie Without Secure Flag across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/cookie-missing-samesite-attribute",
+              "name": "Cookie Missing SameSite Attribute",
+              "shortDescription": {
+                "text": "Coverage: Cookie Missing SameSite Attribute"
+              },
+              "fullDescription": {
+                "text": "Coverage of Cookie Missing SameSite Attribute across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Cookie Missing SameSite Attribute across the assessed attack surface.",
+                "markdown": "Coverage of Cookie Missing SameSite Attribute across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/server-banner-information-disclosure",
+              "name": "Server Banner Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Server Banner Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Server Banner Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Server Banner Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Server Banner Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/reverse-tabnabbing-missing-noopener-noreferrer-on-target-blank",
+              "name": "Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank)",
+              "shortDescription": {
+                "text": "Coverage: Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank) across the assessed attack surface.",
+                "markdown": "Coverage of Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/client-side-insecure-javascript-processing",
+              "name": "Client-Side Insecure JavaScript Processing",
+              "shortDescription": {
+                "text": "Coverage: Client-Side Insecure JavaScript Processing"
+              },
+              "fullDescription": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface.",
+                "markdown": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+              "name": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "shortDescription": {
+                "text": "Coverage: Permissive Cross-Origin Resource Sharing (CORS) Policy"
+              },
+              "fullDescription": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface.",
+                "markdown": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "vuln-0001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "PHPInfo Diagnostic Configuration Disclosure\n\nThe /phpinfo.php endpoint exposes sensitive server environment information without authentication, potentially allowing attackers to gather detailed configuration data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "https://pentest-ground.com:4280/phpinfo.php",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "fd683786dc3b98608411d4fd22040e70fee2e1890d7cfae2f593aad5951e5c0a"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "9a1bae2ff4cba322b6b9e6accf3df7d7d08b5cde22ea870051412e590c451a05",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0001",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-11-12 15:34:21 UTC",
+              "target": "https://pentest-ground.com:4280/phpinfo.php",
+              "impact": "An attacker can access detailed PHP configuration, system information, and environment variables that could aid in further exploitation attempts.",
+              "technical_analysis": "The phpinfo.php endpoint is directly accessible without authentication, exposing sensitive server configuration including PHP version, build date, loaded extensions, system information, and configuration file paths.",
+              "remediation_steps": "1. Restrict access to phpinfo.php endpoint through authentication or IP filtering\n2. Remove or disable phpinfo() calls from production code\n3. Implement proper access controls for sensitive diagnostic endpoints",
+              "counterevidence": "No authentication or access control mechanism was found on the phpinfo.php endpoint. The response contains detailed server configuration information including PHP version, build date, system info, and loaded extensions.",
+              "confidence": "high",
+              "severity_change_conditions": "If proper authentication is implemented to restrict access to authorized users only, this vulnerability would be reduced in severity.",
+              "poc": {
+                "description": "1. Navigate to https://pentest-ground.com:4280/phpinfo.php\n2. Observe the detailed server configuration information exposed in the response",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "vuln-0002",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Reflected Cross-Site Scripting (XSS) in name parameter\n\nThe /vulnerabilities/xss_r/ endpoint reflects user input from the 'name' parameter without proper sanitization, allowing for reflected XSS attacks."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "https://pentest-ground.com:4280/vulnerabilities/xss_r/",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "1288446d63459c2d0726babdbc774434818a63b3ff3c75f963451a24fec0ce89"
+          },
+          "properties": {
+            "security-severity": "5.4",
+            "strix_vuln_class_hash": "e78e12e566ecf38eeabbfaf41c3a8efb344abcb603e83f25a6ae0910ca08f5e6",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0002",
+              "severity": "medium",
+              "cvss": 5.4,
+              "timestamp": "2026-11-12 15:36:10 UTC",
+              "target": "https://pentest-ground.com:4280/vulnerabilities/xss_r/",
+              "impact": "An attacker can inject malicious JavaScript code that will execute in the victim's browser when they visit the page with the crafted URL, potentially leading to session hijacking or other client-side attacks.",
+              "technical_analysis": "The application directly reflects user input from the 'name' parameter in the response without any output encoding or sanitization, making it vulnerable to reflected cross-site scripting attacks.",
+              "remediation_steps": "1. Implement proper output encoding for all user-controllable data before rendering it in HTML\n2. Use a Content Security Policy (CSP) to prevent inline script execution\n3. Validate and sanitize all input parameters\n4. Implement proper XSS protection mechanisms like HTML escaping",
+              "counterevidence": "No output encoding or sanitization was found on the reflected parameter. The script tag from the 'name' parameter is directly included in the HTML response and executed by the browser.",
+              "confidence": "high",
+              "severity_change_conditions": "If proper input validation and output encoding are implemented, this vulnerability would be reduced in severity.",
+              "poc": {
+                "description": "1. Navigate to https://pentest-ground.com:4280/vulnerabilities/xss_r/?name=%3Cscript%3Ealert%281%29%3C/script%3E\n2. Observe that the script tag is reflected in the response and executed in the browser",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "vuln-0003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Path Traversal / Local File Inclusion in File Inclusion Vulnerability\n\nThe /vulnerabilities/fi/ endpoint in Damn Vulnerable Web Application (DVWA) is vulnerable to Path Traversal and Local File Inclusion attacks when the security level is set to 'low'. The application directly includes files based on user input without proper validation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                }
+              }
+            },
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "https://pentest-ground.com:4280/vulnerabilities/fi/",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "09b31cbcaea98fae652b646488427e6cef6ae55e02db082e390fcb04ac5e4713"
+          },
+          "properties": {
+            "security-severity": "7.5",
+            "strix_vuln_class_hash": "fe8c2cf7020febe74c79120c859d65c972360a8c327e52e02c021bd5819c5314",
+            "synthetic_location": true,
+            "strix": {
+              "id": "vuln-0003",
+              "severity": "high",
+              "cvss": 7.5,
+              "timestamp": "2026-11-12 16:14:42 UTC",
+              "target": "https://pentest-ground.com:4280/vulnerabilities/fi/",
+              "impact": "An attacker can potentially include arbitrary files from the server filesystem, which could lead to information disclosure or further exploitation depending on the file inclusion mechanism.",
+              "technical_analysis": "In DVWA's low security mode, the file inclusion vulnerability allows direct file inclusion through the 'page' parameter. The application directly includes files without proper validation or sanitization of user input, making it vulnerable to path traversal attacks.",
+              "remediation_steps": "1. Implement proper input validation and sanitization for file inclusion parameters\n2. Use a whitelist approach to restrict which files can be included\n3. Set appropriate security levels in DVWA to prevent exploitation\n4. Avoid direct file inclusion based on user input\n5. Implement proper access controls for sensitive file operations",
+              "counterevidence": "No input validation or sanitization is performed on the 'page' parameter. The application directly includes files as specified by the user, which constitutes a Path Traversal / Local File Inclusion vulnerability.",
+              "confidence": "high",
+              "severity_change_conditions": "If proper input validation and file access controls are implemented, this vulnerability would be mitigated.",
+              "poc": {
+                "description": "1. Navigate to https://pentest-ground.com:4280/vulnerabilities/fi/?page=include.php\n2. Observe that the page parameter is directly included without validation\n3. Error messages show that the include function is being called with user-provided input",
+                "script_available": true
+              }
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/open-tcp-port-6379-redis",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Open TCP Port: 6379 (Redis) — No issue identified: tcp://178.79.134.182:6379\n\nPort 6379 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "tcp://178.79.134.182:6379"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Open TCP Port: 6379 (Redis)",
+              "surface": "tcp://178.79.134.182:6379",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/open-tcp-port-7001-weblogic",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Open TCP Port: 7001 (WebLogic) — No issue identified: tcp://178.79.134.182:7001\n\nPort 7001 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "tcp://178.79.134.182:7001"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Open TCP Port: 7001 (WebLogic)",
+              "surface": "tcp://178.79.134.182:7001",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/open-tcp-port-9000-sonarqube-php-fpm",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Open TCP Port: 9000 (SonarQube/PHP-FPM) — No issue identified: tcp://178.79.134.182:9000\n\nPort 9000 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "tcp://178.79.134.182:9000"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Open TCP Port: 9000 (SonarQube/PHP-FPM)",
+              "surface": "tcp://178.79.134.182:9000",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+          "ruleIndex": 6,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Robots Exclusion Protocol Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file is accessible but only contains 'Disallow: /' which is a standard configuration that doesn't reveal sensitive information or internal directories."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Robots Exclusion Protocol Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Sensitive Directory and Endpoint Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file is accessible but only contains 'Disallow: /' which is a standard configuration that doesn't reveal sensitive information or internal directories."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Sensitive Directory and Endpoint Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/missing-anti-clickjacking-header-x-frame-options",
+          "ruleIndex": 8,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Missing Anti-Clickjacking Header (X-Frame-Options) — No issue identified: /\n\nThe X-Frame-Options header is missing from the response, which could make the application vulnerable to clickjacking attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Missing Anti-Clickjacking Header (X-Frame-Options)",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/content-security-policy-csp-header-not-set",
+          "ruleIndex": 9,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Content Security Policy (CSP) Header Not Set — No issue identified: /\n\nThe Content-Security-Policy header is missing from the response, which could make the application vulnerable to XSS attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Content Security Policy (CSP) Header Not Set",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/x-content-type-options-header-missing",
+          "ruleIndex": 10,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "X-Content-Type-Options Header Missing — No issue identified: /\n\nThe X-Content-Type-Options header is missing from the response, which could make the application vulnerable to MIME sniffing attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "X-Content-Type-Options Header Missing",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/strict-transport-security-hsts-header-not-set",
+          "ruleIndex": 11,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Strict-Transport-Security (HSTS) Header Not Set — No issue identified: /\n\nThe Strict-Transport-Security header is missing from the response, which could make the application vulnerable to protocol downgrade attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Strict-Transport-Security (HSTS) Header Not Set",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/cookie-missing-httponly-flag",
+          "ruleIndex": 12,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Cookie Missing HttpOnly Flag — No issue identified: /\n\nThe session cookies (security and PHPSESSID) are missing the HttpOnly flag, which could make them vulnerable to XSS attacks that could steal the cookies."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Cookie Missing HttpOnly Flag",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/cookie-without-secure-flag",
+          "ruleIndex": 13,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Cookie Without Secure Flag — No issue identified: /\n\nThe session cookies (security and PHPSESSID) are missing the Secure flag, which means they could be transmitted over HTTP instead of HTTPS only."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Cookie Without Secure Flag",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/cookie-missing-samesite-attribute",
+          "ruleIndex": 14,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Cookie Missing SameSite Attribute — No issue identified: /\n\nThe session cookies (security and PHPSESSID) are missing the SameSite attribute, which could make them vulnerable to CSRF attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Cookie Missing SameSite Attribute",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/server-banner-information-disclosure",
+          "ruleIndex": 15,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Server Banner Information Disclosure — No issue identified: /\n\nThe Server header in the response reveals that nginx/1.31.8 is being used, which could provide information about the server software version to potential attackers."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Server Banner Information Disclosure",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/reverse-tabnabbing-missing-noopener-noreferrer-on-target-blank",
+          "ruleIndex": 16,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank) — No issue identified: /\n\nThe main page doesn't appear to contain links with target='_blank' without noopener/noreferrer attributes that would enable reverse tabnabbing attacks."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Reverse Tabnabbing (Missing noopener/noreferrer on target=_blank)",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/client-side-insecure-javascript-processing",
+          "ruleIndex": 17,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Client-Side Insecure JavaScript Processing — No issue identified: /vulnerabilities/javascript/\n\nThe JavaScript vulnerability page exists but doesn't appear to have exploitable insecure JavaScript processing based on the initial inspection."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/vulnerabilities/javascript/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Client-Side Insecure JavaScript Processing",
+              "surface": "/vulnerabilities/javascript/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+          "ruleIndex": 18,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Permissive Cross-Origin Resource Sharing (CORS) Policy — No issue identified: /\n\nNo CORS headers (Access-Control-Allow-Origin, Access-Control-Allow-Methods, etc.) were found in the response from the main endpoint. The application does not appear to have a permissive CORS policy that would allow unauthorized cross-origin requests. The absence of these headers suggests either no CORS implementation or proper restrictions are in place."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "surface": "/",
+              "recorded_by": "CORS Investigation Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "syntheticLocationCount": 3
+      }
+    }
+  ]
+}

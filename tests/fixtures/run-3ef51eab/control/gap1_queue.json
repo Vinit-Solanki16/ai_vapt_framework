@@ -1,0 +1,60 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "gap1_rank": 1,
+      "title": "Missing Anti-Clickjacking Header (X-Frame-Options)",
+      "endpoint": "/",
+      "target": "http://vulnweb.com/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.552,
+      "assessment_reasoning": "Standard exploit payload syntax valid with moderate noise profile and verified endpoint access."
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "gap1_rank": 2,
+      "title": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      "endpoint": "/",
+      "target": "http://vulnweb.com/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.552,
+      "assessment_reasoning": "Permissive CORS policy allows unauthorized origin cross-domain access."
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "gap1_rank": 3,
+      "title": "X-Content-Type-Options Header Missing",
+      "endpoint": "/",
+      "target": "http://vulnweb.com/",
+      "method": "GET",
+      "quality_rank": "LOW",
+      "priority_score": 0.34,
+      "assessment_reasoning": "Passive HTTP response header audit notes missing defensive directives (hardening observation); no active exploit demonstrated."
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "gap1_rank": 4,
+      "title": "Content Security Policy (CSP) Header Not Set",
+      "endpoint": "/",
+      "target": "http://vulnweb.com/",
+      "method": "GET",
+      "quality_rank": "LOW",
+      "priority_score": 0.264,
+      "assessment_reasoning": "HTTP header inspection notes absence of Content-Security-Policy (hardening observation); no executable XSS payload demonstrated."
+    }
+  ],
+  "original_order": [
+    "missing-anti-clickjacking",
+    "cors-misconfiguration",
+    "missing-security-headers",
+    "csp-bypass"
+  ],
+  "ranked_order": [
+    "missing-anti-clickjacking",
+    "cors-misconfiguration",
+    "missing-security-headers",
+    "csp-bypass"
+  ]
+}

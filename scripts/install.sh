@@ -2,6 +2,17 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# If invoked directly for AI-VAPT installation, redirect to genuine setup.sh
+if [ -z "${VERSION:-}" ] && [ -z "${STRIX_TEST_ARCHIVE:-}" ]; then
+    if [ -f "$ROOT_DIR/setup.sh" ]; then
+        echo "Launching AI-VAPT Setup ($ROOT_DIR/setup.sh)..."
+        exec "$ROOT_DIR/setup.sh" "$@"
+    fi
+fi
+
 APP=strix
 REPO="usestrix/strix"
 STRIX_IMAGE="ghcr.io/usestrix/strix-sandbox:1.3.0"

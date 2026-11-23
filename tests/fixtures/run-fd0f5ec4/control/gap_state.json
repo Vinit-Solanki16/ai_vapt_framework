@@ -1,0 +1,84 @@
+{
+  "attempts": {
+    "sensitive-path-robotstxt": 1,
+    "robots-txt-exposure": 1,
+    "sensitive-path-wellknownsecuritytxt": 1,
+    "cors-misconfiguration": 1,
+    "sensitive-path-apidocs": 1,
+    "missing-security-headers": 1,
+    "csp-bypass": 1,
+    "client-js-attacks": 1
+  },
+  "exhausted": [],
+  "completed": [
+    "cors-misconfiguration",
+    "csp-bypass",
+    "missing-security-headers",
+    "robots-txt-exposure",
+    "sensitive-path-apidocs",
+    "sensitive-path-robotstxt",
+    "sensitive-path-wellknownsecuritytxt"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "status": "positive",
+      "detail": "The /robots.txt file is accessible and reveals internal configuration information. It contains \"Disallow: /ftp\" which exposes a sensitive path that should not be publicly disclosed.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:43:31.214830+00:00"
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "status": "positive",
+      "detail": "The /robots.txt file exposes sensitive directory information by disallowing access to /ftp path, which is a disclosure of internal configuration.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:43:42.336771+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-wellknownsecuritytxt",
+      "status": "positive",
+      "detail": "The /.well-known/security.txt file is accessible and reveals security policy information including contact details, encryption keys, and other sensitive metadata that could be used for further attacks.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:43:57.069044+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "positive",
+      "detail": "The application has a permissive CORS policy with 'Access-Control-Allow-Origin: *' which allows any origin to make cross-origin requests. This can enable CSRF attacks and unauthorized data access.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:44:10.352485+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-apidocs",
+      "status": "positive",
+      "detail": "The /api-docs endpoint is accessible and provides comprehensive API documentation that could be used by attackers to understand the application's endpoints, parameters, and data structures.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:44:23.263445+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "positive",
+      "detail": "The application is missing several security-hardening headers including Content-Security-Policy, X-XSS-Protection, and Strict-Transport-Security which could make it vulnerable to various client-side attacks.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:44:35.430104+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "positive",
+      "detail": "The application is missing Content-Security-Policy header which could make it vulnerable to XSS attacks and other client-side vulnerabilities.",
+      "report_id": "",
+      "timestamp": "2026-11-17T12:44:47.033374+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Initial analysis of client-side JavaScript did not reveal any obvious DOM-based XSS sinks (innerHTML, document.write, eval, etc.). Further dynamic analysis may be required to confirm if there are any client-side vulnerabilities.",
+      "reason": "Initial analysis of client-side JavaScript did not reveal any obvious DOM-based XSS sinks (innerHTML, document.write, eval, etc.). Further dynamic analysis may be required to confirm if there are any client-side vulnerabilities.",
+      "next_candidate": null,
+      "timestamp": "2026-11-17T12:45:14.177881+00:00"
+    }
+  ]
+}

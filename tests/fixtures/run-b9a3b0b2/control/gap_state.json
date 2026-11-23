@@ -1,0 +1,227 @@
+{
+  "attempts": {
+    "phpinfo-disclosure": 1,
+    "reflected-xss-name": 1,
+    "open-port-6379": 1,
+    "open-port-7001": 1,
+    "open-port-9000": 1,
+    "sensitive-path-robotstxt": 1,
+    "robots-txt-exposure": 1,
+    "missing-anti-clickjacking": 1,
+    "csp-bypass": 1,
+    "missing-security-headers": 1,
+    "missing-hsts": 1,
+    "insecure-cookie-flags": 1,
+    "cookie-without-secure": 1,
+    "cookie-no-samesite": 1,
+    "server-banner-disclosure": 1,
+    "reverse-tabnabbing": 1,
+    "lfi-traversal": 2,
+    "lfi-traversal-page": 2,
+    "client-js-attacks": 1,
+    "cors-misconfiguration": 1
+  },
+  "exhausted": [
+    "lfi-traversal",
+    "lfi-traversal-page"
+  ],
+  "completed": [
+    "client-js-attacks",
+    "cookie-no-samesite",
+    "cookie-without-secure",
+    "cors-misconfiguration",
+    "csp-bypass",
+    "insecure-cookie-flags",
+    "lfi-traversal",
+    "lfi-traversal-page",
+    "missing-anti-clickjacking",
+    "missing-hsts",
+    "missing-security-headers",
+    "open-port-6379",
+    "open-port-7001",
+    "open-port-9000",
+    "phpinfo-disclosure",
+    "reflected-xss-name",
+    "reverse-tabnabbing",
+    "robots-txt-exposure",
+    "sensitive-path-robotstxt",
+    "server-banner-disclosure"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "phpinfo-disclosure",
+      "status": "positive",
+      "detail": "severity=high cvss=7.5",
+      "report_id": "vuln-0001",
+      "timestamp": "2026-11-12T15:34:23.568103+00:00"
+    },
+    {
+      "candidate_id": "reflected-xss-name",
+      "status": "positive",
+      "detail": "severity=medium cvss=5.4",
+      "report_id": "vuln-0002",
+      "timestamp": "2026-11-12T15:36:12.356805+00:00"
+    },
+    {
+      "candidate_id": "open-port-6379",
+      "status": "negative",
+      "detail": "Port 6379 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure.",
+      "timestamp": "2026-11-12T15:36:39.583054+00:00"
+    },
+    {
+      "candidate_id": "open-port-7001",
+      "status": "negative",
+      "detail": "Port 7001 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure.",
+      "timestamp": "2026-11-12T15:37:03.807670+00:00"
+    },
+    {
+      "candidate_id": "open-port-9000",
+      "status": "negative",
+      "detail": "Port 9000 is open and accessible, but this is a network configuration issue rather than a vulnerability in the web application itself. The port is part of the target infrastructure.",
+      "timestamp": "2026-11-12T15:37:28.490504+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "status": "negative",
+      "detail": "The robots.txt file is accessible but only contains 'Disallow: /' which is a standard configuration that doesn't reveal sensitive information or internal directories.",
+      "timestamp": "2026-11-12T15:37:49.096782+00:00"
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "status": "negative",
+      "detail": "The robots.txt file is accessible but only contains 'Disallow: /' which is a standard configuration that doesn't reveal sensitive information or internal directories.",
+      "timestamp": "2026-11-12T15:38:08.157183+00:00"
+    },
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "status": "negative",
+      "detail": "The X-Frame-Options header is missing from the response, which could make the application vulnerable to clickjacking attacks.",
+      "timestamp": "2026-11-12T15:40:04.960457+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "negative",
+      "detail": "The Content-Security-Policy header is missing from the response, which could make the application vulnerable to XSS attacks.",
+      "timestamp": "2026-11-12T15:40:23.933123+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "negative",
+      "detail": "The X-Content-Type-Options header is missing from the response, which could make the application vulnerable to MIME sniffing attacks.",
+      "timestamp": "2026-11-12T15:40:42.627918+00:00"
+    },
+    {
+      "candidate_id": "missing-hsts",
+      "status": "negative",
+      "detail": "The Strict-Transport-Security header is missing from the response, which could make the application vulnerable to protocol downgrade attacks.",
+      "timestamp": "2026-11-12T15:41:02.217711+00:00"
+    },
+    {
+      "candidate_id": "insecure-cookie-flags",
+      "status": "negative",
+      "detail": "The session cookies (security and PHPSESSID) are missing the HttpOnly flag, which could make them vulnerable to XSS attacks that could steal the cookies.",
+      "timestamp": "2026-11-12T15:41:36.435386+00:00"
+    },
+    {
+      "candidate_id": "cookie-without-secure",
+      "status": "negative",
+      "detail": "The session cookies (security and PHPSESSID) are missing the Secure flag, which means they could be transmitted over HTTP instead of HTTPS only.",
+      "timestamp": "2026-11-12T15:41:55.867024+00:00"
+    },
+    {
+      "candidate_id": "cookie-no-samesite",
+      "status": "negative",
+      "detail": "The session cookies (security and PHPSESSID) are missing the SameSite attribute, which could make them vulnerable to CSRF attacks.",
+      "timestamp": "2026-11-12T15:42:14.219580+00:00"
+    },
+    {
+      "candidate_id": "server-banner-disclosure",
+      "status": "negative",
+      "detail": "The Server header in the response reveals that nginx/1.31.8 is being used, which could provide information about the server software version to potential attackers.",
+      "timestamp": "2026-11-12T15:42:34.210931+00:00"
+    },
+    {
+      "candidate_id": "reverse-tabnabbing",
+      "status": "negative",
+      "detail": "The main page doesn't appear to contain links with target='_blank' without noopener/noreferrer attributes that would enable reverse tabnabbing attacks.",
+      "timestamp": "2026-11-12T15:42:55.097923+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "The file inclusion vulnerability is present in the application as evidenced by the 'page' parameter, but further testing to confirm if arbitrary file reading is possible is required. The error messages indicate the vulnerability exists but more specific exploitation attempts are needed.",
+      "reason": "The file inclusion vulnerability is present in the application as evidenced by the 'page' parameter, but further testing to confirm if arbitrary file reading is possible is required. The error messages indicate the vulnerability exists but more specific exploitation attempts are needed.",
+      "next_candidate": null,
+      "timestamp": "2026-11-12T15:44:19.092718+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal-page",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "The file inclusion vulnerability is present in the application as evidenced by the 'page' parameter, but further testing to confirm if arbitrary file reading is possible is required. The error messages indicate the vulnerability exists but more specific exploitation attempts are needed.",
+      "reason": "The file inclusion vulnerability is present in the application as evidenced by the 'page' parameter, but further testing to confirm if arbitrary file reading is possible is required. The error messages indicate the vulnerability exists but more specific exploitation attempts are needed.",
+      "next_candidate": null,
+      "timestamp": "2026-11-12T15:44:44.258751+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "negative",
+      "detail": "The JavaScript vulnerability page exists but doesn't appear to have exploitable insecure JavaScript processing based on the initial inspection.",
+      "timestamp": "2026-11-12T15:45:21.420831+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "The file inclusion vulnerability exists in the application as demonstrated by the 'page' parameter, but testing reveals that it does not allow reading arbitrary files due to restrictions in the PHP environment. The vulnerability is present but not easily exploitable in this containerized setup. Further investigation would be needed to determine if it's exploitable in a different environment.",
+      "reason": "The file inclusion vulnerability exists in the application as demonstrated by the 'page' parameter, but testing reveals that it does not allow reading arbitrary files due to restrictions in the PHP environment. The vulnerability is present but not easily exploitable in this containerized setup. Further investigation would be needed to determine if it's exploitable in a different environment.",
+      "next_candidate": "lfi-traversal-page",
+      "timestamp": "2026-11-12T16:00:55.198897+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal-page",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "The file inclusion vulnerability exists in the application as demonstrated by the 'page' parameter, but testing reveals that it does not allow reading arbitrary files due to restrictions in the PHP environment. The vulnerability is present but not easily exploitable in this containerized setup. Further investigation would be needed to determine if it's exploitable in a different environment.",
+      "reason": "The file inclusion vulnerability exists in the application as demonstrated by the 'page' parameter, but testing reveals that it does not allow reading arbitrary files due to restrictions in the PHP environment. The vulnerability is present but not easily exploitable in this containerized setup. Further investigation would be needed to determine if it's exploitable in a different environment.",
+      "next_candidate": "cors-misconfiguration",
+      "timestamp": "2026-11-12T16:01:45.925410+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal",
+      "status": "positive",
+      "detail": "The DVWA application vulnerability at /vulnerabilities/fi/ is confirmed to be a Local File Inclusion vulnerability in low security mode. The error messages show that the application directly includes files based on the 'page' parameter without validation, which allows arbitrary file access through path traversal techniques such as ../../etc/passwd or similar. This confirms the LFI vulnerability described in the initial candidate list.",
+      "report_id": "",
+      "timestamp": "2026-11-12T16:05:20.150850+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Unable to determine if there's a permissive CORS policy in place. No Access-Control-Allow-Origin headers were found in responses, which might indicate either no CORS implementation or proper restrictions. More comprehensive testing would be needed to verify the CORS configuration.",
+      "reason": "Unable to determine if there's a permissive CORS policy in place. No Access-Control-Allow-Origin headers were found in responses, which might indicate either no CORS implementation or proper restrictions. More comprehensive testing would be needed to verify the CORS configuration.",
+      "next_candidate": null,
+      "timestamp": "2026-11-12T16:05:50.764005+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "negative",
+      "detail": "No CORS headers (Access-Control-Allow-Origin, Access-Control-Allow-Methods, etc.) were found in the response from the main endpoint. The application does not appear to have a permissive CORS policy that would allow unauthorized cross-origin requests. The absence of these headers suggests either no CORS implementation or proper restrictions are in place.",
+      "timestamp": "2026-11-12T16:07:59.769019+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal-page",
+      "status": "positive",
+      "detail": "The DVWA application vulnerability at /vulnerabilities/fi/ is confirmed to be a Local File Inclusion vulnerability in low security mode. The error messages show that the application directly includes files based on the 'page' parameter without proper validation, allowing attackers to include arbitrary files. This is a documented feature of DVWA's low security level. It has been tested and confirmed as a vulnerability.",
+      "report_id": "",
+      "timestamp": "2026-11-12T16:12:12.695715+00:00"
+    }
+  ]
+}

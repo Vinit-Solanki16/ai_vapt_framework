@@ -51,7 +51,9 @@ def test_status_classification_distinction():
     assert run_entry["active_agent"] == "Paused"
     assert "Limit reached" in run_entry["error"]
 
-    _finalize_run_lifecycle(run_entry, status="failed_infrastructure", error="Docker socket missing")
+    _finalize_run_lifecycle(
+        run_entry, status="failed_infrastructure", error="Docker socket missing"
+    )
     assert run_entry["status"] == "failed_infrastructure"
     assert run_entry["active_agent"] == "Stopped"
 
@@ -130,17 +132,30 @@ def test_css_compactness_and_nowrap():
     assert "max-width: 1600px" in css_content
 
     # Check metric icon has compact dimensions
-    assert "width: 2.35rem" in css_content or "width: 2.25rem" in css_content or "font-size: 1.25rem" in css_content
+    assert (
+        "width: 2.35rem" in css_content
+        or "width: 2.25rem" in css_content
+        or "font-size: 1.25rem" in css_content
+    )
 
 
 def test_healed_run_b9a3b0b2_loaded_cleanly():
     """Verify historical run-b9a3b0b2 loads as completed with 3 findings and accurate turns."""
-    run_dir = Path("strix_runs/run-b9a3b0b2")
+    fixture_dir = Path(__file__).resolve().parent / "fixtures" / "run-b9a3b0b2"
+    run_dir = fixture_dir if fixture_dir.is_dir() else Path("strix_runs/run-b9a3b0b2")
     if not (run_dir / "findings.sarif").is_file():
         return
 
     _load_runs_from_disk()
     run = _RUNS.get("run-b9a3b0b2")
+    if run is None and fixture_dir.is_dir():
+        import shutil
+
+        dest = Path.cwd() / "strix_runs" / "run-b9a3b0b2"
+        if not dest.exists():
+            shutil.copytree(fixture_dir, dest)
+        _load_runs_from_disk()
+        run = _RUNS.get("run-b9a3b0b2")
     assert run is not None
     assert run.get("status") == "completed"
     assert run.get("error") is None
@@ -168,6 +183,7 @@ def test_turn_accounting_per_agent_prevents_inflation():
         "Starting turn 17, current_agent=CORS Investigation Agent",
     ]
     import re
+
     agent_turns = {}
     for line in log_sample:
         m = re.search(r"Starting turn\s+(\d+),\s*current_agent=([^,\n\r]+)", line)

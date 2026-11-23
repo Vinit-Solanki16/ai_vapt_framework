@@ -438,8 +438,7 @@ def record_outcome(
     # with an empty report_id while vulnerabilities.json stayed empty.
     if status_norm == "positive" and not str(report_id or "").strip():
         detail = (
-            (detail or "")
-            + " [rejected: positive outcome requires a vulnerability report id]"
+            (detail or "") + " [rejected: positive outcome requires a vulnerability report id]"
         ).strip()
         status_norm = "observed"
 
@@ -662,7 +661,9 @@ def record_outcome(
         "pivot": executed_pivot,
         "pivot_executed": executed_pivot,
         "next_candidate": next_entry if executed_pivot else None,
-        "status": "abandoned" if (attempts >= st.threshold() and not executed_pivot) else status_norm,
+        "status": "abandoned"
+        if (attempts >= st.threshold() and not executed_pivot)
+        else status_norm,
         "reason": pivot_reason if pivot else None,
     }
 

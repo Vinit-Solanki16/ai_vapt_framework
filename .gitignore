@@ -104,3 +104,16 @@ schema.graphql
 .run/
 ai_vapt_server.log
 .docker/
+
+# Internal development and research artifacts (preserved on dev branch)
+AI_VAPT_*.md
+headless_qa_results/
+benchmark_results/
+benchmarks/
+experiments/
+docs/research/
+docs/ai_vapt_integration/
+docs/project_management/
+docs/strix_ai_vapt_integration/
+screenshots/pdf_inspection_*/
+scripts/generate_docx_report.py

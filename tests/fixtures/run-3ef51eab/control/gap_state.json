@@ -1,0 +1,116 @@
+{
+  "attempts": {
+    "missing-anti-clickjacking": 2,
+    "cors-misconfiguration": 2,
+    "missing-security-headers": 2,
+    "csp-bypass": 1
+  },
+  "exhausted": [
+    "cors-misconfiguration",
+    "missing-anti-clickjacking",
+    "missing-security-headers"
+  ],
+  "completed": [
+    "cors-misconfiguration",
+    "csp-bypass",
+    "missing-anti-clickjacking",
+    "missing-security-headers"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "reason": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:16:06.269922+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "reason": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:16:25.421088+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "reason": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:16:45.748279+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "reason": "Initial probe failed to access target http://vulnweb.com/ - received 502 Bad Gateway error. Need to investigate if the target is properly configured or accessible.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:17:04.013783+00:00"
+    },
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "status": "negative",
+      "detail": "Target http://vulnweb.com/ cannot be accessed - returns 502 Bad Gateway error. Cannot verify presence or absence of X-Frame-Options header due to infrastructure issues. Target is unreachable.",
+      "timestamp": "2026-11-13T10:48:28.482483+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "negative",
+      "detail": "Target http://vulnweb.com/ cannot be accessed - returns 502 Bad Gateway error. Cannot verify presence or absence of CORS policy due to infrastructure issues. Target is unreachable.",
+      "timestamp": "2026-11-13T10:48:51.118115+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "negative",
+      "detail": "Target http://vulnweb.com/ cannot be accessed - returns 502 Bad Gateway error. Cannot verify presence or absence of X-Content-Type-Options header due to infrastructure issues. Target is unreachable.",
+      "timestamp": "2026-11-13T10:49:19.318047+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "negative",
+      "detail": "Target http://vulnweb.com/ cannot be accessed - returns 502 Bad Gateway error. Cannot verify presence or absence of CSP header due to infrastructure issues. Target is unreachable.",
+      "timestamp": "2026-11-13T10:49:47.498580+00:00"
+    },
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "Target URL returns 502 errors and is not accessible for security header analysis. Cannot verify if X-Frame-Options header is present or missing.",
+      "reason": "Target URL returns 502 errors and is not accessible for security header analysis. Cannot verify if X-Frame-Options header is present or missing.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:50:06.549584+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "Target URL returns 502 errors and is not accessible for CORS policy analysis. Cannot verify CORS headers.",
+      "reason": "Target URL returns 502 errors and is not accessible for CORS policy analysis. Cannot verify CORS headers.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:51:13.018966+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "inconclusive",
+      "attempt": 2,
+      "pivot": true,
+      "detail": "Target URL returns 502 errors and is not accessible for X-Content-Type-Options header analysis. Cannot verify if this header is present or missing.",
+      "reason": "Target URL returns 502 errors and is not accessible for X-Content-Type-Options header analysis. Cannot verify if this header is present or missing.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T10:51:43.466751+00:00"
+    }
+  ]
+}

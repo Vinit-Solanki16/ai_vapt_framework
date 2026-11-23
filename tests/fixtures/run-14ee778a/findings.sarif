@@ -1,0 +1,73 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "AI-VAPT",
+          "informationUri": "https://github.com/Vinit-Solanki16/ai_vapt_framework",
+          "rules": [
+            {
+              "id": "strix-coverage/client-side-insecure-javascript-processing",
+              "name": "Client-Side Insecure JavaScript Processing",
+              "shortDescription": {
+                "text": "Coverage: Client-Side Insecure JavaScript Processing"
+              },
+              "fullDescription": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface.",
+                "markdown": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "strix-coverage/client-side-insecure-javascript-processing",
+          "ruleIndex": 0,
+          "kind": "open",
+          "level": "none",
+          "message": {
+            "text": "Client-Side Insecure JavaScript Processing — Requires further review: /\n\nThe client-side JavaScript processing was not fully analyzed for potential DOM-based XSS or other vulnerabilities. This is a known area of concern in the OWASP Juice Shop but requires more detailed analysis to confirm specific vulnerabilities. The application's intentionally insecure design makes it a good target for security testing, but this particular vulnerability has not been fully verified."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "needs_follow_up",
+              "risk_area": "Client-Side Insecure JavaScript Processing",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

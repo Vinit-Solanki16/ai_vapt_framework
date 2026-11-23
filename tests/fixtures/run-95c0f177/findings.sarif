@@ -1,0 +1,269 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "AI-VAPT",
+          "informationUri": "https://github.com/Vinit-Solanki16/ai_vapt_framework",
+          "rules": [
+            {
+              "id": "strix-coverage/open-tcp-port-6379-redis",
+              "name": "Open TCP Port: 6379 (Redis)",
+              "shortDescription": {
+                "text": "Coverage: Open TCP Port: 6379 (Redis)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface.",
+                "markdown": "Coverage of Open TCP Port: 6379 (Redis) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+              "name": "Robots Exclusion Protocol Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Robots Exclusion Protocol Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+              "name": "Sensitive Directory and Endpoint Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Sensitive Directory and Endpoint Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+              "name": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "shortDescription": {
+                "text": "Coverage: Permissive Cross-Origin Resource Sharing (CORS) Policy"
+              },
+              "fullDescription": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface.",
+                "markdown": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/client-side-insecure-javascript-processing",
+              "name": "Client-Side Insecure JavaScript Processing",
+              "shortDescription": {
+                "text": "Coverage: Client-Side Insecure JavaScript Processing"
+              },
+              "fullDescription": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface.",
+                "markdown": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "strix-coverage/open-tcp-port-6379-redis",
+          "ruleIndex": 0,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Open TCP Port: 6379 (Redis) — No issue identified: tcp://178.79.134.182:6379\n\nPort 6379 (Redis) was filtered and not directly accessible from external connections. Nmap scan showed 'filtered' state."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "tcp://178.79.134.182:6379"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Open TCP Port: 6379 (Redis)",
+              "surface": "tcp://178.79.134.182:6379",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+          "ruleIndex": 1,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Robots Exclusion Protocol Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file exists but contains 'Disallow: /' which is standard behavior. It doesn't expose sensitive information or directories."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Robots Exclusion Protocol Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+          "ruleIndex": 2,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Sensitive Directory and Endpoint Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file exists but contains standard 'Disallow: /' directive which is normal behavior. No sensitive information or directory paths are exposed."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Sensitive Directory and Endpoint Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Permissive Cross-Origin Resource Sharing (CORS) Policy — No issue identified: /\n\nNo CORS headers found in response. While this could be a concern if the application handles cross-origin requests, it does not appear to be actively misconfigured with permissive policies."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/client-side-insecure-javascript-processing",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Client-Side Insecure JavaScript Processing — No issue identified: /\n\nNo obvious client-side JavaScript processing patterns found that could lead to XSS vulnerabilities. The page does not appear to use dangerous DOM methods like innerHTML or eval on user-controllable input."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Client-Side Insecure JavaScript Processing",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

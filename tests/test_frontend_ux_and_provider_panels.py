@@ -249,12 +249,21 @@ def test_cloud_hosted_panel_id_mapping_and_profile_priority():
     assert 'id="panel-provider-cloud-hosted"' in INDEX_HTML
 
     # Ensure getSelectedModelId, getActiveProviderApiKey, getActiveProviderBaseUrl prioritize cloudProfileSelectMain
-    assert "elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null" in APP_JS
+    assert (
+        "elements.cloudProfileSelectMain ? elements.cloudProfileSelectMain.value : null" in APP_JS
+    )
 
 
 def test_report_download_formats_conformance():
     """Verify all 6 report formats (HTML, PDF, JSON, SARIF, CSV, Markdown) are supported via API."""
     run_id = "run-95c0f177"
+    fixture_dir = Path(__file__).resolve().parent / "fixtures" / run_id
+    if fixture_dir.is_dir():
+        import shutil
+
+        dest = Path.cwd() / "strix_runs" / run_id
+        if not dest.exists():
+            shutil.copytree(fixture_dir, dest)
 
     formats = [
         ("html", "text/html"),
@@ -273,4 +282,3 @@ def test_report_download_formats_conformance():
             f"Format {fmt} returned unexpected content-type: {res.headers.get('content-type')}"
         )
         assert len(res.content) > 0, f"Format {fmt} returned empty content"
-

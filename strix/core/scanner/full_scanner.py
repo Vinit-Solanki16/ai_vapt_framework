@@ -188,7 +188,7 @@ class FullScanner:
         scan_matrix = []
         for cat_key, cat_meta in SCAN_CATEGORIES.items():
             found_count = category_summary.get(cat_key, {}).get("found", 0)
-            configured = int(cat_meta["test_count"])
+            configured = int(str(cat_meta["test_count"]))
             if found_count > 0:
                 status = "VULNERABILITIES_IDENTIFIED"
                 executed = 1

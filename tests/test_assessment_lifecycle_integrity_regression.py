@@ -46,8 +46,6 @@ def test_record_coverage_reported_is_not_a_confirmed_positive(tmp_path: Path):
     GAP-2 success requires a vulnerability report id backed by a real finding.
     'reported' simply means the agent visited/labelled a surface.
     """
-    import asyncio
-
     from strix.tools.coverage.tools import _record_impl
 
     control = tmp_path / "control"
@@ -71,7 +69,9 @@ def test_record_coverage_reported_is_not_a_confirmed_positive(tmp_path: Path):
         assert gap2.get("status") in ("observed", "inconclusive"), gap2
 
         trace = control / gap_bridge.TRACE_FILENAME
-        events = [json.loads(line) for line in trace.read_text().splitlines()] if trace.exists() else []
+        events = (
+            [json.loads(line) for line in trace.read_text().splitlines()] if trace.exists() else []
+        )
         assert not any(e.get("event") == "GAP2_SUCCESS" for e in events), events
     finally:
         monkeypatch.undo()
@@ -82,6 +82,7 @@ def test_gap2_positive_requires_a_real_report_id(tmp_path: Path):
     control = tmp_path / "control"
     control.mkdir()
     import os
+
     os.environ[gap_bridge.CONTROL_DIR_ENV] = str(control)
     os.environ[gap_bridge.GAP2_ENABLED_ENV] = "1"
     result = gap_bridge.record_outcome(
@@ -131,26 +132,35 @@ def test_no_progress_detector_distinguishes_real_work_from_bookkeeping():
     assert api._is_productive_tool("terminal") is True
 
     # 19 turns of coverage-only work still count as no progress.
-    assert api.should_stop_for_no_progress(
-        elapsed_seconds=700,
-        last_progress_seconds=700,
-        productively_advanced_turns=0,
-        max_turns=500,
-    ) is True
+    assert (
+        api.should_stop_for_no_progress(
+            elapsed_seconds=700,
+            last_progress_seconds=700,
+            productively_advanced_turns=0,
+            max_turns=500,
+        )
+        is True
+    )
     # A scan making real tool calls is not stalled.
-    assert api.should_stop_for_no_progress(
-        elapsed_seconds=700,
-        last_progress_seconds=700,
-        productively_advanced_turns=3,
-        max_turns=500,
-    ) is False
+    assert (
+        api.should_stop_for_no_progress(
+            elapsed_seconds=700,
+            last_progress_seconds=700,
+            productively_advanced_turns=3,
+            max_turns=500,
+        )
+        is False
+    )
     # Early in a run, no stall is declared.
-    assert api.should_stop_for_no_progress(
-        elapsed_seconds=60,
-        last_progress_seconds=60,
-        productively_advanced_turns=0,
-        max_turns=500,
-    ) is False
+    assert (
+        api.should_stop_for_no_progress(
+            elapsed_seconds=60,
+            last_progress_seconds=60,
+            productively_advanced_turns=0,
+            max_turns=500,
+        )
+        is False
+    )
 
 
 def test_web_worker_and_cli_subprocess_use_separate_run_json(tmp_path: Path, monkeypatch):

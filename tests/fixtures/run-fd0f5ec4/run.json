@@ -1,0 +1,1338 @@
+{
+  "run_id": "run-fd0f5ec4",
+  "run_name": "run-fd0f5ec4",
+  "start_time": "2026-11-17T12:39:44.753487+00:00",
+  "end_time": "2026-11-17T12:46:16.277145+00:00",
+  "status": "stopped",
+  "auth_mode": "api_key",
+  "targets_info": [
+    {
+      "type": "web_application",
+      "details": {
+        "target_url": "http://host.docker.internal:3000/#/"
+      },
+      "original": "http://host.docker.internal:3000/#/"
+    }
+  ],
+  "llm_usage": {
+    "requests": 19,
+    "input_tokens": 1277509,
+    "input_tokens_details": [
+      {
+        "cache_write_tokens": 0,
+        "cached_tokens": 1208800
+      }
+    ],
+    "output_tokens": 1919,
+    "output_tokens_details": [
+      {
+        "reasoning_tokens": 0
+      }
+    ],
+    "total_tokens": 1279428,
+    "request_usage_entries": [
+      {
+        "input_tokens": 59541,
+        "output_tokens": 67,
+        "total_tokens": 59608,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 6
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 64461,
+        "output_tokens": 56,
+        "total_tokens": 64517,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 59607
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 64569,
+        "output_tokens": 50,
+        "total_tokens": 64619,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 64516
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 64874,
+        "output_tokens": 46,
+        "total_tokens": 64920,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 64618
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 65012,
+        "output_tokens": 38,
+        "total_tokens": 65050,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 64919
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 66994,
+        "output_tokens": 65,
+        "total_tokens": 67059,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 65049
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 67288,
+        "output_tokens": 72,
+        "total_tokens": 67360,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 67058
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 67424,
+        "output_tokens": 83,
+        "total_tokens": 67507,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 67359
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 67572,
+        "output_tokens": 79,
+        "total_tokens": 67651,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 67506
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 67694,
+        "output_tokens": 109,
+        "total_tokens": 67803,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 67650
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 67995,
+        "output_tokens": 86,
+        "total_tokens": 68081,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 67802
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 68281,
+        "output_tokens": 94,
+        "total_tokens": 68375,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 68080
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 68577,
+        "output_tokens": 98,
+        "total_tokens": 68675,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 68374
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 68866,
+        "output_tokens": 88,
+        "total_tokens": 68954,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 68674
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 69163,
+        "output_tokens": 94,
+        "total_tokens": 69257,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 68953
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 69460,
+        "output_tokens": 84,
+        "total_tokens": 69544,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 69256
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 69747,
+        "output_tokens": 94,
+        "total_tokens": 69841,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 69543
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 69891,
+        "output_tokens": 100,
+        "total_tokens": 69991,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 69840
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      },
+      {
+        "input_tokens": 70100,
+        "output_tokens": 516,
+        "total_tokens": 70616,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 69990
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        }
+      }
+    ],
+    "cost": 0.0,
+    "providers": {},
+    "agents": [
+      {
+        "requests": 19,
+        "input_tokens": 1277509,
+        "input_tokens_details": [
+          {
+            "cache_write_tokens": 0,
+            "cached_tokens": 1208800
+          }
+        ],
+        "output_tokens": 1919,
+        "output_tokens_details": [
+          {
+            "reasoning_tokens": 0
+          }
+        ],
+        "total_tokens": 1279428,
+        "request_usage_entries": [
+          {
+            "input_tokens": 59541,
+            "output_tokens": 67,
+            "total_tokens": 59608,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 6
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 64461,
+            "output_tokens": 56,
+            "total_tokens": 64517,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 59607
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 64569,
+            "output_tokens": 50,
+            "total_tokens": 64619,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 64516
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 64874,
+            "output_tokens": 46,
+            "total_tokens": 64920,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 64618
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 65012,
+            "output_tokens": 38,
+            "total_tokens": 65050,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 64919
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 66994,
+            "output_tokens": 65,
+            "total_tokens": 67059,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 65049
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 67288,
+            "output_tokens": 72,
+            "total_tokens": 67360,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 67058
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 67424,
+            "output_tokens": 83,
+            "total_tokens": 67507,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 67359
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 67572,
+            "output_tokens": 79,
+            "total_tokens": 67651,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 67506
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 67694,
+            "output_tokens": 109,
+            "total_tokens": 67803,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 67650
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 67995,
+            "output_tokens": 86,
+            "total_tokens": 68081,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 67802
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 68281,
+            "output_tokens": 94,
+            "total_tokens": 68375,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 68080
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 68577,
+            "output_tokens": 98,
+            "total_tokens": 68675,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 68374
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 68866,
+            "output_tokens": 88,
+            "total_tokens": 68954,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 68674
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 69163,
+            "output_tokens": 94,
+            "total_tokens": 69257,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 68953
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 69460,
+            "output_tokens": 84,
+            "total_tokens": 69544,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 69256
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 69747,
+            "output_tokens": 94,
+            "total_tokens": 69841,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 69543
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 69891,
+            "output_tokens": 100,
+            "total_tokens": 69991,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 69840
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "input_tokens": 70100,
+            "output_tokens": 516,
+            "total_tokens": 70616,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 69990
+            },
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            }
+          }
+        ],
+        "agent_id": "17949214",
+        "agent_name": "Root Agent",
+        "model": "openai/kaggle-model",
+        "cost": 0.0
+      }
+    ]
+  },
+  "execution_mode": "autonomous_multi_agent",
+  "started_at": "2026-11-17T12:39:44.753487+00:00",
+  "duration_seconds": 17.01,
+  "elapsed_seconds": 17.01,
+  "last_progress_at": "2026-11-17T12:39:44.753487+00:00",
+  "turns_consumed": 1,
+  "progress_percent": 40,
+  "scenario": "web_assessment",
+  "mode": "autonomous",
+  "target_url": "http://127.0.0.1:3000/#/",
+  "provider": "cloud_hosted",
+  "model": "kaggle-model",
+  "scan_mode": "deep",
+  "max_turns": 500,
+  "created_at": "2026-11-17T12:39:44.753487+00:00",
+  "completed_at": null,
+  "events": [
+    {
+      "timestamp": "2026-11-17T12:39:46.141236+00:00",
+      "event": "AUTONOMOUS_RUN_STARTED",
+      "message": "Autonomous multi-agent assessment started (Depth: DEEP, Limit: 500 turns, Tier: OBSERVED_EXTERNAL)"
+    },
+    {
+      "timestamp": "2026-11-17T12:39:46.163561+00:00",
+      "event": "GAP1_TRIAGE_COMPLETED",
+      "message": "GAP-1 dynamic triage prioritized 8 candidate(s) for stack GENERIC_WEB"
+    },
+    {
+      "timestamp": "2026-11-17T12:39:49.988466+00:00",
+      "event": "AUTONOMOUS_EXECUTION_STARTED",
+      "message": "Autonomous multi-agent pentest runner spawned with 500 turns limit."
+    }
+  ],
+  "decision_trace": [
+    {
+      "type": "candidate_added",
+      "candidate_id": "sensitive-path-robotstxt",
+      "title": "Robots Exclusion Protocol Information Disclosure",
+      "endpoint": "/robots.txt",
+      "category": "general",
+      "score": 0.724,
+      "rank": 1,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "robots-txt-exposure",
+      "title": "Sensitive Directory and Endpoint Information Disclosure",
+      "endpoint": "/robots.txt",
+      "category": "general",
+      "score": 0.72,
+      "rank": 2,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "sensitive-path-wellknownsecuritytxt",
+      "title": "Security Policy Disclosure (security.txt)",
+      "endpoint": "/.well-known/security.txt",
+      "category": "general",
+      "score": 0.6,
+      "rank": 3,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "cors-misconfiguration",
+      "title": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.552,
+      "rank": 4,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "sensitive-path-apidocs",
+      "title": "API Documentation Disclosure",
+      "endpoint": "/api-docs",
+      "category": "general",
+      "score": 0.54,
+      "rank": 5,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "client-js-attacks",
+      "title": "Client-Side Insecure JavaScript Processing",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.48,
+      "rank": 6,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "missing-security-headers",
+      "title": "Missing Security Hardening Headers",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.34,
+      "rank": 7,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "type": "candidate_added",
+      "candidate_id": "csp-bypass",
+      "title": "Content Security Policy (CSP) Header Not Set",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.264,
+      "rank": 8,
+      "target": "http://127.0.0.1:3000/#/",
+      "at": "2026-11-17 12:40:01 UTC"
+    }
+  ],
+  "pivot_events": [],
+  "candidates": [
+    {
+      "id": "sensitive-path-robotstxt",
+      "title": "Robots Exclusion Protocol Information Disclosure",
+      "endpoint": "/robots.txt",
+      "category": "general",
+      "score": 0.724,
+      "rank": 1,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "robots-txt-exposure",
+      "title": "Sensitive Directory and Endpoint Information Disclosure",
+      "endpoint": "/robots.txt",
+      "category": "general",
+      "score": 0.72,
+      "rank": 2,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "sensitive-path-wellknownsecuritytxt",
+      "title": "Security Policy Disclosure (security.txt)",
+      "endpoint": "/.well-known/security.txt",
+      "category": "general",
+      "score": 0.6,
+      "rank": 3,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "cors-misconfiguration",
+      "title": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.552,
+      "rank": 4,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "sensitive-path-apidocs",
+      "title": "API Documentation Disclosure",
+      "endpoint": "/api-docs",
+      "category": "general",
+      "score": 0.54,
+      "rank": 5,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "client-js-attacks",
+      "title": "Client-Side Insecure JavaScript Processing",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.48,
+      "rank": 6,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "missing-security-headers",
+      "title": "Missing Security Hardening Headers",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.34,
+      "rank": 7,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    },
+    {
+      "id": "csp-bypass",
+      "title": "Content Security Policy (CSP) Header Not Set",
+      "endpoint": "/",
+      "category": "general",
+      "score": 0.264,
+      "rank": 8,
+      "target": "http://127.0.0.1:3000/#/",
+      "max_attempts": 2,
+      "attempts": 0,
+      "status": "discovered",
+      "investigation_outcome": "",
+      "verification_evidence": "",
+      "verification_state": "candidate",
+      "reproducible_request": "",
+      "verification_response": "",
+      "verification_procedure": "",
+      "demonstrated_impact": "",
+      "evidence_timestamp": "",
+      "actual_impact": "",
+      "abandon_reason": "",
+      "abandoned_at": null,
+      "last_investigated_at": "",
+      "discovered_at": "2026-11-17 12:40:01 UTC"
+    }
+  ],
+  "findings": [],
+  "findings_discovered": 0,
+  "findings_verified": 0,
+  "findings_under_investigation": 0,
+  "findings_blocked": 0,
+  "findings_false_positive": 0,
+  "gap1_candidates_identified": 8,
+  "gap1_candidates_under_investigation": 0,
+  "gap2_pivots": 0,
+  "active_agent": "Autonomous Multi-Agent Core",
+  "active_task": "Target reconnaissance and technology fingerprinting",
+  "provider_error": null,
+  "evidence_tier": "OBSERVED_EXTERNAL",
+  "safety_notice": "LIVE ACTIVE VAPT — Verified against authorized target endpoint (127.0.0.1) with non-destructive cryptographic evidence.",
+  "target_ip": "127.0.0.1",
+  "additional_authorized_hosts": [],
+  "open_ports": [
+    {
+      "port": 3000,
+      "service": "HTTP Web Service",
+      "conventional_service": "Node/React/Grafana (Conventional Guess Only)",
+      "service_confirmed": true,
+      "service_confidence": "CONFIRMED",
+      "service_fingerprint": "HTTP/Web Service",
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "HTTP response banner verified via TCP probe",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "low",
+      "risk": "Target web application service.",
+      "cwe_id": "CWE-200",
+      "ip": "127.0.0.1",
+      "in_scope": true,
+      "scope": "target_application",
+      "target_port": 3000,
+      "is_localhost": true
+    },
+    {
+      "port": 8000,
+      "service": "Unfingerprinted TCP Listener",
+      "conventional_service": "HTTP-Dev (Conventional Guess Only)",
+      "service_confirmed": false,
+      "service_confidence": "UNCONFIRMED",
+      "service_fingerprint": null,
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "info",
+      "risk": "Host network listener observed on TCP port 8000. Application protocol unconfirmed.",
+      "cwe_id": "CWE-200",
+      "ip": "127.0.0.1",
+      "in_scope": false,
+      "scope": "environmental",
+      "target_port": 3000,
+      "is_localhost": true
+    },
+    {
+      "port": 9090,
+      "service": "Unfingerprinted TCP Listener",
+      "conventional_service": "Prometheus/Cockpit (Conventional Guess Only)",
+      "service_confirmed": false,
+      "service_confidence": "UNCONFIRMED",
+      "service_fingerprint": null,
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "info",
+      "risk": "Host network listener observed on TCP port 9090. Application protocol unconfirmed.",
+      "cwe_id": "CWE-200",
+      "ip": "127.0.0.1",
+      "in_scope": false,
+      "scope": "environmental",
+      "target_port": 3000,
+      "is_localhost": true
+    }
+  ],
+  "components": [
+    {
+      "library": "angular",
+      "version": "17.0.0",
+      "source_file": "polyfills.js",
+      "vulnerable": false,
+      "cves": [],
+      "severity": "low",
+      "cvss": 3.5,
+      "summary": "Third-party software library detected.",
+      "remediation": "Ensure third-party libraries receive security patches."
+    },
+    {
+      "library": "cookieconsent",
+      "version": "3.1.0",
+      "source_file": "scripts.js",
+      "vulnerable": false,
+      "cves": [],
+      "severity": "low",
+      "cvss": 3.5,
+      "summary": "Third-party software library detected.",
+      "remediation": "Ensure third-party libraries receive security patches."
+    },
+    {
+      "library": "express",
+      "version": "4.19.2",
+      "source_file": "HTTP Backend Infrastructure (Node.js/Express)",
+      "vulnerable": false,
+      "cves": [],
+      "severity": "low",
+      "cvss": 0.0,
+      "summary": "Node.js Express backend web application framework.",
+      "remediation": "Disable X-Powered-By header and apply standard framework security updates."
+    }
+  ],
+  "scan_matrix": [
+    {
+      "category_key": "version_sca",
+      "title": "Version-based vulnerability detection",
+      "description": "Software component analysis (jQuery, Bootstrap, Angular, Vue) correlating authoritative CVEs.",
+      "test_count": 12,
+      "configured_checks": 12,
+      "executed_checks": 3,
+      "capability": "SCA & CVE Fingerprinting",
+      "findings_count": 0,
+      "status": "PARTIALLY TESTED"
+    },
+    {
+      "category_key": "configuration",
+      "title": "Common configuration issues",
+      "description": "Server misconfigurations, security hardening headers, cookie attributes, banners, and open ports.",
+      "test_count": 22,
+      "configured_checks": 22,
+      "executed_checks": 0,
+      "capability": "Passive HTTP & Port Recon",
+      "findings_count": 0,
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category_key": "xss",
+      "title": "XSS testing using real browsers",
+      "description": "Reflected, Persistent, and DOM-based Cross-Site Scripting inspection across inputs and execution sinks.",
+      "test_count": 8,
+      "configured_checks": 8,
+      "executed_checks": 0,
+      "capability": "DOM Analysis & Active Injection",
+      "findings_count": 0,
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "category_key": "sqli",
+      "title": "SQL Injection",
+      "description": "Error-based, boolean-blind, and union-based database injection testing across DBMS engines.",
+      "test_count": 14,
+      "configured_checks": 14,
+      "executed_checks": 0,
+      "capability": "Active SQL Syntax Injection",
+      "findings_count": 0,
+      "status": "NOT TESTED"
+    },
+    {
+      "category_key": "ssrf",
+      "title": "Server-Side Request Forgery (SSRF)",
+      "description": "Unvalidated URL redirection and loopback/cloud metadata probing (169.254.169.254, 127.0.0.1).",
+      "test_count": 8,
+      "configured_checks": 8,
+      "executed_checks": 0,
+      "capability": "Loopback & Redirect Auditing",
+      "findings_count": 0,
+      "status": "NOT TESTED"
+    },
+    {
+      "category_key": "ssti",
+      "title": "Server-Side Template Injection",
+      "description": "Template expression evaluation (${7*7}, {{7*7}}) across Jinja2, Twig, and Freemarker runtimes.",
+      "test_count": 8,
+      "configured_checks": 8,
+      "executed_checks": 0,
+      "capability": "Active Expression Probing",
+      "findings_count": 0,
+      "status": "NOT TESTED"
+    },
+    {
+      "category_key": "prototype_pollution",
+      "title": "Client-Side Prototype Pollution",
+      "description": "Client JavaScript prototype mutation patterns (__proto__, constructor.prototype, $.extend sinks).",
+      "test_count": 6,
+      "configured_checks": 6,
+      "executed_checks": 0,
+      "capability": "Client Script Pattern Analysis",
+      "findings_count": 0,
+      "status": "NOT TESTED"
+    },
+    {
+      "category_key": "code_injection",
+      "title": "Python, Javascript, PHP Code Injection",
+      "description": "Remote code execution via dynamic evaluation functions (eval, assert, phpinfo) across server runtimes.",
+      "test_count": 10,
+      "configured_checks": 10,
+      "executed_checks": 0,
+      "capability": "Active Runtime Execution Probing",
+      "findings_count": 0,
+      "status": "NOT TESTED"
+    }
+  ],
+  "spider_stats": {
+    "visited_count": 5,
+    "discovered_paths": [
+      "/",
+      "/2fa/enter",
+      "/403",
+      "/about",
+      "/accounting",
+      "/address/create",
+      "/address/edit/:addressId",
+      "/address/saved",
+      "/address/select",
+      "/administration",
+      "/api/Addresss",
+      "/api/BasketItems",
+      "/api/Cards",
+      "/api/Challenges",
+      "/api/Complaints",
+      "/api/Deliverys",
+      "/api/Feedbacks",
+      "/api/Hints",
+      "/api/Products",
+      "/api/Quantitys",
+      "/api/Recycles",
+      "/api/SecurityAnswers",
+      "/api/SecurityQuestions",
+      "/api/Users",
+      "/basket",
+      "/bee-haven",
+      "/change-password",
+      "/chatbot",
+      "/chunk-1qQQGal7.js",
+      "/chunk-Cv2YgWUq.js",
+      "/chunk-DBPdFzgj.js",
+      "/coding-challenge/:challengeKey",
+      "/complain",
+      "/contact",
+      "/conversation/:id",
+      "/data-export",
+      "/delivery-method",
+      "/deluxe-membership",
+      "/forgot-password",
+      "/hacking-instructor",
+      "/juicy-nft",
+      "/last-login-ip",
+      "/login",
+      "/order-completion/:id",
+      "/order-history",
+      "/order-summary",
+      "/payment/:entity",
+      "/photo-wall",
+      "/privacy-policy",
+      "/privacy-security",
+      "/recycle",
+      "/register",
+      "/rest/admin",
+      "/rest/captcha",
+      "/rest/chat",
+      "/rest/continue-code",
+      "/rest/continue-code-findIt",
+      "/rest/continue-code-findIt/apply/",
+      "/rest/continue-code-fixIt",
+      "/rest/continue-code-fixIt/apply/",
+      "/rest/continue-code/apply/",
+      "/rest/country-mapping",
+      "/rest/deluxe-membership",
+      "/rest/image-captcha/",
+      "/rest/memories",
+      "/rest/order-history",
+      "/rest/products",
+      "/rest/repeat-notification",
+      "/rest/saveLoginIp",
+      "/rest/track-order",
+      "/rest/user",
+      "/rest/user/authentication-details/",
+      "/rest/user/login",
+      "/rest/user/reset-password",
+      "/rest/user/whoami",
+      "/rest/wallet/balance",
+      "/rest/web3",
+      "/rolldown-runtime-BoHGiXSq.js",
+      "/saved-payment-methods",
+      "/score-board",
+      "/search",
+      "/track-result",
+      "/track-result/new",
+      "/two-factor-authentication",
+      "/wallet",
+      "/wallet-web3",
+      "/web3-sandbox"
+    ],
+    "forms_count": 2,
+    "parameters_count": 9
+  },
+  "stats": {
+    "attempts": 1,
+    "pivots": 0,
+    "findings": 0,
+    "candidates_dispatched": 8,
+    "candidates_investigated": 8,
+    "candidates_validated": 0,
+    "candidates_abandoned": 0,
+    "candidates_not_tested": 0,
+    "candidates_blocked": 0,
+    "unique_tool_invocations": 8
+  },
+  "pivots": 0,
+  "run_lifecycle_status": "Run process running — 1 of 500 turns used.",
+  "configured_turn_limit": 500,
+  "actual_probe_count": 8,
+  "candidate_completion_percent": 0.0,
+  "category_coverage_percent": 12.5,
+  "assessment_completeness_percent": 0.0,
+  "termination_reason": "Process ended with status running.",
+  "execution_lifecycle": {
+    "status": "Run process running — 1 of 500 turns used.",
+    "turns_consumed": 1,
+    "max_turns": 500,
+    "termination_reason": "Process ended with status running."
+  },
+  "assessment_completeness": {
+    "candidate_completion_percent": 0.0,
+    "category_coverage_percent": 12.5,
+    "objective_completeness_percent": 0.0,
+    "vulnerability_assessment_completeness": "12.5%"
+  },
+  "_current_segment_start": "2026-11-17T12:39:44.755349+00:00",
+  "error": null,
+  "findings_candidate": 0,
+  "findings_exploitation_attempted": 0,
+  "findings_unconfirmed": 0,
+  "findings_inconclusive": 0,
+  "verification_states": {
+    "discovered": 0,
+    "candidate": 0,
+    "under_investigation": 0,
+    "exploitation_attempted": 0,
+    "verified": 0,
+    "unconfirmed": 0,
+    "false_positive": 0,
+    "blocked": 0,
+    "inconclusive": 0
+  },
+  "findings_summary": {
+    "discovered": 0,
+    "candidate": 0,
+    "under_investigation": 0,
+    "exploitation_attempted": 0,
+    "verified": 0,
+    "unconfirmed": 0,
+    "false_positive": 0,
+    "blocked": 0,
+    "inconclusive": 0
+  },
+  "progress": {
+    "phase": "GAP1 triage and candidate investigation",
+    "phase_index": 3,
+    "percent": 40,
+    "current": 1,
+    "total": 500,
+    "candidate": "Autonomous Multi-Agent Turn 1",
+    "candidates_identified": 8,
+    "candidates_investigated": 0,
+    "pivots": 0,
+    "run_id": "run-fd0f5ec4",
+    "start_time": "2026-11-17T12:39:44.753487+00:00",
+    "started_at": "2026-11-17T12:39:44.753487+00:00",
+    "duration_seconds": 17.01,
+    "elapsed_seconds": 17.01,
+    "active_task": "Target reconnaissance and technology fingerprinting",
+    "active_agent": "Autonomous Multi-Agent Core",
+    "verification_states": {
+      "discovered": 0,
+      "candidate": 0,
+      "under_investigation": 0,
+      "exploitation_attempted": 0,
+      "verified": 0,
+      "unconfirmed": 0,
+      "false_positive": 0,
+      "blocked": 0,
+      "inconclusive": 0
+    },
+    "gap1": {
+      "identified": 8,
+      "investigated": 0
+    },
+    "gap2": {
+      "pivots": 0
+    },
+    "findings_summary": {
+      "discovered": 0,
+      "candidate": 0,
+      "under_investigation": 0,
+      "exploitation_attempted": 0,
+      "verified": 0,
+      "unconfirmed": 0,
+      "false_positive": 0,
+      "blocked": 0,
+      "inconclusive": 0
+    },
+    "run_lifecycle_status": "Run process running — 1 of 500 turns used.",
+    "actual_probe_count": 8,
+    "candidate_completion_percent": 0.0,
+    "category_coverage_percent": 12.5,
+    "assessment_completeness_percent": 0.0
+  },
+  "environmental_observations": [
+    {
+      "port": 8000,
+      "service": "Unfingerprinted TCP Listener",
+      "conventional_service": "HTTP-Dev (Conventional Guess Only)",
+      "service_confirmed": false,
+      "service_confidence": "UNCONFIRMED",
+      "service_fingerprint": null,
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "info",
+      "risk": "Host network listener observed on TCP port 8000. Application protocol unconfirmed.",
+      "cwe_id": "CWE-200",
+      "ip": "127.0.0.1",
+      "in_scope": false,
+      "scope": "environmental",
+      "target_port": 3000,
+      "is_localhost": true
+    },
+    {
+      "port": 9090,
+      "service": "Unfingerprinted TCP Listener",
+      "conventional_service": "Prometheus/Cockpit (Conventional Guess Only)",
+      "service_confirmed": false,
+      "service_confidence": "UNCONFIRMED",
+      "service_fingerprint": null,
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded; application banner unconfirmed",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "info",
+      "risk": "Host network listener observed on TCP port 9090. Application protocol unconfirmed.",
+      "cwe_id": "CWE-200",
+      "ip": "127.0.0.1",
+      "in_scope": false,
+      "scope": "environmental",
+      "target_port": 3000,
+      "is_localhost": true
+    }
+  ],
+  "tech_stack": "generic_web",
+  "candidate_accounting": {
+    "dispatched": 8,
+    "investigated": 0,
+    "validated": 0,
+    "abandoned": 0,
+    "not_tested": 8,
+    "blocked": 0
+  },
+  "probe_accounting": {
+    "candidates_identified": 8,
+    "candidates_dispatched": 8,
+    "candidates_with_actual_probes": 8,
+    "candidate_to_probe_associations": 8,
+    "unique_tool_invocations": 8,
+    "duplicate_evidence_associations": 8,
+    "verification_checks_executed": 8,
+    "validated_candidates": 0,
+    "validated_observations": 0,
+    "verified_vulnerabilities": 0,
+    "ruled_out_candidates": 0,
+    "abandoned_candidates": 0,
+    "blocked_candidates": 0,
+    "inconclusive_candidates": 0,
+    "not_tested_candidates": 0
+  },
+  "instruction": "",
+  "user_instruction": "VAPT assessment on http://127.0.0.1:3000/#/",
+  "diff_scope": {
+    "active": false,
+    "mode": "auto"
+  },
+  "non_interactive": true,
+  "local_sources": [],
+  "scope_mode": "auto",
+  "diff_base": null,
+  "gap1_candidates_investigated": 0
+}

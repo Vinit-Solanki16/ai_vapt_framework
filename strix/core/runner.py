@@ -405,8 +405,37 @@ async def _investigate_gap1_candidates(
     subagents, so the assessment always executes real security tools against
     the target.
     """
-    from strix.core.decision_engine.schemas import Outcome, PivotActionType
+    from strix.core.decision_engine.engine import DecisionEngine
+    from strix.core.decision_engine.schemas import (
+        ActionCandidate,
+        Outcome,
+        PivotActionType,
+    )
     from strix.report.verification import VerificationBlock, VerificationState
+
+    # Preparatory probing must not consume the shared DecisionEngine. It walks
+    # a pre-sorted queue with generic HTTP probes; feeding the shared engine
+    # marks every candidate abandoned before the model starts, so
+    # record_probe_outcome() can never recommend an alternative and genuine
+    # agent-driven GAP-2 pivots become impossible. Keep a private engine for
+    # preparatory guidance; the shared one stays available for real decisions
+    # tied to actually executed alternatives.
+    prep_decision_engine = DecisionEngine(
+        pivot_threshold=int(getattr(decision_engine, "pivot_threshold", 2)),
+        authorized_targets=list(getattr(decision_engine, "authorized_targets", [])),
+    )
+    prep_decision_engine.initialize(
+        [
+            ActionCandidate(
+                id=c.id,
+                name=c.title,
+                endpoint=c.endpoint,
+                target=c.target or "",
+                max_attempts=int(c.max_attempts),
+            )
+            for c in gap_run.candidates.values()
+        ]
+    )
 
     base_url = _probe_target_url(target_url)
 
@@ -419,7 +448,12 @@ async def _investigate_gap1_candidates(
 
         probe_url = base_url + cand.endpoint
 
-        while cand.attempts < cand.max_attempts:
+        # Bound preparatory probes locally. Preparatory probes are evidence,
+        # not agent investigation attempts, so using cand.attempts as the loop
+        # counter would never advance and would misrepresent agent effort.
+        prep_attempts = 0
+        while prep_attempts < cand.max_attempts:
+            prep_attempts += 1
             probe_result = await _http_probe(probe_url)
             outcome, detail, evidence = _analyze_probe(cand, probe_result, probe_url)
 
@@ -431,6 +465,10 @@ async def _investigate_gap1_candidates(
                 gap_run_outcome = "negative"
             elif outcome == "needs_follow_up":
                 gap_run_outcome = "inconclusive"
+            # Mark these bounded GET probes as preparatory reconnaissance. The
+            # evidence is preserved verbatim, but it must not consume the
+            # agent's investigation attempts or abandon the candidate: doing
+            # so left no eligible alternative for a genuine GAP-2 pivot.
             gap_run.record_probe_outcome(
                 cand.id,
                 outcome=gap_run_outcome,
@@ -439,6 +477,7 @@ async def _investigate_gap1_candidates(
                 alternative_candidate="",
                 pivot_executed=False,
                 pivot_result="",
+                preparatory=True,
             )
 
             # Emit progress event.
@@ -452,8 +491,10 @@ async def _investigate_gap1_candidates(
                             "endpoint": cand.endpoint,
                             "outcome": outcome,
                             "detail": detail,
-                            "attempts": cand.attempts,
+                            "attempts": prep_attempts,
                             "max_attempts": cand.max_attempts,
+                            "preparatory": True,
+                            "agent_attempts": cand.attempts,
                         },
                     )
                 except Exception:
@@ -469,7 +510,10 @@ async def _investigate_gap1_candidates(
             else:
                 out_enum = Outcome.FAIL_TIMEOUT
 
-            pivot_action = decision_engine.record_outcome(
+            # Feed only the private preparatory engine. The shared engine is
+            # reserved for agent-driven decisions so a real alternative can
+            # still be recommended and executed by the model.
+            pivot_action = prep_decision_engine.record_outcome(
                 cand.id,
                 out_enum,
                 detail=detail,
@@ -503,10 +547,7 @@ async def _investigate_gap1_candidates(
                     target=probe_url,
                     endpoint=cand.endpoint,
                     method="GET",
-                    evidence=(
-                        f"Request: {evidence['request']}\n"
-                        f"Response: {evidence['response']}"
-                    ),
+                    evidence=(f"Request: {evidence['request']}\nResponse: {evidence['response']}"),
                     technical_analysis=(
                         f"Live automated probe against authorized target {probe_url} "
                         f"produced {detail.lower()}."
@@ -535,9 +576,7 @@ async def _investigate_gap1_candidates(
                         demonstrated_impact=(
                             f"Confirmed observable behavior at {cand.endpoint}: {detail}"
                         ),
-                        evidence_timestamp=datetime.now(UTC).strftime(
-                            "%Y-%m-%d %H:%M:%S UTC"
-                        ),
+                        evidence_timestamp=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
                         confidence="high",
                         severity="medium",
                         remediation=(
@@ -550,9 +589,7 @@ async def _investigate_gap1_candidates(
                         verification_block=vb,
                     )
                 except Exception:
-                    logger.exception(
-                        "failed to attach verification block to report %s", report_id
-                    )
+                    logger.exception("failed to attach verification block to report %s", report_id)
 
                 # Record the positive outcome with a report_id so GAP-2 marks
                 # the candidate complete (a positive claim without a report id
@@ -560,10 +597,7 @@ async def _investigate_gap1_candidates(
                 try:
                     from strix.core import gap_bridge
 
-                    if (
-                        gap_bridge.control_dir() is not None
-                        and gap_bridge.gap2_enabled()
-                    ):
+                    if gap_bridge.control_dir() is not None and gap_bridge.gap2_enabled():
                         gap_bridge.record_outcome(
                             candidate_id=cand.id,
                             title=cand.title,
@@ -591,25 +625,25 @@ async def _investigate_gap1_candidates(
                         pass
                 break
 
-            # GAP-2 pivot executed -> abandon this candidate, move to next.
+            # GAP-2 guidance: the decision engine may recommend a redirect
+            # when a route is exhausted. This PREPARATORY probe loop does not
+            # dispatch alternative investigation paths — it merely walks the
+            # pre-sorted GAP-1 queue with generic HTTP probes. Per the project
+            # definition, a pivot requires an actually dispatched and executed
+            # alternative, so we do NOT call gap_run.record_pivot() here. A
+            # genuine pivot is recorded by the agent-driven investigation path
+            # when a specialist acts on a decision and produces execution
+            # evidence for the alternative candidate.
             if pivot_executed and recommended_next:
-                try:
-                    gap_run.record_pivot(
-                        cand.id,
-                        recommended_next,
-                        "inconclusive",
-                        detail=f"Pivot after {cand.attempts} attempts: {detail}",
-                    )
-                except Exception:
-                    logger.exception("failed to record GAP-2 pivot for %s", cand.id)
                 if event_sink is not None:
                     try:
                         event_sink(
                             root_id,
                             {
-                                "type": "GAP2_PIVOT",
+                                "type": "GAP2_GUIDANCE",
                                 "from_candidate": cand.id,
-                                "to_candidate": recommended_next,
+                                "suggested_candidate": recommended_next,
+                                "note": "preparatory probe; alternative not dispatched by this loop",
                             },
                         )
                     except Exception:
@@ -620,9 +654,10 @@ async def _investigate_gap1_candidates(
             if cand.status in ("abandoned", "blocked"):
                 break
 
-            # No progress (attempts unchanged) -> avoid an infinite loop.
-            if cand.attempts == 0:
-                break
+            # The loop is already bounded by ``prep_attempts < max_attempts``.
+            # Checking ``cand.attempts`` here was always true after preparatory
+            # probes stopped consuming agent attempts, so it silently reduced
+            # every candidate to a single probe.
 
         # Persist per-candidate state after each probe loop.
         gap_run.save()
@@ -1197,14 +1232,15 @@ async def run_strix_scan(
             except Exception:
                 logger.exception("GAP-1 investigation failed; continuing to agent loop")
             # Re-hydrate the report state from the (possibly updated) gap run.
-            try:
-                summary = gap_run.summary
-                report_state.gap1_candidates_identified = summary["candidates_identified"]
-                report_state.gap1_candidates_investigated = summary["candidates_investigated"]
-                report_state.gap2_pivots = summary["pivots_executed"]
-                report_state.save_run_data()
-            except Exception:
-                logger.exception("failed to sync gap run summary to report state")
+            if report_state is not None:
+                try:
+                    summary = gap_run.summary
+                    report_state.gap1_candidates_identified = summary["candidates_identified"]
+                    report_state.gap1_candidates_investigated = summary["candidates_investigated"]
+                    report_state.gap2_pivots = summary["pivots_executed"]
+                    report_state.save_run_data()
+                except Exception:
+                    logger.exception("failed to sync gap run summary to report state")
 
             # The automated probes are genuine HTTP execution, but they are
             # only PREPARATORY evidence gathering. They must never replace the

@@ -1,0 +1,13 @@
+{
+  "spider_stats": {
+    "visited_count": 1,
+    "discovered_paths": [
+      "/"
+    ],
+    "forms_count": 0,
+    "parameters_count": 0
+  },
+  "open_ports": [],
+  "components": [],
+  "candidates_count": 4
+}

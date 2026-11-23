@@ -112,10 +112,22 @@ def test_verification_states_all_categories_present():
     sample_findings = [
         {"id": "v1", "title": "SQLi", "verification": {"verification_state": "verified"}},
         {"id": "v2", "title": "XSS", "verification": {"verification_state": "candidate"}},
-        {"id": "v3", "title": "CSRF", "verification": {"verification_state": "under_investigation"}},
-        {"id": "v4", "title": "SSRF", "verification": {"verification_state": "exploitation_attempted"}},
+        {
+            "id": "v3",
+            "title": "CSRF",
+            "verification": {"verification_state": "under_investigation"},
+        },
+        {
+            "id": "v4",
+            "title": "SSRF",
+            "verification": {"verification_state": "exploitation_attempted"},
+        },
         {"id": "v5", "title": "IDOR", "verification": {"verification_state": "unconfirmed"}},
-        {"id": "v6", "title": "Info Disclosure", "verification": {"verification_state": "false_positive"}},
+        {
+            "id": "v6",
+            "title": "Info Disclosure",
+            "verification": {"verification_state": "false_positive"},
+        },
         {"id": "v7", "title": "Rate Limit", "verification": {"verification_state": "blocked"}},
         {"id": "v8", "title": "CORS", "verification": {"verification_state": "inconclusive"}},
         {"id": "v9", "title": "RCE", "verification": {"verification_state": "discovered"}},
@@ -142,7 +154,12 @@ def test_sync_run_counters_populates_verification_states(client):
         "start_time": now_iso,
         "started_at": now_iso,
         "findings": [
-            {"id": "v1", "title": "Confirmed SQLi", "verified": True, "verification": {"verification_state": "verified"}},
+            {
+                "id": "v1",
+                "title": "Confirmed SQLi",
+                "verified": True,
+                "verification": {"verification_state": "verified"},
+            },
         ],
         "events": [],
         "decision_trace": [],
@@ -281,7 +298,7 @@ def test_cloud_hosted_profile_crud_and_activation(client, tmp_path):
         # 1. Create a profile
         create_payload = {
             "name": "Kaggle Dedicated GPU",
-            "api_base": "https://expel-gizzard-effective.ngrok-free.dev/v1",
+            "api_base": "https://llm-gateway.example.com/v1",
             "api_key": "test-key-12345",
             "model": "kaggle-model",
             "model_alias": "Qwen 2.5 72B Kaggle",
@@ -446,7 +463,9 @@ def test_resume_preserves_historical_findings(client):
         "started_at": now_iso,
         "provider": "openrouter",
         "model": "deepseek/deepseek-chat",
-        "findings": [{"id": "vuln-preserved-1", "title": "Preserved Vulnerability", "verified": True}],
+        "findings": [
+            {"id": "vuln-preserved-1", "title": "Preserved Vulnerability", "verified": True}
+        ],
         "candidates": [{"id": "cand-1", "state": "VALIDATED", "attempts": 1}],
         "events": [],
         "decision_trace": ["Log 1 before resume"],
@@ -503,4 +522,3 @@ def test_no_fabrication_between_candidates_and_findings(client):
     assert len(res["candidates"]) == 3
     assert len(res["findings"]) == 0
     assert res["verification_states"]["verified"] == 0
-

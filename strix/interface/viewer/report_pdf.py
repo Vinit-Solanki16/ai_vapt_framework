@@ -393,7 +393,14 @@ def _cover(
         ("STATUS", str(record.get("status") or "n/a")),
         ("STARTED", _fmt_time(record.get("start_time"))),
         ("COMPLETED", _fmt_time(record.get("end_time"))),
-        ("DURATION", _duration(record.get("start_time"), record.get("end_time"), record.get("active_duration_seconds") or record.get("duration_seconds"))),
+        (
+            "DURATION",
+            _duration(
+                record.get("start_time"),
+                record.get("end_time"),
+                record.get("active_duration_seconds") or record.get("duration_seconds"),
+            ),
+        ),
     ]
     meta_table = Table(
         [
@@ -574,6 +581,18 @@ def _field_block(
     return flow
 
 
+def is_confirmed_finding(vuln: dict[str, Any]) -> bool:
+    """A finding is confirmed only when evidence verification says so.
+
+    The PDF must never turn an unconfirmed finding into a "confirmed" one just
+    because it appears in vulnerabilities.json.
+    """
+    return (
+        bool(vuln.get("verified"))
+        or str(vuln.get("verification_state") or "").strip().lower() == "verified"
+    )
+
+
 def _finding_flowables(
     styles: dict[str, ParagraphStyle], index: int, vuln: dict[str, Any]
 ) -> list[Flowable]:
@@ -596,6 +615,13 @@ def _finding_flowables(
     ]
     if meta_bits:
         header.append(Paragraph("&nbsp;&nbsp;".join(meta_bits), styles["meta_inline"]))
+    verification_state = str(vuln.get("verification_state") or "").strip()
+    if verification_state:
+        header.append(
+            Paragraph(
+                f"<b>Verification</b> {_esc(verification_state.upper())}", styles["meta_inline"]
+            )
+        )
 
     story: list[Flowable] = [KeepTogether(header)]
     story.extend(_field_block(styles, "Description", vuln.get("description")))
@@ -616,20 +642,31 @@ def _finding_flowables(
 
 
 def _overview_flowables(
-    styles: dict[str, ParagraphStyle], record: dict[str, Any], total: int, counts: dict[str, int]
+    styles: dict[str, ParagraphStyle],
+    record: dict[str, Any],
+    total: int,
+    counts: dict[str, int],
+    confirmed: int | None = None,
 ) -> list[Flowable]:
     story: list[Flowable] = [
         _section(styles, "Executive Summary"),
         Spacer(1, 16),
         _severity_grid(styles, counts),
         Spacer(1, 10),
-        Paragraph(f"<b>{total}</b> total confirmed findings across this assessment.", styles["body"]),
+        Paragraph(
+            f"<b>{confirmed if confirmed is not None else total}</b> confirmed finding(s); "
+            f"{total} finding(s) recorded in this assessment.",
+            styles["body"],
+        ),
     ]
 
     # 1. Assessment Lifecycle & Completeness Table
     turns_consumed = record.get("turns_consumed", 0)
     max_turns = record.get("configured_turn_limit") or record.get("max_turns", 500)
-    lifecycle_msg = record.get("run_lifecycle_status") or f"Run process completed — {turns_consumed} of {max_turns} turns used."
+    lifecycle_msg = (
+        record.get("run_lifecycle_status")
+        or f"Run process completed — {turns_consumed} of {max_turns} turns used."
+    )
     actual_probes = record.get("actual_probe_count", turns_consumed)
     pivots_count = record.get("pivots", record.get("gap2_pivots", 0))
     cands = record.get("candidates", [])
@@ -651,10 +688,24 @@ def _overview_flowables(
     )
 
     compl_rows = [
-        [Paragraph("RUN LIFECYCLE", styles["meta_label"]), Paragraph(_esc(lifecycle_msg), styles["meta_value"])],
-        [Paragraph("PROBES EXECUTED", styles["meta_label"]), Paragraph(f"{actual_probes} concrete tool probe executions recorded", styles["meta_value"])],
-        [Paragraph("GAP-1 CANDIDATES", styles["meta_label"]), Paragraph(_esc(cands_summary), styles["meta_value"])],
-        [Paragraph("GAP-2 ADAPTIVE PIVOTS", styles["meta_label"]), Paragraph(_esc(pivot_narrative), styles["meta_value"])],
+        [
+            Paragraph("RUN LIFECYCLE", styles["meta_label"]),
+            Paragraph(_esc(lifecycle_msg), styles["meta_value"]),
+        ],
+        [
+            Paragraph("PROBES EXECUTED", styles["meta_label"]),
+            Paragraph(
+                f"{actual_probes} concrete tool probe executions recorded", styles["meta_value"]
+            ),
+        ],
+        [
+            Paragraph("GAP-1 CANDIDATES", styles["meta_label"]),
+            Paragraph(_esc(cands_summary), styles["meta_value"]),
+        ],
+        [
+            Paragraph("GAP-2 ADAPTIVE PIVOTS", styles["meta_label"]),
+            Paragraph(_esc(pivot_narrative), styles["meta_value"]),
+        ],
     ]
     compl_table = Table(compl_rows, colWidths=[42 * mm, _PAGE_W - 40 * mm - 42 * mm])
     compl_table.setStyle(
@@ -708,7 +759,9 @@ def _overview_flowables(
                 ]
             )
         col_w = (_PAGE_W - 40 * mm) / 4
-        m_tbl = Table(matrix_table_data, colWidths=[col_w * 1.5, col_w * 1.1, col_w * 0.7, col_w * 0.7])
+        m_tbl = Table(
+            matrix_table_data, colWidths=[col_w * 1.5, col_w * 1.1, col_w * 0.7, col_w * 0.7]
+        )
         m_tbl.setStyle(
             TableStyle(
                 [
@@ -759,7 +812,9 @@ def _overview_flowables(
                 ]
             )
         col_w = (_PAGE_W - 40 * mm) / 4
-        p_tbl = Table(port_table_data, colWidths=[col_w * 0.8, col_w * 1.8, col_w * 0.7, col_w * 0.7])
+        p_tbl = Table(
+            port_table_data, colWidths=[col_w * 0.8, col_w * 1.8, col_w * 0.7, col_w * 0.7]
+        )
         p_tbl.setStyle(
             TableStyle(
                 [
@@ -819,7 +874,8 @@ def generate_report_pdf(run_dir: Path) -> bytes:
 
     story: list[Flowable] = []
     story.extend(_cover(styles, record, run_name))
-    story.extend(_overview_flowables(styles, record, len(vulns), counts))
+    confirmed = sum(1 for v in vulns if is_confirmed_finding(v))
+    story.extend(_overview_flowables(styles, record, len(vulns), counts, confirmed))
 
     story.append(PageBreak())
     story.append(_section(styles, "Findings"))

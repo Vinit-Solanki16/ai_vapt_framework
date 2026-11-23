@@ -15,6 +15,54 @@ def _disabled_copilot_poll(*args: object, **kwargs: object) -> str:
     raise RuntimeError("Copilot device polling disabled in tests")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_cli_config(tmp_path_factory: pytest.TempPathFactory):
+    """Keep settings/cloud-profile tests from editing the real AI provider profile.
+
+    Several API tests exercise endpoints that persist to
+    ``~/.strix/cli-config.json`` by design. Redirect both the API and settings
+    loader to a session-local copy so the developer's (or CI runner's) real
+    credentials and base URLs are never overwritten by a test run. Tests that
+    need a specific config path still patch it themselves.
+    """
+    import shutil
+    from pathlib import Path
+
+    from strix.config import loader
+    from strix.interface import api
+
+    target_dir = Path(tmp_path_factory.mktemp("cli-config-session"))
+    target = target_dir / "cli-config.json"
+    if api.CLI_CONFIG_FILE.is_file():
+        shutil.copyfile(api.CLI_CONFIG_FILE, target)
+
+    original_api_path, original_loader_path = api.CLI_CONFIG_FILE, loader._DEFAULT_PATH
+    api.CLI_CONFIG_FILE = target
+    loader._DEFAULT_PATH = target
+    try:
+        yield
+    finally:
+        api.CLI_CONFIG_FILE = original_api_path
+        loader._DEFAULT_PATH = original_loader_path
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_tracked_fixtures_in_runs_dir():
+    """Ensure tracked historical fixtures from tests/fixtures/ are mirrored into strix_runs/."""
+    import shutil
+    from pathlib import Path
+
+    fixtures_dir = Path(__file__).resolve().parent / "fixtures"
+    if fixtures_dir.is_dir():
+        runs_dir = Path.cwd() / "strix_runs"
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        for fixture in fixtures_dir.iterdir():
+            if fixture.is_dir() and fixture.name.startswith("run-"):
+                dest = runs_dir / fixture.name
+                if not dest.exists():
+                    shutil.copytree(fixture, dest)
+
+
 @pytest.fixture(autouse=True)
 def _isolate_mcp_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory

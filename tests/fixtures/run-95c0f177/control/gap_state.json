@@ -1,0 +1,150 @@
+{
+  "attempts": {
+    "open-port-6379": 1,
+    "lfi-traversal": 1,
+    "server-banner-disclosure": 1,
+    "missing-anti-clickjacking": 1,
+    "sensitive-path-robotstxt": 1,
+    "reverse-tabnabbing": 1,
+    "csp-bypass": 1,
+    "insecure-cookie-flags": 1,
+    "robots-txt-exposure": 1,
+    "cors-misconfiguration": 1,
+    "client-js-attacks": 1,
+    "missing-security-headers": 1,
+    "cookie-without-secure": 1,
+    "cookie-no-samesite": 1,
+    "missing-hsts": 1
+  },
+  "exhausted": [],
+  "completed": [
+    "client-js-attacks",
+    "cookie-no-samesite",
+    "cookie-without-secure",
+    "cors-misconfiguration",
+    "csp-bypass",
+    "insecure-cookie-flags",
+    "lfi-traversal",
+    "missing-anti-clickjacking",
+    "missing-hsts",
+    "missing-security-headers",
+    "open-port-6379",
+    "reverse-tabnabbing",
+    "robots-txt-exposure",
+    "sensitive-path-robotstxt",
+    "server-banner-disclosure"
+  ],
+  "announced": true,
+  "probe_outcomes": [
+    {
+      "candidate_id": "open-port-6379",
+      "status": "negative",
+      "detail": "Port 6379 (Redis) was filtered and not directly accessible from external connections. Nmap scan showed 'filtered' state.",
+      "timestamp": "2026-11-13T06:19:45.096201+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal",
+      "status": "inconclusive",
+      "attempt": 1,
+      "pivot": false,
+      "detail": "Path traversal vulnerability detected in /vulnerabilities/fi/. The application is vulnerable to LFI attacks as demonstrated by reading /etc/passwd file. This represents a potential security risk for sensitive system files.",
+      "reason": "Path traversal vulnerability detected in /vulnerabilities/fi/. The application is vulnerable to LFI attacks as demonstrated by reading /etc/passwd file. This represents a potential security risk for sensitive system files.",
+      "next_candidate": null,
+      "timestamp": "2026-11-13T06:20:56.933220+00:00"
+    },
+    {
+      "candidate_id": "server-banner-disclosure",
+      "status": "positive",
+      "detail": "Server banner information disclosure detected. The response headers reveal:\n- Server: nginx/1.31.8\n- X-Powered-By: PHP/8.5.12\n\nThis exposes detailed server and application versions, which can be used by attackers to identify known vulnerabilities.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:21:27.857340+00:00"
+    },
+    {
+      "candidate_id": "missing-anti-clickjacking",
+      "status": "positive",
+      "detail": "X-Frame-Options header is missing from the response. This makes the application vulnerable to clickjacking attacks where the site can be embedded in iframes by malicious sites.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:23:31.048264+00:00"
+    },
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "status": "negative",
+      "detail": "The robots.txt file exists but contains 'Disallow: /' which is standard behavior. It doesn't expose sensitive information or directories.",
+      "timestamp": "2026-11-13T06:45:37.277638+00:00"
+    },
+    {
+      "candidate_id": "reverse-tabnabbing",
+      "status": "positive",
+      "detail": "Found 5 links with target=\"_blank\" attribute but without rel=\"noopener\" or rel=\"noreferrer\". This creates a reverse tabnabbing vulnerability where malicious sites could potentially access the parent page through window.opener.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:46:23.469180+00:00"
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "status": "positive",
+      "detail": "Content-Security-Policy header is missing. This leaves the application vulnerable to cross-site scripting (XSS) attacks and other content injection vulnerabilities.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:47:12.593073+00:00"
+    },
+    {
+      "candidate_id": "insecure-cookie-flags",
+      "status": "positive",
+      "detail": "Session cookies are missing the HttpOnly flag, making them vulnerable to XSS attacks where JavaScript could access the cookie contents.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:47:34.935957+00:00"
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "status": "negative",
+      "detail": "The robots.txt file exists but contains standard 'Disallow: /' directive which is normal behavior. No sensitive information or directory paths are exposed.",
+      "timestamp": "2026-11-13T06:48:39.905588+00:00"
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "status": "negative",
+      "detail": "No CORS headers found in response. While this could be a concern if the application handles cross-origin requests, it does not appear to be actively misconfigured with permissive policies.",
+      "timestamp": "2026-11-13T06:49:03.490968+00:00"
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "status": "negative",
+      "detail": "No obvious client-side JavaScript processing patterns found that could lead to XSS vulnerabilities. The page does not appear to use dangerous DOM methods like innerHTML or eval on user-controllable input.",
+      "timestamp": "2026-11-13T06:49:27.136412+00:00"
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "status": "positive",
+      "detail": "X-Content-Type-Options header is missing from responses. This leaves the application vulnerable to MIME type sniffing attacks where browsers might incorrectly interpret content types.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:49:48.750188+00:00"
+    },
+    {
+      "candidate_id": "cookie-without-secure",
+      "status": "positive",
+      "detail": "Session cookies are missing the Secure flag, meaning they could be transmitted over unencrypted HTTP connections. This makes them vulnerable to interception attacks.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:50:00.999409+00:00"
+    },
+    {
+      "candidate_id": "cookie-no-samesite",
+      "status": "positive",
+      "detail": "Session cookies are missing the SameSite attribute, making them vulnerable to Cross-Site Request Forgery (CSRF) attacks.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:50:12.917926+00:00"
+    },
+    {
+      "candidate_id": "lfi-traversal",
+      "status": "positive",
+      "detail": "Confirmed LFI vulnerability in /vulnerabilities/fi/. The application is vulnerable to path traversal attacks as demonstrated by successfully reading /etc/passwd file with deeper traversal paths. This allows attackers to access sensitive system files, representing a critical security risk.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:50:49.966261+00:00"
+    },
+    {
+      "candidate_id": "missing-hsts",
+      "status": "positive",
+      "detail": "Strict-Transport-Security header is missing from responses. This means the application does not enforce HTTPS connections, leaving it vulnerable to protocol downgrade attacks and man-in-the-middle attacks that could compromise user sessions.",
+      "report_id": "",
+      "timestamp": "2026-11-13T06:52:05.906145+00:00"
+    }
+  ]
+}

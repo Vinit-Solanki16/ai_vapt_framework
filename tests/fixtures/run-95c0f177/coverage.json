@@ -1,0 +1,77 @@
+{
+  "spider_stats": {
+    "visited_count": 1,
+    "discovered_paths": [
+      "/"
+    ],
+    "forms_count": 0,
+    "parameters_count": 0
+  },
+  "open_ports": [
+    {
+      "port": 80,
+      "service": "HTTP",
+      "conventional_service": "HTTP",
+      "service_confirmed": true,
+      "service_confidence": "CONFIRMED",
+      "service_fingerprint": "HTTP/Web Service",
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "low",
+      "risk": "Standard cleartext HTTP web server port.",
+      "cwe_id": "CWE-200",
+      "ip": "178.79.134.182",
+      "in_scope": true,
+      "scope": "target_application",
+      "target_port": 4280,
+      "is_localhost": false
+    },
+    {
+      "port": 443,
+      "service": "HTTPS",
+      "conventional_service": "HTTPS",
+      "service_confirmed": true,
+      "service_confidence": "CONFIRMED",
+      "service_fingerprint": "HTTP/Web Service",
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "low",
+      "risk": "Secure TLS encrypted web server port.",
+      "cwe_id": "CWE-200",
+      "ip": "178.79.134.182",
+      "in_scope": true,
+      "scope": "target_application",
+      "target_port": 4280,
+      "is_localhost": false
+    },
+    {
+      "port": 6379,
+      "service": "Redis (Conventional Port Mapping, Unconfirmed)",
+      "conventional_service": "Redis",
+      "service_confirmed": false,
+      "service_confidence": "UNCONFIRMED",
+      "service_fingerprint": null,
+      "version": null,
+      "exposure_demonstrated": false,
+      "raw_probe_result": "TCP SYN/ACK connection handshake succeeded",
+      "protocol": "tcp",
+      "state": "OPEN",
+      "severity": "critical",
+      "risk": "In-memory Redis cache exposed without firewall isolation.",
+      "cwe_id": "CWE-200",
+      "ip": "178.79.134.182",
+      "in_scope": true,
+      "scope": "target_application",
+      "target_port": 4280,
+      "is_localhost": false
+    }
+  ],
+  "components": [],
+  "candidates_count": 15
+}

@@ -51,7 +51,9 @@ def is_placeholder_credential(key: str | None) -> bool:
     if not cleaned or cleaned.lower() in ("none", "null", "undefined", "false", "0"):
         return True
     lower = cleaned.lower()
-    return cleaned.startswith("sk-or-v1-test") or any(marker in lower for marker in _PLACEHOLDER_MARKERS)
+    return cleaned.startswith("sk-or-v1-test") or any(
+        marker in lower for marker in _PLACEHOLDER_MARKERS
+    )
 
 
 def _read_strix_cli_config() -> dict[str, str]:
@@ -165,9 +167,17 @@ def get_runtime_base_url(provider: str, override_base: str | None = None) -> str
             return _RUNTIME_BASE_URLS[prov]
 
     if prov == "ollama":
-        return os.environ.get("OLLAMA_API_BASE") or os.environ.get("OLLAMA_HOST") or "http://127.0.0.1:11434"
+        return (
+            os.environ.get("OLLAMA_API_BASE")
+            or os.environ.get("OLLAMA_HOST")
+            or "http://127.0.0.1:11434"
+        )
     if prov in ("cloud_hosted", "custom_cloud", "custom"):
-        return os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_API_BASE") or "https://api.openai.com/v1"
+        return (
+            os.environ.get("OPENAI_BASE_URL")
+            or os.environ.get("LLM_API_BASE")
+            or "https://api.openai.com/v1"
+        )
     if prov == "openrouter":
         return os.environ.get("OPENROUTER_API_BASE") or "https://openrouter.ai/api/v1"
     if prov == "openai":

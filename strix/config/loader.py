@@ -69,6 +69,14 @@ def persist_current() -> None:
     var set to the empty string clears the field from the file. A change to
     any linked LLM connection var drops the whole stored connection first.
     """
+    # Web Console engine subprocesses receive per-request runtime credentials
+    # and base URLs in their environment. Those must stay in memory: persisting
+    # them here would overwrite the operator's profile with a temporary tunnel
+    # URL and key. The worker sets this flag for engine subprocesses only.
+    if os.environ.get("STRIX_NO_PERSIST_CONFIG", "").strip().lower() in {"1", "true", "yes"}:
+        logger.debug("config persistence disabled for this process")
+        return
+
     s = load_settings()
     target = _override or _DEFAULT_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
