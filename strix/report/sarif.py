@@ -551,6 +551,8 @@ def _result_properties(
         "confidence_rationale",
         "severity_change_conditions",
         "fix_verification",
+        "verification_state",
+        "verified",
     ):
         value = report.get(key)
         if value not in (None, ""):

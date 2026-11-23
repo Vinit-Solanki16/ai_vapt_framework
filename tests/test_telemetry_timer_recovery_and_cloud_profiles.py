@@ -281,7 +281,7 @@ def test_cloud_hosted_profile_crud_and_activation(client, tmp_path):
         # 1. Create a profile
         create_payload = {
             "name": "Kaggle Dedicated GPU",
-            "api_base": "https://expel-gizzard-effective.ngrok-free.dev/v1",
+            "api_base": "https://llm-gateway.example.com/v1",
             "api_key": "test-key-12345",
             "model": "kaggle-model",
             "model_alias": "Qwen 2.5 72B Kaggle",

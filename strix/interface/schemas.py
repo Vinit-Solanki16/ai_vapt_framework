@@ -276,6 +276,7 @@ class RunStatus(BaseModel):
     progress: dict[str, Any] | None = None
     tech_stack: str | None = None
     evidence_tier: str | None = None
+    execution_evidence: dict[str, Any] | None = None
     safety_notice: str | None = None
     target_ip: str | None = None
     open_ports: list[dict[str, Any]] = Field(default_factory=list)

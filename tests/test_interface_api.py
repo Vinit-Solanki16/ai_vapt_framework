@@ -250,8 +250,15 @@ def test_technology_aware_remediation_iis_aspnet():
     assert "X-Frame-Options" in res["remediation_technical"]
 
 
-def test_llm_settings_endpoints():
-    """Verify GET and POST /settings/llm endpoints configure provider and model."""
+def test_llm_settings_endpoints(tmp_path, monkeypatch):
+    """Verify GET and POST /settings/llm endpoints configure provider and model.
+
+    Redirect the persistence target into the test sandbox so this test never
+    modifies the operator's ~/.strix/cli-config.json.
+    """
+    from strix.interface import api
+
+    monkeypatch.setattr(api, "CLI_CONFIG_FILE", tmp_path / "cli-config.json")
     # 1. GET settings
     get_res = client.get("/settings/llm")
     assert get_res.status_code == 200

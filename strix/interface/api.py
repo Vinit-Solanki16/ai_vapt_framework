@@ -528,7 +528,7 @@ def _is_productive_tool(tool_name: str) -> bool:
     let run-fd0f5ec4 spin for 19 turns with zero security tools executed.
     """
     name = (tool_name or "").lower()
-    if name in {
+    return name not in {
         "record_coverage",
         "update_coverage",
         "list_coverage",
@@ -538,9 +538,187 @@ def _is_productive_tool(tool_name: str) -> bool:
         "delete_vulnerability_report",
         "update_vulnerability_report",
         "list_vulnerability_reports",
-    }:
+    }
+
+
+def productive_tool_count(run_data: dict[str, Any] | None) -> int:
+    """Count real security-tool executions recorded in engine telemetry.
+
+    SDK versions that log only ``Processing output item type=function_call``
+    never emit ``Invoking tool`` lines. The engine's ``tool_calls`` telemetry
+    is authoritative for those runs; bookkeeping tools never count.
+    """
+    data = run_data or {}
+    return sum(
+        1
+        for t in (data.get("tool_calls") or [])
+        if isinstance(t, dict) and _is_productive_tool(str(t.get("tool", "")))
+    )
+
+
+_ENGINE_FAILED_STATUSES = frozenset({"failed", "error", "interrupted", "aborted"})
+
+
+def genuine_pivot_key(event: dict[str, Any]) -> tuple[str, str] | None:
+    """Canonical identity of an executed pivot: (original, alternative).
+
+    The control bridge and the native GapRun can both record the same executed
+    pivot. Counting raw events double-counts it; counting canonical keys does
+    not. A self-pivot (candidate == alternative) is never a genuine pivot.
+    """
+    if not isinstance(event, dict):
+        return None
+    if event.get("pivot_executed") is False:
+        return None
+    event_name = str(event.get("event") or "")
+    event_type = str(event.get("type") or "")
+    if "GAP2_PIVOT" not in (event_name, event_type) and event_name != "pivot_decision":
+        return None
+    origin = str(event.get("candidate_id") or "")
+    alternative = str(
+        event.get("next_candidate")
+        or event.get("to_candidate")
+        or event.get("alternative_candidate")
+        or ""
+    )
+    if not origin or not alternative or origin == alternative:
+        return None
+    return (origin, alternative)
+
+
+def engine_executed_alternatives(engine_gap_file: Path | None) -> set[str]:
+    """Candidate ids with a non-preparatory engine probe (real dispatch/execution)."""
+    if engine_gap_file is None or not engine_gap_file.is_file():
+        return set()
+    try:
+        data = json.loads(engine_gap_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    return {
+        str(p.get("candidate_id"))
+        for p in (data.get("probe_outcomes") or [])
+        if isinstance(p, dict) and p.get("candidate_id") and not p.get("preparatory")
+    }
+
+
+def reconcile_control_gap_state(control_dir: Path | None, engine_gap_file: Path | None) -> bool:
+    """Mirror authoritative engine attempts/status into the control-plane file.
+
+    The engine's ``.state/gap_state.json`` is authoritative for candidate
+    attempts and status; ``control/gap_state.json`` is written by the file-based
+    bridge with a different schema. Reconciling the overlapping fields after
+    the engine exits keeps resume/completion decisions consistent without
+    touching the bridge's own probe/event history or pivot accounting.
+    """
+    if control_dir is None or engine_gap_file is None or not engine_gap_file.is_file():
         return False
-    return True
+    try:
+        engine_state = json.loads(engine_gap_file.read_text(encoding="utf-8"))
+        control_path = control_dir / "gap_state.json"
+        control_state = (
+            json.loads(control_path.read_text(encoding="utf-8"))
+            if control_path.is_file()
+            else {}
+        )
+        if not isinstance(engine_state, dict) or not isinstance(control_state, dict):
+            return False
+        attempts = dict(control_state.get("attempts") or {})
+        exhausted = {str(x) for x in (control_state.get("exhausted") or [])}
+        completed = {str(x) for x in (control_state.get("completed") or [])}
+        for cid, cand in (engine_state.get("candidates") or {}).items():
+            if not isinstance(cand, dict):
+                continue
+            attempts[str(cid)] = max(int(attempts.get(str(cid), 0)), int(cand.get("attempts", 0)))
+            status = str(cand.get("status") or "").lower()
+            if status == "abandoned":
+                exhausted.add(str(cid))
+            elif status == "validated":
+                completed.add(str(cid))
+        control_state["attempts"] = attempts
+        control_state["exhausted"] = sorted(exhausted)
+        control_state["completed"] = sorted(completed)
+        control_dir.mkdir(parents=True, exist_ok=True)
+        control_path.write_text(json.dumps(control_state, indent=2), encoding="utf-8")
+        return True
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def pivot_execution_after_decision(
+    decision: dict[str, Any], probe_outcomes: list[dict[str, Any]]
+) -> bool:
+    """True only when a non-preparatory probe of the chosen alternative was
+    recorded at or after the pivot decision."""
+    alternative = str((decision or {}).get("alternative_candidate") or "")
+    if not alternative:
+        return False
+    decision_at = str((decision or {}).get("at") or "")
+    return any(
+        isinstance(p, dict)
+        and not p.get("preparatory")
+        and str(p.get("candidate_id")) == alternative
+        and (not decision_at or str(p.get("at", "")) >= decision_at)
+        for p in probe_outcomes or []
+    )
+
+
+def dedupe_pivot_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep one event per genuine (original -> alternative) pivot.
+
+    Self-referential records (an alternative pivoting to itself) are never
+    genuine and are dropped rather than presented as adaptive behaviour.
+    """
+    seen: set[tuple[str, str]] = set()
+    result: list[dict[str, Any]] = []
+    for event in events or []:
+        if not isinstance(event, dict):
+            result.append(event)
+            continue
+        event_name = str(event.get("event") or "")
+        event_type = str(event.get("type") or "")
+        is_pivot = "GAP2_PIVOT" in (event_name, event_type) or event_type == "pivot_decision"
+        if is_pivot:
+            origin = str(event.get("candidate_id") or "")
+            alternative = str(
+                event.get("next_candidate")
+                or event.get("to_candidate")
+                or event.get("alternative_candidate")
+                or ""
+            )
+            if origin and alternative and origin == alternative:
+                continue
+        key = genuine_pivot_key(event)
+        if key is not None:
+            if key in seen:
+                continue
+            seen.add(key)
+        result.append(event)
+    return result
+
+
+def engine_terminal_failure(engine_run_data: dict[str, Any] | None) -> str | None:
+    """Return the terminal failure status of the engine, if any.
+
+    A genuine finding may be harvested from a run whose engine still ended in
+    failure (e.g. a context overflow after the finding was filed). Such a run
+    must be reported as failed with a partial report — never relabelled as a
+    clean completion just because artifacts exist.
+    """
+    status = str((engine_run_data or {}).get("status") or "").strip().lower()
+    return status if status in _ENGINE_FAILED_STATUSES else None
+
+
+def should_stop_for_stall(
+    *, elapsed_seconds: float, last_progress_seconds: float, stall_seconds: float = 600.0
+) -> bool:
+    """Stop when no real security tool has run for ``stall_seconds``.
+
+    Unlike :func:`should_stop_for_no_progress`, this is not disabled by an
+    early burst of productive tools. A late-stage model-only hang (e.g. an SDK
+    stream replay loop) is still a genuine no-progress stall, and must reach an
+    honest terminal state instead of running until the wall-clock limit.
+    """
+    return elapsed_seconds >= stall_seconds and last_progress_seconds >= stall_seconds
 
 
 def should_stop_for_no_progress(
@@ -4110,6 +4288,10 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             active_cloud["context_window"]
                         )
 
+            # The engine subprocess receives per-request credentials/base URL
+            # via env. Prevent its CLI bootstrap from persisting those runtime
+            # values into the operator's ~/.strix/cli-config.json profile.
+            sub_env["STRIX_NO_PERSIST_CONFIG"] = "1"
             sub_env["STRIX_GAP_CONTROL_DIR"] = str(control_dir)
             sub_env["STRIX_GAP1_QUEUE"] = str(control_dir / "gap1_queue.json")
             sub_env["STRIX_GAP2_THRESHOLD"] = str(max_k)
@@ -4336,6 +4518,11 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             stalled = False
             productive_turns = 0
             last_progress_time = proc_start_time
+            # Some SDK versions never emit "Invoking tool" lines; they record
+            # real tool executions only in run.json["tool_calls"]. Track how
+            # many of those we have consumed so progress detection works for
+            # both log formats without ever counting bookkeeping tools.
+            seen_tool_telemetry = 0
             log_file_pos = 0
             u_dir = None
             candidates_investigated = 0
@@ -4344,7 +4531,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
 
             def _sync_telemetry(final_sync: bool = False):
                 nonlocal underlying_run_name, u_dir, log_file_pos
+                nonlocal seen_tool_telemetry
                 nonlocal current_turn, candidates_investigated, pivots_count, candidates_identified
+                nonlocal productive_turns, last_progress_time
 
                 # 1. Resolve u_dir if needed
                 if not u_dir or not u_dir.is_dir():
@@ -4373,6 +4562,25 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 "SANDBOX",
                                 f"Discovered autonomous scan run directory: {underlying_run_name}",
                             )
+
+                # 2a. Count productive tool executions from the engine's
+                # telemetry array. SDK versions that log only
+                # "Processing output item type=function_call" never emit
+                # "Invoking tool" lines, so log tailing alone undercounts real
+                # security work and can trigger a false no-progress stall.
+                # Bookkeeping tools are excluded by _is_productive_tool.
+                if u_dir and u_dir.is_dir():
+                    engine_run_json = u_dir / "run.json"
+                    if engine_run_json.is_file():
+                        try:
+                            ed = json.loads(engine_run_json.read_text(encoding="utf-8"))
+                            productive_total = productive_tool_count(ed)
+                            if productive_total > seen_tool_telemetry:
+                                productive_turns += productive_total - seen_tool_telemetry
+                                seen_tool_telemetry = productive_total
+                                last_progress_time = time.time()
+                        except Exception:
+                            pass
 
                 # 2. Tail strix.log. At final sync after process exit, re-read
                 # the whole file: late writes may have arrived after the last
@@ -4491,6 +4699,74 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     except Exception:
                         pass
 
+                # 3a. Reconcile with the engine's authoritative GAP state.
+                # The engine (GapRun) writes <engine-run>/.state/gap_state.json;
+                # the control bridge writes <control>/gap_state.json. When both
+                # exist they can disagree. Prefer real execution evidence from
+                # the engine state so the dashboard reflects what actually ran.
+                if u_dir and u_dir.is_dir():
+                    engine_gap_file = u_dir / ".state" / "gap_state.json"
+                    if engine_gap_file.is_file():
+                        try:
+                            eg = json.loads(engine_gap_file.read_text(encoding="utf-8"))
+                            eng_cands = eg.get("candidates", {}) or {}
+                            eng_probes = eg.get("probe_outcomes", []) or []
+                            # Preparatory reconnaissance is evidence, not agent
+                            # execution of an alternative. Counting it here
+                            # made a pivot appear executed before the model had
+                            # dispatched or run the selected candidate.
+                            eng_executed = {
+                                str(p.get("candidate_id"))
+                                for p in eng_probes
+                                if isinstance(p, dict)
+                                and p.get("candidate_id")
+                                and not p.get("preparatory")
+                            }
+                            for cand in run_entry.get("candidates", []):
+                                cid = str(cand.get("id"))
+                                ec = eng_cands.get(cid)
+                                if not isinstance(ec, dict):
+                                    continue
+                                cand["attempts"] = max(
+                                    int(cand.get("attempts", 0)), int(ec.get("attempts", 0))
+                                )
+                                estatus = str(ec.get("status", "")).lower()
+                                if estatus in ("validated", "abandoned", "blocked", "investigated"):
+                                    cand["state"] = estatus.upper()
+                                    cand["status"] = cand["state"]
+                                elif cid in eng_executed:
+                                    cand["state"] = "ATTEMPTING"
+                                    cand["status"] = "ATTEMPTING"
+                            candidates_investigated = sum(
+                                1
+                                for c in run_entry.get("candidates", [])
+                                if c.get("state") in ("VALIDATED", "ABANDONED", "INVESTIGATED")
+                                or (c.get("state") == "ATTEMPTING" and c.get("attempts", 0) > 0)
+                            )
+                            # Only count pivots that name an alternative which
+                            # actually produced an execution record.
+                            for ev in eg.get("decision_trace", []) or []:
+                                if not isinstance(ev, dict) or ev.get("type") != "pivot_decision":
+                                    continue
+                                alt = str(ev.get("alternative_candidate", ""))
+                                if alt and alt in eng_executed and pivot_execution_after_decision(ev, eng_probes):
+                                    pivot_ev = dict(ev)
+                                    pivot_ev["event"] = "GAP2_PIVOT"
+                                    pivot_ev["pivot_executed"] = True
+                                    pivot_ev["next_candidate"] = alt
+                                    if pivot_ev not in run_entry["pivot_events"]:
+                                        run_entry["pivot_events"].append(pivot_ev)
+                        except Exception:
+                            pass
+
+                # 3a-2. At terminal state, write the engine-authoritative
+                # attempt/status values back to the control file so the two
+                # stores do not disagree on resume or completion gating.
+                if final_sync and u_dir and u_dir.is_dir():
+                    reconcile_control_gap_state(
+                        control_dir, u_dir / ".state" / "gap_state.json"
+                    )
+
                 # 3b. Also synchronize candidate coverage from coverage.json in underlying scan directory
                 if u_dir and u_dir.is_dir():
                     cov_file = u_dir / "coverage.json"
@@ -4559,7 +4835,22 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                 if t_obj.get("event") == "GAP2_PIVOT":
                                     next_c = t_obj.get("next_candidate") or t_obj.get("to_candidate")
                                     is_real_pivot = bool(next_c) and (t_obj.get("pivot_executed") is not False)
-                                    if is_real_pivot:
+                                    # The bridge emits GAP2_PIVOT at decision time.
+                                    # Confirm the selected alternative was really
+                                    # dispatched/executed by the engine before it
+                                    # is counted as a genuine pivot.
+                                    engine_gap_file = (
+                                        (u_dir / ".state" / "gap_state.json") if u_dir else None
+                                    )
+                                    if engine_gap_file is not None and not engine_gap_file.is_file():
+                                        # No engine state available (e.g. a legacy
+                                        # or lightweight run): the bridge record is
+                                        # the only source of truth, so accept it.
+                                        executed = bool(next_c)
+                                    else:
+                                        engine_evidence = engine_executed_alternatives(engine_gap_file)
+                                        executed = bool(next_c) and str(next_c) in engine_evidence
+                                    if is_real_pivot and executed:
                                         engine.log(
                                             "PIVOT",
                                             f"[GAP-2 PIVOT] Bounded threshold reached for {t_obj.get('candidate_id')}; pivoted to {next_c}",
@@ -4568,7 +4859,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                     else:
                                         engine.log(
                                             "DECISION",
-                                            f"GAP2 threshold reached for {t_obj.get('candidate_id')}. Candidate abandoned. Queue exhausted. No alternative path executed. Pivot count: 0.",
+                                            f"GAP2 threshold reached for {t_obj.get('candidate_id')}. Candidate abandoned or alternative not executed. No genuine pivot counted.",
                                         )
                                 elif t_obj.get("event") in ("GAP2_ABANDON", "GAP2_COMPLETE"):
                                     engine.log(
@@ -4579,16 +4870,17 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                     except Exception:
                         pass
 
+                # The bridge and the native engine can record the same executed
+                # pivot. Deduplicate by (original -> alternative) before both
+                # storing and counting so dashboard, API and reports agree.
+                run_entry["pivot_events"] = dedupe_pivot_events(
+                    run_entry.get("pivot_events", [])
+                )
                 pivots_count = len(
                     [
                         e
                         for e in run_entry.get("pivot_events", [])
-                        if (
-                            e.get("event") == "GAP2_PIVOT"
-                            or e.get("type") in ("REDIRECT", "GAP2_PIVOT")
-                        )
-                        and bool(e.get("pivot_executed", False))
-                        and bool(e.get("next_candidate") or e.get("to_candidate"))
+                        if genuine_pivot_key(e) is not None
                     ]
                 )
 
@@ -4726,11 +5018,16 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             proc.kill()
                     break
 
+                elapsed_now = time.time() - proc_start_time
+                last_progress_now = time.time() - last_progress_time
                 if should_stop_for_no_progress(
-                    elapsed_seconds=time.time() - proc_start_time,
-                    last_progress_seconds=time.time() - last_progress_time,
+                    elapsed_seconds=elapsed_now,
+                    last_progress_seconds=last_progress_now,
                     productively_advanced_turns=productive_turns,
                     max_turns=max_turns,
+                ) or should_stop_for_stall(
+                    elapsed_seconds=elapsed_now,
+                    last_progress_seconds=last_progress_now,
                 ):
                     stalled = True
                     engine.log(
@@ -4890,7 +5187,20 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
             else:
                 u_status = (u_run_data or {}).get("status")
                 u_exit_reason = (u_run_data or {}).get("scan_ended_exit_reason")
-                if u_status and u_status != "completed" and not report_exists and not sarif_exists:
+                engine_failure = engine_terminal_failure(u_run_data)
+                if engine_failure:
+                    # The engine actually failed. Harvested findings stay as a
+                    # partial report, but the run's terminal status is failed;
+                    # the presence of a SARIF/JSON report does not make a failed
+                    # engine run a successful assessment.
+                    proc_failed = True
+                    reason_str = f" (exit reason: {u_exit_reason})" if u_exit_reason else ""
+                    error_msg = _extract_clean_error(
+                        stderr_lines,
+                        last_stdout_lines,
+                        fallback=f"Scan engine ended with status '{engine_failure}'{reason_str} before completing",
+                    )
+                elif u_status and u_status != "completed" and not report_exists and not sarif_exists:
                     proc_failed = True
                     reason_str = f" (exit reason: {u_exit_reason})" if u_exit_reason else ""
                     error_msg = _extract_clean_error(
@@ -5057,7 +5367,17 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         "retest_procedure": mapped.get("retest_procedure", ""),
                                         "finding_class": sv.get("finding_class", "dynamic"),
                                     }
-                                    v_state, v_reason, is_v = evaluate_finding_verification(finding_item)
+                                    v_state_raw = (
+                                        v_block.get("verification_state")
+                                        or sv.get("verification_state")
+                                        or ""
+                                    )
+                                    v_state, v_reason, is_v = evaluate_finding_verification(
+                                        {
+                                            **finding_item,
+                                            "verification_state": str(v_state_raw).strip().lower(),
+                                        }
+                                    )
                                     finding_item["verification_state"] = v_state
                                     finding_item["verification_reason"] = v_reason
                                     finding_item["verified"] = is_v
@@ -5136,6 +5456,9 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                         "remediation_technical": strix_info.get("remediation_steps") or mapped_owasp.get("remediation_technical", ""),
                                         "retest_procedure": mapped_owasp.get("retest_procedure", ""),
                                         "finding_class": "dynamic",
+                                        "verification_state": str(
+                                            strix_info.get("verification_state") or ""
+                                        ).strip().lower(),
                                     }
                                     v_state, v_reason, is_v = evaluate_finding_verification(sarif_finding)
                                     sarif_finding["verification_state"] = v_state
@@ -6522,6 +6845,12 @@ async def get_run_status(run_id: str):
         run = _RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+    # A worker thread can die while the in-memory record still says "running".
+    # Disk loads quarantine such records, but an entry already in memory was
+    # skipped; reconcile it here so the dashboard never shows a stale active
+    # assessment or blocks a relaunch.
+    run = _quarantine_stale_running_run(run_id, run)
 
     run_dir = runs_base_dir() / run_id
     run = reconcile_all(run, run_dir=run_dir if run_dir.is_dir() else None)

@@ -253,8 +253,17 @@ class GapRun:
         alternative_candidate: str = "",
         pivot_executed: bool = False,
         pivot_result: str = "",
+        preparatory: bool = False,
     ) -> dict[str, Any]:
         """Record one probe of one candidate.
+
+        ``preparatory=True`` marks bounded reconnaissance performed by the
+        driver before the agent starts. Preparatory probes keep their full
+        evidence but do NOT consume the agent's investigation attempt budget
+        and do NOT change a candidate's eligibility for an agent-driven GAP-2
+        pivot. Without this distinction the prep loop exhausts every candidate
+        and leaves no alternative for a real decision (see ``preparatory_probes``
+        on :class:`GapCandidate`).
 
         Only records real events: a pivot is incremented only when
         ``pivot_executed`` is True and both an alternative candidate and a real
@@ -275,6 +284,32 @@ class GapRun:
             )
         if pivot_executed and (not alternative_candidate or not pivot_result):
             raise GapRunError("a pivot requires an alternative_candidate and a pivot_result")
+
+        if preparatory:
+            # Preparatory reconnaissance: preserve the evidence verbatim, but
+            # keep the candidate eligible for genuine agent investigation. It
+            # must never mark a candidate abandoned or decrement the pool of
+            # alternatives available to the DecisionEngine.
+            entry = {
+                "candidate_id": candidate_id,
+                "outcome": outcome,
+                "detail": detail,
+                "retry_reason": retry_reason,
+                "at": _now(),
+                "preparatory": True,
+            }
+            cand.preparatory_probes += 1
+            cand.preparatory_outcomes.append(entry)
+            self.probe_outcomes.append(entry)
+            self._record(
+                "preparatory_probe",
+                candidate_id=candidate_id,
+                outcome=outcome,
+                detail=detail,
+                agent_attempts=cand.attempts,
+            )
+            self.save()
+            return entry
 
         cand.attempts += 1
         cand.last_investigated_at = _now()
@@ -311,7 +346,7 @@ class GapRun:
         self.probe_outcomes.append(entry)
         self.decision_trace.append(entry)
         if pivot_executed:
-            self.record_pivot(candidate_id, alternative_candidate, pivot_result, detail)
+            self.link_pivot_execution(candidate_id, alternative_candidate, pivot_result, detail)
         self.save()
         return entry
 
@@ -331,7 +366,7 @@ class GapRun:
 
         self.decision_trace.append(
             {
-                "type": "pivot",
+                "type": "pivot_decision",
                 "candidate_id": candidate_id,
                 "alternative_candidate": alternative_candidate,
                 "result": result,
@@ -345,11 +380,137 @@ class GapRun:
             "alternative_candidate": alternative_candidate,
             "result": result,
             "detail": detail,
-            "pivot_executed": True,
+            "pivot_executed": False,
+            "note": "decision recorded; counts as a pivot only after the alternative is executed",
         }
 
+    def link_pivot_execution(
+        self,
+        executed_candidate: str,
+        alternative_candidate: str,
+        result: str,
+        detail: str = "",
+    ) -> dict[str, Any]:
+        """Attach real alternative execution to the decision that selected it.
+
+        When the agent executes the recommended alternative, the originating
+        decision was already recorded by the DecisionEngine's REDIRECT. Without
+        this link, ``record_probe_outcome(pivot_executed=True)`` would create a
+        self-referential decision (alternative -> itself) and lose the original
+        candidate. Execution evidence is preserved on the decision trace, and
+        ``pivot_count`` then counts exactly one genuine pivot.
+        """
+        target = str(alternative_candidate or executed_candidate)
+        for decision in reversed(self.decision_trace):
+            if (
+                decision.get("type") == "pivot_decision"
+                and str(decision.get("alternative_candidate")) == target
+                and not decision.get("executed")
+            ):
+                decision["executed"] = True
+                decision["executed_at"] = _now()
+                decision["execution_candidate"] = executed_candidate
+                decision["execution_detail"] = detail
+                decision["execution_result"] = result
+                self._record(
+                    "pivot_execution_linked",
+                    candidate_id=decision.get("candidate_id"),
+                    alternative_candidate=target,
+                    detail=detail,
+                )
+                self.save()
+                return decision
+        # No prior decision to link: record one with a truthful origin and
+        # attach execution evidence immediately, so the same-call pivot path
+        # cannot be mistaken for a decision that was never executed.
+        self.record_pivot(executed_candidate, target, result, detail)
+        for entry in reversed(self.decision_trace):
+            if entry.get("type") == "pivot_decision":
+                entry["executed"] = True
+                entry["executed_at"] = _now()
+                entry["execution_candidate"] = executed_candidate
+                entry["execution_detail"] = detail
+                entry["execution_result"] = result
+                self.save()
+                return entry
+        return {}
+
     def pivot_count(self) -> int:
-        return sum(1 for e in self.decision_trace if e.get("type") == "pivot")
+        """Count only pivots backed by real execution evidence.
+
+        Two legitimate signals count:
+        1. A probe outcome recorded with ``pivot_executed=True`` and an
+           alternative candidate — the caller confirms the alternative was
+           dispatched and executed in the same operation.
+        2. A ``pivot_decision`` followed by a recorded probe outcome on the
+           selected alternative candidate.
+
+        A bare threshold marker, decision trace line, or advancing through a
+        pre-sorted queue without either signal is not a genuine pivot.
+        """
+        executed_alternatives = {
+            str(e["alternative_candidate"])
+            for e in self.probe_outcomes
+            if e.get("pivot_executed") is True
+            and e.get("alternative_candidate")
+            and str(e.get("candidate_id")) != str(e.get("alternative_candidate"))
+        }
+        decisions = [
+            e
+            for e in self.decision_trace
+            if e.get("type") == "pivot_decision" and e.get("alternative_candidate")
+        ]
+        for decision in decisions:
+            alt = str(decision["alternative_candidate"])
+            decision_at = str(decision.get("at", ""))
+            for entry in self.probe_outcomes:
+                if entry.get("preparatory"):
+                    continue
+                if str(entry.get("candidate_id")) != alt:
+                    continue
+                if decision_at and str(entry.get("at", "")) < decision_at:
+                    continue
+                executed_alternatives.add(alt)
+                break
+        return len(executed_alternatives)
+
+    def eligible_alternatives(self, exclude: str | None = None) -> list[dict[str, Any]]:
+        """Candidates that are genuinely eligible as GAP-2 alternatives.
+
+        Eligibility is based on *agent investigation* state only. Preparatory
+        reconnaissance (``preparatory_probes``) is recorded as evidence but is
+        deliberately not an exhaustion signal. Each entry explains why it is
+        eligible so the state machine's decision is auditable.
+
+        A candidate is eligible when it is not already validated, blocked, or
+        abandoned and still has agent investigation attempts remaining.
+        """
+        ineligible_statuses = {"validated", "abandoned", "blocked", "unresolved"}
+        eligible: list[dict[str, Any]] = []
+        for c in self.candidates.values():
+            if c.id == exclude:
+                continue
+            if c.status in ineligible_statuses:
+                reason = f"ineligible: status={c.status}"
+            elif c.attempts >= c.max_attempts:
+                reason = f"ineligible: agent attempts {c.attempts}/{c.max_attempts} exhausted"
+            else:
+                reason = (
+                    f"eligible: agent attempts {c.attempts}/{c.max_attempts}; "
+                    f"{c.preparatory_probes} preparatory probe(s) recorded as evidence only"
+                )
+                eligible.append(
+                    {
+                        "id": c.id,
+                        "endpoint": c.endpoint,
+                        "status": c.status,
+                        "attempts": c.attempts,
+                        "max_attempts": c.max_attempts,
+                        "preparatory_probes": c.preparatory_probes,
+                        "reason": reason,
+                    }
+                )
+        return eligible
 
     # -- summaries for reporting -------------------------------------------
 
@@ -440,6 +601,16 @@ class GapRun:
                 st = CandidateState.ABANDONED
             elif c.status in ("blocked", "unresolved"):
                 st = CandidateState.BLOCKED
+            elif c.attempts >= c.max_attempts and c.status in (
+                "investigated",
+                "abandoned",
+                "inconclusive",
+            ):
+                # A bounded-exhausted route is not "still attempting". Mark it
+                # ABANDONED so the decision engine does not treat it as an
+                # available alternative, while genuinely pending candidates
+                # remain selectable for agent-driven GAP-2 pivots.
+                st = CandidateState.ABANDONED
             elif c.status == "investigated" or c.attempts > 0:
                 st = CandidateState.ATTEMPTING
             else:
@@ -454,7 +625,11 @@ class GapRun:
                     attempts=c.attempts,
                     max_attempts=c.max_attempts,
                     state=st,
-                    detail=c.investigation_outcome or "",
+                    detail=(
+                        f"{c.investigation_outcome or ''} "
+                        f"[agent_attempts={c.attempts}/{c.max_attempts}, "
+                        f"preparatory_probes={c.preparatory_probes} (evidence only)]"
+                    ).strip(),
                     reproducible_request=c.reproducible_request or None,
                     reproducible_response=c.verification_response or None,
                     verification_procedure=c.verification_procedure or None,
@@ -493,6 +668,12 @@ class GapCandidate:
         self.target = target
         self.max_attempts = max_attempts
         self.attempts = attempts
+        # Preparatory reconnaissance is tracked separately from agent-driven
+        # investigation attempts. This keeps the state machine able to explain
+        # that a bounded GET probe happened without treating it as exhausted
+        # agent investigation.
+        self.preparatory_probes: int = 0
+        self.preparatory_outcomes: list[dict[str, Any]] = []
         self.status: str = "discovered"
         self.investigation_outcome: str = ""
         self.verification_evidence: str = ""
@@ -521,6 +702,10 @@ class GapCandidate:
             max_attempts=int(data.get("max_attempts", 2)),
             attempts=int(data.get("attempts", 0)),
         )
+        c.preparatory_probes = int(data.get("preparatory_probes", 0))
+        c.preparatory_outcomes = [
+            e for e in data.get("preparatory_outcomes", []) if isinstance(e, dict)
+        ]
         c.status = str(data.get("status", "discovered"))
         c.investigation_outcome = str(data.get("investigation_outcome", ""))
         c.verification_evidence = str(data.get("verification_evidence", ""))
@@ -548,6 +733,8 @@ class GapCandidate:
             "target": self.target,
             "max_attempts": self.max_attempts,
             "attempts": self.attempts,
+            "preparatory_probes": self.preparatory_probes,
+            "preparatory_outcomes": self.preparatory_outcomes,
             "status": self.status,
             "investigation_outcome": self.investigation_outcome,
             "verification_evidence": self.verification_evidence,

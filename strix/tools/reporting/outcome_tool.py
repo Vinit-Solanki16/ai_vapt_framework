@@ -161,12 +161,33 @@ async def record_vulnerability_outcome(
         verification_block=block,
         coverage_outcome=aligned_outcome,
     )
+    # A failed update (e.g. the finding has not been created yet) must never be
+    # reported as success. The previous implementation returned success=True
+    # even when update_verification logged "unknown vulnerability report", so
+    # the agent believed a finding was verified when nothing was persisted.
+    if report is None:
+        return json.dumps(
+            {
+                "success": False,
+                "error": (
+                    f"Cannot update verification: no vulnerability report with id "
+                    f"{report_id!r} exists. Call create_vulnerability_report first, "
+                    f"then record_vulnerability_outcome with the returned id."
+                ),
+                "report_id": report_id,
+                "verification_state": None,
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+    actual_state = str(report.get("verification_state") or requested_state)
     return json.dumps(
         {
             "success": True,
-            "message": f"verification_state -> {requested_state}",
+            "message": f"verification_state -> {actual_state}",
             "report_id": report_id,
-            "verification": block.to_dict(),
+            "verification_state": actual_state,
+            "verification": (report.get("verification") or block.to_dict()),
             "coverage_outcome": aligned_outcome,
         },
         ensure_ascii=False,
@@ -336,6 +357,34 @@ async def record_probe_outcome(
             reason=retry_reason,
         )
         recommended_next = getattr(action, "to_candidate", None)
+
+        # A REDIRECT is the model-driven decision to pivot. Record it on the
+        # authoritative GapRun now, linking the ORIGINAL candidate to the
+        # selected alternative. It counts as a pivot only once that alternative
+        # is actually executed (see GapRun.link_pivot_execution).
+        action_type = getattr(action, "action", None)
+        action_name = getattr(action_type, "value", str(action_type or ""))
+        if action_name == "REDIRECT" and recommended_next and gap_run is not None:
+            already_recorded = any(
+                e.get("type") == "pivot_decision"
+                and str(e.get("candidate_id")) == str(candidate_id)
+                and str(e.get("alternative_candidate")) == str(recommended_next)
+                for e in gap_run.decision_trace
+            )
+            if not already_recorded:
+                decision_result = (
+                    norm_outcome
+                    if norm_outcome in ("positive", "negative", "inconclusive")
+                    else "inconclusive"
+                )
+                gap_run.record_pivot(
+                    candidate_id,
+                    str(recommended_next),
+                    decision_result,
+                    detail
+                    or retry_reason
+                    or f"Decision engine redirected after {candidate_id} was exhausted",
+                )
 
     # 3. Synchronize file-based gap_bridge if active
     try:

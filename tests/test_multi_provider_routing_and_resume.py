@@ -77,8 +77,17 @@ def client() -> TestClient:
 # ---------------------------------------------------------------------------
 # Test 1: All 6 providers selectable and configurable
 # ---------------------------------------------------------------------------
-def test_all_six_providers_selectable_and_configurable(client: TestClient) -> None:
-    """Verify that all 6 providers can be configured and selected via /settings/llm."""
+def test_all_six_providers_selectable_and_configurable(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that all 6 providers can be configured and selected via /settings/llm.
+
+    The settings endpoint persists to disk by design; keep that write inside
+    the test sandbox so a test run never edits the operator's real profile.
+    """
+    from strix.interface import api
+
+    monkeypatch.setattr(api, "CLI_CONFIG_FILE", tmp_path / "cli-config.json")
     providers_and_models = [
         ("openrouter", "deepseek/deepseek-r1:free", "sk-or-v1-testkey12345"),
         ("anthropic", "claude-3-5-sonnet-20241022", "sk-ant-api03-testkey12345"),

@@ -574,6 +574,15 @@ def _field_block(
     return flow
 
 
+def is_confirmed_finding(vuln: dict[str, Any]) -> bool:
+    """A finding is confirmed only when evidence verification says so.
+
+    The PDF must never turn an unconfirmed finding into a "confirmed" one just
+    because it appears in vulnerabilities.json.
+    """
+    return bool(vuln.get("verified")) or str(vuln.get("verification_state") or "").strip().lower() == "verified"
+
+
 def _finding_flowables(
     styles: dict[str, ParagraphStyle], index: int, vuln: dict[str, Any]
 ) -> list[Flowable]:
@@ -596,6 +605,13 @@ def _finding_flowables(
     ]
     if meta_bits:
         header.append(Paragraph("&nbsp;&nbsp;".join(meta_bits), styles["meta_inline"]))
+    verification_state = str(vuln.get("verification_state") or "").strip()
+    if verification_state:
+        header.append(
+            Paragraph(
+                f"<b>Verification</b> {_esc(verification_state.upper())}", styles["meta_inline"]
+            )
+        )
 
     story: list[Flowable] = [KeepTogether(header)]
     story.extend(_field_block(styles, "Description", vuln.get("description")))
@@ -616,14 +632,22 @@ def _finding_flowables(
 
 
 def _overview_flowables(
-    styles: dict[str, ParagraphStyle], record: dict[str, Any], total: int, counts: dict[str, int]
+    styles: dict[str, ParagraphStyle],
+    record: dict[str, Any],
+    total: int,
+    counts: dict[str, int],
+    confirmed: int | None = None,
 ) -> list[Flowable]:
     story: list[Flowable] = [
         _section(styles, "Executive Summary"),
         Spacer(1, 16),
         _severity_grid(styles, counts),
         Spacer(1, 10),
-        Paragraph(f"<b>{total}</b> total confirmed findings across this assessment.", styles["body"]),
+        Paragraph(
+            f"<b>{confirmed if confirmed is not None else total}</b> confirmed finding(s); "
+            f"{total} finding(s) recorded in this assessment.",
+            styles["body"],
+        ),
     ]
 
     # 1. Assessment Lifecycle & Completeness Table
@@ -819,7 +843,8 @@ def generate_report_pdf(run_dir: Path) -> bytes:
 
     story: list[Flowable] = []
     story.extend(_cover(styles, record, run_name))
-    story.extend(_overview_flowables(styles, record, len(vulns), counts))
+    confirmed = sum(1 for v in vulns if is_confirmed_finding(v))
+    story.extend(_overview_flowables(styles, record, len(vulns), counts, confirmed))
 
     story.append(PageBreak())
     story.append(_section(styles, "Findings"))
