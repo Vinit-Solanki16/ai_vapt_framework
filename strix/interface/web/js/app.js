@@ -2336,10 +2336,25 @@
     let nodesHtml = '';
     let edgesHtml = '';
 
+    // Attach safe DOM click listener once on the SVG container (D02 fix)
+    if (!svg._hasDagClickListener) {
+      svg.addEventListener('click', (evt) => {
+        const node = evt.target.closest('.dag-node');
+        if (node && node.dataset && node.dataset.id) {
+          inspectDagNode(node.dataset.id);
+        }
+      });
+      svg._hasDagClickListener = true;
+    }
+
     displayNodes.forEach((c, idx) => {
       const cy = count === 1 ? totalHeight / 2 : startY + idx * stepY;
-      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || (c.state === 'VALIDATED' && (run.findings || []).length > 0);
-      const isObservation = c.state === 'VALIDATED_OBSERVATION' || (c.state === 'VALIDATED' && (run.findings || []).length === 0);
+      // D01 fix: link strictly by candidate ID match, never global findings count
+      const matchingFinding = (run.findings || []).find(
+        (f) => (f.candidate_id === c.id || f.id === c.id) && (f.verification_state === 'verified' || f.is_verified === true || f.verified === true)
+      );
+      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || Boolean(matchingFinding);
+      const isObservation = !isVerifiedVuln && (c.state === 'VALIDATED_OBSERVATION' || c.state === 'VALIDATED');
       const isAbandoned = c.state === 'ABANDONED';
       const isRo = c.state === 'RULED_OUT' || c.state === 'RULED_OUT_WITH_EVIDENCE';
       const isInconclusive = c.state === 'INCONCLUSIVE';
@@ -2357,7 +2372,7 @@
               stroke="${edgeColor}" stroke-width="${isVerifiedVuln ? '2.5' : '1.8'}" fill="none" marker-end="${markerId}" opacity="0.85"/>
       `;
 
-      // Candidate Node & Label
+      // Candidate Node & Label (D02 fix: safe DOM attribute without inline onclick)
       const activeClass = state.selectedCandidateId === c.id ? 'active-node' : '';
       const pivotEvt = (currentDagPivotEvents || []).find(
         (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && e.pivot_executed === true && Boolean(e.next_candidate || e.to_candidate)
@@ -2376,7 +2391,7 @@
                 : (isInconclusive ? '? INCONCLUSIVE' : (isAttempting ? '⟳ PROBING' : (c.state || 'IDENTIFIED')))))));
 
       nodesHtml += `
-        <g class="dag-node ${activeClass}" data-id="${c.id}" onclick="inspectDagNode('${c.id}')">
+        <g class="dag-node ${activeClass}" data-id="${escapeHtml(c.id)}" style="cursor: pointer;">
           <circle cx="${candX}" cy="${cy}" r="18" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2.2"/>
           <text x="${candX}" y="${cy + 4}" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle" font-family="sans-serif">C${idx + 1}</text>
           
@@ -2861,8 +2876,11 @@
               candidates.length
                 ? candidates
                     .map((c) => {
-                      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || (c.state === 'VALIDATED' && (run.findings || []).length > 0);
-                      const isObservation = c.state === 'VALIDATED_OBSERVATION' || (c.state === 'VALIDATED' && (run.findings || []).length === 0);
+                      const matchingFinding = (run.findings || []).find(
+                        (f) => (f.candidate_id === c.id || f.id === c.id) && (f.verification_state === 'verified' || f.is_verified === true || f.verified === true)
+                      );
+                      const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || Boolean(matchingFinding);
+                      const isObservation = !isVerifiedVuln && (c.state === 'VALIDATED_OBSERVATION' || c.state === 'VALIDATED');
                       const stateBadge = isVerifiedVuln
                         ? '<span class="badge badge-emerald">VULNERABILITY</span>'
                         : (isObservation

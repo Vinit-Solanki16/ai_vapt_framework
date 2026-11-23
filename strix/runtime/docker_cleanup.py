@@ -1,11 +1,13 @@
-"""Docker Container Cleanup Backstop for AI-VAPT.
+"""Docker Container Cleanup and Sandbox Preservation for AI-VAPT.
 
-Provides reliable detection and reaping of orphaned sandbox containers left behind
+Provides safe detection and reaping of orphaned sandbox containers left behind
 after abrupt host crashes, unhandled exceptions, or SIGKILL events, while strictly:
 1. Identifying ownership through explicit labels ('ai-vapt-managed', 'strix-managed',
    'strix-run-id', 'ai-vapt-run-id').
-2. Never removing unrelated Docker containers (e.g. databases, user services, testbeds).
-3. Preserving currently active assessments and freshly spawned containers within a safety grace window.
+2. NEVER removing unrelated Docker containers (e.g. Juice Shop, user services, databases).
+3. Preserving RUNNING containers by default across restarts, parallel workers, and transient
+   in-memory disconnects (Finding D03 fix). Only genuinely dead/exited containers are
+   cleaned automatically.
 """
 
 from __future__ import annotations
@@ -26,14 +28,46 @@ OWNERSHIP_LABELS = (
     "strix-run-id",
 )
 
+# Known lab / testbed image keywords that must NEVER be touched by cleanup
+PROTECTED_IMAGE_KEYWORDS = (
+    "juice-shop",
+    "bkimminich/juice-shop",
+    "dvwa",
+    "mutillidae",
+    "webgoat",
+    "postgres",
+    "mysql",
+    "redis",
+    "mongo",
+)
+
 
 def is_container_owned_by_app(container: Any) -> bool:
     """Return True only if the container possesses explicit AI-VAPT ownership labels."""
     try:
+        # Check image tag safety first
+        image_tags = []
+        try:
+            image = getattr(container, "image", None)
+            if image:
+                image_tags = getattr(image, "tags", []) or []
+        except Exception:
+            pass
+
+        attrs = getattr(container, "attrs", {}) or {}
+        config = attrs.get("Config", {}) if isinstance(attrs, dict) else {}
+        image_name = str(config.get("Image", "")).lower()
+
+        for tag in image_tags:
+            tag_lower = str(tag).lower()
+            if any(prot in tag_lower for prot in PROTECTED_IMAGE_KEYWORDS):
+                return False
+        if any(prot in image_name for prot in PROTECTED_IMAGE_KEYWORDS):
+            return False
+
         labels = getattr(container, "labels", None)
         if not isinstance(labels, dict):
-            attrs = getattr(container, "attrs", {})
-            labels = attrs.get("Config", {}).get("Labels") or {}
+            labels = config.get("Labels") or {}
         if not isinstance(labels, dict):
             return False
 
@@ -52,7 +86,7 @@ def get_container_run_id(container: Any) -> str | None:
     try:
         labels = getattr(container, "labels", None)
         if not isinstance(labels, dict):
-            attrs = getattr(container, "attrs", {})
+            attrs = getattr(container, "attrs", {}) or {}
             labels = attrs.get("Config", {}).get("Labels") or {}
         if isinstance(labels, dict):
             return labels.get("ai-vapt-run-id") or labels.get("strix-run-id")
@@ -64,12 +98,10 @@ def get_container_run_id(container: Any) -> str | None:
 def get_container_age_seconds(container: Any) -> float:
     """Calculate the age in seconds of a container from its created timestamp."""
     try:
-        attrs = getattr(container, "attrs", {})
+        attrs = getattr(container, "attrs", {}) or {}
         created_str = attrs.get("Created")
         if not created_str:
             return 0.0
-        # Format is typically ISO 8601 with fractional seconds and 'Z'
-        # e.g., '2026-11-19T07:15:22.123456789Z'
         normalized = created_str.split(".")[0].rstrip("Z")
         dt = datetime.fromisoformat(normalized).replace(tzinfo=UTC)
         return (datetime.now(UTC) - dt).total_seconds()
@@ -82,14 +114,23 @@ def reap_orphaned_containers(
     active_run_ids: set[str] | list[str] | None = None,
     min_age_seconds: int = 120,
     dry_run: bool = False,
+    preserve_running: bool = True,
+    force_running_reap: bool = False,
 ) -> dict[str, Any]:
     """Inspect and reap orphaned containers owned by AI-VAPT.
+
+    D03 Hardening:
+    - Running containers are preserved by default (`preserve_running=True`).
+    - Exited/dead containers owned by AI-VAPT are safely removed if age >= min_age_seconds.
+    - Unrelated containers (Juice Shop, databases, host services) are never touched.
 
     Args:
         docker_client: Optional docker.DockerClient instance; instantiated from environment if None.
         active_run_ids: Set of currently active assessment run IDs to preserve.
-        min_age_seconds: Grace period in seconds; running containers younger than this are preserved.
+        min_age_seconds: Grace period in seconds; containers younger than this are preserved.
         dry_run: When True, identifies containers without stopping or removing them.
+        preserve_running: When True (default), never kills running containers.
+        force_running_reap: Requires explicit admin opt-in along with preserve_running=False to kill running containers.
 
     Returns:
         Structured summary of the cleanup operation.
@@ -155,8 +196,8 @@ def reap_orphaned_containers(
             )
             continue
 
-        # 3. Grace period check for running containers without an explicit dead state
-        if status == "running" and age_seconds < min_age_seconds:
+        # 3. Grace period check
+        if age_seconds < min_age_seconds:
             summary["preserved"] += 1
             summary["preserved_containers"].append(
                 {
@@ -167,7 +208,20 @@ def reap_orphaned_containers(
             )
             continue
 
-        # 4. Container is orphaned: either dead/exited or running past grace period with no active assessment
+        # 4. Preservation of running containers (D03 fix)
+        # Never terminate a running sandbox unless preserve_running is explicitly False AND force_running_reap is True
+        if status == "running" and (preserve_running or not force_running_reap):
+            summary["preserved"] += 1
+            summary["preserved_containers"].append(
+                {
+                    "id": c_id,
+                    "run_id": run_id,
+                    "reason": "running_sandbox_preserved_by_default",
+                }
+            )
+            continue
+
+        # 5. Container is dead/exited or explicitly confirmed for reap
         if dry_run:
             summary["reaped"] += 1
             summary["reaped_containers"].append(
@@ -204,6 +258,8 @@ async def reap_orphaned_containers_async(
     active_run_ids: set[str] | list[str] | None = None,
     min_age_seconds: int = 120,
     dry_run: bool = False,
+    preserve_running: bool = True,
+    force_running_reap: bool = False,
 ) -> dict[str, Any]:
     """Asynchronous wrapper for reap_orphaned_containers offloaded to worker thread."""
     return await asyncio.to_thread(
@@ -211,4 +267,6 @@ async def reap_orphaned_containers_async(
         active_run_ids=active_run_ids,
         min_age_seconds=min_age_seconds,
         dry_run=dry_run,
+        preserve_running=preserve_running,
+        force_running_reap=force_running_reap,
     )

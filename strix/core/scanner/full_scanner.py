@@ -38,9 +38,9 @@ class FullScanner:
         additional_authorized_hosts: list[str] | None = None,
     ) -> dict[str, Any]:
         """Perform full multi-category assessment against target URL."""
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        from strix.core.safety.http_transport import create_scanner_ssl_context
+
+        ctx = create_scanner_ssl_context()
 
         headers_dict: dict[str, str] = {}
         cookies_list: list[str] = []
