@@ -1566,17 +1566,6 @@ async def _app_lifespan(app_instance: FastAPI):
 app.router.lifespan_context = _app_lifespan
 
 
-@app.post("/system/docker/cleanup")
-async def trigger_docker_cleanup(dry_run: bool = False):
-    """Safely reap orphaned AI-VAPT sandbox containers left behind by crashes or host death."""
-    from strix.runtime.docker_cleanup import reap_orphaned_containers_async
-
-    active_ids = {
-        rid for rid, r in _RUNS.items() if r.get("status") in ("running", "resuming", "starting")
-    }
-    return await reap_orphaned_containers_async(active_run_ids=active_ids, dry_run=dry_run)
-
-
 @app.get("/", response_class=FileResponse)
 async def serve_index(request: Request, response: Response):
     """Serve the Single Page Application index.html with automatic loopback session bootstrap."""
