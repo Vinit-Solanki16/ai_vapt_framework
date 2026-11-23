@@ -66,9 +66,13 @@ def _do_finish(
         )
         vuln_count = len(report_state.vulnerability_reports)
         coverage_summary = _coverage_summary(agent_graph)
-    except (ImportError, AttributeError) as e:
+    except Exception as e:
         logger.exception("finish_scan persistence failed")
-        return {"success": False, "error": f"Failed to complete scan: {e!s}"}
+        return {
+            "success": False,
+            "scan_completed": False,
+            "error": f"Failed to complete scan: {e!s}",
+        }
     else:
         logger.info(
             "finish_scan: completed scan with %d vulnerability report(s)",
@@ -144,6 +148,26 @@ def _evaluate_completion_gate(*, control_dir: Path | None = None) -> dict[str, A
         ctrl_dir = control_dir or gap_bridge.control_dir()
         if ctrl_dir is None or not gap_bridge.gap1_enabled():
             return {"permitted": True}
+
+        # C09 Fix: Fail closed if queue file is present but corrupted or unparseable
+        q_path = gap_bridge._queue_path(ctrl_dir)
+        if q_path and q_path.is_file():
+            q_text = q_path.read_text(encoding="utf-8").strip()
+            if q_text:
+                try:
+                    q_data = json.loads(q_text)
+                    if not isinstance(q_data, dict) or "candidates" not in q_data:
+                        return {
+                            "permitted": False,
+                            "error": "Corrupt GAP-1 queue: invalid payload structure.",
+                            "actionable_instructions": "Ensure GAP-1 queue contains a valid candidates dictionary.",
+                        }
+                except Exception as parse_err:
+                    return {
+                        "permitted": False,
+                        "error": f"Corrupt GAP-1 queue file: {parse_err}",
+                        "actionable_instructions": "Queue file contains invalid JSON. Repair before calling finish_scan.",
+                    }
 
         candidates = gap_bridge.load_queue(directory=ctrl_dir)
         if not candidates:
@@ -246,8 +270,12 @@ def _evaluate_completion_gate(*, control_dir: Path | None = None) -> dict[str, A
             "total_candidates": len(candidates),
         }
     except Exception as exc:
-        logger.warning("Completion gate evaluation warning: %s", exc)
-        return {"permitted": True}
+        logger.warning("Completion gate evaluation failure: %s", exc)
+        return {
+            "permitted": False,
+            "error": f"Completion gate evaluation failed closed: {exc}",
+            "actionable_instructions": "Ensure GAP-1 queue file is valid and accessible before calling finish_scan.",
+        }
 
 
 @function_tool(timeout=60)

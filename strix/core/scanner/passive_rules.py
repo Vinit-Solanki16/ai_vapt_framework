@@ -107,6 +107,10 @@ def run_passive_rules(
                 "cwe_id": cwe_id,
                 "endpoint": endpoint,
                 "detail": detail,
+                "is_observation": True,
+                "requires_active_verification": True,
+                "state": "OBSERVATION",
+                "verification_state": "candidate",
             }
         )
 

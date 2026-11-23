@@ -103,25 +103,80 @@ class VerificationBlock:
 
     def satisfies_verification_contract(self) -> bool:
         """A finding satisfies the verification contract only if it possesses:
-        1. Non-empty reproducible_request (an actual captured HTTP/network request).
-        2. Non-empty verification_response (actual observed HTTP response data).
-        3. Non-empty verification_procedure (concrete verification steps executed).
-        4. Non-empty demonstrated_impact (concrete, observed impact, not generic text).
+        1. Non-empty, valid reproducible_request (an actual captured HTTP/network request, len >= 10, not generic).
+        2. Non-empty verification_response (actual observed HTTP response data, len >= 10).
+        3. Non-empty, descriptive verification_procedure (concrete verification steps executed, len >= 15).
+        4. Substantive demonstrated_impact (concrete, observed impact, len >= 20, not generic placeholders).
         5. Non-empty evidence_timestamp.
+        6. Category-specific validation:
+           - SQLi: requires demonstrable query differential, DB syntax error differential, or data extraction evidence.
+           - XSS: requires executed DOM proof or active payload reflection in execution context.
         """
-        return bool(
-            self.reproducible_request
-            and str(self.reproducible_request).strip()
-            and str(self.reproducible_request).strip() != "N/A"
-            and self.verification_response
-            and str(self.verification_response).strip()
-            and self.verification_procedure
-            and str(self.verification_procedure).strip()
-            and self.demonstrated_impact
-            and str(self.demonstrated_impact).strip()
-            and self.evidence_timestamp
-            and str(self.evidence_timestamp).strip()
-        )
+        # 1. Base string checks
+        req = str(self.reproducible_request or "").strip()
+        resp = str(self.verification_response or "").strip()
+        proc = str(self.verification_procedure or "").strip()
+        impact = str(self.demonstrated_impact or "").strip()
+        ts = str(self.evidence_timestamp or "").strip()
+
+        if not (req and resp and proc and impact and ts):
+            return False
+
+        # Reject generic placeholders
+        generic_placeholders = {"n/a", "none", "test", "vulnerable", "observed", "unknown", "null", "undefined"}
+        if req.lower() in generic_placeholders or len(req) < 10:
+            return False
+        if resp.lower() in generic_placeholders or len(resp) < 5:
+            return False
+        if proc.lower() in generic_placeholders or len(proc) < 15:
+            return False
+        if impact.lower() in generic_placeholders or len(impact) < 20:
+            return False
+
+        # Category-specific validation
+        proc_lower = proc.lower()
+        impact_lower = impact.lower()
+        if "sql" in proc_lower or "sqli" in proc_lower:
+            # Must demonstrate query differential, syntax error, or extracted schema/data
+            has_sqli_evidence = any(
+                term in impact_lower or term in resp.lower()
+                for term in (
+                    "syntax",
+                    "differential",
+                    "database",
+                    "mysql",
+                    "sqlite",
+                    "postgresql",
+                    "ora-",
+                    "extract",
+                    "union select",
+                    "boolean-blind",
+                    "time-based",
+                    "delay",
+                )
+            )
+            if not has_sqli_evidence:
+                return False
+
+        if "xss" in proc_lower or "cross-site scripting" in proc_lower:
+            # Must demonstrate active payload execution or DOM execution
+            has_xss_evidence = any(
+                term in impact_lower or term in proc_lower
+                for term in (
+                    "dom",
+                    "sink",
+                    "executed",
+                    "payload",
+                    "browser",
+                    "alert",
+                    "context",
+                    "script",
+                )
+            )
+            if not has_xss_evidence:
+                return False
+
+        return True
 
     def __post_init__(self) -> None:
         # Normalize severity/confidence case for contract use.

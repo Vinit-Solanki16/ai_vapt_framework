@@ -295,7 +295,8 @@ def _analyze_probe(
 
     # 3. Successful response -> examine content.
     if 200 <= status < 300:
-        # SQL-injection error signatures in the response body.
+        # C01 Fix: Substring matches on plain GET responses are preliminary observations
+        # that require active, differential follow-up — NEVER confirmed vulnerabilities.
         sql_signatures = (
             "you have an error in your sql",
             "sql syntax",
@@ -314,8 +315,8 @@ def _analyze_probe(
                     "response": f"HTTP/1.1 {status}\n{body[:800]}",
                 }
                 return (
-                    "positive",
-                    f"SQL error signature detected at {candidate.endpoint}: {sig}",
+                    "needs_follow_up",
+                    f"Potential SQL error signature observed at {candidate.endpoint}: {sig} (requires active differential payload verification)",
                     evidence,
                 )
 
@@ -326,8 +327,8 @@ def _analyze_probe(
                 "response": f"HTTP/1.1 {status}\n{body[:800]}",
             }
             return (
-                "positive",
-                f"Script content reflected in response body at {candidate.endpoint}",
+                "needs_follow_up",
+                f"Reflected script text observed in response body at {candidate.endpoint} (requires active DOM execution verification)",
                 evidence,
             )
 
