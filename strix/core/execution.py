@@ -40,7 +40,12 @@ from strix.core.sessions import (
     strip_all_images_from_session,
 )
 from strix.llm import request_log
-from strix.llm.compaction import is_context_overflow, maybe_compact
+from strix.llm.compaction import (
+    extract_context_limit_from_error,
+    is_context_overflow,
+    maybe_compact,
+)
+from strix.llm.context_budget import record_detected_context_limit
 from strix.skills import skill_turn_limit
 
 
@@ -195,6 +200,8 @@ def _is_permanent_quota_error(exc: BaseException) -> bool:
 
 
 def _is_transient_model_error(exc: BaseException) -> bool:
+    if is_context_overflow(exc):
+        return False
     if codex.is_content_guardrail_error(exc):
         return False
     if _is_permanent_quota_error(exc):
@@ -893,11 +900,35 @@ async def _run_cycle(  # noqa: PLR0912, PLR0915
                 and session is not None
                 and is_context_overflow(exc)
             ):
+                model_name = _run_config_model(run_config)
+                limit = extract_context_limit_from_error(exc)
+                if model_name and limit:
+                    record_detected_context_limit(model_name, limit)
                 try:
                     compacted = await _compact_session(agent, session, run_config, force=True)
                 except Exception:
                     logger.exception("overflow compaction recovery failed for %s", agent_id)
                     compacted = False
+                if not compacted:
+                    try:
+                        from strix.llm.compaction import _checkpoint_item
+
+                        items = list(await session.get_items())
+                        if len(items) >= 4:
+                            split = max(1, len(items) // 2)
+                            recent = items[split:]
+                            summary = (
+                                f"Autonomous context checkpoint:\n"
+                                f"- Emergency truncation of {split} earlier turns to fit model context window ({limit or 'unknown'} tokens).\n"
+                                f"- Retained {len(recent)} recent execution turns."
+                            )
+                            compacted = await replace_session_items(
+                                session,
+                                [_checkpoint_item(summary), *recent],
+                                expected_len=len(items),
+                            )
+                    except Exception:
+                        logger.exception("emergency session truncation failed for %s", agent_id)
                 if compacted:
                     compactions += 1
                     logger.info(

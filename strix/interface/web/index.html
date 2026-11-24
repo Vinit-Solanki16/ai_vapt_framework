@@ -55,7 +55,10 @@
         <div class="card" id="card-target-config">
           <div class="card-header">
             <div class="card-title"><span>🎯</span> Target Specification & Assessment Configuration</div>
-            <span class="badge badge-cyan">Ethical Boundary</span>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-manage-scope" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">⚙️ Scope Engagements</button>
+              <span class="badge badge-cyan">Ethical Boundary</span>
+            </div>
           </div>
 
           <div class="form-group">
@@ -757,9 +760,9 @@
               <div class="card-title"><span>🌲</span> GAP-2 Decision-Pivoting Graph (DAG)</div>
               <div style="display: flex; gap: 0.35rem; align-items: center; margin-left: auto;">
                 <div class="btn-group-sm" style="display: flex; gap: 0.2rem;">
-                  <button type="button" class="btn btn-xs btn-active" id="btn-dag-filter-found" title="Show only confirmed vulnerabilities">Found Only</button>
+                  <button type="button" class="btn btn-xs btn-secondary" id="btn-dag-filter-found" title="Show only confirmed vulnerabilities">Found Only</button>
                   <button type="button" class="btn btn-xs btn-secondary" id="btn-dag-filter-pivots" title="Show pivot redirections">Pivots</button>
-                  <button type="button" class="btn btn-xs btn-secondary" id="btn-dag-filter-all" title="Show entire candidate attack surface">All Surface</button>
+                  <button type="button" class="btn btn-xs btn-active" id="btn-dag-filter-all" title="Show entire candidate attack surface">All Surface</button>
                 </div>
                 <div style="display: flex; gap: 0.2rem; margin-left: 0.4rem;">
                   <button type="button" class="btn btn-xs btn-secondary" id="btn-dag-zoom-in" title="Zoom In">+</button>
@@ -1194,10 +1197,54 @@ Ready. Configure Base URL and click "Test Connection" or "Verify Tool Calling" t
     </div>
   </div>
 
+  <!-- Target Scope & Engagement Management Modal -->
+  <div id="modal-scope-engagements-backdrop" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog card" style="max-width: 680px; width: 92%; max-height: 90vh; overflow-y: auto;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+        <div class="card-title"><span>🛡️</span> Scope & Authorization Management</div>
+        <button type="button" class="btn btn-secondary" id="btn-close-scope-modal" style="padding: 0.25rem 0.6rem; font-size: 1rem; line-height: 1;">✖</button>
+      </div>
+
+      <div style="padding: 1rem 0;">
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Define authorized target domains, hostnames, and subdomains in scope. Scanning external targets requires documented owner authorization.
+        </div>
+
+        <!-- Add New Scope Host -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+          <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--text-main);">➕ Authorize External Target or Subdomain</div>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" for="modal-scope-target-input">Target URL, Domain, or Hostname <span style="color:#f43f5e;">*</span></label>
+            <input type="text" id="modal-scope-target-input" class="form-input" placeholder="e.g. pentest-ground.com or https://pentest-ground.com:4280/">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" for="modal-scope-additional-hosts">Authorized In-Scope Subdomains (Optional, comma-separated)</label>
+            <input type="text" id="modal-scope-additional-hosts" class="form-input" placeholder="e.g. api.pentest-ground.com, cdn.pentest-ground.com">
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="checkbox" id="modal-scope-owner-approval" checked>
+            <label for="modal-scope-owner-approval" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0; cursor: pointer;">
+              Operator confirms documented owner authorization / authorized security testing scope
+            </label>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-modal-add-scope">
+            🛡️ Add to Authorized Scope
+          </button>
+        </div>
+
+        <!-- Current Authorized Scopes List -->
+        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-main);">Active Authorized Scope Profiles</div>
+        <div id="modal-scope-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="color: var(--text-muted); font-size: 0.85rem;">Loading authorized scopes...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="/js/app.js?v=20261029_v5"></script>
+  <script src="/js/app.js?v=20261124_v9"></script>
 </body>
 </html>

@@ -661,10 +661,19 @@ def validate_openai_compatible_endpoint(
                 body = json.loads(resp.read().decode("utf-8"))
                 models_list: list[str] = []
                 data = body.get("data")
+                from strix.llm.context_budget import (
+                    extract_model_context_length,
+                    record_detected_context_limit,
+                )
+
                 if isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict) and "id" in item:
-                            models_list.append(item["id"])
+                            m_id = str(item["id"])
+                            models_list.append(m_id)
+                            ctx_len = extract_model_context_length(item)
+                            if ctx_len:
+                                record_detected_context_limit(m_id, ctx_len)
                         elif isinstance(item, str):
                             models_list.append(item)
                 if model and model not in models_list:

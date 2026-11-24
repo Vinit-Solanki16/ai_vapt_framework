@@ -10,6 +10,7 @@ pairing so the trimmed history is still valid provider input.
 from __future__ import annotations
 
 import logging
+import re
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
@@ -52,10 +53,16 @@ _OVERFLOW_MARKERS = (
     "context length",
     "context window",
     "context_length_exceeded",
+    "context size",
+    "exceeds the available context",
+    "exceed_context_size_error",
+    "n_ctx",
+    "n_prompt_tokens",
     "prompt is too long",
     "input is too long",
     "input length",
     "maximum prompt length",
+    "maximum context length",
     "reduce the length of the messages",
     "too many tokens",
     "token limit exceeded",
@@ -64,33 +71,67 @@ _OVERFLOW_MARKERS = (
 
 
 @cache
-def _overflow_error_types() -> tuple[type[BaseException], type[BaseException]]:
-    """``(ContextWindowExceededError, BadRequestError)``, imported on first use.
+def _overflow_error_types() -> tuple[type[BaseException], ...]:
+    """Exception types that signal context-window overflow."""
+    types: list[type[BaseException]] = []
+    try:
+        from litellm.exceptions import BadRequestError, ContextWindowExceededError
 
-    LiteLLM costs seconds to import, and nothing needs it until a model call is
-    actually made, so it stays off the launch path.
-    """
-    from litellm.exceptions import BadRequestError, ContextWindowExceededError
+        types.extend([ContextWindowExceededError, BadRequestError])
+    except ImportError:
+        pass
+    try:
+        from openai import BadRequestError as OpenAIBadRequestError
 
-    return ContextWindowExceededError, BadRequestError
+        types.append(OpenAIBadRequestError)
+    except ImportError:
+        pass
+    return tuple(types)
 
 
 def is_context_overflow(exc: BaseException) -> bool:
-    """Whether ``exc`` is a model context-window-overflow error.
+    """Whether ``exc`` is a model context-window-overflow error."""
+    overflow_types = _overflow_error_types()
+    is_overflow_type = any(isinstance(exc, t) for t in overflow_types) or type(exc).__name__ in (
+        "BadRequestError",
+        "ContextWindowExceededError",
+    )
+    if not is_overflow_type:
+        return False
 
-    LiteLLM types most providers' overflow as ContextWindowExceededError, but its
-    OpenRouter branch raises a plain BadRequestError, so for that we fall back to
-    matching the provider message.
-    """
-    context_window_exceeded, bad_request = _overflow_error_types()
-    if isinstance(exc, context_window_exceeded):
-        return True
-    if isinstance(exc, bad_request):
-        msg = str(exc).lower()
-        if any(x in msg for x in _OVERFLOW_EXCLUSIONS):
-            return False
-        return any(x in msg for x in _OVERFLOW_MARKERS)
-    return False
+    try:
+        from litellm.exceptions import ContextWindowExceededError
+
+        if isinstance(exc, ContextWindowExceededError):
+            return True
+    except ImportError:
+        pass
+
+    msg = str(exc).lower()
+    if any(x in msg for x in _OVERFLOW_EXCLUSIONS):
+        return False
+    return any(x in msg for x in _OVERFLOW_MARKERS)
+
+
+def extract_context_limit_from_error(exc: BaseException) -> int | None:
+    """Extract authoritative context token limit from a provider error if reported."""
+    msg = str(exc)
+    patterns = (
+        r"(?:available context size|context size|context length|n_ctx)[\"':\s\(]+(\d{4,7})",
+        r"code[\"':\s]+(\d{5,7})",
+        r"maximum context length is (\d{4,7}) tokens",
+        r"context length of (\d{4,7}) tokens",
+    )
+    for pat in patterns:
+        m = re.search(pat, msg, re.IGNORECASE)
+        if m:
+            try:
+                val = int(m.group(1))
+                if 2048 <= val <= 2_000_000:
+                    return val
+            except ValueError:
+                pass
+    return None
 
 
 _SUMMARY_INSTRUCTIONS = """\
@@ -360,7 +401,11 @@ async def maybe_compact(
         return False
 
     window = context_window(model)
-    reserve = max(context.compact_buffer_tokens, output_limit(model))
+    if context.compact_buffer_tokens > 0:
+        pct_reserve = max(1, int(window * 0.15))
+        reserve = max(output_limit(model), min(context.compact_buffer_tokens, pct_reserve))
+    else:
+        reserve = output_limit(model)
     budget = max(context.keep_tokens, window - reserve)
     used = count_tokens(model, "\n".join((instructions, tools_text, _serialize_items(items))))
     if not force and used <= budget:

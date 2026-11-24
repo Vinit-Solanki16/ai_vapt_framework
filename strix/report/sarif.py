@@ -680,9 +680,11 @@ def _build_coverage_result(
     kind: str,
     entry: dict[str, Any],
 ) -> dict[str, Any]:
+    from strix.report.evidence import redact_jwt_tokens
+
     surface = _string_value(entry.get("surface")) or "unspecified surface"
     risk_area = _string_value(entry.get("risk_area")) or "unspecified risk"
-    evidence = _string_value(entry.get("evidence"))
+    evidence = redact_jwt_tokens(_string_value(entry.get("evidence")))
     label = _string_value(entry.get("outcome_label")) or str(entry.get("outcome", ""))
 
     message = f"{risk_area} — {label}: {surface}"

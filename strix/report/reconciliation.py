@@ -46,10 +46,29 @@ def enrich_candidates_from_execution(
     r_dir = Path(run_dir) if run_dir else None
     c_dir = Path(control_dir) if control_dir else (r_dir / "control" if r_dir else None)
 
-    # 1. Load messages from agents.db if available
+    # 1. Load messages from agents.db if available (resolving engine directory variants)
     tool_calls: list[dict[str, Any]] = []
     tool_outputs: dict[str, str] = {}
-    db_path = r_dir / ".state" / "agents.db" if r_dir else None
+    db_path: Path | None = None
+    if r_dir:
+        cand_dbs = [
+            r_dir / ".state" / "agents.db",
+            r_dir / "agents.db",
+            (r_dir.parent / f"{r_dir.name}-engine" / ".state" / "agents.db"),
+            (r_dir.parent / f"{r_dir.name}-engine" / "agents.db"),
+        ]
+        if r_dir.name.endswith("-engine"):
+            base_name = r_dir.name[:-7]
+            cand_dbs.extend(
+                [
+                    r_dir.parent / base_name / ".state" / "agents.db",
+                    r_dir.parent / base_name / "agents.db",
+                ]
+            )
+        for cd in cand_dbs:
+            if cd.is_file():
+                db_path = cd
+                break
 
     if db_path and db_path.is_file():
         try:
@@ -76,11 +95,26 @@ def enrich_candidates_from_execution(
 
     # 2. Load coverage ledger from coverage.json
     coverage_entries: dict[str, Any] = {}
-    for cov_cand in [
-        r_dir / ".state" / "coverage.json" if r_dir else None,
-        r_dir / "coverage.json" if r_dir else None,
-    ]:
-        if cov_cand and cov_cand.is_file():
+    cov_cands: list[Path] = []
+    if r_dir:
+        cov_cands.extend(
+            [
+                r_dir / ".state" / "coverage.json",
+                r_dir / "coverage.json",
+                (r_dir.parent / f"{r_dir.name}-engine" / ".state" / "coverage.json"),
+                (r_dir.parent / f"{r_dir.name}-engine" / "coverage.json"),
+            ]
+        )
+        if r_dir.name.endswith("-engine"):
+            base_name = r_dir.name[:-7]
+            cov_cands.extend(
+                [
+                    r_dir.parent / base_name / ".state" / "coverage.json",
+                    r_dir.parent / base_name / "coverage.json",
+                ]
+            )
+    for cov_cand in cov_cands:
+        if cov_cand.is_file():
             try:
                 cdata = json.loads(cov_cand.read_text(encoding="utf-8"))
                 if isinstance(cdata, dict):
@@ -91,23 +125,42 @@ def enrich_candidates_from_execution(
                         coverage_entries = {
                             str(i): e for i, e in enumerate(entries) if isinstance(e, dict)
                         }
-                break
+                if coverage_entries:
+                    break
             except Exception:
                 pass
 
     # 3. Load probe outcomes from gap_state.json in .state or control (engine is authoritative)
     probe_outcomes_map: dict[str, dict[str, Any]] = {}
-    for state_cand in [
-        r_dir / ".state" / "gap_state.json" if r_dir else None,
-        c_dir / "gap_state.json" if c_dir else None,
-    ]:
-        if state_cand and state_cand.is_file():
+    gap_state_cands: list[Path] = []
+    if r_dir:
+        gap_state_cands.extend(
+            [
+                r_dir / ".state" / "gap_state.json",
+                r_dir / "gap_state.json",
+                (r_dir.parent / f"{r_dir.name}-engine" / ".state" / "gap_state.json"),
+                (r_dir.parent / f"{r_dir.name}-engine" / "gap_state.json"),
+            ]
+        )
+        if r_dir.name.endswith("-engine"):
+            base_name = r_dir.name[:-7]
+            gap_state_cands.extend(
+                [
+                    r_dir.parent / base_name / ".state" / "gap_state.json",
+                    r_dir.parent / base_name / "gap_state.json",
+                ]
+            )
+    if c_dir:
+        gap_state_cands.append(c_dir / "gap_state.json")
+    for state_cand in gap_state_cands:
+        if state_cand.is_file():
             try:
                 sdata = json.loads(state_cand.read_text(encoding="utf-8"))
                 for po in sdata.get("probe_outcomes", []):
                     if isinstance(po, dict) and po.get("candidate_id"):
                         probe_outcomes_map[str(po["candidate_id"])] = po
-                break
+                if probe_outcomes_map:
+                    break
             except Exception:
                 pass
 
@@ -251,6 +304,18 @@ def enrich_candidates_from_execution(
                 )
         # C04 Fix: Do not fabricate synthetic curl commands or fake execution for unprobed candidates
         # If the candidate already has legitimate tool execution details from an earlier stage, preserve them.
+        elif po_match and po_match.get("tool_invocation_id"):
+            cand["dispatched"] = True
+            cand["tool_selected"] = "http_probe"
+            cand["tool_invocation_id"] = str(po_match["tool_invocation_id"])
+            cand["sanitized_request"] = f"GET {cand.get('endpoint', '/')}"
+            cand["tool_result"] = (
+                str(po_match.get("detail", "")[:240]).replace("\r", " ").replace("\n", " ").strip()
+            )
+            cand["is_duplicate_association"] = False
+            cand["http_status"] = (
+                200 if po_match.get("outcome") in ("positive", "needs_follow_up") else None
+            )
         elif not (cand.get("tool_invocation_id") and cand.get("tool_selected")):
             cand["dispatched"] = False
             cand["tool_selected"] = None
@@ -406,12 +471,20 @@ def enrich_candidates_from_execution(
                     "Candidate validated with verified execution proof"
                 )
         elif current_state in ("RULED_OUT", "RULED_OUT_WITH_EVIDENCE"):
-            cand["state"] = "RULED_OUT"
-            cand["status"] = "RULED_OUT"
-            cand["retry_eligibility"] = False
-            cand["state_transition_reason"] = (
-                "Probe conclusively proved endpoint is non-vulnerable / negative space recorded"
-            )
+            if has_verified_vuln:
+                cand["state"] = "VERIFIED_VULNERABILITY"
+                cand["status"] = "VERIFIED_VULNERABILITY"
+                cand["retry_eligibility"] = False
+                cand["state_transition_reason"] = (
+                    "Candidate validated with reproducible cryptographic proof"
+                )
+            else:
+                cand["state"] = "RULED_OUT"
+                cand["status"] = "RULED_OUT"
+                cand["retry_eligibility"] = False
+                cand["state_transition_reason"] = (
+                    "Probe conclusively proved endpoint is non-vulnerable / negative space recorded"
+                )
         elif current_state == "ABANDONED":
             cand["state"] = "ABANDONED"
             cand["status"] = "ABANDONED"

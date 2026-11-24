@@ -64,19 +64,45 @@ VULN_SPECIFIC_CATALOG: dict[str, dict[str, Any]] = {
         "cvss": 7.2,
         "severity": "HIGH",
         "impact": "Direct manipulation of backend database structure, full data exfiltration from user tables, credential theft, and authentication bypass.",
-        "remediation_summary": "Enforce PDO parameterized prepared statements and disable error output display.",
+        "remediation_summary": "Enforce parameterized prepared statements and input validation; disable error output display.",
         "remediation_technical": (
-            "# PHP Configuration (php.ini): Hide verbose database errors\n"
-            "display_errors = Off\n"
-            "log_errors = On\n\n"
-            "// Application Code Patch (PHP PDO):\n"
-            "// AVOID: $query = \"SELECT * FROM users WHERE user_id = '$id'\";\n"
-            "// SECURE: Prepared statements with bound parameters\n"
+            "// Node.js Express / Sequelize Parameterized Query (Securing SQL Injection):\n"
+            "// AVOID: const [results] = await sequelize.query(`SELECT * FROM Products WHERE name LIKE '%${q}%'`);\n"
+            "// SECURE: Use parameterized replacements or ORM model abstractions\n"
+            "const products = await Product.findAll({\n"
+            "    where: { name: { [Op.like]: `%${q}%` } }\n"
+            "});\n\n"
+            "// Alternative Prepared Statement (Raw Database Driver):\n"
+            "db.all('SELECT * FROM Products WHERE name LIKE ?', [`%${q}%`], (err, rows) => { ... });\n\n"
+            "// PHP PDO Example:\n"
             "$stmt = $pdo->prepare('SELECT first_name, last_name FROM users WHERE user_id = :id');\n"
             "$stmt->execute(['id' => $id]);\n"
             "$user = $stmt->fetch();"
         ),
-        "retest_procedure": 'curl -s -k "https://<target>/vulnerabilities/sqli/?id=1\'&Submit=Submit" | grep -i "error in your SQL syntax"',
+        "retest_procedure": 'curl -s -k "http://<target><endpoint>?q=1\'%20OR%201=1--"',
+    },
+    "jwt-exposure": {
+        "title": "Weak JWT Implementation & Sensitive Data Exposure",
+        "owasp_id": "A01:2021",
+        "category_name": "Broken Access Control",
+        "cwe_id": "CWE-200",
+        "cve_id": None,
+        "cvss": 7.5,
+        "severity": "HIGH",
+        "impact": "Cleartext exposure of user password hashes, internal identifiers, or sensitive roles in unencrypted JWT payload tokens.",
+        "remediation_summary": "Remove sensitive credentials and password hashes from JWT payloads; enforce strict cryptographic signing and short token lifetimes.",
+        "remediation_technical": (
+            "// Node.js Express JWT Hardening:\n"
+            "// AVOID: Storing password hashes or sensitive claims in JWT payload\n"
+            "// jwt.sign({ id: user.id, password: user.password, role: user.role }, secret);\n"
+            "// SECURE: Store only non-sensitive subject claim and verify with strong algorithm (RS256/ES256)\n"
+            "const token = jwt.sign(\n"
+            "    { sub: user.id, role: user.role },\n"
+            "    privateKey,\n"
+            "    { algorithm: 'RS256', expiresIn: '1h' }\n"
+            ");"
+        ),
+        "retest_procedure": 'curl -s -X POST "http://<target><endpoint>" -H "Content-Type: application/json" -d \'{"email":"admin@juice-sh.op","password":"admin123"}\' | grep -o "eyJ[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]*\\.[A-Za-z0-9_-]*"',
     },
     "reflected-xss": {
         "title": "Reflected Cross-Site Scripting (XSS)",
@@ -778,6 +804,11 @@ def map_finding_to_owasp(
     elif any(k in text for k in ["redirect", "open_redirect"]):
         found = VULN_SPECIFIC_CATALOG["open-redirect"]
     elif any(
+        k in text
+        for k in ["jwt", "token", "password in jwt", "token manipulation", "jwt-password-leak"]
+    ):
+        found = VULN_SPECIFIC_CATALOG["jwt-exposure"]
+    elif any(
         k in text for k in ["weak_id", "weak-session", "session fixation", "predictable session"]
     ):
         found = VULN_SPECIFIC_CATALOG["weak-session"]
@@ -875,6 +906,27 @@ def map_finding_to_owasp(
     if endpoint:
         ep_clean = "/" + endpoint.lstrip("/")
         res["retest_procedure"] = res.get("retest_procedure", "").replace("<endpoint>", ep_clean)
+        # Avoid inappropriate DVWA templates when targeting a distinct application endpoint
+        cur_proc = res.get("retest_procedure", "")
+        if "/vulnerabilities/" in cur_proc and not ep_clean.startswith("/vulnerabilities/"):
+            if "sql" in text:
+                res["retest_procedure"] = (
+                    f'curl -s -k "http://<target>{ep_clean}?q=1\'%20OR%201=1--"'
+                )
+            elif "xss" in text:
+                res["retest_procedure"] = (
+                    f'curl -s -k "http://<target>{ep_clean}?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E"'
+                )
+            elif "exec" in text or "command" in text:
+                res["retest_procedure"] = (
+                    f'curl -s -k -X POST "http://<target>{ep_clean}" -d "ip=127.0.0.1;id"'
+                )
+            elif "upload" in text:
+                res["retest_procedure"] = (
+                    f'curl -s -k -F "file=@test.txt" "http://<target>{ep_clean}"'
+                )
+            else:
+                res["retest_procedure"] = f'curl -s -k "http://<target>{ep_clean}"'
     else:
         res["retest_procedure"] = res.get("retest_procedure", "").replace("<endpoint>", "/")
 

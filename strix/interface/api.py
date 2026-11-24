@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import secrets
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -571,19 +572,71 @@ def _is_productive_tool(tool_name: str) -> bool:
     }
 
 
-def productive_tool_count(run_data: dict[str, Any] | None) -> int:
-    """Count real security-tool executions recorded in engine telemetry.
+def productive_tool_count_from_db(db_path: Path | str | None) -> int:
+    """Count productive security tool calls recorded in SQLite .state/agents.db."""
+    if not db_path:
+        return 0
+    p = Path(db_path)
+    if not p.is_file():
+        return 0
+    try:
+        conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+        cursor = conn.cursor()
+        rows = cursor.execute(
+            "SELECT message_data FROM agent_messages WHERE message_data LIKE '%function_call%'"
+        ).fetchall()
+        conn.close()
+        count = 0
+        for (m_str,) in rows:
+            try:
+                m = json.loads(m_str)
+                if m.get("type") == "function_call":
+                    tname = m.get("name") or ""
+                    if _is_productive_tool(tname):
+                        count += 1
+            except Exception:
+                continue
+        return count
+    except Exception:
+        return 0
+
+
+def productive_tool_count(
+    run_data: dict[str, Any] | None, run_dir: Path | str | None = None
+) -> int:
+    """Count real security-tool executions recorded in engine telemetry or agents.db.
 
     SDK versions that log only ``Processing output item type=function_call``
     never emit ``Invoking tool`` lines. The engine's ``tool_calls`` telemetry
-    is authoritative for those runs; bookkeeping tools never count.
+    and ``.state/agents.db`` are authoritative for those runs; bookkeeping tools never count.
     """
     data = run_data or {}
-    return sum(
+    total = sum(
         1
         for t in (data.get("tool_calls") or [])
         if isinstance(t, dict) and _is_productive_tool(str(t.get("tool", "")))
     )
+    if run_dir:
+        r_p = Path(run_dir)
+        cand_dbs = [
+            r_p / ".state" / "agents.db",
+            r_p / "agents.db",
+            (r_p.parent / f"{r_p.name}-engine" / ".state" / "agents.db"),
+            (r_p.parent / f"{r_p.name}-engine" / "agents.db"),
+        ]
+        if r_p.name.endswith("-engine"):
+            base_name = r_p.name[:-7]
+            cand_dbs.extend(
+                [
+                    r_p.parent / base_name / ".state" / "agents.db",
+                    r_p.parent / base_name / "agents.db",
+                ]
+            )
+        for cd in cand_dbs:
+            if cd.is_file():
+                total = max(total, productive_tool_count_from_db(cd))
+                break
+    return total
 
 
 _ENGINE_FAILED_STATUSES = frozenset({"failed", "error", "interrupted", "aborted"})
@@ -775,7 +828,9 @@ def execution_evidence_from_logs(logs: str | list[str] | tuple[str, ...]) -> dic
 
 
 def execution_evidence_from_run(
-    run_data: dict[str, Any] | None, log_text: str = ""
+    run_data: dict[str, Any] | None,
+    log_text: str = "",
+    run_dir: Path | str | None = None,
 ) -> dict[str, Any]:
     """Derive trustworthy execution counters from an engine run record.
 
@@ -783,7 +838,8 @@ def execution_evidence_from_run(
     evidence of assessment work. The primary source is the engine log,
     which always records ``Calling LLM`` and ``Invoking tool`` lines. The
     optional ``llm_requests`` / ``tool_calls`` telemetry arrays agree when
-    ``STRIX_RUN_RECORD_TIMINGS`` is enabled, but are not required.
+    ``STRIX_RUN_RECORD_TIMINGS`` is enabled, and ``.state/agents.db`` records
+    actual tool executions for modern SDKs.
     Bookkeeping tools (coverage/finish/report management) never count.
     """
     data = run_data or {}
@@ -801,6 +857,26 @@ def execution_evidence_from_run(
         for t in (data.get("tool_calls") or [])
         if isinstance(t, dict) and _is_productive_tool(str(t.get("tool", "")))
     )
+    if run_dir:
+        r_p = Path(run_dir)
+        cand_dbs = [
+            r_p / ".state" / "agents.db",
+            r_p / "agents.db",
+            (r_p.parent / f"{r_p.name}-engine" / ".state" / "agents.db"),
+            (r_p.parent / f"{r_p.name}-engine" / "agents.db"),
+        ]
+        if r_p.name.endswith("-engine"):
+            base_name = r_p.name[:-7]
+            cand_dbs.extend(
+                [
+                    r_p.parent / base_name / ".state" / "agents.db",
+                    r_p.parent / base_name / "agents.db",
+                ]
+            )
+        for cd in cand_dbs:
+            if cd.is_file():
+                recorded_tools = max(recorded_tools, productive_tool_count_from_db(cd))
+                break
     llm_calls = max(llm_calls, recorded_llm)
     security_tool_calls = max(security_tool_calls, recorded_tools)
     return {
@@ -2511,7 +2587,17 @@ async def discover_cloud_models_endpoint(
 
     from strix.llm.cloud_provider import discover_cloud_models
 
-    return discover_cloud_models(api_base=api_base, api_key=api_key, extra_headers=extra_headers)
+    disc = discover_cloud_models(api_base=api_base, api_key=api_key, extra_headers=extra_headers)
+    if profile_id and disc.get("valid"):
+        details = disc.get("model_details") or {}
+        for p in _get_cloud_profiles():
+            if p.get("id") == profile_id:
+                m = p.get("model")
+                if m and m in details and details[m].get("context_length"):
+                    p["context_window"] = details[m]["context_length"]
+                    _save_cloud_profile(p)
+                break
+    return disc
 
 
 @app.post("/providers/cloud_hosted/validate", response_model=CloudTestConnectionResponse)
@@ -4580,10 +4666,16 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                         sub_env["LLM_TIMEOUT"] = str(active_cloud["timeout"])
                     if active_cloud.get("streaming") is False:
                         sub_env["LLM_DISABLE_STREAMING"] = "1"
-                    if active_cloud.get("context_window"):
-                        sub_env["STRIX_CONTEXT_FALLBACK_TOKENS"] = str(
-                            active_cloud["context_window"]
-                        )
+                    from strix.llm.context_budget import resolve_and_record_model_context
+
+                    dyn_ctx = active_cloud.get(
+                        "context_window"
+                    ) or resolve_and_record_model_context(
+                        m_name, api_base=base_url, api_key=cloud_key
+                    )
+                    if dyn_ctx:
+                        sub_env["STRIX_MODEL_CONTEXT_WINDOW"] = str(dyn_ctx)
+                        sub_env["STRIX_CONTEXT_FALLBACK_TOKENS"] = str(dyn_ctx)
 
             # The engine subprocess receives per-request credentials/base URL
             # via env. Prevent its CLI bootstrap from persisting those runtime
@@ -4881,23 +4973,27 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                             )
 
                 # 2a. Count productive tool executions from the engine's
-                # telemetry array. SDK versions that log only
+                # telemetry array or .state/agents.db. SDK versions that log only
                 # "Processing output item type=function_call" never emit
                 # "Invoking tool" lines, so log tailing alone undercounts real
                 # security work and can trigger a false no-progress stall.
                 # Bookkeeping tools are excluded by _is_productive_tool.
                 if u_dir and u_dir.is_dir():
                     engine_run_json = u_dir / "run.json"
+                    ed = None
                     if engine_run_json.is_file():
                         try:
                             ed = json.loads(engine_run_json.read_text(encoding="utf-8"))
-                            productive_total = productive_tool_count(ed)
-                            if productive_total > seen_tool_telemetry:
-                                productive_turns += productive_total - seen_tool_telemetry
-                                seen_tool_telemetry = productive_total
-                                last_progress_time = time.time()
                         except Exception:
                             pass
+                    try:
+                        productive_total = productive_tool_count(ed, run_dir=u_dir)
+                        if productive_total > seen_tool_telemetry:
+                            productive_turns += productive_total - seen_tool_telemetry
+                            seen_tool_telemetry = productive_total
+                            last_progress_time = time.time()
+                    except Exception:
+                        pass
 
                 # 2. Tail strix.log. At final sync after process exit, re-read
                 # the whole file: late writes may have arrived after the last
@@ -5123,8 +5219,13 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                                 "ruled_out",
                                                 "not_applicable",
                                             ):
-                                                cand["state"] = "RULED_OUT"
-                                                cand["status"] = "RULED_OUT"
+                                                if cand.get("state") not in (
+                                                    "VALIDATED",
+                                                    "VERIFIED_VULNERABILITY",
+                                                    "VALIDATED_VULNERABILITY",
+                                                ):
+                                                    cand["state"] = "RULED_OUT"
+                                                    cand["status"] = "RULED_OUT"
                                             elif c_out == "reported":
                                                 cand["state"] = "VALIDATED"
                                                 cand["status"] = "VALIDATED"
@@ -5160,6 +5261,8 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                                     "GAP2_PIVOT",
                                     "PIVOT_VERIFIED",
                                     "REDIRECT",
+                                    "PIVOT_DECIDED",
+                                    "PIVOT_BLOCKED",
                                 ):
                                     next_c = t_obj.get("next_candidate") or t_obj.get(
                                         "to_candidate"
@@ -5326,19 +5429,23 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
 
                 elapsed_now = time.time() - proc_start_time
                 last_progress_now = time.time() - last_progress_time
+                stall_timeout = max(600.0, min(1800.0, max_turns * 20.0))
                 if should_stop_for_no_progress(
                     elapsed_seconds=elapsed_now,
                     last_progress_seconds=last_progress_now,
                     productively_advanced_turns=productive_turns,
                     max_turns=max_turns,
+                    stall_seconds=stall_timeout,
                 ) or should_stop_for_stall(
                     elapsed_seconds=elapsed_now,
                     last_progress_seconds=last_progress_now,
+                    stall_seconds=stall_timeout,
                 ):
                     stalled = True
+                    stall_min = int(stall_timeout // 60)
                     engine.log(
                         "STALL",
-                        "No real security tool executed for 10 minutes; terminating "
+                        f"No real security tool executed for {stall_min} minutes; terminating "
                         "unproductive scan rather than leaving it running indefinitely.",
                     )
                     try:
@@ -5452,6 +5559,7 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                         else []
                     )
                 ),
+                run_dir=u_dir,
             )
             run_entry["execution_evidence"] = execution_evidence
             insufficient_execution = not (
@@ -5468,9 +5576,10 @@ def _execute_run_worker(run_id: str, req: RunRequest, runtime_key: str | None):
                 proc_failed = True
                 exit_interp = "no_progress_stall"
                 run_entry["exit_code_interpretation"] = exit_interp
+                stall_min = int(stall_timeout // 60) if "stall_timeout" in locals() else 10
                 error_msg = (
-                    "Assessment stopped: the model made no real security-tool progress "
-                    "for 10 minutes. No findings were inferred from bookkeeping calls."
+                    f"Assessment stopped: the model made no real security-tool progress "
+                    f"for {stall_min} minutes. No findings were inferred from bookkeeping calls."
                 )
             elif turn_limit_reached:
                 proc_failed = False
@@ -6931,6 +7040,25 @@ async def create_run(
             operator_scope_confirmed=req.target_scope_acknowledged,
             engagement_id=req.engagement_id,
         )
+        if not scope_res.authorized and req.target_scope_acknowledged:
+            from urllib.parse import urlparse
+
+            from strix.core.safety.scope_validator import authorize_host_scope
+
+            parsed = urlparse(
+                target_candidate if "://" in target_candidate else f"http://{target_candidate}"
+            )
+            target_host = parsed.hostname or target_candidate
+            authorize_host_scope(
+                host=target_host,
+                name=f"Authorized Engagement: {target_host}",
+                owner_approval=True,
+                additional_hosts=req.additional_authorized_hosts or [],
+            )
+            scope_res = validate_web_target(
+                target_candidate,
+                operator_scope_confirmed=req.target_scope_acknowledged,
+            )
         if not scope_res.authorized:
             raise HTTPException(
                 status_code=403,
@@ -7692,17 +7820,80 @@ async def get_run_report(
 @app.get("/engagements")
 async def list_engagements(user: dict[str, Any] = Depends(require_viewer)):
     """List authorized engagement profiles."""
-    return list(_ENGAGEMENTS.values())
+    from strix.core.safety.scope_validator import list_all_engagements
+
+    return list_all_engagements()
 
 
 @app.post("/engagements")
 async def create_engagement(
     profile: dict[str, Any] = Body(...),
-    user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_operator),
 ):
     """Create a new authorized engagement profile."""
+    from strix.core.safety.scope_validator import register_engagement
+
     eng_id = profile.get("id") or f"eng-{uuid.uuid4().hex[:6]}"
     profile["id"] = eng_id
     profile["created_at"] = _utc_now()
+    if "owner_approval" not in profile:
+        profile["owner_approval"] = True
+    if "status" not in profile:
+        profile["status"] = "approved" if profile.get("owner_approval") else "pending"
+    register_engagement(profile)
     _ENGAGEMENTS[eng_id] = profile
     return profile
+
+
+@app.delete("/engagements/{engagement_id}")
+async def delete_engagement_endpoint(
+    engagement_id: str,
+    user: dict[str, Any] = Depends(require_operator),
+):
+    """Delete an engagement by ID."""
+    from strix.core.safety.scope_validator import delete_engagement
+
+    success = delete_engagement(engagement_id)
+    _ENGAGEMENTS.pop(engagement_id, None)
+    if not success:
+        raise HTTPException(status_code=404, detail="Engagement not found or protected")
+    return {"status": "ok", "message": f"Engagement '{engagement_id}' deleted"}
+
+
+@app.post("/engagements/authorize_target")
+async def authorize_target_endpoint(
+    body: dict[str, Any] = Body(...),
+    user: dict[str, Any] = Depends(require_operator),
+):
+    """Quick-authorize an external target URL or host into an active scope engagement."""
+    target_url = str(body.get("target_url") or body.get("target") or "").strip()
+    if not target_url:
+        raise HTTPException(status_code=400, detail="Target URL is required")
+    from urllib.parse import urlparse
+
+    from strix.core.safety.scope_validator import authorize_host_scope, validate_web_target
+
+    parsed = urlparse(target_url if "://" in target_url else f"http://{target_url}")
+    host = parsed.hostname or target_url
+    additional = body.get("additional_hosts") or []
+    name = body.get("name") or f"Authorized Engagement: {host}"
+    owner_approval = body.get("owner_approval", True)
+
+    profile = authorize_host_scope(
+        host=host,
+        name=name,
+        owner_approval=bool(owner_approval),
+        additional_hosts=additional if isinstance(additional, list) else [],
+    )
+    # Re-validate target immediately
+    res = validate_web_target(target_url, engagement_id=profile["id"])
+    return {
+        "status": "authorized",
+        "engagement": profile,
+        "validation": {
+            "authorized": res.authorized,
+            "detail": res.detail,
+            "resolved_ips": res.resolved_ips,
+            "hostname": res.hostname,
+        },
+    }

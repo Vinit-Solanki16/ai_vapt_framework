@@ -114,7 +114,7 @@
     dagZoom: 1.0,
     dagPanX: 0,
     dagPanY: 0,
-    dagFilterMode: 'found',
+    dagFilterMode: 'all',
     selectedCandidateId: null,
   };
 
@@ -159,6 +159,17 @@
     elements.apiKeyFeedback = document.getElementById('api-key-feedback');
     elements.gap2Threshold = document.getElementById('gap2-threshold-select');
     elements.btnLaunch = document.getElementById('btn-launch-assessment');
+    elements.additionalHostsInput = document.getElementById('additional-hosts-input');
+
+    // Scope & Engagement Modal Elements
+    elements.btnManageScope = document.getElementById('btn-manage-scope');
+    elements.modalScopeBackdrop = document.getElementById('modal-scope-engagements-backdrop');
+    elements.btnCloseScopeModal = document.getElementById('btn-close-scope-modal');
+    elements.modalScopeTargetInput = document.getElementById('modal-scope-target-input');
+    elements.modalScopeAdditionalHosts = document.getElementById('modal-scope-additional-hosts');
+    elements.modalScopeOwnerApproval = document.getElementById('modal-scope-owner-approval');
+    elements.btnModalAddScope = document.getElementById('btn-modal-add-scope');
+    elements.modalScopeList = document.getElementById('modal-scope-list');
 
     // Active Assessment
     elements.heroRunStatus = document.getElementById('hero-run-status');
@@ -1284,15 +1295,87 @@
       if (data.authorized) {
         elements.scopeFeedback.innerHTML = `
           <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); padding: 0.65rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; color: #34d399;">
-            <strong>Target Scope Authorized:</strong> ${escapeHtml(data.detail)} (Resolved: ${escapeHtml((data.resolved_ips || []).join(', ') || 'Public Target')})
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <strong>Target Scope Authorized:</strong> ${escapeHtml(data.detail)} (Resolved: ${escapeHtml((data.resolved_ips || []).join(', ') || 'Public Target')})
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-scope-settings" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                ⚙️ View Scope Engagements
+              </button>
+            </div>
           </div>`;
+        const openSettingsBtn = document.getElementById('btn-open-scope-settings');
+        if (openSettingsBtn) {
+          openSettingsBtn.addEventListener('click', openScopeModal);
+        }
         showToast('Target authorization verified!', 'success');
       } else {
+        const targetHost = data.hostname || data.normalized_host || data.resolved_host || 'target';
+        const isExternalUnauthorized = data.scope_kind === 'external_unauthorized' || (data.detail && (data.detail.includes('External target') || data.detail.includes('not covered by any valid engagement')));
+
+        let actionBtnHtml = '';
+        if (isExternalUnauthorized) {
+          actionBtnHtml = `
+            <div style="margin-top: 0.65rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-quick-authorize-scope" style="background: #e11d48; border-color: #f43f5e; padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 600;">
+                🛡️ Authorize '${escapeHtml(targetHost)}' in Scope
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-scope-settings-alert" style="padding: 0.35rem 0.75rem; font-size: 0.82rem;">
+                ⚙️ Manage Scope Profiles
+              </button>
+            </div>
+          `;
+        }
+
         elements.scopeFeedback.innerHTML = `
-          <div style="background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); padding: 0.65rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; color: #fb7185;">
-            <strong>Scope Alert:</strong> ${escapeHtml(data.detail)}
+          <div style="background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; color: #fb7185;">
+            <div><strong>Scope Alert:</strong> ${escapeHtml(data.detail)}</div>
+            ${actionBtnHtml}
           </div>`;
-        showToast('Target rejected by fail-closed gatekeeper', 'error');
+
+        if (isExternalUnauthorized) {
+          const quickBtn = document.getElementById('btn-quick-authorize-scope');
+          if (quickBtn) {
+            quickBtn.addEventListener('click', async () => {
+              quickBtn.disabled = true;
+              quickBtn.textContent = 'Authorizing...';
+              try {
+                const addlHostsVal = (elements.additionalHostsInput ? elements.additionalHostsInput.value.trim() : '');
+                const addlHosts = addlHostsVal ? addlHostsVal.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+                const authRes = await fetch('/engagements/authorize_target', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    target_url: url,
+                    additional_hosts: addlHosts,
+                    owner_approval: true,
+                  }),
+                });
+                const authData = await authRes.json();
+                if (authRes.ok && (authData.status === 'authorized' || authData.validation?.authorized)) {
+                  showToast(`Host '${targetHost}' authorized in scope profile!`, 'success');
+                  await preflightTarget();
+                  if (elements.modalScopeBackdrop && elements.modalScopeBackdrop.style.display !== 'none') {
+                    loadScopeEngagements();
+                  }
+                } else {
+                  showToast(`Authorization failed: ${authData.detail || 'Unknown error'}`, 'error');
+                  quickBtn.disabled = false;
+                  quickBtn.textContent = `🛡️ Authorize '${targetHost}' in Scope`;
+                }
+              } catch (e) {
+                showToast(`Failed to authorize: ${e.message}`, 'error');
+                quickBtn.disabled = false;
+                quickBtn.textContent = `🛡️ Authorize '${targetHost}' in Scope`;
+              }
+            });
+          }
+          const openSettingsBtn = document.getElementById('btn-open-scope-settings-alert');
+          if (openSettingsBtn) {
+            openSettingsBtn.addEventListener('click', openScopeModal);
+          }
+        }
+        showToast('Target rejected by fail-closed gatekeeper. Authorize scope to proceed.', 'error');
       }
     } catch (err) {
       elements.scopeFeedback.innerHTML = `<span class="badge badge-rose">Validation Error: ${escapeHtml(err.message)}</span>`;
@@ -1454,6 +1537,41 @@
         headers['Authorization'] = `Bearer ${apiKey}`;
         headers['X-OpenAI-API-Key'] = apiKey;
       }
+    }
+
+    // Ensure target scope is authorized before launching
+    try {
+      const valRes = await fetch('/targets/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_url: targetUrl }),
+      });
+      const valData = await valRes.json();
+      if (!valData.authorized) {
+        if (elements.chkScopeAck && elements.chkScopeAck.checked) {
+          const addlHostsVal = (elements.additionalHostsInput ? elements.additionalHostsInput.value.trim() : '');
+          const addlHosts = addlHostsVal ? addlHostsVal.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+          const authRes = await fetch('/engagements/authorize_target', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              target_url: targetUrl,
+              additional_hosts: addlHosts,
+              owner_approval: true,
+            }),
+          });
+          const authData = await authRes.json();
+          if (!authRes.ok || (!authData.status && !authData.validation?.authorized)) {
+            showToast(`Target scope authorization failed: ${authData.detail || 'Unauthorized target'}`, 'error');
+            return;
+          }
+        } else {
+          showToast(`Target scope unauthorized: ${valData.detail}`, 'error');
+          return;
+        }
+      }
+    } catch (e) {
+      // Proceed to let backend fail-closed check validate
     }
 
     elements.btnLaunch.disabled = true;
@@ -2045,7 +2163,7 @@
     renderProgress(prog, run);
 
     renderCandidateTable(candidates);
-    renderDecisionDag(candidates, pivotEvents);
+    renderDecisionDag(candidates, pivotEvents, run);
     renderTerminalLogs(trace);
     renderFindingsLive(findings);
     renderReconSummaryLive(run);
@@ -2223,7 +2341,7 @@
         }
       }
     });
-    renderDecisionDag(currentDagCandidates, currentDagPivotEvents);
+    renderDecisionDag(currentDagCandidates, currentDagPivotEvents, state.latestRunData);
   }
 
   function inspectDagNode(cid) {
@@ -2284,13 +2402,14 @@
   window.setDagFilter = setDagFilter;
 
   // Render Live Interactive SVG Decision DAG
-  function renderDecisionDag(candidates, pivotEvents) {
+  function renderDecisionDag(candidates, pivotEvents, run) {
     const svg = elements.dagSvg;
     if (!svg) return;
 
-    currentDagCandidates = candidates || [];
-    currentDagPivotEvents = (pivotEvents || []).filter(
-      (e) => e && e.pivot_executed !== false && (e.event === 'GAP2_PIVOT' || e.type === 'GAP2_PIVOT')
+    const activeRun = run || state.latestRunData || {};
+    currentDagCandidates = (candidates && candidates.length) ? candidates : (activeRun.candidates || []);
+    currentDagPivotEvents = (pivotEvents || activeRun.pivot_events || []).filter(
+      (e) => e && (e.event === 'GAP2_PIVOT' || e.type === 'GAP2_PIVOT' || e.event === 'PIVOT_VERIFIED' || e.event === 'REDIRECT' || e.event === 'PIVOT_DECIDED' || e.event === 'PIVOT_BLOCKED' || e.pivot_executed !== undefined)
     );
 
     if (!currentDagCandidates.length) {
@@ -2300,14 +2419,21 @@
 
     // Filter according to current dagFilterMode
     let displayNodes = currentDagCandidates;
+    const runFindings = activeRun.findings || [];
     if (state.dagFilterMode === 'found') {
-      const found = currentDagCandidates.filter((c) => c.state === 'VALIDATED');
+      const found = currentDagCandidates.filter((c) => {
+        const matchesFinding = runFindings.some(
+          (f) => (f.candidate_id === c.id || f.id === c.id) && (f.verification_state === 'verified' || f.is_verified === true || f.verified === true)
+        );
+        return c.state === 'VALIDATED' || c.state === 'VERIFIED_VULNERABILITY' || c.state === 'VALIDATED_OBSERVATION' || matchesFinding;
+      });
       displayNodes = found.length ? found : currentDagCandidates;
     } else if (state.dagFilterMode === 'pivots') {
-      const pivotCandIds = new Set(currentDagPivotEvents.map(e => e.candidate_id || e.from_candidate).filter(Boolean));
+      const pivotCandIds = new Set(
+        currentDagPivotEvents.map(e => e.candidate_id || e.from_candidate || e.next_candidate || e.to_candidate || e.alternative_candidate).filter(Boolean)
+      );
       const pivots = currentDagCandidates.filter((c) => pivotCandIds.has(c.id));
-      displayNodes = pivots;
-      if (!displayNodes.length) {
+      if (!pivots.length) {
         svg.setAttribute('viewBox', '0 0 980 320');
         svg.innerHTML = `
           <g transform="translate(0, 40)">
@@ -2322,6 +2448,7 @@
         `;
         return;
       }
+      displayNodes = pivots;
     }
 
     const count = displayNodes.length;
@@ -2351,8 +2478,9 @@
 
     displayNodes.forEach((c, idx) => {
       const cy = count === 1 ? totalHeight / 2 : startY + idx * stepY;
-      // D01 fix: link strictly by candidate ID match, never global findings count
-      const matchingFinding = (run.findings || []).find(
+      // Link strictly by candidate ID match, never global findings count
+      const runFindings = activeRun.findings || [];
+      const matchingFinding = runFindings.find(
         (f) => (f.candidate_id === c.id || f.id === c.id) && (f.verification_state === 'verified' || f.is_verified === true || f.verified === true)
       );
       const isVerifiedVuln = c.state === 'VERIFIED_VULNERABILITY' || Boolean(matchingFinding);
@@ -2377,20 +2505,26 @@
       // Candidate Node & Label (D02 fix: safe DOM attribute without inline onclick)
       const activeClass = state.selectedCandidateId === c.id ? 'active-node' : '';
       const pivotEvt = (currentDagPivotEvents || []).find(
-        (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && e.pivot_executed === true && Boolean(e.next_candidate || e.to_candidate)
+        (e) => (e.candidate_id === c.id || e.from_candidate === c.id) && Boolean(e.next_candidate || e.to_candidate || e.alternative_candidate)
       );
       const hasPivotEvent = Boolean(pivotEvt);
+      const isPivotExecuted = pivotEvt && (pivotEvt.pivot_executed === true || pivotEvt.executed === true);
+      const isPivotBlocked = pivotEvt && (pivotEvt.pivot_executed === false || pivotEvt.blocked === true || pivotEvt.event === 'PIVOT_BLOCKED');
       const badgeText = isVerifiedVuln
         ? '✓ VULNERABILITY'
         : (isObservation
           ? 'ℹ OBSERVATION'
-          : (hasPivotEvent
-            ? '⚡ PIVOT'
-            : (isRo
-              ? '✓ RULED OUT'
-              : (isAbandoned
-                ? '✕ ABANDONED'
-                : (isInconclusive ? '? INCONCLUSIVE' : (isAttempting ? '⟳ PROBING' : (c.state || 'IDENTIFIED')))))));
+          : (isPivotExecuted
+            ? '⚡ PIVOT EXECUTED'
+            : (isPivotBlocked
+              ? '🚫 PIVOT BLOCKED'
+              : (hasPivotEvent
+                ? '⚡ PIVOT'
+                : (isRo
+                  ? '✓ RULED OUT'
+                  : (isAbandoned
+                    ? '✕ ABANDONED'
+                    : (isInconclusive ? '? INCONCLUSIVE' : (isAttempting ? '⟳ PROBING' : (c.state || 'IDENTIFIED')))))))));
 
       nodesHtml += `
         <g class="dag-node ${activeClass}" data-id="${escapeHtml(c.id)}" style="cursor: pointer;">
@@ -2408,18 +2542,23 @@
         </g>
       `;
 
-      // ONLY draw dynamic pivot loop on LEFT side of candidate nodes if an ACTUAL pivot event was recorded to a valid next candidate
+      // Draw dynamic pivot loop on LEFT side of candidate nodes if a pivot event was recorded to a valid next candidate
       if (hasPivotEvent && pivotEvt) {
-        const nextId = pivotEvt.next_candidate || pivotEvt.to_candidate;
+        const nextId = pivotEvt.next_candidate || pivotEvt.to_candidate || pivotEvt.alternative_candidate;
         const targetIdx = displayNodes.findIndex(node => node.id === nextId);
         if (targetIdx !== -1 && targetIdx !== idx) {
           const nextCy = count === 1 ? totalHeight / 2 : startY + targetIdx * stepY;
           const midY = (cy + nextCy) / 2;
+          const isBlocked = pivotEvt.pivot_executed === false || pivotEvt.blocked === true || pivotEvt.event === 'PIVOT_BLOCKED';
+          const pStroke = isBlocked ? '#f59e0b' : '#f43f5e';
+          const pFill = isBlocked ? '#451a03' : '#4c0519';
+          const pText = isBlocked ? 'BLOCKED ➔ HOLD' : `k=${c.max_attempts || 2} LIMIT ➔ PIVOT`;
+          const pMarker = isBlocked ? 'url(#arrow-amber)' : 'url(#arrow-red)';
           edgesHtml += `
             <path d="M ${candX - 18} ${cy} C ${candX - 65} ${cy + 15}, ${candX - 65} ${nextCy - 15}, ${candX - 18} ${nextCy}" 
-                  stroke="#f43f5e" stroke-width="2.2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrow-red)"/>
-            <rect x="${candX - 146}" y="${midY - 9}" width="126" height="18" rx="4" fill="#4c0519" stroke="#f43f5e" stroke-width="1"/>
-            <text x="${candX - 83}" y="${midY + 4}" fill="#fecdd3" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="monospace">k=${c.max_attempts || 2} LIMIT ➔ PIVOT</text>
+                  stroke="${pStroke}" stroke-width="2.2" stroke-dasharray="5,4" fill="none" marker-end="${pMarker}"/>
+            <rect x="${candX - 146}" y="${midY - 9}" width="126" height="18" rx="4" fill="${pFill}" stroke="${pStroke}" stroke-width="1"/>
+            <text x="${candX - 83}" y="${midY + 4}" fill="#fecdd3" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="monospace">${pText}</text>
           `;
         }
       }
@@ -2435,6 +2574,9 @@
         </marker>
         <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#f43f5e"/>
+        </marker>
+        <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/>
         </marker>
       </defs>
       
@@ -3304,6 +3446,22 @@
       elements.btnModalVerifyTools.addEventListener('click', verifyModalCloudTools);
     }
 
+    // Scope & Engagement Modal Listeners
+    if (elements.btnManageScope) {
+      elements.btnManageScope.addEventListener('click', openScopeModal);
+    }
+    if (elements.btnCloseScopeModal) {
+      elements.btnCloseScopeModal.addEventListener('click', closeScopeModal);
+    }
+    if (elements.btnModalAddScope) {
+      elements.btnModalAddScope.addEventListener('click', addScopeEngagementFromModal);
+    }
+    if (elements.modalScopeBackdrop) {
+      elements.modalScopeBackdrop.addEventListener('click', (e) => {
+        if (e.target === elements.modalScopeBackdrop) closeScopeModal();
+      });
+    }
+
     // Model Catalog Explorer in Settings View
     if (elements.catalogSearchInput) {
       elements.catalogSearchInput.addEventListener('input', renderModelCatalog);
@@ -4119,6 +4277,147 @@
         elements.btnModalVerifyTools.disabled = false;
         elements.btnModalVerifyTools.textContent = '🛠️ Verify Tool Calling';
       }
+    }
+  }
+
+  // Scope & Engagement Management Functions
+  function openScopeModal() {
+    if (!elements.modalScopeBackdrop) return;
+    elements.modalScopeBackdrop.style.display = 'flex';
+    if (elements.modalScopeTargetInput && elements.targetUrlInput) {
+      if (!elements.modalScopeTargetInput.value.trim() && elements.targetUrlInput.value.trim()) {
+        elements.modalScopeTargetInput.value = elements.targetUrlInput.value.trim();
+      }
+    }
+    loadScopeEngagements();
+  }
+
+  function closeScopeModal() {
+    if (!elements.modalScopeBackdrop) return;
+    elements.modalScopeBackdrop.style.display = 'none';
+  }
+
+  async function loadScopeEngagements() {
+    if (!elements.modalScopeList) return;
+    elements.modalScopeList.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem;">Loading authorized scopes...</div>`;
+    try {
+      const res = await fetch('/engagements');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const engagements = await res.json();
+      if (!engagements || engagements.length === 0) {
+        elements.modalScopeList.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0;">No custom scopes defined yet.</div>`;
+        return;
+      }
+
+      elements.modalScopeList.innerHTML = engagements.map((eng) => {
+        const isDefault = eng.id === 'default-local';
+        const hostsStr = (eng.authorized_hosts || []).join(', ') || 'None';
+        const createdStr = eng.created_at ? new Date(eng.created_at).toLocaleString() : '';
+        return `
+          <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <strong style="color: var(--text-main); font-size: 0.9rem;">${escapeHtml(eng.name || eng.id)}</strong>
+                ${isDefault ? '<span class="badge badge-cyan" style="font-size:0.7rem;">Default Local Lab</span>' : '<span class="badge badge-emerald" style="font-size:0.7rem;">Active Scope</span>'}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); word-break: break-all;">
+                <strong>Hosts:</strong> <span style="color: var(--accent-cyan);">${escapeHtml(hostsStr)}</span>
+              </div>
+              ${createdStr ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Authorized: ${escapeHtml(createdStr)}</div>` : ''}
+            </div>
+            <div>
+              ${!isDefault ? `
+                <button type="button" class="btn btn-secondary btn-sm btn-delete-engagement" data-id="${escapeHtml(eng.id)}" style="color: #fb7185; border-color: rgba(244,63,94,0.3); padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+                  🗑️ Revoke
+                </button>
+              ` : '<span style="font-size: 0.75rem; color: var(--text-muted);">Protected</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Wire revoke buttons
+      elements.modalScopeList.querySelectorAll('.btn-delete-engagement').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const engId = e.currentTarget.getAttribute('data-id');
+          if (!engId) return;
+          if (!confirm(`Are you sure you want to revoke scope profile '${engId}'?`)) return;
+          try {
+            const delRes = await fetch(`/engagements/${engId}`, { method: 'DELETE' });
+            if (delRes.ok) {
+              showToast(`Scope profile '${engId}' revoked`, 'info');
+              loadScopeEngagements();
+              if (elements.targetUrlInput && elements.targetUrlInput.value.trim()) {
+                preflightTarget();
+              }
+            } else {
+              const err = await delRes.json();
+              showToast(`Failed to revoke scope: ${err.detail || 'Error'}`, 'error');
+            }
+          } catch (err) {
+            showToast(`Error revoking scope: ${err.message}`, 'error');
+          }
+        });
+      });
+    } catch (err) {
+      elements.modalScopeList.innerHTML = `<div style="color: #fb7185; font-size: 0.85rem;">Failed to load scopes: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function addScopeEngagementFromModal() {
+    if (!elements.modalScopeTargetInput) return;
+    const target = elements.modalScopeTargetInput.value.trim();
+    if (!target) {
+      showToast('Please enter a target URL or host domain', 'error');
+      elements.modalScopeTargetInput.focus();
+      return;
+    }
+    if (elements.modalScopeOwnerApproval && !elements.modalScopeOwnerApproval.checked) {
+      showToast('Please confirm operator documented owner authorization', 'error');
+      return;
+    }
+
+    const addlHostsVal = elements.modalScopeAdditionalHosts ? elements.modalScopeAdditionalHosts.value.trim() : '';
+    const addlHosts = addlHostsVal ? addlHostsVal.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+
+    elements.btnModalAddScope.disabled = true;
+    elements.btnModalAddScope.textContent = 'Authorizing...';
+
+    try {
+      const res = await fetch('/engagements/authorize_target', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_url: target,
+          additional_hosts: addlHosts,
+          owner_approval: true,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && (data.status === 'authorized' || data.validation?.authorized)) {
+        showToast(`Target '${target}' authorized in scope profile!`, 'success');
+        elements.modalScopeTargetInput.value = '';
+        if (elements.modalScopeAdditionalHosts) elements.modalScopeAdditionalHosts.value = '';
+        loadScopeEngagements();
+
+        // If main target input matches or is empty, sync and re-preflight
+        if (elements.targetUrlInput) {
+          if (!elements.targetUrlInput.value.trim()) {
+            elements.targetUrlInput.value = target;
+          }
+          if (elements.additionalHostsInput && addlHostsVal && !elements.additionalHostsInput.value.trim()) {
+            elements.additionalHostsInput.value = addlHostsVal;
+          }
+          preflightTarget();
+        }
+      } else {
+        showToast(`Authorization failed: ${data.detail || 'Unknown error'}`, 'error');
+      }
+    } catch (err) {
+      showToast(`Network error: ${err.message}`, 'error');
+    } finally {
+      elements.btnModalAddScope.disabled = false;
+      elements.btnModalAddScope.textContent = '🛡️ Add to Authorized Scope';
     }
   }
 

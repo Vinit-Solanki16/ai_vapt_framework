@@ -142,8 +142,9 @@ class ContextSettings(BaseSettings):
     auto_compact: bool = Field(default=True, alias="STRIX_CONTEXT_AUTO_COMPACT")
     compact_buffer_tokens: int = Field(default=20_000, gt=0, alias="STRIX_CONTEXT_BUFFER_TOKENS")
     keep_tokens: int = Field(default=8_000, gt=0, alias="STRIX_CONTEXT_KEEP_TOKENS")
+    model_context_window: int | None = Field(default=None, alias="STRIX_MODEL_CONTEXT_WINDOW")
     fallback_context_tokens: int = Field(
-        default=200_000, gt=0, alias="STRIX_CONTEXT_FALLBACK_TOKENS"
+        default=128_000, gt=0, alias="STRIX_CONTEXT_FALLBACK_TOKENS"
     )
     summary_max_tokens: int = Field(default=4_096, gt=0, alias="STRIX_CONTEXT_SUMMARY_TOKENS")
     tool_output_max_tokens: int = Field(default=8_000, gt=0, alias="STRIX_TOOL_OUTPUT_MAX_TOKENS")

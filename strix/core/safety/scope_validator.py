@@ -58,6 +58,96 @@ def get_engagement(engagement_id: str | None) -> dict[str, Any] | None:
     return None
 
 
+def list_all_engagements() -> list[dict[str, Any]]:
+    """Return all active and stored engagement profiles."""
+    engagements: dict[str, dict[str, Any]] = dict(_BUILTIN_ENGAGEMENTS)
+    if ENGAGEMENT_FILE.is_file():
+        try:
+            data = json.loads(ENGAGEMENT_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                engagements.update({k: v for k, v in data.items() if isinstance(v, dict)})
+        except Exception as exc:
+            logger.debug("Failed reading engagements file: %s", exc)
+    return list(engagements.values())
+
+
+def delete_engagement(engagement_id: str) -> bool:
+    """Delete an engagement by ID from memory and disk."""
+    eid = str(engagement_id).strip()
+    if eid in _BUILTIN_ENGAGEMENTS and eid == "default-local":
+        return False  # Protect default local lab
+    removed = _BUILTIN_ENGAGEMENTS.pop(eid, None) is not None
+    if ENGAGEMENT_FILE.is_file():
+        try:
+            store = json.loads(ENGAGEMENT_FILE.read_text(encoding="utf-8"))
+            if isinstance(store, dict) and eid in store:
+                del store[eid]
+                from strix.utils.secret_files import write_secret_text
+
+                write_secret_text(ENGAGEMENT_FILE, json.dumps(store, indent=2))
+                removed = True
+        except Exception as exc:
+            logger.debug("Failed deleting engagement from file: %s", exc)
+    return removed
+
+
+def find_engagement_for_host(host: str) -> dict[str, Any] | None:
+    """Find any approved, active engagement covering the given host."""
+    nhost = str(host).lower().strip()
+    all_engs = list_all_engagements()
+    for eng in all_engs:
+        owner_approval = eng.get("owner_approval") is True or eng.get("status") in (
+            "approved",
+            "active",
+        )
+        if not owner_approval:
+            continue
+        hosts = [str(h).lower().strip() for h in eng.get("authorized_hosts", []) if h]
+        if nhost in hosts or any(nhost.endswith(f".{h}") for h in hosts):
+            return eng
+    return None
+
+
+def authorize_host_scope(
+    host: str,
+    name: str | None = None,
+    owner_approval: bool = True,
+    allowed_ports: list[int] | None = None,
+    additional_hosts: list[str] | None = None,
+) -> dict[str, Any]:
+    """Dynamically register and authorize an external host or domain in scope."""
+    nhost = str(host).lower().strip()
+    if "://" in nhost:
+        nhost = urlparse(nhost).hostname or nhost
+    if ":" in nhost:
+        nhost = nhost.split(":", 1)[0]
+
+    eid = f"eng-{nhost.replace('.', '-')}"
+    existing = get_engagement(eid)
+    hosts = [nhost]
+    if additional_hosts:
+        for ah in additional_hosts:
+            clean = str(ah).lower().strip()
+            if clean and clean not in hosts:
+                hosts.append(clean)
+    if existing and isinstance(existing.get("authorized_hosts"), list):
+        for eh in existing["authorized_hosts"]:
+            clean = str(eh).lower().strip()
+            if clean and clean not in hosts:
+                hosts.append(clean)
+
+    profile = {
+        "id": eid,
+        "name": name or f"Authorized Engagement: {nhost}",
+        "authorized_hosts": hosts,
+        "allowed_ports": allowed_ports or [80, 443, 8080, 8443, 4280, 3000, 5000, 8000, 8888, 9191],
+        "owner_approval": owner_approval,
+        "status": "approved" if owner_approval else "pending",
+    }
+    register_engagement(profile)
+    return profile
+
+
 def register_engagement(engagement: dict[str, Any]) -> None:
     """Register or update an engagement record in memory and on disk."""
     eid = str(engagement.get("id") or "").strip()
@@ -264,7 +354,7 @@ def validate_web_target(
         )
 
     # External target requires explicit, approved engagement authorization
-    engagement = get_engagement(engagement_id)
+    engagement = get_engagement(engagement_id) or find_engagement_for_host(normalized_host)
     if not engagement:
         return TargetValidationResult(
             authorized=False,

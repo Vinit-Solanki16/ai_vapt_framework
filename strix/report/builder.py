@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any
 
 from strix.core.triage.owasp_mapping import map_finding_to_owasp
+from strix.report.evidence import redact_jwt_tokens
 
 
 def render_html_report(run_data: Any) -> str:
@@ -155,6 +156,24 @@ def render_html_report(run_data: Any) -> str:
     high_count = sum(1 for f in findings if f.get("severity", "").upper() == "HIGH")
     med_count = sum(1 for f in findings if f.get("severity", "").upper() == "MEDIUM")
     low_count = sum(1 for f in findings if f.get("severity", "").upper() == "LOW")
+
+    has_verified_findings = any(
+        f.get("verified") is True
+        or str(f.get("verification_state", "")).strip().lower() == "verified"
+        for f in findings
+    )
+    if has_verified_findings:
+        findings_section_title = "1. Confirmed Vulnerability Findings & Cryptographic PoC Evidence"
+        findings_section_narrative = (
+            "All findings below were actively confirmed with non-destructive verification "
+            "against the target and cryptographically hashed using SHA-256."
+        )
+    else:
+        findings_section_title = "1. Vulnerability Findings & Candidate Vectors Evaluated"
+        findings_section_narrative = (
+            "The findings and candidate attack vectors below were identified and evaluated during the assessment. "
+            "Unconfirmed findings require secondary path verification before being classified as confirmed vulnerabilities."
+        )
 
     # DEF-02: Honest GAP-2 Pivot & Abandonment accounting
     # Executed pivots require an active redirection dispatch (next_candidate exists and pivot_executed is not False)
@@ -370,17 +389,17 @@ def render_html_report(run_data: Any) -> str:
                 or f"Rated {sev} (CVSS {cvss}) based on unauthenticated network exploitability and observed impact."
             )
         )
-        # DEF-04: Remove synthetic request/response fabrication
+        # DEF-04: Remove synthetic request/response fabrication & redact bearer tokens
         raw_req = f.get("poc_script_code") or f.get("reproducible_request")
         rep_req = (
-            html.escape(str(raw_req))
+            html.escape(redact_jwt_tokens(str(raw_req)))
             if raw_req and str(raw_req).strip()
             else "No raw HTTP exchange captured."
         )
 
         raw_ev = f.get("evidence_snippet") or f.get("evidence") or f.get("reproducible_response")
         resp_ev = (
-            html.escape(str(raw_ev))
+            html.escape(redact_jwt_tokens(str(raw_ev)))
             if raw_ev and str(raw_ev).strip()
             else "No raw HTTP exchange captured."
         )
@@ -514,9 +533,19 @@ def render_html_report(run_data: Any) -> str:
             )
         )
 
-        if c_state == "VERIFIED_VULNERABILITY" or (c_state == "VALIDATED" and findings_total > 0):
+        cand_has_verified = any(
+            isinstance(f, dict)
+            and (f.get("candidate_id") == c.get("id") or f.get("location") == c_endp)
+            and (
+                f.get("verified") is True
+                or str(f.get("verification_state", "")).strip().lower() == "verified"
+            )
+            for f in findings
+        )
+
+        if c_state == "VERIFIED_VULNERABILITY" or (c_state == "VALIDATED" and cand_has_verified):
             state_badge = '<span class="badge badge-emerald">VALIDATED VULNERABILITY</span>'
-        elif c_state == "VALIDATED_OBSERVATION" or (c_state == "VALIDATED" and findings_total == 0):
+        elif c_state in ("VALIDATED_OBSERVATION", "VALIDATED"):
             state_badge = '<span class="badge badge-cyan">VALIDATED OBSERVATION</span>'
         elif c_state in ("RULED_OUT", "RULED_OUT_WITH_EVIDENCE"):
             state_badge = '<span class="badge badge-secondary">RULED OUT</span>'
@@ -1233,9 +1262,9 @@ def render_html_report(run_data: Any) -> str:
     </div>
 
     <!-- Section 1: Findings Table -->
-    <h2 id="findings">1. Confirmed Vulnerability Findings & Cryptographic PoC Evidence</h2>
+    <h2 id="findings">{findings_section_title}</h2>
     <p style="color:#94a3b8; font-size:0.85rem; margin-top:-0.5rem; margin-bottom:1rem; line-height:1.5;">
-        All findings below were actively confirmed with non-destructive verification against the target and cryptographically hashed using SHA-256.<br>
+        {findings_section_narrative}<br>
         <span style="color:#cbd5e1;"><em>Note on Vulnerability Taxonomy:</em> Architectural and web configuration weaknesses (e.g. missing HTTP hardening headers, insecure cookie flags, missing CSRF tokens, permissive CSP) are categorized under authoritative <strong>Common Weakness Enumerations (CWE)</strong> and <strong>OWASP Top 10</strong> standards. <strong>CVE Identifiers</strong> are strictly reserved for verified Common Vulnerabilities and Exposures in third-party COTS software components.</span>
     </p>
     <table>

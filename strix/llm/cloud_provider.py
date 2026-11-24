@@ -193,25 +193,44 @@ def discover_cloud_models(
                     }
 
                 models_list: list[str] = []
+                model_details: dict[str, dict[str, Any]] = {}
+                from strix.llm.context_budget import (
+                    extract_model_context_length,
+                    record_detected_context_limit,
+                )
+
                 data = body.get("data") or body.get("models")
                 if isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict) and "id" in item:
-                            models_list.append(str(item["id"]))
+                            m_id = str(item["id"])
+                            models_list.append(m_id)
+                            ctx_len = extract_model_context_length(item)
+                            if ctx_len:
+                                record_detected_context_limit(m_id, ctx_len)
+                                model_details[m_id] = {"context_length": ctx_len}
                             if "aliases" in item and isinstance(item["aliases"], list):
                                 for alias in item["aliases"]:
                                     if isinstance(alias, str) and alias not in models_list:
                                         models_list.append(alias)
+                                        if ctx_len:
+                                            record_detected_context_limit(alias, ctx_len)
                         elif isinstance(item, str):
                             models_list.append(item)
                 elif isinstance(body, dict) and "id" in body:
-                    models_list.append(str(body["id"]))
+                    m_id = str(body["id"])
+                    models_list.append(m_id)
+                    ctx_len = extract_model_context_length(body)
+                    if ctx_len:
+                        record_detected_context_limit(m_id, ctx_len)
+                        model_details[m_id] = {"context_length": ctx_len}
 
                 return {
                     "valid": True,
                     "status": "configured",
                     "message": f"Successfully discovered {len(models_list)} model(s)",
                     "models": sorted(models_list),
+                    "model_details": model_details,
                 }
             return {
                 "valid": False,
@@ -342,9 +361,13 @@ def test_cloud_connection(
                 if completion_tokens and duration_ms > 0:
                     tps = round(completion_tokens / (duration_ms / 1000.0), 1)
 
+                from strix.llm.context_budget import context_window
+
+                ctx_win = context_window(model)
+
                 return CloudTestConnectionResponse(
                     status="configured",
-                    message=f"Connection verified: '{model}' responded successfully in {duration_ms}ms",
+                    message=f"Connection verified: '{model}' responded successfully in {duration_ms}ms (context: {ctx_win:,} tokens)",
                     valid=True,
                     models=discovered_models,
                     chat_completion_ok=True,
@@ -355,6 +378,7 @@ def test_cloud_connection(
                     diagnostics={
                         "endpoint": base,
                         "model": model,
+                        "context_window": ctx_win,
                         "reply_sample": reply_text[:80].strip(),
                         "prompt_tokens": prompt_tokens,
                         "completion_tokens": completion_tokens,

@@ -498,6 +498,7 @@ def _wrap_exec_command(tool: FunctionTool) -> FunctionTool:
                 parsed["shell"] = "bash"
             _apply_shell_output_cap(parsed)
             raw_input = json.dumps(parsed)
+        logger.debug("Invoking tool exec_command with input %s", raw_input)
         try:
             result = await invoke_tool(ctx, raw_input)
         except ValidationError as exc:
@@ -530,6 +531,7 @@ def _wrap_write_stdin(tool: FunctionTool) -> FunctionTool:
                 parsed["chars"] = _decode_chars_escape(parsed["chars"])
             _apply_shell_output_cap(parsed)
             raw_input = json.dumps(parsed)
+        logger.debug("Invoking tool write_stdin with input %s", raw_input)
         try:
             return await invoke_tool(ctx, raw_input)
         except ValidationError as exc:

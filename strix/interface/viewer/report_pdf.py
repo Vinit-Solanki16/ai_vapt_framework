@@ -628,9 +628,12 @@ def _finding_flowables(
     story.extend(_field_block(styles, "Impact", vuln.get("impact")))
     story.extend(_field_block(styles, "Technical analysis", vuln.get("technical_analysis")))
     story.extend(_field_block(styles, "Proof of concept", vuln.get("poc_description")))
-    poc_script = _strip_code_fence(vuln.get("poc_script_code"))
+    from strix.report.evidence import redact_jwt_tokens
+
+    poc_script = redact_jwt_tokens(_strip_code_fence(vuln.get("poc_script_code")))
     story.extend(_field_block(styles, "PoC script", poc_script, code=True))
-    story.extend(_field_block(styles, "Evidence", vuln.get("evidence"), code=True))
+    raw_ev = redact_jwt_tokens(vuln.get("evidence"))
+    story.extend(_field_block(styles, "Evidence", raw_ev, code=True))
 
     remediation = vuln.get("remediation_steps")
     if isinstance(remediation, list):

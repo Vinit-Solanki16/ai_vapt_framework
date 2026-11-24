@@ -36,6 +36,16 @@ def is_legacy_synthetic_hash(finding_id: str, title: str, hash_val: str | None) 
     return hash_val.lower() == synthetic.lower()
 
 
+_JWT_PATTERN = re.compile(r"(eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.)([a-zA-Z0-9_-]{10,})")
+
+
+def redact_jwt_tokens(text: str | None) -> str:
+    """Redact raw JWT signatures and live bearer credentials from report and evidence text."""
+    if not text:
+        return ""
+    return _JWT_PATTERN.sub(r"\1[REDACTED_SIGNATURE]", str(text))
+
+
 def record_authentic_evidence(
     run_dir: Path,
     finding_id: str,
