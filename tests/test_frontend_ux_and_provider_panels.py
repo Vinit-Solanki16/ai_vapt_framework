@@ -256,14 +256,18 @@ def test_cloud_hosted_panel_id_mapping_and_profile_priority():
 
 def test_report_download_formats_conformance():
     """Verify all 6 report formats (HTML, PDF, JSON, SARIF, CSV, Markdown) are supported via API."""
-    run_id = "run-95c0f177"
-    fixture_dir = Path(__file__).resolve().parent / "fixtures" / run_id
-    if fixture_dir.is_dir():
-        import shutil
+    from strix.interface.api import _RUNS
 
-        dest = Path.cwd() / "strix_runs" / run_id
-        if not dest.exists():
-            shutil.copytree(fixture_dir, dest)
+    run_id = "run-95c0f177"
+    _RUNS[run_id] = {
+        "id": run_id,
+        "run_id": run_id,
+        "status": "completed",
+        "target": "http://127.0.0.1:3000",
+        "target_url": "http://127.0.0.1:3000",
+        "findings": [],
+        "scanned_at": "2026-11-23T00:00:00Z",
+    }
 
     formats = [
         ("html", "text/html"),

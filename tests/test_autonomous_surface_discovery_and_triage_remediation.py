@@ -5,7 +5,11 @@ GAP-1 candidate triage, active parameter fuzzing, and status synchronization.
 from __future__ import annotations
 
 import json
+import socket
+import urllib.parse
 from pathlib import Path
+
+import pytest
 
 from strix.core.scanner.active_fuzzer import ActiveFuzzer
 from strix.core.scanner.crawler import WebSpider
@@ -14,8 +18,25 @@ from strix.interface.schemas import RunStatus
 from strix.report.reconciliation import reconcile_all
 
 
+def _is_target_live(url: str = "http://127.0.0.1:3000") -> bool:
+    """Check if the authorized target is actively accepting connections."""
+    parsed = urllib.parse.urlparse(url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
 def test_web_spider_discovers_spa_routes_and_disallowed_paths():
     """Verify WebSpider discovers API routes from script bundles and robots.txt."""
+    if not _is_target_live("http://127.0.0.1:3000"):
+        pytest.skip(
+            "Authorized local target http://127.0.0.1:3000 is not reachable (live lab offline)"
+        )
+
     spider = WebSpider("http://127.0.0.1:3000", scan_mode="quick")
     res = spider.crawl()
 
@@ -37,6 +58,11 @@ def test_web_spider_discovers_spa_routes_and_disallowed_paths():
 
 def test_active_fuzzer_discovers_sensitive_ftp_and_sqli():
     """Verify ActiveFuzzer discovers /ftp directory listing and SQL injection."""
+    if not _is_target_live("http://127.0.0.1:3000"):
+        pytest.skip(
+            "Authorized local target http://127.0.0.1:3000 is not reachable (live lab offline)"
+        )
+
     fuzzer = ActiveFuzzer("http://127.0.0.1:3000", scan_mode="quick")
     path_findings = fuzzer.probe_paths()
 
@@ -69,6 +95,11 @@ def test_active_fuzzer_discovers_sensitive_ftp_and_sqli():
 
 def test_run_gap1_triage_produces_full_attack_surface():
     """Verify run_gap1_triage produces realistic, prioritized candidate queue."""
+    if not _is_target_live("http://127.0.0.1:3000"):
+        pytest.skip(
+            "Authorized local target http://127.0.0.1:3000 is not reachable (live lab offline)"
+        )
+
     candidates = run_gap1_triage(
         target_url="http://127.0.0.1:3000",
         scan_mode="quick",

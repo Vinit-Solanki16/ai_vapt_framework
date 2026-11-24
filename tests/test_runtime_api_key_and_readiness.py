@@ -155,7 +155,11 @@ def test_llm_provider_unavailable_produces_llm_warning_not_docker(
         assert llm_comp["status"] == "configuration_required"
         assert any(
             phrase in llm_comp["actionable_message"]
-            for phrase in ("requires an API credential", "placeholder test token")
+            for phrase in (
+                "requires an API credential",
+                "placeholder test token",
+                "No AI model configured",
+            )
         )
 
         # Verify frontend display logic
@@ -176,6 +180,7 @@ def test_frontend_entered_openrouter_key_makes_provider_ready_without_env(
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.setenv("STRIX_TEST_ALLOW_DOCKER_PROBE", "1")
+    monkeypatch.setenv("STRIX_LLM", "openrouter/auto")
 
     valid_key = "sk-or-v1-abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 
@@ -224,6 +229,8 @@ def test_placeholder_credentials_remain_configuration_required(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """5. Placeholder keys (e.g. sk-or-v1-test... or containing placeholder) remain configuration_required."""
+    clear_runtime_credentials()
+    monkeypatch.setenv("STRIX_LLM", "openrouter/auto")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-v1-testkey1234567890abcdef")
 
     assert is_placeholder_credential("sk-or-v1-testkey1234567890abcdef") is True

@@ -1,0 +1,370 @@
+2026-11-17 01:05:34.499 INFO    run-8ae38b46 - strix.core.runner: Starting Strix scan run-8ae38b46 (image=ghcr.io/usestrix/strix-sandbox:1.3.0, max_turns=500, interactive=False, run_dir=/home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46)
+2026-11-17 01:05:34.499 INFO    run-8ae38b46 - strix.config.models: OpenAI API route for openai/kaggle-model: chat_completions
+2026-11-17 01:05:34.500 INFO    run-8ae38b46 - strix.core.runner: LLM model resolved: openai/kaggle-model
+2026-11-17 01:05:34.500 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (1 candidates)
+2026-11-17 01:05:34.500 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (2 candidates)
+2026-11-17 01:05:34.501 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (3 candidates)
+2026-11-17 01:05:34.501 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (4 candidates)
+2026-11-17 01:05:34.502 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (5 candidates)
+2026-11-17 01:05:34.502 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (6 candidates)
+2026-11-17 01:05:34.502 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (7 candidates)
+2026-11-17 01:05:34.503 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (8 candidates)
+2026-11-17 01:05:34.509 INFO    run-8ae38b46 - strix.core.runner: Bringing up sandbox session for scan run-8ae38b46
+2026-11-17 01:05:34.509 DEBUG   run-8ae38b46 - strix.runtime.backends: Selected sandbox backend: docker
+2026-11-17 01:05:34.509 INFO    run-8ae38b46 - strix.runtime.session_manager: Creating sandbox session for scan run-8ae38b46 (backend=docker, image=ghcr.io/usestrix/strix-sandbox:1.3.0)
+2026-11-17 01:05:34.649 DEBUG   run-8ae38b46 - strix.runtime.docker_client: Creating sandbox container: image=ghcr.io/usestrix/strix-sandbox:1.3.0 caps=['NET_ADMIN', 'NET_RAW'] exposed_ports=[48080]
+2026-11-17 01:05:34.871 INFO    run-8ae38b46 - strix.runtime.docker_client: Sandbox container created: id=01ebd4762a51 image=ghcr.io/usestrix/strix-sandbox:1.3.0
+2026-11-17 01:05:35.244 DEBUG   run-8ae38b46 - strix.runtime.session_manager: Caido host endpoint resolved: http://127.0.0.1:32770
+2026-11-17 01:05:35.244 INFO    run-8ae38b46 - strix.runtime.session_manager: Sandbox session for scan run-8ae38b46 ready and cached
+2026-11-17 01:05:35.244 INFO    run-8ae38b46 - strix.core.runner: Sandbox ready for scan run-8ae38b46
+2026-11-17 01:05:35.248 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: scan_modes/deep -> deep
+2026-11-17 01:05:35.251 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: tooling/agent_browser -> agent_browser
+2026-11-17 01:05:35.252 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: tooling/python -> python
+2026-11-17 01:05:35.254 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: analysis/counterevidence -> counterevidence
+2026-11-17 01:05:35.254 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: analysis/severity_calibration -> severity_calibration
+2026-11-17 01:05:35.256 DEBUG   run-8ae38b46 - strix.skills: Loaded skill: coordination/root_agent -> root_agent
+2026-11-17 01:05:35.256 DEBUG   run-8ae38b46 - strix.skills: load_skills: 6 skill(s) resolved
+2026-11-17 01:05:35.269 DEBUG   run-8ae38b46 - strix.agents.prompt: render_system_prompt: scan_mode=deep root=True whitebox=False skills=6 prompt_len=107242
+2026-11-17 01:05:35.272 INFO    run-8ae38b46 - strix.agents.factory: Built root agent 'Root Agent' (skills=0, tools=46, scan_mode=deep, whitebox=False)
+2026-11-17 01:05:35.273 INFO    run-8ae38b46 - strix.core.agents: agent.register 5b8fa520 (Root Agent) parent=-
+2026-11-17 01:05:35.330 INFO    run-8ae38b46 - strix.runtime.caido_bootstrap: Bootstrapping Caido client (host=http://127.0.0.1:32770, container=http://127.0.0.1:48080)
+2026-11-17 01:05:35.363 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating trace
+2026-11-17 01:05:35.364 DEBUG   run-8ae38b46 - openai.agents: Setting current trace: no-op
+2026-11-17 01:05:35.364 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:05:35.371 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:05:35.371 DEBUG   run-8ae38b46 - openai.agents: Starting turn 1, current_agent=Root Agent
+2026-11-17 01:05:35.371 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:05:35.373 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:05:35.375 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:05:35.377 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:05:35.385 DEBUG   run-8ae38b46 - strix.runtime.caido_bootstrap: loginAsGuest attempt 1/10 failed: curl exit 7: curl: (7) Failed to connect to 127.0.0.1 port 48080 after 0 ms: Could not connect to server
+
+2026-11-17 01:05:37.618 INFO    run-8ae38b46 - strix.runtime.caido_bootstrap: Caido project selected: c216a37c-a90c-43a7-9948-48f068125652
+2026-11-17 01:07:18.964 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=103589 ttft_ms=95750 req_bytes=248584 res_bytes=1121 finish=- in=59539 out=80 cached=6 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:07:18.966 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:07:18.973 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:07:18.974 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:07:18.975 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:07:18.976 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:07:18.977 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:07:18.977 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:19.133 DEBUG   run-8ae38b46 - openai.agents: Turn 1 complete, next_step type=NextStepRunAgain
+2026-11-17 01:07:19.155 DEBUG   run-8ae38b46 - openai.agents: Starting turn 2, current_agent=Root Agent
+2026-11-17 01:07:19.155 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:19.156 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:07:19.159 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:19.161 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:07:40.266 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=21109 ttft_ms=15810 req_bytes=259634 res_bytes=957 finish=- in=64475 out=51 cached=59583 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:07:40.267 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:07:40.271 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:07:40.272 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:07:40.273 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:07:40.273 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:07:40.273 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:07:40.274 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:40.365 DEBUG   run-8ae38b46 - openai.agents: Turn 2 complete, next_step type=NextStepRunAgain
+2026-11-17 01:07:40.396 DEBUG   run-8ae38b46 - openai.agents: Starting turn 3, current_agent=Root Agent
+2026-11-17 01:07:40.396 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:40.397 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:07:40.399 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:40.400 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:07:47.703 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=7305 ttft_ms=2465 req_bytes=260437 res_bytes=949 finish=- in=64580 out=49 cached=64525 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:07:47.704 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:07:47.708 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:07:47.708 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:07:47.709 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:07:47.710 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:07:47.710 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:07:47.710 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:47.803 DEBUG   run-8ae38b46 - openai.agents: Turn 3 complete, next_step type=NextStepRunAgain
+2026-11-17 01:07:47.825 DEBUG   run-8ae38b46 - openai.agents: Starting turn 4, current_agent=Root Agent
+2026-11-17 01:07:47.825 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:47.826 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:07:47.828 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:47.831 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:07:56.230 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=8403 ttft_ms=3835 req_bytes=261693 res_bytes=939 finish=- in=64884 out=46 cached=64628 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:07:56.230 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:07:56.234 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:07:56.234 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:07:56.235 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:07:56.235 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:07:56.235 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:07:56.236 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:56.316 DEBUG   run-8ae38b46 - openai.agents: Turn 4 complete, next_step type=NextStepRunAgain
+2026-11-17 01:07:56.340 DEBUG   run-8ae38b46 - openai.agents: Starting turn 5, current_agent=Root Agent
+2026-11-17 01:07:56.340 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:56.341 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:07:56.343 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:07:56.344 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:08:04.635 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=8293 ttft_ms=2628 req_bytes=262621 res_bytes=956 finish=- in=65024 out=54 cached=64929 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:08:04.635 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:08:04.640 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:08:04.641 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:08:04.641 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:08:04.642 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:08:04.642 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:08:04.643 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:04.732 DEBUG   run-8ae38b46 - openai.agents: Turn 5 complete, next_step type=NextStepRunAgain
+2026-11-17 01:08:04.756 DEBUG   run-8ae38b46 - openai.agents: Starting turn 6, current_agent=Root Agent
+2026-11-17 01:08:04.757 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:04.758 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:08:04.760 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:04.762 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:08:17.892 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=13133 ttft_ms=7806 req_bytes=266663 res_bytes=951 finish=- in=67023 out=48 cached=65077 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:08:17.892 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:08:17.896 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:08:17.897 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:08:17.897 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:08:17.898 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:08:17.898 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:08:17.898 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:17.982 DEBUG   run-8ae38b46 - openai.agents: Turn 6 complete, next_step type=NextStepRunAgain
+2026-11-17 01:08:18.006 DEBUG   run-8ae38b46 - openai.agents: Starting turn 7, current_agent=Root Agent
+2026-11-17 01:08:18.007 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:18.007 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:08:18.009 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:18.011 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:08:29.447 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=11439 ttft_ms=3286 req_bytes=267934 res_bytes=1042 finish=- in=67300 out=72 cached=67070 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:08:29.447 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:08:29.451 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:08:29.452 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:08:29.453 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:08:29.453 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:08:29.453 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:08:29.454 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:29.535 DEBUG   run-8ae38b46 - openai.agents: Turn 7 complete, next_step type=NextStepRunAgain
+2026-11-17 01:08:29.555 DEBUG   run-8ae38b46 - openai.agents: Starting turn 8, current_agent=Root Agent
+2026-11-17 01:08:29.555 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:29.556 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:08:29.558 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:29.560 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:08:39.587 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=10030 ttft_ms=2514 req_bytes=268859 res_bytes=1035 finish=- in=67438 out=67 cached=67371 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:08:39.588 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:08:39.591 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:08:39.592 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:08:39.593 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:08:39.594 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:08:39.594 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:08:39.594 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:39.679 DEBUG   run-8ae38b46 - openai.agents: Turn 8 complete, next_step type=NextStepRunAgain
+2026-11-17 01:08:39.704 DEBUG   run-8ae38b46 - openai.agents: Starting turn 9, current_agent=Root Agent
+2026-11-17 01:08:39.704 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:39.705 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:08:39.707 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:08:39.708 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:09:01.506 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=21800 ttft_ms=14781 req_bytes=277424 res_bytes=1003 finish=- in=71369 out=61 cached=67504 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:09:01.506 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:09:01.510 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:09:01.510 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:09:01.511 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:09:01.512 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:09:01.512 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:09:01.512 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:01.595 DEBUG   run-8ae38b46 - openai.agents: Turn 9 complete, next_step type=NextStepRunAgain
+2026-11-17 01:09:01.617 DEBUG   run-8ae38b46 - openai.agents: Starting turn 10, current_agent=Root Agent
+2026-11-17 01:09:01.617 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:01.618 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:09:01.620 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:01.621 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:09:14.262 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=12644 ttft_ms=2446 req_bytes=278245 res_bytes=1111 finish=- in=71473 out=90 cached=71429 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:09:14.263 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:09:14.266 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:09:14.267 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:09:14.268 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:09:14.269 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:09:14.269 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:09:14.269 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:14.359 DEBUG   run-8ae38b46 - openai.agents: Turn 10 complete, next_step type=NextStepRunAgain
+2026-11-17 01:09:14.381 DEBUG   run-8ae38b46 - openai.agents: Starting turn 11, current_agent=Root Agent
+2026-11-17 01:09:14.381 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:14.382 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:09:14.384 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:14.385 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:09:28.899 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=14516 ttft_ms=1740 req_bytes=279273 res_bytes=1242 finish=- in=71637 out=111 cached=71562 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:09:28.900 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:09:28.904 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (0 surface(s), 1 gap(s))
+2026-11-17 01:09:28.905 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:09:28.905 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:09:28.906 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:09:28.906 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:09:28.907 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:28.907 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:09:28.908 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=c640a2 outcome=no_issue_found surface=/robots.txt
+2026-11-17 01:09:28.908 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:09:28.909 DEBUG   run-8ae38b46 - openai.agents: Turn 11 complete, next_step type=NextStepRunAgain
+2026-11-17 01:09:28.931 DEBUG   run-8ae38b46 - openai.agents: Starting turn 12, current_agent=Root Agent
+2026-11-17 01:09:28.931 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:28.932 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:09:28.934 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:28.936 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:09:42.880 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=13946 ttft_ms=2647 req_bytes=280942 res_bytes=918 finish=- in=71944 out=93 cached=71747 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:09:42.880 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:09:42.884 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (1 surface(s), 0 gap(s))
+2026-11-17 01:09:42.885 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:09:42.886 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:09:42.886 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:09:42.887 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:42.887 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:09:42.888 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=f302f3 outcome=no_issue_found surface=/robots.txt
+2026-11-17 01:09:42.888 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:09:42.889 DEBUG   run-8ae38b46 - openai.agents: Turn 12 complete, next_step type=NextStepRunAgain
+2026-11-17 01:09:42.912 DEBUG   run-8ae38b46 - openai.agents: Starting turn 13, current_agent=Root Agent
+2026-11-17 01:09:42.912 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:42.913 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:09:42.915 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:42.916 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:09:59.462 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=16548 ttft_ms=3976 req_bytes=282323 res_bytes=996 finish=- in=72241 out=104 cached=72036 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:09:59.463 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:09:59.467 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (2 surface(s), 0 gap(s))
+2026-11-17 01:09:59.467 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:09:59.468 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:09:59.469 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:09:59.469 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:59.470 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:09:59.470 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=17eae8 outcome=no_issue_found surface=/.well-known/security.txt
+2026-11-17 01:09:59.471 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:09:59.471 DEBUG   run-8ae38b46 - openai.agents: Turn 13 complete, next_step type=NextStepRunAgain
+2026-11-17 01:09:59.491 DEBUG   run-8ae38b46 - openai.agents: Starting turn 14, current_agent=Root Agent
+2026-11-17 01:09:59.491 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:59.492 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:09:59.494 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:09:59.496 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:10:19.725 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=20232 ttft_ms=2648 req_bytes=283763 res_bytes=1161 finish=- in=72549 out=146 cached=72344 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:10:19.726 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:10:19.729 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (3 surface(s), 0 gap(s))
+2026-11-17 01:10:19.730 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:10:19.731 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:10:19.731 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:10:19.732 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:19.732 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:10:19.733 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=25951f outcome=ruled_out surface=/
+2026-11-17 01:10:19.733 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:10:19.734 DEBUG   run-8ae38b46 - openai.agents: Turn 14 complete, next_step type=NextStepRunAgain
+2026-11-17 01:10:19.757 DEBUG   run-8ae38b46 - openai.agents: Starting turn 15, current_agent=Root Agent
+2026-11-17 01:10:19.757 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:19.758 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:10:19.760 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:19.761 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:10:35.515 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=15756 ttft_ms=3174 req_bytes=285327 res_bytes=1009 finish=- in=72890 out=107 cached=72694 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:10:35.516 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:10:35.519 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (4 surface(s), 0 gap(s))
+2026-11-17 01:10:35.520 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:10:35.521 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:10:35.522 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:10:35.522 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:35.523 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:10:35.523 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=774ff4 outcome=no_issue_found surface=/api-docs
+2026-11-17 01:10:35.524 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:10:35.524 DEBUG   run-8ae38b46 - openai.agents: Turn 15 complete, next_step type=NextStepRunAgain
+2026-11-17 01:10:35.547 DEBUG   run-8ae38b46 - openai.agents: Starting turn 16, current_agent=Root Agent
+2026-11-17 01:10:35.547 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:35.548 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:10:35.550 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:35.552 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:10:52.117 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=16568 ttft_ms=4088 req_bytes=286801 res_bytes=970 finish=- in=73208 out=105 cached=72996 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:10:52.118 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:10:52.121 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (5 surface(s), 0 gap(s))
+2026-11-17 01:10:52.122 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:10:52.123 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:10:52.124 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:10:52.124 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:52.124 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:10:52.125 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=2c1451 outcome=no_issue_found surface=/
+2026-11-17 01:10:52.126 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:10:52.126 DEBUG   run-8ae38b46 - openai.agents: Turn 16 complete, next_step type=NextStepRunAgain
+2026-11-17 01:10:52.148 DEBUG   run-8ae38b46 - openai.agents: Starting turn 17, current_agent=Root Agent
+2026-11-17 01:10:52.148 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:52.149 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:10:52.151 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:10:52.338 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:11:08.781 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=16630 ttft_ms=3176 req_bytes=288209 res_bytes=1010 finish=- in=73509 out=112 cached=73312 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:11:08.781 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:11:08.786 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (6 surface(s), 0 gap(s))
+2026-11-17 01:11:08.787 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:11:08.788 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:11:08.789 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:11:08.789 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:08.789 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:11:08.790 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=f01f10 outcome=no_issue_found surface=/
+2026-11-17 01:11:08.791 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:11:08.792 DEBUG   run-8ae38b46 - openai.agents: Turn 17 complete, next_step type=NextStepRunAgain
+2026-11-17 01:11:08.812 DEBUG   run-8ae38b46 - openai.agents: Starting turn 18, current_agent=Root Agent
+2026-11-17 01:11:08.813 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:08.814 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:11:08.816 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:08.817 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:11:26.484 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=17669 ttft_ms=3880 req_bytes=289662 res_bytes=1017 finish=- in=73825 out=117 cached=73620 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:11:26.484 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:11:26.488 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (7 surface(s), 0 gap(s))
+2026-11-17 01:11:26.489 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:11:26.490 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:11:26.491 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:11:26.491 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:26.492 DEBUG   run-8ae38b46 - openai.agents: Invoking tool record_coverage
+2026-11-17 01:11:26.492 INFO    run-8ae38b46 - strix.tools.coverage.tools: Coverage recorded: id=03321f outcome=no_issue_found surface=/
+2026-11-17 01:11:26.493 DEBUG   run-8ae38b46 - openai.agents: Tool record_coverage completed.
+2026-11-17 01:11:26.493 DEBUG   run-8ae38b46 - openai.agents: Turn 18 complete, next_step type=NextStepRunAgain
+2026-11-17 01:11:26.515 DEBUG   run-8ae38b46 - openai.agents: Starting turn 19, current_agent=Root Agent
+2026-11-17 01:11:26.515 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:26.516 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:11:26.518 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:26.519 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:11:38.414 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=11897 ttft_ms=2291 req_bytes=290703 res_bytes=1109 finish=- in=74037 out=81 cached=73941 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:11:38.414 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:11:38.418 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (8 surface(s), 0 gap(s))
+2026-11-17 01:11:38.419 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:11:38.420 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:11:38.420 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:11:38.421 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:11:38.421 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:38.505 DEBUG   run-8ae38b46 - openai.agents: Turn 19 complete, next_step type=NextStepRunAgain
+2026-11-17 01:11:38.529 DEBUG   run-8ae38b46 - openai.agents: Starting turn 20, current_agent=Root Agent
+2026-11-17 01:11:38.530 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:38.531 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:11:38.532 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:11:38.534 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:12:05.704 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=27172 ttft_ms=2337 req_bytes=291663 res_bytes=1817 finish=- in=74169 out=195 cached=74117 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:12:05.704 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:12:05.708 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (8 surface(s), 0 gap(s))
+2026-11-17 01:12:05.709 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:12:05.711 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:12:05.711 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:12:05.711 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:12:05.712 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:12:05.712 DEBUG   run-8ae38b46 - openai.agents: Invoking tool think
+2026-11-17 01:12:05.712 DEBUG   run-8ae38b46 - openai.agents: Tool think completed.
+2026-11-17 01:12:05.712 DEBUG   run-8ae38b46 - openai.agents: Turn 20 complete, next_step type=NextStepRunAgain
+2026-11-17 01:12:05.733 DEBUG   run-8ae38b46 - openai.agents: Starting turn 21, current_agent=Root Agent
+2026-11-17 01:12:05.733 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:12:05.734 DEBUG   run-8ae38b46 - openai.agents: No conversation_id available for request
+2026-11-17 01:12:05.736 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:12:05.738 DEBUG   run-8ae38b46 - openai.agents: Calling LLM
+2026-11-17 01:13:21.007 DEBUG   run-8ae38b46 - strix.llm.request_log: llm_request route=openai provider=openai upstream=- upstream_error=- model=openai/kaggle-model host=referring-future-meat-agricultural.trycloudflare.com outcome=success status=200 request_id=- response_id=- stream=1 duration_ms=75271 ttft_ms=1807 req_bytes=293268 res_bytes=3893 finish=- in=74389 out=581 cached=74363 cost=- agent=5b8fa520 attempt=0
+2026-11-17 01:13:21.007 DEBUG   run-8ae38b46 - strix.report.usage: LiteLLM cost estimate unavailable for model kaggle-model
+2026-11-17 01:13:21.012 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (8 surface(s), 0 gap(s))
+2026-11-17 01:13:21.013 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:13:21.014 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:13:21.015 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=message class=ResponseOutputMessage
+2026-11-17 01:13:21.015 DEBUG   run-8ae38b46 - openai.agents: Processing output item type=function_call class=ResponseFunctionToolCall
+2026-11-17 01:13:21.016 DEBUG   run-8ae38b46 - openai.agents: Tracing is disabled. Not creating span
+2026-11-17 01:13:21.016 DEBUG   run-8ae38b46 - openai.agents: Invoking tool finish_scan
+2026-11-17 01:13:21.017 INFO    run-8ae38b46 - strix.report.state: Updated scan final fields
+2026-11-17 01:13:21.020 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (8 surface(s), 0 gap(s))
+2026-11-17 01:13:21.021 INFO    run-8ae38b46 - strix.report.writer: Saved final penetration test report to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/penetration_test_report.md
+2026-11-17 01:13:21.022 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:13:21.023 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:13:21.847 DEBUG   run-8ae38b46 - strix.telemetry.posthog: posthog event sent: scan_ended
+2026-11-17 01:13:22.781 DEBUG   run-8ae38b46 - strix.telemetry.scarf: scarf event sent: scan_ended
+2026-11-17 01:13:22.785 INFO    run-8ae38b46 - strix.tools.finish.tool: finish_scan: completed scan with 0 vulnerability report(s)
+2026-11-17 01:13:22.785 INFO    run-8ae38b46 - strix.core.agents: agent.status 5b8fa520=completed
+2026-11-17 01:13:22.785 DEBUG   run-8ae38b46 - openai.agents: Tool finish_scan completed.
+2026-11-17 01:13:22.786 DEBUG   run-8ae38b46 - openai.agents: Turn 21 complete, next_step type=NextStepFinalOutput
+2026-11-17 01:13:22.808 DEBUG   run-8ae38b46 - openai.agents: Resetting current trace
+2026-11-17 01:13:22.809 INFO    run-8ae38b46 - strix.core.gap_run: GAP state saved for run run-8ae38b46 (8 candidates)
+2026-11-17 01:13:22.813 INFO    run-8ae38b46 - strix.report.coverage: Saved coverage record to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/coverage.json (8 surface(s), 0 gap(s))
+2026-11-17 01:13:22.814 INFO    run-8ae38b46 - strix.report.writer: Saved final penetration test report to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/penetration_test_report.md
+2026-11-17 01:13:22.815 INFO    run-8ae38b46 - strix.report.sarif: Wrote SARIF 2.1.0 report: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46/findings.sarif (0 results)
+2026-11-17 01:13:22.816 INFO    run-8ae38b46 - strix.report.state: Essential scan data saved to: /home/vinit/AI_VAPT/ai_vapt_framework/strix_runs/run-8ae38b46
+2026-11-17 01:13:22.816 INFO    run-8ae38b46 - strix.core.runner: Tearing down sandbox session for scan run-8ae38b46
+2026-11-17 01:13:23.150 INFO    run-8ae38b46 - strix.runtime.session_manager: Cleaned up sandbox session for scan run-8ae38b46
+2026-11-17 01:13:23.151 INFO    run-8ae38b46 - strix.core.runner: Strix scan run-8ae38b46 done
