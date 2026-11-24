@@ -131,6 +131,8 @@ def test_reap_orphaned_containers_preserves_grace_period():
         docker_client=mock_docker,
         active_run_ids=set(),
         min_age_seconds=120,
+        preserve_running=False,
+        force_running_reap=True,
     )
 
     assert res["status"] == "ok"
@@ -163,6 +165,8 @@ def test_reap_orphaned_containers_reaps_dead_and_stale_containers():
         docker_client=mock_docker,
         active_run_ids=set(),
         min_age_seconds=120,
+        preserve_running=False,
+        force_running_reap=True,
     )
 
     assert res["status"] == "ok"
@@ -190,6 +194,8 @@ def test_reap_orphaned_containers_dry_run_mode():
         active_run_ids=set(),
         min_age_seconds=120,
         dry_run=True,
+        preserve_running=False,
+        force_running_reap=True,
     )
 
     assert res["dry_run"] is True
