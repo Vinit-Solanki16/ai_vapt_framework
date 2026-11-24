@@ -1222,10 +1222,11 @@ async def run_strix_scan(
             # Re-hydrate the report state from the (possibly updated) gap run.
             try:
                 summary = gap_run.summary
-                report_state.gap1_candidates_identified = summary["candidates_identified"]
-                report_state.gap1_candidates_investigated = summary["candidates_investigated"]
-                report_state.gap2_pivots = summary["pivots_executed"]
-                report_state.save_run_data()
+                if report_state is not None:
+                    report_state.gap1_candidates_identified = summary["candidates_identified"]
+                    report_state.gap1_candidates_investigated = summary["candidates_investigated"]
+                    report_state.gap2_pivots = summary["pivots_executed"]
+                    report_state.save_run_data()
             except Exception:
                 logger.exception("failed to sync gap run summary to report state")
 
