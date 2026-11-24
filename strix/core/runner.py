@@ -1220,15 +1220,15 @@ async def run_strix_scan(
             except Exception:
                 logger.exception("GAP-1 investigation failed; continuing to agent loop")
             # Re-hydrate the report state from the (possibly updated) gap run.
-            if report_state is not None:
-                try:
-                    summary = gap_run.summary
+            try:
+                summary = gap_run.summary
+                if report_state is not None:
                     report_state.gap1_candidates_identified = summary["candidates_identified"]
                     report_state.gap1_candidates_investigated = summary["candidates_investigated"]
                     report_state.gap2_pivots = summary["pivots_executed"]
                     report_state.save_run_data()
-                except Exception:
-                    logger.exception("failed to sync gap run summary to report state")
+            except Exception:
+                logger.exception("failed to sync gap run summary to report state")
 
             # The automated probes are genuine HTTP execution, but they are
             # only PREPARATORY evidence gathering. They must never replace the
