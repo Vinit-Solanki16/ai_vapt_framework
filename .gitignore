@@ -94,6 +94,9 @@ schema.graphql
 
 .opencode/
 
+# Test fixtures
+!tests/fixtures/**
+
 # Root-only local data and reference checkouts
 /.benchmarks/
 /references/

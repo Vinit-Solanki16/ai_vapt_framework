@@ -1,0 +1,112 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "sensitive-path-robotstxt",
+      "gap1_rank": 1,
+      "title": "Robots Exclusion Protocol Information Disclosure",
+      "endpoint": "/robots.txt",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "HIGH",
+      "priority_score": 0.724,
+      "assessment_reasoning": "Direct HTTP GET reveals internal configuration or sensitive directories."
+    },
+    {
+      "candidate_id": "robots-txt-exposure",
+      "gap1_rank": 2,
+      "title": "Sensitive Directory and Endpoint Information Disclosure",
+      "endpoint": "/robots.txt",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "HIGH",
+      "priority_score": 0.72,
+      "assessment_reasoning": "Direct HTTP GET reveals internal configuration or sensitive directories."
+    },
+    {
+      "candidate_id": "sensitive-path-wellknownsecuritytxt",
+      "gap1_rank": 3,
+      "title": "Security Policy Disclosure (security.txt)",
+      "endpoint": "/.well-known/security.txt",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.6,
+      "assessment_reasoning": "Standard exploit payload syntax valid with moderate noise profile and verified endpoint access."
+    },
+    {
+      "candidate_id": "cors-misconfiguration",
+      "gap1_rank": 4,
+      "title": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      "endpoint": "/",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.552,
+      "assessment_reasoning": "Permissive CORS policy allows unauthorized origin cross-domain access."
+    },
+    {
+      "candidate_id": "sensitive-path-apidocs",
+      "gap1_rank": 5,
+      "title": "API Documentation Disclosure",
+      "endpoint": "/api-docs",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.54,
+      "assessment_reasoning": "Standard exploit payload syntax valid with moderate noise profile and verified endpoint access."
+    },
+    {
+      "candidate_id": "client-js-attacks",
+      "gap1_rank": 6,
+      "title": "Client-Side Insecure JavaScript Processing",
+      "endpoint": "/",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "MEDIUM",
+      "priority_score": 0.48,
+      "assessment_reasoning": "Client-side DOM sink (e.g. innerHTML) identified in page scripts; viability depends on user-controlled input reaching the execution sink."
+    },
+    {
+      "candidate_id": "missing-security-headers",
+      "gap1_rank": 7,
+      "title": "Missing Security Hardening Headers",
+      "endpoint": "/",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "LOW",
+      "priority_score": 0.34,
+      "assessment_reasoning": "Passive HTTP response header audit notes missing defensive directives (hardening observation); no active exploit demonstrated."
+    },
+    {
+      "candidate_id": "csp-bypass",
+      "gap1_rank": 8,
+      "title": "Content Security Policy (CSP) Header Not Set",
+      "endpoint": "/",
+      "target": "http://127.0.0.1:3000/",
+      "method": "GET",
+      "quality_rank": "LOW",
+      "priority_score": 0.264,
+      "assessment_reasoning": "HTTP header inspection notes absence of Content-Security-Policy (hardening observation); no executable XSS payload demonstrated."
+    }
+  ],
+  "original_order": [
+    "sensitive-path-robotstxt",
+    "robots-txt-exposure",
+    "sensitive-path-wellknownsecuritytxt",
+    "cors-misconfiguration",
+    "sensitive-path-apidocs",
+    "client-js-attacks",
+    "missing-security-headers",
+    "csp-bypass"
+  ],
+  "ranked_order": [
+    "sensitive-path-robotstxt",
+    "robots-txt-exposure",
+    "sensitive-path-wellknownsecuritytxt",
+    "cors-misconfiguration",
+    "sensitive-path-apidocs",
+    "client-js-attacks",
+    "missing-security-headers",
+    "csp-bypass"
+  ]
+}

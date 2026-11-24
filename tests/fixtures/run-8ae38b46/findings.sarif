@@ -1,0 +1,416 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "AI-VAPT",
+          "informationUri": "https://github.com/Vinit-Solanki16/ai_vapt_framework",
+          "rules": [
+            {
+              "id": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+              "name": "Robots Exclusion Protocol Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Robots Exclusion Protocol Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Robots Exclusion Protocol Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+              "name": "Sensitive Directory and Endpoint Information Disclosure",
+              "shortDescription": {
+                "text": "Coverage: Sensitive Directory and Endpoint Information Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of Sensitive Directory and Endpoint Information Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/security-policy-disclosure-security-txt",
+              "name": "Security Policy Disclosure (security.txt)",
+              "shortDescription": {
+                "text": "Coverage: Security Policy Disclosure (security.txt)"
+              },
+              "fullDescription": {
+                "text": "Coverage of Security Policy Disclosure (security.txt) across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Security Policy Disclosure (security.txt) across the assessed attack surface.",
+                "markdown": "Coverage of Security Policy Disclosure (security.txt) across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+              "name": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "shortDescription": {
+                "text": "Coverage: Permissive Cross-Origin Resource Sharing (CORS) Policy"
+              },
+              "fullDescription": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface.",
+                "markdown": "Coverage of Permissive Cross-Origin Resource Sharing (CORS) Policy across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/api-documentation-disclosure",
+              "name": "API Documentation Disclosure",
+              "shortDescription": {
+                "text": "Coverage: API Documentation Disclosure"
+              },
+              "fullDescription": {
+                "text": "Coverage of API Documentation Disclosure across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of API Documentation Disclosure across the assessed attack surface.",
+                "markdown": "Coverage of API Documentation Disclosure across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/client-side-insecure-javascript-processing",
+              "name": "Client-Side Insecure JavaScript Processing",
+              "shortDescription": {
+                "text": "Coverage: Client-Side Insecure JavaScript Processing"
+              },
+              "fullDescription": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface.",
+                "markdown": "Coverage of Client-Side Insecure JavaScript Processing across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/missing-security-hardening-headers",
+              "name": "Missing Security Hardening Headers",
+              "shortDescription": {
+                "text": "Coverage: Missing Security Hardening Headers"
+              },
+              "fullDescription": {
+                "text": "Coverage of Missing Security Hardening Headers across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Missing Security Hardening Headers across the assessed attack surface.",
+                "markdown": "Coverage of Missing Security Hardening Headers across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            },
+            {
+              "id": "strix-coverage/content-security-policy-csp-header-not-set",
+              "name": "Content Security Policy (CSP) Header Not Set",
+              "shortDescription": {
+                "text": "Coverage: Content Security Policy (CSP) Header Not Set"
+              },
+              "fullDescription": {
+                "text": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface."
+              },
+              "defaultConfiguration": {
+                "level": "none"
+              },
+              "help": {
+                "text": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface.",
+                "markdown": "Coverage of Content Security Policy (CSP) Header Not Set across the assessed attack surface."
+              },
+              "properties": {
+                "tags": [
+                  "coverage"
+                ]
+              }
+            }
+          ],
+          "version": "1.7.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "strix-coverage/robots-exclusion-protocol-information-disclosure",
+          "ruleIndex": 0,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Robots Exclusion Protocol Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file only disallows the /ftp path, which is a standard practice and not sensitive information disclosure. No internal configuration or sensitive directories are exposed."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Robots Exclusion Protocol Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/sensitive-directory-and-endpoint-information-disclosure",
+          "ruleIndex": 1,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Sensitive Directory and Endpoint Information Disclosure — No issue identified: /robots.txt\n\nThe robots.txt file only disallows the /ftp path, which is a standard practice and not sensitive information disclosure. No internal configuration or sensitive directories are exposed."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/robots.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Sensitive Directory and Endpoint Information Disclosure",
+              "surface": "/robots.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/security-policy-disclosure-security-txt",
+          "ruleIndex": 2,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Security Policy Disclosure (security.txt) — No issue identified: /.well-known/security.txt\n\nThe security.txt file is publicly accessible and contains standard security policy information including contact details, encryption keys, acknowledgments, and job openings. This is expected behavior for a security-conscious application and not a vulnerability."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/.well-known/security.txt"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Security Policy Disclosure (security.txt)",
+              "surface": "/.well-known/security.txt",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/permissive-cross-origin-resource-sharing-cors-policy",
+          "ruleIndex": 3,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Permissive Cross-Origin Resource Sharing (CORS) Policy — Ruled out: /\n\nThe application sets Access-Control-Allow-Origin: * which is permissive CORS configuration. However, this is not necessarily a vulnerability in itself as it's commonly used for public APIs and the app appears to be an intentionally insecure demo application (OWASP Juice Shop). The permissiveness allows all origins to access the resources, but since this is a demo environment with no sensitive data, this doesn't constitute a security risk."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "ruled_out",
+              "risk_area": "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/api-documentation-disclosure",
+          "ruleIndex": 4,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "API Documentation Disclosure — No issue identified: /api-docs\n\nThe API documentation is publicly accessible but this is standard practice for development environments and APIs. The Swagger UI documentation is intended to be available for developers to understand the API endpoints, and it's common for such documentation to be exposed in non-production environments."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/api-docs"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "API Documentation Disclosure",
+              "surface": "/api-docs",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/client-side-insecure-javascript-processing",
+          "ruleIndex": 5,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Client-Side Insecure JavaScript Processing — No issue identified: /\n\nWhile the application is an insecure demo (OWASP Juice Shop), no specific client-side vulnerabilities were found in the main page HTML. The JavaScript processing appears to be standard for a frontend application without direct DOM sinks that would enable XSS."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Client-Side Insecure JavaScript Processing",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/missing-security-hardening-headers",
+          "ruleIndex": 6,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Missing Security Hardening Headers — No issue identified: /\n\nThe application is missing several security headers like Content-Security-Policy, X-XSS-Protection, and others. However, since this is the OWASP Juice Shop - an intentionally insecure demo application designed for security training - these missing headers are expected behavior rather than a vulnerability."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Missing Security Hardening Headers",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        },
+        {
+          "ruleId": "strix-coverage/content-security-policy-csp-header-not-set",
+          "ruleIndex": 7,
+          "kind": "pass",
+          "level": "none",
+          "message": {
+            "text": "Content Security Policy (CSP) Header Not Set — No issue identified: /\n\nThe Content-Security-Policy header is not set, which would normally be a security concern. However, since this is the OWASP Juice Shop - an intentionally insecure demo application designed for security training and education - the absence of CSP headers is expected behavior rather than a vulnerability."
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "/"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "strix": {
+              "coverage_outcome": "no_issue_found",
+              "risk_area": "Content Security Policy (CSP) Header Not Set",
+              "surface": "/",
+              "recorded_by": "Root Agent",
+              "source": "agent_reported"
+            }
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}
